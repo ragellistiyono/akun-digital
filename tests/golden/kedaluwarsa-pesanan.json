@@ -1,0 +1,47 @@
+{
+  "aturan": "Kedaluwarsa Pesanan",
+  "prd": "§5.8",
+  "keterangan": "Pesanan Menunggu Pembayaran menjadi Kedaluwarsa begitu waktu kedaluwarsa QRIS dari Qrispy tercapai.",
+  "kasus": [
+    {
+      "nama": "Sedetik sebelum",
+      "input": {
+        "kedaluwarsaPada": "2026-11-11T10:15:00+07:00",
+        "sekarang": "2026-11-11T10:14:59+07:00"
+      },
+      "output": {
+        "kedaluwarsa": false
+      }
+    },
+    {
+      "nama": "Tepat waktunya",
+      "input": {
+        "kedaluwarsaPada": "2026-11-11T10:15:00+07:00",
+        "sekarang": "2026-11-11T10:15:00+07:00"
+      },
+      "output": {
+        "kedaluwarsa": true
+      }
+    },
+    {
+      "nama": "Sudah lewat",
+      "input": {
+        "kedaluwarsaPada": "2026-11-11T10:15:00+07:00",
+        "sekarang": "2026-11-11T10:20:00+07:00"
+      },
+      "output": {
+        "kedaluwarsa": true
+      }
+    },
+    {
+      "nama": "Zona waktu berbeda",
+      "input": {
+        "kedaluwarsaPada": "2026-11-11T03:15:00Z",
+        "sekarang": "2026-11-11T10:14:00+07:00"
+      },
+      "output": {
+        "kedaluwarsa": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "aturan": "Mengubah Format Item stok",
+  "prd": "§4.1",
+  "keterangan": "Ganti nama kolom selalu boleh. Tambah atau hapus kolom hanya boleh bila Produk tidak punya Item stok Tersedia atau Ditahan.",
+  "kasus": [
+    {
+      "nama": "Ganti nama saat ada stok",
+      "input": {
+        "perubahan": "ganti-nama",
+        "jumlahTersedia": 8,
+        "jumlahDitahan": 1
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Tambah kolom saat ada Tersedia",
+      "input": {
+        "perubahan": "tambah-kolom",
+        "jumlahTersedia": 3,
+        "jumlahDitahan": 0
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Hapus kolom saat ada Ditahan",
+      "input": {
+        "perubahan": "hapus-kolom",
+        "jumlahTersedia": 0,
+        "jumlahDitahan": 1
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Tambah kolom saat hanya ada Terkirim",
+      "input": {
+        "perubahan": "tambah-kolom",
+        "jumlahTersedia": 0,
+        "jumlahDitahan": 0
+      },
+      "output": {
+        "boleh": true
+      }
+    }
+  ]
+}

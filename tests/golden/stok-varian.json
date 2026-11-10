@@ -1,0 +1,46 @@
+{
+  "aturan": "Stok Varian",
+  "prd": "§5.3",
+  "keterangan": "Stok Varian = jumlah Item stok berstatus Tersedia (belum terkirim dan tidak ditahan).",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "jumlahPerStatus": {
+          "Tersedia": 8,
+          "Ditahan": 2,
+          "Terkirim": 5
+        }
+      },
+      "output": {
+        "stokVarian": 8
+      }
+    },
+    {
+      "nama": "Semua ditahan",
+      "input": {
+        "jumlahPerStatus": {
+          "Tersedia": 0,
+          "Ditahan": 3,
+          "Terkirim": 0
+        }
+      },
+      "output": {
+        "stokVarian": 0
+      }
+    },
+    {
+      "nama": "Belum ada Item stok",
+      "input": {
+        "jumlahPerStatus": {
+          "Tersedia": 0,
+          "Ditahan": 0,
+          "Terkirim": 0
+        }
+      },
+      "output": {
+        "stokVarian": 0
+      }
+    }
+  ]
+}

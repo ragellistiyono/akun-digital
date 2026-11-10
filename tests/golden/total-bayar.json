@@ -1,0 +1,62 @@
+{
+  "aturan": "Total bayar",
+  "prd": "§5.5",
+  "keterangan": "Total bayar = Harga jual − potongan voucher + Kode unik.",
+  "kasus": [
+    {
+      "nama": "50000 − 5000 + 123",
+      "input": {
+        "hargaJual": 50000,
+        "potonganVoucher": 5000,
+        "kodeUnik": 123
+      },
+      "output": {
+        "totalBayar": 45123
+      }
+    },
+    {
+      "nama": "135000 − 0 + 499",
+      "input": {
+        "hargaJual": 135000,
+        "potonganVoucher": 0,
+        "kodeUnik": 499
+      },
+      "output": {
+        "totalBayar": 135499
+      }
+    },
+    {
+      "nama": "3000 − 2000 + 1",
+      "input": {
+        "hargaJual": 3000,
+        "potonganVoucher": 2000,
+        "kodeUnik": 1
+      },
+      "output": {
+        "totalBayar": 1001
+      }
+    },
+    {
+      "nama": "1000 − 0 + 250",
+      "input": {
+        "hargaJual": 1000,
+        "potonganVoucher": 0,
+        "kodeUnik": 250
+      },
+      "output": {
+        "totalBayar": 1250
+      }
+    },
+    {
+      "nama": "135000 − 10000 + 77",
+      "input": {
+        "hargaJual": 135000,
+        "potonganVoucher": 10000,
+        "kodeUnik": 77
+      },
+      "output": {
+        "totalBayar": 125077
+      }
+    }
+  ]
+}

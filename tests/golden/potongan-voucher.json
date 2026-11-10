@@ -1,0 +1,124 @@
+{
+  "aturan": "Menghitung potongan voucher",
+  "prd": "§8.2, §8.3",
+  "keterangan": "Persen dibulatkan ke bawah lalu dibatasi batas maksimum. Potongan tidak boleh membuat Harga jual − potongan < Rp 1.000. Apakah potongan Rp 0 membuat Voucher ditolak belum diputuskan (OD-3), jadi tidak diuji di sini.",
+  "kasus": [
+    {
+      "nama": "50000, nominal 5000",
+      "input": {
+        "hargaJual": 50000,
+        "jenisPotongan": "nominal",
+        "nilai": 5000,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 5000,
+        "hargaSetelahPotongan": 45000
+      }
+    },
+    {
+      "nama": "135000, persen 10 maks 10000",
+      "input": {
+        "hargaJual": 135000,
+        "jenisPotongan": "persen",
+        "nilai": 10,
+        "batasMaksimum": 10000
+      },
+      "output": {
+        "potonganVoucher": 10000,
+        "hargaSetelahPotongan": 125000
+      }
+    },
+    {
+      "nama": "33333, persen 15",
+      "input": {
+        "hargaJual": 33333,
+        "jenisPotongan": "persen",
+        "nilai": 15,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 4999,
+        "hargaSetelahPotongan": 28334
+      }
+    },
+    {
+      "nama": "30000, nominal 50000",
+      "input": {
+        "hargaJual": 30000,
+        "jenisPotongan": "nominal",
+        "nilai": 50000,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 29000,
+        "hargaSetelahPotongan": 1000
+      }
+    },
+    {
+      "nama": "3000, nominal 5000",
+      "input": {
+        "hargaJual": 3000,
+        "jenisPotongan": "nominal",
+        "nilai": 5000,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 2000,
+        "hargaSetelahPotongan": 1000
+      }
+    },
+    {
+      "nama": "1000, nominal 5000",
+      "input": {
+        "hargaJual": 1000,
+        "jenisPotongan": "nominal",
+        "nilai": 5000,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 0,
+        "hargaSetelahPotongan": 1000
+      }
+    },
+    {
+      "nama": "50000, persen 20",
+      "input": {
+        "hargaJual": 50000,
+        "jenisPotongan": "persen",
+        "nilai": 20,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 10000,
+        "hargaSetelahPotongan": 40000
+      }
+    },
+    {
+      "nama": "49900, persen 12",
+      "input": {
+        "hargaJual": 49900,
+        "jenisPotongan": "persen",
+        "nilai": 12,
+        "batasMaksimum": null
+      },
+      "output": {
+        "potonganVoucher": 5988,
+        "hargaSetelahPotongan": 43912
+      }
+    },
+    {
+      "nama": "135000, persen 10 maks 20000",
+      "input": {
+        "hargaJual": 135000,
+        "jenisPotongan": "persen",
+        "nilai": 10,
+        "batasMaksimum": 20000
+      },
+      "output": {
+        "potonganVoucher": 13500,
+        "hargaSetelahPotongan": 121500
+      }
+    }
+  ]
+}

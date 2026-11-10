@@ -1,0 +1,115 @@
+{
+  "aturan": "Batas salah password",
+  "prd": "§7.7",
+  "keterangan": "5 kali salah berturut-turut mengunci email itu 15 menit sejak kesalahan kelima. Login berhasil atau berakhirnya kunci mengembalikan hitungan ke 0. Berlaku untuk Member dan Admin.",
+  "kasus": [
+    {
+      "nama": "Salah ketiga",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 2,
+          "terkunciSampai": null
+        },
+        "sekarang": "2026-11-11T09:58:00+07:00",
+        "passwordBenar": false
+      },
+      "output": {
+        "hasil": "salah",
+        "keadaanBaru": {
+          "jumlahSalah": 3,
+          "terkunciSampai": null
+        }
+      }
+    },
+    {
+      "nama": "Salah kelima",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 4,
+          "terkunciSampai": null
+        },
+        "sekarang": "2026-11-11T10:00:00+07:00",
+        "passwordBenar": false
+      },
+      "output": {
+        "hasil": "salah",
+        "keadaanBaru": {
+          "jumlahSalah": 5,
+          "terkunciSampai": "2026-11-11T10:15:00+07:00"
+        }
+      }
+    },
+    {
+      "nama": "Benar saat masih terkunci",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 5,
+          "terkunciSampai": "2026-11-11T10:15:00+07:00"
+        },
+        "sekarang": "2026-11-11T10:14:00+07:00",
+        "passwordBenar": true
+      },
+      "output": {
+        "hasil": "terkunci",
+        "keadaanBaru": {
+          "jumlahSalah": 5,
+          "terkunciSampai": "2026-11-11T10:15:00+07:00"
+        }
+      }
+    },
+    {
+      "nama": "Benar tepat saat kunci berakhir",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 5,
+          "terkunciSampai": "2026-11-11T10:15:00+07:00"
+        },
+        "sekarang": "2026-11-11T10:15:00+07:00",
+        "passwordBenar": true
+      },
+      "output": {
+        "hasil": "berhasil",
+        "keadaanBaru": {
+          "jumlahSalah": 0,
+          "terkunciSampai": null
+        }
+      }
+    },
+    {
+      "nama": "Salah setelah kunci berakhir",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 5,
+          "terkunciSampai": "2026-11-11T10:15:00+07:00"
+        },
+        "sekarang": "2026-11-11T10:16:00+07:00",
+        "passwordBenar": false
+      },
+      "output": {
+        "hasil": "salah",
+        "keadaanBaru": {
+          "jumlahSalah": 1,
+          "terkunciSampai": null
+        }
+      }
+    },
+    {
+      "nama": "Benar setelah beberapa kali salah",
+      "input": {
+        "keadaan": {
+          "jumlahSalah": 3,
+          "terkunciSampai": null
+        },
+        "sekarang": "2026-11-11T10:00:00+07:00",
+        "passwordBenar": true
+      },
+      "output": {
+        "hasil": "berhasil",
+        "keadaanBaru": {
+          "jumlahSalah": 0,
+          "terkunciSampai": null
+        }
+      }
+    }
+  ]
+}

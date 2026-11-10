@@ -1,0 +1,70 @@
+{
+  "aturan": "Menghitung pemakaian Voucher",
+  "prd": "§8.5, §7.4",
+  "keterangan": "Dihitung dari Pesanan yang memakai Voucher itu dengan status Menunggu Pembayaran, Selesai, atau Bermasalah. olehEmail memakai kesamaan email §7.4.",
+  "kasus": [
+    {
+      "nama": "Campuran status",
+      "input": {
+        "emailCheckout": "budi@mail.com",
+        "pesananDenganVoucher": [
+          {
+            "email": "budi@mail.com",
+            "status": "Selesai"
+          },
+          {
+            "email": "sinta@mail.com",
+            "status": "Menunggu Pembayaran"
+          },
+          {
+            "email": "andi@mail.com",
+            "status": "Bermasalah"
+          },
+          {
+            "email": "budi@mail.com",
+            "status": "Kedaluwarsa"
+          },
+          {
+            "email": "rina@mail.com",
+            "status": "Dibatalkan"
+          },
+          {
+            "email": "joko@mail.com",
+            "status": "Dana Dikembalikan"
+          }
+        ]
+      },
+      "output": {
+        "total": 3,
+        "olehEmail": 1
+      }
+    },
+    {
+      "nama": "Email beda huruf",
+      "input": {
+        "emailCheckout": "Budi@Mail.com",
+        "pesananDenganVoucher": [
+          {
+            "email": "budi@mail.com",
+            "status": "Menunggu Pembayaran"
+          }
+        ]
+      },
+      "output": {
+        "total": 1,
+        "olehEmail": 1
+      }
+    },
+    {
+      "nama": "Belum pernah dipakai",
+      "input": {
+        "emailCheckout": "budi@mail.com",
+        "pesananDenganVoucher": []
+      },
+      "output": {
+        "total": 0,
+        "olehEmail": 0
+      }
+    }
+  ]
+}

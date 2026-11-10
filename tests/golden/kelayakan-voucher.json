@@ -1,0 +1,647 @@
+{
+  "aturan": "Syarat Voucher dan pesan penolakan",
+  "prd": "§8.1, §8.4, §8.5, §8.7",
+  "keterangan": "voucher null berarti kode tidak ada. pemakaian dihitung menurut §8.5 (lihat pemakaian-voucher.json). Waktu berakhir diisi sampai menit; menit berakhir masih termasuk. Bila beberapa syarat gagal, pesan yang tampil adalah yang paling atas di §8.7.",
+  "kasus": [
+    {
+      "nama": "Semua syarat terpenuhi",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Kode tidak ada",
+      "input": {
+        "voucher": null,
+        "checkout": {
+          "kodeDiketik": "ASAL",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Kode voucher tidak ditemukan"
+      }
+    },
+    {
+      "nama": "Voucher nonaktif",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": false,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Kode voucher tidak ditemukan"
+      }
+    },
+    {
+      "nama": "Kode huruf kecil",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "hemat10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Belum berlaku",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": "2026-11-20T00:00+07:00",
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Voucher belum berlaku"
+      }
+    },
+    {
+      "nama": "Tepat waktu mulai",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": "2026-11-15T12:00+07:00",
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Masih di menit berakhir",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": "2026-11-30T23:59+07:00",
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-30T23:59:40+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Lewat menit berakhir",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": "2026-11-30T23:59+07:00",
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-12-01T00:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Voucher sudah berakhir"
+      }
+    },
+    {
+      "nama": "Kuota habis",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": 1,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 1,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Kuota voucher habis"
+      }
+    },
+    {
+      "nama": "Kuota masih sisa",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": 100,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 99,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Sudah dipakai email ini",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 5,
+          "olehEmail": 1
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Anda sudah memakai voucher ini"
+      }
+    },
+    {
+      "nama": "Batas per email 2, baru sekali",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 2,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 5,
+          "olehEmail": 1
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Di bawah minimal Harga jual",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": 50000,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 1000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Minimal pembelian Rp 50.000"
+      }
+    },
+    {
+      "nama": "Tepat minimal Harga jual",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": 50000,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Di luar cakupan Kategori",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "kategori",
+            "daftar": [
+              "musik"
+            ]
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Voucher tidak berlaku untuk produk ini"
+      }
+    },
+    {
+      "nama": "Dalam cakupan Produk",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "produk",
+            "daftar": [
+              "netflix-premium"
+            ]
+          },
+          "khususMember": false
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Khusus Member, Tamu",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": true
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Voucher khusus Member, silakan login"
+      }
+    },
+    {
+      "nama": "Khusus Member, Member",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": null,
+          "kuotaVoucher": null,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": true
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": true,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 0,
+          "olehEmail": 0
+        }
+      },
+      "output": {
+        "diterima": true,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Beberapa syarat gagal",
+      "input": {
+        "voucher": {
+          "kode": "HEMAT10",
+          "aktif": true,
+          "mulai": null,
+          "berakhir": "2026-11-10T23:59+07:00",
+          "kuotaVoucher": 1,
+          "batasPerEmail": 1,
+          "minimalHargaJual": null,
+          "cakupan": {
+            "jenis": "semua"
+          },
+          "khususMember": true
+        },
+        "checkout": {
+          "kodeDiketik": "HEMAT10",
+          "waktu": "2026-11-15T12:00:00+07:00",
+          "member": false,
+          "produk": "netflix-premium",
+          "kategori": "streaming",
+          "hargaJual": 50000
+        },
+        "pemakaian": {
+          "total": 1,
+          "olehEmail": 1
+        }
+      },
+      "output": {
+        "diterima": false,
+        "pesan": "Voucher sudah berakhir"
+      }
+    }
+  ]
+}

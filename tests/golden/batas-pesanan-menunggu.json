@@ -1,0 +1,66 @@
+{
+  "aturan": "Batas Pesanan Menunggu Pembayaran per email",
+  "prd": "§5.4, §7.4",
+  "keterangan": "Satu email paling banyak 1 Pesanan Menunggu Pembayaran. Email dibandingkan menurut §7.4.",
+  "kasus": [
+    {
+      "nama": "Belum ada Pesanan",
+      "input": {
+        "email": "budi@mail.com",
+        "pesananLain": []
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Ada Pesanan menunggu, beda huruf",
+      "input": {
+        "email": "BUDI@mail.com",
+        "pesananLain": [
+          {
+            "email": "budi@mail.com",
+            "status": "Menunggu Pembayaran"
+          }
+        ]
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Pesanan menunggu milik email lain",
+      "input": {
+        "email": "budi@mail.com",
+        "pesananLain": [
+          {
+            "email": "sinta@mail.com",
+            "status": "Menunggu Pembayaran"
+          }
+        ]
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Pesanan lama sudah Kedaluwarsa dan Selesai",
+      "input": {
+        "email": "budi@mail.com",
+        "pesananLain": [
+          {
+            "email": "budi@mail.com",
+            "status": "Kedaluwarsa"
+          },
+          {
+            "email": "budi@mail.com",
+            "status": "Selesai"
+          }
+        ]
+      },
+      "output": {
+        "boleh": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "aturan": "Masa berlaku Kode verifikasi",
+  "prd": "§7.3",
+  "keterangan": "Berlaku 10 menit sejak dikirim. Tepat 10 menit setelah dikirim sudah tidak berlaku.",
+  "kasus": [
+    {
+      "nama": "Menit ke-9",
+      "input": {
+        "dikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:09:00+07:00"
+      },
+      "output": {
+        "berlaku": true
+      }
+    },
+    {
+      "nama": "Sedetik sebelum 10 menit",
+      "input": {
+        "dikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:09:59+07:00"
+      },
+      "output": {
+        "berlaku": true
+      }
+    },
+    {
+      "nama": "Tepat 10 menit",
+      "input": {
+        "dikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:10:00+07:00"
+      },
+      "output": {
+        "berlaku": false
+      }
+    },
+    {
+      "nama": "Menit ke-11",
+      "input": {
+        "dikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:11:00+07:00"
+      },
+      "output": {
+        "berlaku": false
+      }
+    }
+  ]
+}

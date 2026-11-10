@@ -1,0 +1,67 @@
+{
+  "aturan": "Percobaan memasukkan Kode verifikasi",
+  "prd": "§7.3, §7.7",
+  "keterangan": "Kode hangus setelah 5 kali salah. Kode yang hangus menolak semua percobaan berikutnya, termasuk kode yang benar.",
+  "kasus": [
+    {
+      "nama": "Benar pada percobaan pertama",
+      "input": {
+        "jumlahSalahSebelumnya": 0,
+        "kodeCocok": true
+      },
+      "output": {
+        "hasil": "diterima",
+        "jumlahSalah": 0,
+        "hangus": false
+      }
+    },
+    {
+      "nama": "Salah pertama",
+      "input": {
+        "jumlahSalahSebelumnya": 0,
+        "kodeCocok": false
+      },
+      "output": {
+        "hasil": "salah",
+        "jumlahSalah": 1,
+        "hangus": false
+      }
+    },
+    {
+      "nama": "Benar setelah 4 kali salah",
+      "input": {
+        "jumlahSalahSebelumnya": 4,
+        "kodeCocok": true
+      },
+      "output": {
+        "hasil": "diterima",
+        "jumlahSalah": 4,
+        "hangus": false
+      }
+    },
+    {
+      "nama": "Salah kelima",
+      "input": {
+        "jumlahSalahSebelumnya": 4,
+        "kodeCocok": false
+      },
+      "output": {
+        "hasil": "salah",
+        "jumlahSalah": 5,
+        "hangus": true
+      }
+    },
+    {
+      "nama": "Benar setelah hangus",
+      "input": {
+        "jumlahSalahSebelumnya": 5,
+        "kodeCocok": true
+      },
+      "output": {
+        "hasil": "hangus",
+        "jumlahSalah": 5,
+        "hangus": true
+      }
+    }
+  ]
+}

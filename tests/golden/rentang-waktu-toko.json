@@ -1,0 +1,55 @@
+{
+  "aturan": "Hari ini dan bulan ini dalam zona waktu toko",
+  "prd": "§9.1",
+  "keterangan": "Zona waktu toko WIB (UTC+7). mulai termasuk, sebelum tidak termasuk.",
+  "kasus": [
+    {
+      "nama": "Dini hari WIB",
+      "input": {
+        "sekarang": "2026-11-11T01:02:52+07:00"
+      },
+      "output": {
+        "hariIni": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "bulanIni": {
+          "mulai": "2026-11-01T00:00:00+07:00",
+          "sebelum": "2026-12-01T00:00:00+07:00"
+        }
+      }
+    },
+    {
+      "nama": "Jam UTC masih tanggal kemarin",
+      "input": {
+        "sekarang": "2026-11-10T18:00:00Z"
+      },
+      "output": {
+        "hariIni": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "bulanIni": {
+          "mulai": "2026-11-01T00:00:00+07:00",
+          "sebelum": "2026-12-01T00:00:00+07:00"
+        }
+      }
+    },
+    {
+      "nama": "Pergantian bulan",
+      "input": {
+        "sekarang": "2026-11-30T17:30:00Z"
+      },
+      "output": {
+        "hariIni": {
+          "mulai": "2026-12-01T00:00:00+07:00",
+          "sebelum": "2026-12-02T00:00:00+07:00"
+        },
+        "bulanIni": {
+          "mulai": "2026-12-01T00:00:00+07:00",
+          "sebelum": "2027-01-01T00:00:00+07:00"
+        }
+      }
+    }
+  ]
+}

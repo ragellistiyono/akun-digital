@@ -1,0 +1,156 @@
+{
+  "aturan": "Daftar stok menipis",
+  "prd": "§9.4",
+  "keterangan": "Varian aktif dari Produk aktif dengan Stok Varian ≤ Ambang stok menipis.",
+  "kasus": [
+    {
+      "nama": "Ambang 5",
+      "input": {
+        "ambang": 5,
+        "varian": [
+          {
+            "nama": "A",
+            "stokVarian": 5,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "B",
+            "stokVarian": 0,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "C",
+            "stokVarian": 6,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "D",
+            "stokVarian": 1,
+            "aktif": false,
+            "produkAktif": true
+          },
+          {
+            "nama": "E",
+            "stokVarian": 2,
+            "aktif": true,
+            "produkAktif": false
+          },
+          {
+            "nama": "F",
+            "stokVarian": 4,
+            "aktif": true,
+            "produkAktif": true
+          }
+        ]
+      },
+      "output": {
+        "menipis": [
+          "A",
+          "B",
+          "F"
+        ]
+      }
+    },
+    {
+      "nama": "Ambang 3",
+      "input": {
+        "ambang": 3,
+        "varian": [
+          {
+            "nama": "A",
+            "stokVarian": 5,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "B",
+            "stokVarian": 0,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "C",
+            "stokVarian": 6,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "D",
+            "stokVarian": 1,
+            "aktif": false,
+            "produkAktif": true
+          },
+          {
+            "nama": "E",
+            "stokVarian": 2,
+            "aktif": true,
+            "produkAktif": false
+          },
+          {
+            "nama": "F",
+            "stokVarian": 4,
+            "aktif": true,
+            "produkAktif": true
+          }
+        ]
+      },
+      "output": {
+        "menipis": [
+          "B"
+        ]
+      }
+    },
+    {
+      "nama": "Ambang 0",
+      "input": {
+        "ambang": 0,
+        "varian": [
+          {
+            "nama": "A",
+            "stokVarian": 5,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "B",
+            "stokVarian": 0,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "C",
+            "stokVarian": 6,
+            "aktif": true,
+            "produkAktif": true
+          },
+          {
+            "nama": "D",
+            "stokVarian": 1,
+            "aktif": false,
+            "produkAktif": true
+          },
+          {
+            "nama": "E",
+            "stokVarian": 2,
+            "aktif": true,
+            "produkAktif": false
+          },
+          {
+            "nama": "F",
+            "stokVarian": 4,
+            "aktif": true,
+            "produkAktif": true
+          }
+        ]
+      },
+      "output": {
+        "menipis": [
+          "B"
+        ]
+      }
+    }
+  ]
+}
