@@ -1,0 +1,47 @@
+{
+  "aturan": "Kesamaan email",
+  "prd": "§7.4",
+  "keterangan": "Email dianggap sama tanpa membedakan huruf besar dan kecil, dan tanpa spasi di awal atau akhir. Tidak ada aturan lain, misalnya titik di Gmail.",
+  "kasus": [
+    {
+      "nama": "Beda huruf",
+      "input": {
+        "a": "Budi@Mail.com",
+        "b": "budi@mail.com"
+      },
+      "output": {
+        "sama": true
+      }
+    },
+    {
+      "nama": "Spasi di ujung",
+      "input": {
+        "a": "  budi@mail.com ",
+        "b": "budi@mail.com"
+      },
+      "output": {
+        "sama": true
+      }
+    },
+    {
+      "nama": "Email berbeda",
+      "input": {
+        "a": "budi@mail.com",
+        "b": "budi1@mail.com"
+      },
+      "output": {
+        "sama": false
+      }
+    },
+    {
+      "nama": "Titik Gmail tetap berbeda",
+      "input": {
+        "a": "b.udi@gmail.com",
+        "b": "budi@gmail.com"
+      },
+      "output": {
+        "sama": false
+      }
+    }
+  ]
+}

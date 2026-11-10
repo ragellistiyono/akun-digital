@@ -1,0 +1,95 @@
+{
+  "aturan": "Aturan Harga jual dan Harga normal",
+  "prd": "§3.2, §3.5",
+  "keterangan": "Harga jual minimal Rp 1.000 dan rupiah bulat. Harga normal opsional dan harus lebih besar dari Harga jual.",
+  "kasus": [
+    {
+      "nama": "Harga jual tepat minimum",
+      "input": {
+        "hargaJual": 1000,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": true,
+        "alasan": null
+      }
+    },
+    {
+      "nama": "Harga jual di bawah minimum",
+      "input": {
+        "hargaJual": 999,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-jual-kurang-dari-minimum"
+      }
+    },
+    {
+      "nama": "Harga jual nol",
+      "input": {
+        "hargaJual": 0,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-jual-kurang-dari-minimum"
+      }
+    },
+    {
+      "nama": "Harga jual bersen",
+      "input": {
+        "hargaJual": 1500.5,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-jual-bukan-rupiah-bulat"
+      }
+    },
+    {
+      "nama": "Harga normal lebih besar",
+      "input": {
+        "hargaJual": 50000,
+        "hargaNormal": 75000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null
+      }
+    },
+    {
+      "nama": "Harga normal sama dengan Harga jual",
+      "input": {
+        "hargaJual": 50000,
+        "hargaNormal": 50000
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-normal-tidak-lebih-besar"
+      }
+    },
+    {
+      "nama": "Harga normal lebih kecil",
+      "input": {
+        "hargaJual": 50000,
+        "hargaNormal": 40000
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-normal-tidak-lebih-besar"
+      }
+    },
+    {
+      "nama": "Harga normal bersen",
+      "input": {
+        "hargaJual": 50000,
+        "hargaNormal": 75000.5
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-normal-bukan-rupiah-bulat"
+      }
+    }
+  ]
+}

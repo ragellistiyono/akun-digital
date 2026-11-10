@@ -1,0 +1,79 @@
+{
+  "aturan": "Bentuk Nomor Pesanan",
+  "prd": "§9.6",
+  "keterangan": "MIWE- diikuti 6 karakter dari huruf besar A–Z dan angka 2–9, tanpa O, 0, I, dan 1. Pembuatannya acak; yang diuji di sini hanya bentuknya.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "nomor": "MIWE-7K3P9Q"
+      },
+      "output": {
+        "valid": true
+      }
+    },
+    {
+      "nama": "Ada huruf O",
+      "input": {
+        "nomor": "MIWE-7K3P9O"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada angka 0",
+      "input": {
+        "nomor": "MIWE-7K3P90"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada huruf I",
+      "input": {
+        "nomor": "MIWE-7KIP9Q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada angka 1",
+      "input": {
+        "nomor": "MIWE-7K1P9Q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Terlalu pendek",
+      "input": {
+        "nomor": "MIWE-7K3P9"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Huruf kecil",
+      "input": {
+        "nomor": "MIWE-7k3p9q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Awalan salah",
+      "input": {
+        "nomor": "MIW-7K3P9Q"
+      },
+      "output": {
+        "valid": false
+      }
+    }
+  ]
+}

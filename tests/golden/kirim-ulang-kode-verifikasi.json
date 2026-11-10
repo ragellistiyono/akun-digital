@@ -1,0 +1,51 @@
+{
+  "aturan": "Jeda kirim ulang Kode verifikasi",
+  "prd": "§7.7",
+  "keterangan": "Kode baru boleh diminta paling cepat 60 detik setelah kode sebelumnya dikirim. tungguDetik = sisa detik sebelum boleh.",
+  "kasus": [
+    {
+      "nama": "Langsung",
+      "input": {
+        "terakhirDikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:00:00+07:00"
+      },
+      "output": {
+        "boleh": false,
+        "tungguDetik": 60
+      }
+    },
+    {
+      "nama": "Detik ke-59",
+      "input": {
+        "terakhirDikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:00:59+07:00"
+      },
+      "output": {
+        "boleh": false,
+        "tungguDetik": 1
+      }
+    },
+    {
+      "nama": "Tepat 60 detik",
+      "input": {
+        "terakhirDikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:01:00+07:00"
+      },
+      "output": {
+        "boleh": true,
+        "tungguDetik": 0
+      }
+    },
+    {
+      "nama": "Lima menit kemudian",
+      "input": {
+        "terakhirDikirimPada": "2026-11-11T10:00:00+07:00",
+        "sekarang": "2026-11-11T10:05:00+07:00"
+      },
+      "output": {
+        "boleh": true,
+        "tungguDetik": 0
+      }
+    }
+  ]
+}

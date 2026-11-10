@@ -1,0 +1,156 @@
+{
+  "aturan": "Harga di kartu Produk",
+  "prd": "§3.8",
+  "keterangan": "Kata \"Mulai\" dipakai bila Varian aktif lebih dari satu. Harga = Harga jual termurah di antara Varian aktif yang stoknya > 0; bila semua habis, termurah di antara semua Varian aktif dan label Habis.",
+  "kasus": [
+    {
+      "nama": "Dua Varian berstok",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 50000,
+            "stokVarian": 10,
+            "aktif": true
+          },
+          {
+            "hargaJual": 135000,
+            "stokVarian": 4,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": true,
+        "harga": 50000,
+        "habis": false
+      }
+    },
+    {
+      "nama": "Varian termurah habis",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 50000,
+            "stokVarian": 0,
+            "aktif": true
+          },
+          {
+            "hargaJual": 135000,
+            "stokVarian": 4,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": true,
+        "harga": 135000,
+        "habis": false
+      }
+    },
+    {
+      "nama": "Satu Varian",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 1000,
+            "stokVarian": 5,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": false,
+        "harga": 1000,
+        "habis": false
+      }
+    },
+    {
+      "nama": "Satu Varian aktif, satu nonaktif",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 20000,
+            "stokVarian": 3,
+            "aktif": false
+          },
+          {
+            "hargaJual": 55000,
+            "stokVarian": 3,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": false,
+        "harga": 55000,
+        "habis": false
+      }
+    },
+    {
+      "nama": "Semua Varian aktif habis",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 55000,
+            "stokVarian": 0,
+            "aktif": true
+          },
+          {
+            "hargaJual": 20000,
+            "stokVarian": 0,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": true,
+        "harga": 20000,
+        "habis": true
+      }
+    },
+    {
+      "nama": "Satu Varian habis",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 25000,
+            "stokVarian": 0,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": false,
+        "harga": 25000,
+        "habis": true
+      }
+    },
+    {
+      "nama": "Varian nonaktif lebih murah diabaikan",
+      "input": {
+        "varian": [
+          {
+            "hargaJual": 10000,
+            "stokVarian": 9,
+            "aktif": false
+          },
+          {
+            "hargaJual": 50000,
+            "stokVarian": 2,
+            "aktif": true
+          },
+          {
+            "hargaJual": 135000,
+            "stokVarian": 1,
+            "aktif": true
+          }
+        ]
+      },
+      "output": {
+        "mulai": true,
+        "harga": 50000,
+        "habis": false
+      }
+    }
+  ]
+}

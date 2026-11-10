@@ -1,0 +1,133 @@
+{
+  "aturan": "Hasil kabar pembayaran dari Qrispy",
+  "prd": "§5.7, §5.9",
+  "keterangan": "itemStok: 'ditahan' = Item stok yang ditahan Pesanan itu dikirim; 'baru' = satu Item stok Tersedia diambil; 'lepas' = Item stok ditahan dilepas tanpa dikirim; null = tidak ada perubahan Item stok. Kabar berulang tidak mengubah apa pun.",
+  "kasus": [
+    {
+      "nama": "Normal",
+      "input": {
+        "statusPesanan": "Menunggu Pembayaran",
+        "totalBayar": 45123,
+        "nominalDiterima": 45123,
+        "punyaItemStokDitahan": true,
+        "stokVarian": 7
+      },
+      "output": {
+        "statusBaru": "Selesai",
+        "itemStok": "ditahan"
+      }
+    },
+    {
+      "nama": "Nominal kurang",
+      "input": {
+        "statusPesanan": "Menunggu Pembayaran",
+        "totalBayar": 45123,
+        "nominalDiterima": 45000,
+        "punyaItemStokDitahan": true,
+        "stokVarian": 7
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "itemStok": "lepas"
+      }
+    },
+    {
+      "nama": "Nominal lebih",
+      "input": {
+        "statusPesanan": "Menunggu Pembayaran",
+        "totalBayar": 45123,
+        "nominalDiterima": 46000,
+        "punyaItemStokDitahan": true,
+        "stokVarian": 7
+      },
+      "output": {
+        "statusBaru": "Selesai",
+        "itemStok": "ditahan"
+      }
+    },
+    {
+      "nama": "Telat, stok masih ada",
+      "input": {
+        "statusPesanan": "Kedaluwarsa",
+        "totalBayar": 1250,
+        "nominalDiterima": 1250,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 3
+      },
+      "output": {
+        "statusBaru": "Selesai",
+        "itemStok": "baru"
+      }
+    },
+    {
+      "nama": "Telat, stok habis",
+      "input": {
+        "statusPesanan": "Dibatalkan",
+        "totalBayar": 1250,
+        "nominalDiterima": 1250,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 0
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "itemStok": null
+      }
+    },
+    {
+      "nama": "Telat dan nominal kurang",
+      "input": {
+        "statusPesanan": "Kedaluwarsa",
+        "totalBayar": 1250,
+        "nominalDiterima": 1000,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 3
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "itemStok": null
+      }
+    },
+    {
+      "nama": "Kabar berulang untuk Pesanan Selesai",
+      "input": {
+        "statusPesanan": "Selesai",
+        "totalBayar": 45123,
+        "nominalDiterima": 45123,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 7
+      },
+      "output": {
+        "statusBaru": "Selesai",
+        "itemStok": null
+      }
+    },
+    {
+      "nama": "Kabar berulang untuk Pesanan Bermasalah",
+      "input": {
+        "statusPesanan": "Bermasalah",
+        "totalBayar": 1250,
+        "nominalDiterima": 1250,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 0
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "itemStok": null
+      }
+    },
+    {
+      "nama": "Kabar untuk Pesanan Dana Dikembalikan",
+      "input": {
+        "statusPesanan": "Dana Dikembalikan",
+        "totalBayar": 1250,
+        "nominalDiterima": 1250,
+        "punyaItemStokDitahan": false,
+        "stokVarian": 5
+      },
+      "output": {
+        "statusBaru": "Dana Dikembalikan",
+        "itemStok": null
+      }
+    }
+  ]
+}

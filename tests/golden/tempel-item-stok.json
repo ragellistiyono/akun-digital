@@ -1,0 +1,103 @@
+{
+  "aturan": "Menempel banyak Item stok",
+  "prd": "§4.2",
+  "keterangan": "Satu baris satu Item stok, kolom dipisah |. Nomor baris dihitung dari 1 di teks tempelan, termasuk baris kosong. Alasan penolakan: jumlah-kolom-salah, kolom-kosong, sudah-ada (sama persis dengan Item stok Varian itu), kembar-dalam-tempelan.",
+  "kasus": [
+    {
+      "nama": "Contoh UAT-D1",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password",
+          "Profil"
+        ],
+        "itemStokAda": [],
+        "baris": [
+          "a@mail.com|pass1|Profil 1",
+          "b@mail.com|pass2|Profil 2",
+          "c@mail.com|pass3",
+          "a@mail.com|pass1|Profil 1",
+          "d@mail.com|pass4|Profil 4"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "a@mail.com|pass1|Profil 1",
+          "b@mail.com|pass2|Profil 2",
+          "d@mail.com|pass4|Profil 4"
+        ],
+        "ditolak": [
+          {
+            "baris": 3,
+            "alasan": "jumlah-kolom-salah"
+          },
+          {
+            "baris": 4,
+            "alasan": "kembar-dalam-tempelan"
+          }
+        ],
+        "ringkasan": "3 tersimpan, 2 ditolak"
+      }
+    },
+    {
+      "nama": "Sama dengan Item stok yang sudah ada",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "itemStokAda": [
+          "KODE-111"
+        ],
+        "baris": [
+          "KODE-111",
+          "KODE-222"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "KODE-222"
+        ],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "sudah-ada"
+          }
+        ],
+        "ringkasan": "1 tersimpan, 1 ditolak"
+      }
+    },
+    {
+      "nama": "Kolom kosong dan baris kosong",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password"
+        ],
+        "itemStokAda": [],
+        "baris": [
+          "x@mail.com|",
+          "",
+          "y@mail.com|rahasia",
+          "   ",
+          "z@mail.com|a|b"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "y@mail.com|rahasia"
+        ],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "kolom-kosong"
+          },
+          {
+            "baris": 5,
+            "alasan": "jumlah-kolom-salah"
+          }
+        ],
+        "ringkasan": "1 tersimpan, 2 ditolak"
+      }
+    }
+  ]
+}

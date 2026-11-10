@@ -1,0 +1,307 @@
+{
+  "aturan": "Perpindahan status Pesanan",
+  "prd": "§5.7",
+  "keterangan": "Semua pasangan status yang berbeda. Kedaluwarsa/Dibatalkan → Selesai/Bermasalah hanya terjadi karena kabar pembayaran terlambat; Bermasalah → Selesai/Dana Dikembalikan hanya oleh Admin.",
+  "kasus": [
+    {
+      "nama": "Menunggu Pembayaran → Selesai",
+      "input": {
+        "dari": "Menunggu Pembayaran",
+        "ke": "Selesai"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Menunggu Pembayaran → Kedaluwarsa",
+      "input": {
+        "dari": "Menunggu Pembayaran",
+        "ke": "Kedaluwarsa"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Menunggu Pembayaran → Dibatalkan",
+      "input": {
+        "dari": "Menunggu Pembayaran",
+        "ke": "Dibatalkan"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Menunggu Pembayaran → Bermasalah",
+      "input": {
+        "dari": "Menunggu Pembayaran",
+        "ke": "Bermasalah"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Menunggu Pembayaran → Dana Dikembalikan",
+      "input": {
+        "dari": "Menunggu Pembayaran",
+        "ke": "Dana Dikembalikan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Selesai → Menunggu Pembayaran",
+      "input": {
+        "dari": "Selesai",
+        "ke": "Menunggu Pembayaran"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Selesai → Kedaluwarsa",
+      "input": {
+        "dari": "Selesai",
+        "ke": "Kedaluwarsa"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Selesai → Dibatalkan",
+      "input": {
+        "dari": "Selesai",
+        "ke": "Dibatalkan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Selesai → Bermasalah",
+      "input": {
+        "dari": "Selesai",
+        "ke": "Bermasalah"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Selesai → Dana Dikembalikan",
+      "input": {
+        "dari": "Selesai",
+        "ke": "Dana Dikembalikan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Kedaluwarsa → Menunggu Pembayaran",
+      "input": {
+        "dari": "Kedaluwarsa",
+        "ke": "Menunggu Pembayaran"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Kedaluwarsa → Selesai",
+      "input": {
+        "dari": "Kedaluwarsa",
+        "ke": "Selesai"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Kedaluwarsa → Dibatalkan",
+      "input": {
+        "dari": "Kedaluwarsa",
+        "ke": "Dibatalkan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Kedaluwarsa → Bermasalah",
+      "input": {
+        "dari": "Kedaluwarsa",
+        "ke": "Bermasalah"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Kedaluwarsa → Dana Dikembalikan",
+      "input": {
+        "dari": "Kedaluwarsa",
+        "ke": "Dana Dikembalikan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dibatalkan → Menunggu Pembayaran",
+      "input": {
+        "dari": "Dibatalkan",
+        "ke": "Menunggu Pembayaran"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dibatalkan → Selesai",
+      "input": {
+        "dari": "Dibatalkan",
+        "ke": "Selesai"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Dibatalkan → Kedaluwarsa",
+      "input": {
+        "dari": "Dibatalkan",
+        "ke": "Kedaluwarsa"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dibatalkan → Bermasalah",
+      "input": {
+        "dari": "Dibatalkan",
+        "ke": "Bermasalah"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Dibatalkan → Dana Dikembalikan",
+      "input": {
+        "dari": "Dibatalkan",
+        "ke": "Dana Dikembalikan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Bermasalah → Menunggu Pembayaran",
+      "input": {
+        "dari": "Bermasalah",
+        "ke": "Menunggu Pembayaran"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Bermasalah → Selesai",
+      "input": {
+        "dari": "Bermasalah",
+        "ke": "Selesai"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Bermasalah → Kedaluwarsa",
+      "input": {
+        "dari": "Bermasalah",
+        "ke": "Kedaluwarsa"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Bermasalah → Dibatalkan",
+      "input": {
+        "dari": "Bermasalah",
+        "ke": "Dibatalkan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Bermasalah → Dana Dikembalikan",
+      "input": {
+        "dari": "Bermasalah",
+        "ke": "Dana Dikembalikan"
+      },
+      "output": {
+        "boleh": true
+      }
+    },
+    {
+      "nama": "Dana Dikembalikan → Menunggu Pembayaran",
+      "input": {
+        "dari": "Dana Dikembalikan",
+        "ke": "Menunggu Pembayaran"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dana Dikembalikan → Selesai",
+      "input": {
+        "dari": "Dana Dikembalikan",
+        "ke": "Selesai"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dana Dikembalikan → Kedaluwarsa",
+      "input": {
+        "dari": "Dana Dikembalikan",
+        "ke": "Kedaluwarsa"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dana Dikembalikan → Dibatalkan",
+      "input": {
+        "dari": "Dana Dikembalikan",
+        "ke": "Dibatalkan"
+      },
+      "output": {
+        "boleh": false
+      }
+    },
+    {
+      "nama": "Dana Dikembalikan → Bermasalah",
+      "input": {
+        "dari": "Dana Dikembalikan",
+        "ke": "Bermasalah"
+      },
+      "output": {
+        "boleh": false
+      }
+    }
+  ]
+}

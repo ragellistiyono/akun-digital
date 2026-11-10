@@ -1,0 +1,99 @@
+{
+  "aturan": "Pendapatan",
+  "prd": "§9.1, §9.3",
+  "keterangan": "Jumlah Total bayar Pesanan Selesai yang dibayar dalam rentang [mulai, sebelum). Kode unik ikut, biaya Qrispy tidak dipotong.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "totalBayar": 45123,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "totalBayar": 50010,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "totalBayar": 135499,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "status": "Bermasalah",
+            "totalBayar": 50200,
+            "dibayarPada": "2026-11-11T21:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230632
+      }
+    },
+    {
+      "nama": "Batas hari dan zona waktu",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "totalBayar": 10000,
+            "dibayarPada": "2026-11-10T23:59:59+07:00"
+          },
+          {
+            "status": "Selesai",
+            "totalBayar": 20000,
+            "dibayarPada": "2026-11-11T00:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "totalBayar": 30000,
+            "dibayarPada": "2026-11-10T17:30:00Z"
+          },
+          {
+            "status": "Dana Dikembalikan",
+            "totalBayar": 40000,
+            "dibayarPada": "2026-11-11T08:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "totalBayar": 50000,
+            "dibayarPada": "2026-11-12T00:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000
+      }
+    },
+    {
+      "nama": "Tidak ada Pesanan Selesai",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Bermasalah",
+            "totalBayar": 1250,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 0
+      }
+    }
+  ]
+}

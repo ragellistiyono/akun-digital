@@ -1,0 +1,84 @@
+{
+  "aturan": "Persen hemat dari Harga normal",
+  "prd": "§3.5",
+  "keterangan": "N = (Harga normal − Harga jual) ÷ Harga normal × 100, dibulatkan ke bawah. Hanya tampil bila Harga normal diisi.",
+  "kasus": [
+    {
+      "nama": "Harga normal 75000, Harga jual 50000",
+      "input": {
+        "hargaNormal": 75000,
+        "hargaJual": 50000
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 33
+      }
+    },
+    {
+      "nama": "Harga normal 100000, Harga jual 50000",
+      "input": {
+        "hargaNormal": 100000,
+        "hargaJual": 50000
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 50
+      }
+    },
+    {
+      "nama": "Harga normal 30000, Harga jual 20000",
+      "input": {
+        "hargaNormal": 30000,
+        "hargaJual": 20000
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 33
+      }
+    },
+    {
+      "nama": "Harga normal 99000, Harga jual 49500",
+      "input": {
+        "hargaNormal": 99000,
+        "hargaJual": 49500
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 50
+      }
+    },
+    {
+      "nama": "Harga normal 60000, Harga jual 59999",
+      "input": {
+        "hargaNormal": 60000,
+        "hargaJual": 59999
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 0
+      }
+    },
+    {
+      "nama": "Harga normal 150000, Harga jual 135000",
+      "input": {
+        "hargaNormal": 150000,
+        "hargaJual": 135000
+      },
+      "output": {
+        "tampil": true,
+        "persenHemat": 10
+      }
+    },
+    {
+      "nama": "Tanpa Harga normal",
+      "input": {
+        "hargaNormal": null,
+        "hargaJual": 50000
+      },
+      "output": {
+        "tampil": false,
+        "persenHemat": null
+      }
+    }
+  ]
+}
