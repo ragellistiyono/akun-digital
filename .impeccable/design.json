@@ -1,0 +1,1251 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T00:00:00Z",
+  "title": "Sistem Desain Akun Digital",
+  "extensions": {
+    "colorMeta": {
+      "langit": {
+        "role": "secondary",
+        "displayName": "Langit Malam",
+        "canonical": "#2A1F4D",
+        "tonalRamp": [
+          "#0E012A",
+          "#251A48",
+          "#413767",
+          "#5E5588",
+          "#7D75AA",
+          "#9E96CE",
+          "#C4BBF6",
+          "#EEECFF"
+        ]
+      },
+      "langit-2": {
+        "role": "secondary",
+        "displayName": "Langit Hover",
+        "canonical": "#3A2D66",
+        "tonalRamp": [
+          "#0E012A",
+          "#26174E",
+          "#41346E",
+          "#5E5390",
+          "#7D73B2",
+          "#9E94D6",
+          "#C4B9FE",
+          "#EEECFF"
+        ]
+      },
+      "langit-garis": {
+        "role": "secondary",
+        "displayName": "Garis Langit",
+        "canonical": "#5B4A92",
+        "tonalRamp": [
+          "#0E0029",
+          "#281155",
+          "#433076",
+          "#604F98",
+          "#7F6FBB",
+          "#A091DF",
+          "#C5B9FE",
+          "#EEECFF"
+        ]
+      },
+      "langit-teks": {
+        "role": "secondary",
+        "displayName": "Teks Langit",
+        "canonical": "#E9E2FF",
+        "tonalRamp": [
+          "#0D071A",
+          "#262035",
+          "#423B52",
+          "#605972",
+          "#7F7993",
+          "#A09AB5",
+          "#C6BFDB",
+          "#F0EBFF"
+        ]
+      },
+      "langit-redup": {
+        "role": "secondary",
+        "displayName": "Teks Langit Redup",
+        "canonical": "#C7BDEA",
+        "tonalRamp": [
+          "#0E0422",
+          "#271D3F",
+          "#42395E",
+          "#60567E",
+          "#80769F",
+          "#A197C2",
+          "#C7BDEA",
+          "#EFEBFE"
+        ]
+      },
+      "monogram": {
+        "role": "primary",
+        "displayName": "Ungu Monogram",
+        "canonical": "#8F61FF",
+        "tonalRamp": [
+          "#0E0129",
+          "#2B0161",
+          "#49099D",
+          "#6539C2",
+          "#845DE7",
+          "#A287FD",
+          "#C5B9FD",
+          "#EEECFE"
+        ]
+      },
+      "aksi": {
+        "role": "primary",
+        "displayName": "Ungu Aksi",
+        "canonical": "#7548F2",
+        "tonalRamp": [
+          "#0D002C",
+          "#270463",
+          "#440FA0",
+          "#5F3CC5",
+          "#7D60EA",
+          "#9B8CF9",
+          "#C1BBFE",
+          "#EDECFF"
+        ]
+      },
+      "aksi-tekan": {
+        "role": "primary",
+        "displayName": "Ungu Aksi Tekan",
+        "canonical": "#6236DE",
+        "tonalRamp": [
+          "#0C002D",
+          "#250564",
+          "#4111A1",
+          "#5B3DC6",
+          "#7961EC",
+          "#988DFA",
+          "#BFBCFA",
+          "#EDECFF"
+        ]
+      },
+      "aksi-teks": {
+        "role": "primary",
+        "displayName": "Ungu Tautan",
+        "canonical": "#6A3FE0",
+        "tonalRamp": [
+          "#0D002C",
+          "#270463",
+          "#430FA0",
+          "#5E3CC5",
+          "#7C60EB",
+          "#9B8CF9",
+          "#C0BBFE",
+          "#EDECFF"
+        ]
+      },
+      "teks-di-aksi": {
+        "role": "primary",
+        "displayName": "Putih di Atas Aksi",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#7D7D7D",
+          "#9E9E9E",
+          "#C4C4C4",
+          "#EEEEEE"
+        ]
+      },
+      "matahari": {
+        "role": "tertiary",
+        "displayName": "Emas Matahari",
+        "canonical": "#EBC967",
+        "tonalRamp": [
+          "#100A00",
+          "#2D2303",
+          "#4F3D01",
+          "#725B05",
+          "#977A17",
+          "#BC9B35",
+          "#E3C15E",
+          "#FFEEBF"
+        ]
+      },
+      "persik": {
+        "role": "tertiary",
+        "displayName": "Persik Senja",
+        "canonical": "#ED9065",
+        "tonalRamp": [
+          "#190500",
+          "#3F1602",
+          "#682B07",
+          "#954111",
+          "#BA6237",
+          "#DF8358",
+          "#FFAE89",
+          "#FFEAE0"
+        ]
+      },
+      "persik-teks": {
+        "role": "tertiary",
+        "displayName": "Teks di Atas Persik",
+        "canonical": "#3A1D0E",
+        "tonalRamp": [
+          "#180500",
+          "#381B0C",
+          "#563727",
+          "#765544",
+          "#987463",
+          "#BA9583",
+          "#E2BBA8",
+          "#FFEAE0"
+        ]
+      },
+      "mauve": {
+        "role": "tertiary",
+        "displayName": "Mauve Lembah",
+        "canonical": "#9F5F70",
+        "tonalRamp": [
+          "#1E0009",
+          "#430B20",
+          "#632A3B",
+          "#854859",
+          "#A86778",
+          "#CC8899",
+          "#F4ADBF",
+          "#FEE8ED"
+        ]
+      },
+      "tanah": {
+        "role": "neutral",
+        "displayName": "Tanah Lavender",
+        "canonical": "#F7F3FC",
+        "tonalRamp": [
+          "#0C0A0F",
+          "#252329",
+          "#413E45",
+          "#5F5C63",
+          "#7F7B83",
+          "#A09CA5",
+          "#C6C2CB",
+          "#F0ECF5"
+        ]
+      },
+      "permukaan": {
+        "role": "neutral",
+        "displayName": "Permukaan",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#7D7D7D",
+          "#9E9E9E",
+          "#C4C4C4",
+          "#EEEEEE"
+        ]
+      },
+      "permukaan-2": {
+        "role": "neutral",
+        "displayName": "Permukaan Lembut",
+        "canonical": "#EFE9FA",
+        "tonalRamp": [
+          "#0D0913",
+          "#26212E",
+          "#423D4A",
+          "#605B69",
+          "#807A89",
+          "#A19BAB",
+          "#C7C1D1",
+          "#F1EBFC"
+        ]
+      },
+      "garis": {
+        "role": "neutral",
+        "displayName": "Garis",
+        "canonical": "#E4DCF5",
+        "tonalRamp": [
+          "#0E0717",
+          "#272032",
+          "#423C50",
+          "#60596F",
+          "#80798F",
+          "#A19AB1",
+          "#C7BFD8",
+          "#F1EBFE"
+        ]
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#1E1838",
+        "tonalRamp": [
+          "#0C0522",
+          "#241E3F",
+          "#3F3A5D",
+          "#5D587D",
+          "#7C789F",
+          "#9D99C2",
+          "#C3BEE9",
+          "#EEECFE"
+        ]
+      },
+      "tinta-redup": {
+        "role": "neutral",
+        "displayName": "Tinta Redup",
+        "canonical": "#625879",
+        "tonalRamp": [
+          "#0E051E",
+          "#271E3A",
+          "#433958",
+          "#615778",
+          "#817799",
+          "#A298BC",
+          "#C8BDE3",
+          "#F0EBFE"
+        ]
+      },
+      "st-tunggu-bg": {
+        "role": "status",
+        "displayName": "Status Menunggu Pembayaran (latar)",
+        "canonical": "#FFF1C9",
+        "tonalRamp": [
+          "#100A00",
+          "#2D2303",
+          "#4A3F1C",
+          "#695D39",
+          "#897C58",
+          "#AB9E78",
+          "#D1C39D",
+          "#FCEEC6"
+        ]
+      },
+      "st-tunggu": {
+        "role": "status",
+        "displayName": "Status Menunggu Pembayaran (teks)",
+        "canonical": "#6E4B00",
+        "tonalRamp": [
+          "#120900",
+          "#312002",
+          "#543A09",
+          "#7A5613",
+          "#9B7638",
+          "#BE975A",
+          "#E5BD7F",
+          "#FFECCF"
+        ]
+      },
+      "st-selesai-bg": {
+        "role": "status",
+        "displayName": "Status Selesai (latar)",
+        "canonical": "#DAF3E5",
+        "tonalRamp": [
+          "#000F07",
+          "#15291F",
+          "#30453A",
+          "#4E6458",
+          "#6D8477",
+          "#8EA598",
+          "#B3CBBD",
+          "#DDF6E8"
+        ]
+      },
+      "st-selesai": {
+        "role": "status",
+        "displayName": "Status Selesai (teks)",
+        "canonical": "#18603E",
+        "tonalRamp": [
+          "#001006",
+          "#012C19",
+          "#074C2E",
+          "#286D4A",
+          "#4A8E69",
+          "#6CB089",
+          "#91D6AE",
+          "#C4FFDB"
+        ]
+      },
+      "st-kedaluwarsa-bg": {
+        "role": "status",
+        "displayName": "Status Kedaluwarsa (latar)",
+        "canonical": "#ECE7F2",
+        "tonalRamp": [
+          "#0D0910",
+          "#26222A",
+          "#423E46",
+          "#605B65",
+          "#7F7B85",
+          "#A19CA6",
+          "#C6C2CC",
+          "#F1ECF7"
+        ]
+      },
+      "st-kedaluwarsa": {
+        "role": "status",
+        "displayName": "Status Kedaluwarsa (teks)",
+        "canonical": "#554D68",
+        "tonalRamp": [
+          "#0E061B",
+          "#271F37",
+          "#423B55",
+          "#605874",
+          "#807895",
+          "#A199B7",
+          "#C7BEDE",
+          "#F0EBFF"
+        ]
+      },
+      "st-batal-bg": {
+        "role": "status",
+        "displayName": "Status Dibatalkan (latar)",
+        "canonical": "#ECEDF0",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#232426",
+          "#3F4042",
+          "#5D5D60",
+          "#7C7D80",
+          "#9D9EA1",
+          "#C3C4C7",
+          "#EDEEF1"
+        ]
+      },
+      "st-batal": {
+        "role": "status",
+        "displayName": "Status Dibatalkan (teks)",
+        "canonical": "#4E5460",
+        "tonalRamp": [
+          "#070B14",
+          "#1F242E",
+          "#3A404B",
+          "#585E6A",
+          "#777D8A",
+          "#989FAC",
+          "#BDC4D2",
+          "#E7EFFD"
+        ]
+      },
+      "st-masalah-bg": {
+        "role": "status",
+        "displayName": "Status Bermasalah (latar)",
+        "canonical": "#FCE0DD",
+        "tonalRamp": [
+          "#160605",
+          "#321E1C",
+          "#4F3937",
+          "#6E5755",
+          "#8F7674",
+          "#B19795",
+          "#D8BDBA",
+          "#FFE9E6"
+        ]
+      },
+      "st-masalah": {
+        "role": "status",
+        "displayName": "Status Bermasalah (teks)",
+        "canonical": "#9C2820",
+        "tonalRamp": [
+          "#1F0000",
+          "#4A0303",
+          "#790D0A",
+          "#A22F26",
+          "#C85245",
+          "#EE7466",
+          "#FFAB9F",
+          "#FFE9E5"
+        ]
+      },
+      "st-kembali-bg": {
+        "role": "status",
+        "displayName": "Status Dana Dikembalikan (latar)",
+        "canonical": "#DFE8FC",
+        "tonalRamp": [
+          "#060B17",
+          "#1E2432",
+          "#39404F",
+          "#565E6E",
+          "#757D8F",
+          "#969EB1",
+          "#BBC4D7",
+          "#E7EFFE"
+        ]
+      },
+      "st-kembali": {
+        "role": "status",
+        "displayName": "Status Dana Dikembalikan (teks)",
+        "canonical": "#22448F",
+        "tonalRamp": [
+          "#00042E",
+          "#011962",
+          "#193983",
+          "#3559A6",
+          "#547ACB",
+          "#739DF0",
+          "#A7C4FD",
+          "#E7EFFE"
+        ]
+      },
+      "langit-gelap": {
+        "role": "secondary",
+        "displayName": "Langit Malam, mode gelap",
+        "canonical": "#231A42",
+        "tonalRamp": [
+          "#0D0227",
+          "#251C44",
+          "#403863",
+          "#5D5684",
+          "#7D76A6",
+          "#9E97C9",
+          "#C3BDF1",
+          "#EEECFE"
+        ]
+      },
+      "langit-2-gelap": {
+        "role": "secondary",
+        "displayName": "Langit Hover, mode gelap",
+        "canonical": "#33295C",
+        "tonalRamp": [
+          "#0D012A",
+          "#25194B",
+          "#3F366B",
+          "#5D548C",
+          "#7C74AE",
+          "#9D95D2",
+          "#C2BBFA",
+          "#EEECFF"
+        ]
+      },
+      "langit-garis-gelap": {
+        "role": "secondary",
+        "displayName": "Garis Langit, mode gelap",
+        "canonical": "#4E4180",
+        "tonalRamp": [
+          "#0E0129",
+          "#261550",
+          "#413371",
+          "#5E5293",
+          "#7D72B5",
+          "#9E93D9",
+          "#C4BAFD",
+          "#EEECFE"
+        ]
+      },
+      "aksi-teks-gelap": {
+        "role": "primary",
+        "displayName": "Ungu Tautan, mode gelap",
+        "canonical": "#B49BFF",
+        "tonalRamp": [
+          "#0F0128",
+          "#2C0160",
+          "#472882",
+          "#6449A5",
+          "#8369C9",
+          "#A48BEE",
+          "#C7B9FB",
+          "#EFECFE"
+        ]
+      },
+      "tanah-gelap": {
+        "role": "neutral",
+        "displayName": "Tanah Lavender, mode gelap",
+        "canonical": "#15112A",
+        "tonalRamp": [
+          "#0B071E",
+          "#23203A",
+          "#3E3C58",
+          "#5C5978",
+          "#7C7999",
+          "#9D9ABC",
+          "#C2C0E3",
+          "#EDECFF"
+        ]
+      },
+      "permukaan-gelap": {
+        "role": "neutral",
+        "displayName": "Permukaan, mode gelap",
+        "canonical": "#211A3D",
+        "tonalRamp": [
+          "#0C0424",
+          "#241D41",
+          "#3F395F",
+          "#5D5780",
+          "#7C77A1",
+          "#9D98C4",
+          "#C3BEEC",
+          "#EEECFE"
+        ]
+      },
+      "permukaan-2-gelap": {
+        "role": "neutral",
+        "displayName": "Permukaan Lembut, mode gelap",
+        "canonical": "#2C2350",
+        "tonalRamp": [
+          "#0D0129",
+          "#241B47",
+          "#3F3766",
+          "#5D5687",
+          "#7C75AA",
+          "#9D96CD",
+          "#C3BCF5",
+          "#EEECFF"
+        ]
+      },
+      "garis-gelap": {
+        "role": "neutral",
+        "displayName": "Garis, mode gelap",
+        "canonical": "#3A2F63",
+        "tonalRamp": [
+          "#0E012A",
+          "#25194B",
+          "#40366A",
+          "#5E548C",
+          "#7D74AE",
+          "#9E95D2",
+          "#C3BBFA",
+          "#EEECFF"
+        ]
+      },
+      "tinta-gelap": {
+        "role": "neutral",
+        "displayName": "Tinta, mode gelap",
+        "canonical": "#F3EEFF",
+        "tonalRamp": [
+          "#0D0914",
+          "#25222E",
+          "#413D4B",
+          "#5F5B69",
+          "#7F7A89",
+          "#A09BAB",
+          "#C6C1D1",
+          "#F0EBFC"
+        ]
+      },
+      "tinta-redup-gelap": {
+        "role": "neutral",
+        "displayName": "Tinta Redup, mode gelap",
+        "canonical": "#B9AFD9",
+        "tonalRamp": [
+          "#0E0421",
+          "#271D3E",
+          "#42395C",
+          "#60577C",
+          "#80769D",
+          "#A197C0",
+          "#C7BDE7",
+          "#F0EBFF"
+        ]
+      },
+      "st-tunggu-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Menunggu Pembayaran (latar), mode gelap",
+        "canonical": "#3B2F0E",
+        "tonalRamp": [
+          "#100A00",
+          "#2E2201",
+          "#4B3E1E",
+          "#695C3B",
+          "#8A7C5A",
+          "#AB9D7A",
+          "#D1C39F",
+          "#FCEDC8"
+        ]
+      },
+      "st-tunggu-gelap": {
+        "role": "status",
+        "displayName": "Status Menunggu Pembayaran (teks), mode gelap",
+        "canonical": "#F2D27A",
+        "tonalRamp": [
+          "#100A00",
+          "#2D2303",
+          "#4F3D01",
+          "#735A05",
+          "#977917",
+          "#BA9B42",
+          "#E1C169",
+          "#FFEDBF"
+        ]
+      },
+      "st-selesai-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Selesai (latar), mode gelap",
+        "canonical": "#11352A",
+        "tonalRamp": [
+          "#000F09",
+          "#062B21",
+          "#24483C",
+          "#42665A",
+          "#628779",
+          "#82A89A",
+          "#A7CEC0",
+          "#D1F9EA"
+        ]
+      },
+      "st-selesai-gelap": {
+        "role": "status",
+        "displayName": "Status Selesai (teks), mode gelap",
+        "canonical": "#7FDDB0",
+        "tonalRamp": [
+          "#000F07",
+          "#002C1B",
+          "#034C32",
+          "#0B6F4B",
+          "#2F9168",
+          "#55B489",
+          "#7DDBAE",
+          "#C3FFDF"
+        ]
+      },
+      "st-kedaluwarsa-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Kedaluwarsa (latar), mode gelap",
+        "canonical": "#2A2440",
+        "tonalRamp": [
+          "#0D061E",
+          "#251F3A",
+          "#403B58",
+          "#5E5878",
+          "#7E7899",
+          "#9F99BC",
+          "#C5BFE3",
+          "#EEECFE"
+        ]
+      },
+      "st-kedaluwarsa-gelap": {
+        "role": "status",
+        "displayName": "Status Kedaluwarsa (teks), mode gelap",
+        "canonical": "#C2B9D8",
+        "tonalRamp": [
+          "#0E061B",
+          "#271F37",
+          "#433B54",
+          "#615874",
+          "#807895",
+          "#A299B7",
+          "#C7BEDE",
+          "#F0EBFF"
+        ]
+      },
+      "st-batal-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Dibatalkan (latar), mode gelap",
+        "canonical": "#26272E",
+        "tonalRamp": [
+          "#0A0B11",
+          "#22232A",
+          "#3E3F47",
+          "#5C5D65",
+          "#7B7D85",
+          "#9C9EA7",
+          "#C2C3CD",
+          "#ECEEF7"
+        ]
+      },
+      "st-batal-gelap": {
+        "role": "status",
+        "displayName": "Status Dibatalkan (teks), mode gelap",
+        "canonical": "#C1C5CE",
+        "tonalRamp": [
+          "#090B11",
+          "#21242B",
+          "#3C4047",
+          "#5A5E65",
+          "#7A7D85",
+          "#9B9EA7",
+          "#C0C4CD",
+          "#EAEEF8"
+        ]
+      },
+      "st-masalah-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Bermasalah (latar), mode gelap",
+        "canonical": "#3E1B1B",
+        "tonalRamp": [
+          "#1D0103",
+          "#3A1818",
+          "#593433",
+          "#7A5150",
+          "#9C716F",
+          "#BE918F",
+          "#E6B7B5",
+          "#FEE9E7"
+        ]
+      },
+      "st-masalah-gelap": {
+        "role": "status",
+        "displayName": "Status Bermasalah (teks), mode gelap",
+        "canonical": "#FF9C94",
+        "tonalRamp": [
+          "#1F0001",
+          "#4A0307",
+          "#721C1C",
+          "#953D3A",
+          "#BA5E58",
+          "#DF7F78",
+          "#FBADA6",
+          "#FFE9E6"
+        ]
+      },
+      "st-kembali-bg-gelap": {
+        "role": "status",
+        "displayName": "Status Dana Dikembalikan (latar), mode gelap",
+        "canonical": "#18244A",
+        "tonalRamp": [
+          "#020629",
+          "#152147",
+          "#2F3E66",
+          "#4C5C87",
+          "#6B7CA9",
+          "#8B9DCC",
+          "#B0C3F4",
+          "#E8EEFE"
+        ]
+      },
+      "st-kembali-gelap": {
+        "role": "status",
+        "displayName": "Status Dana Dikembalikan (teks), mode gelap",
+        "canonical": "#A4BCFF",
+        "tonalRamp": [
+          "#030034",
+          "#111D53",
+          "#2A3B74",
+          "#475A95",
+          "#657AB9",
+          "#859CDD",
+          "#AEC2FB",
+          "#E8EEFE"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "monogram": {
+        "displayName": "Monogram",
+        "purpose": "Monogram MDS di bilah atas, warna monogram; 24 px saat bilah ciut."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Judul halaman di ponsel, satu per layar."
+      },
+      "headline-lebar": {
+        "displayName": "Headline lebar",
+        "purpose": "Judul halaman mulai 900 px."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Judul bagian (Produk Unggulan, Semua Produk)."
+      },
+      "harga": {
+        "displayName": "Harga",
+        "purpose": "Harga jual; 22 px di kartu Unggulan, 28 px di Halaman Produk satu Varian."
+      },
+      "nama-produk": {
+        "displayName": "Nama Produk",
+        "purpose": "Nama Produk di kartu; 20 px di kartu Unggulan."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Teks umum dan isian; angka tabular."
+      },
+      "teks-panjang": {
+        "displayName": "Teks panjang",
+        "purpose": "Deskripsi Produk dan garansi, maks 65ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Label isian, chip, tombol kecil."
+      },
+      "label-kecil": {
+        "displayName": "Label kecil",
+        "purpose": "Stok Varian, meta, teks bantuan."
+      },
+      "mikro": {
+        "displayName": "Mikro",
+        "purpose": "Hemat, Habis, label navigasi bawah."
+      },
+      "angka-waktu": {
+        "displayName": "Angka waktu",
+        "purpose": "Hitung mundur QRIS; 48 px di layar lebar."
+      },
+      "mono-nomor": {
+        "displayName": "Mono nomor",
+        "purpose": "Nomor Pesanan sebagai kepala Halaman Pesanan (20 px di Halaman bayar, 13 px di Riwayat)."
+      },
+      "mono-item": {
+        "displayName": "Mono item",
+        "purpose": "Nilai Item stok."
+      }
+    },
+    "shadows": [
+      {
+        "name": "bayang",
+        "value": "0 8px 24px -12px rgba(42,31,77,.38)",
+        "purpose": "Kartu, panel, QR, kartu senja, segmen terpilih. Gelap: 0 10px 26px -12px rgba(0,0,0,.65)."
+      },
+      {
+        "name": "bayang-naik",
+        "value": "0 14px 32px -14px rgba(42,31,77,.5)",
+        "purpose": "Kartu di-hover dan toast. Gelap: 0 16px 34px -14px rgba(0,0,0,.75)."
+      },
+      {
+        "name": "bayang-bilah",
+        "value": "0 10px 24px -14px rgba(20,14,40,.7)",
+        "purpose": "Bilah atas saat ciut."
+      },
+      {
+        "name": "bayang-lekat",
+        "value": "0 -10px 20px -18px rgba(42,31,77,.45)",
+        "purpose": "Bilah lekat di atas navigasi bawah."
+      },
+      {
+        "name": "pendar-surya",
+        "value": "0 -2px 14px 3px rgba(235,201,103,.55)",
+        "purpose": "Pendar penanda tab aktif (desktop: 0 -2px 12px 2px rgba(235,201,103,.6))."
+      },
+      {
+        "name": "cincin-fokus",
+        "value": "outline: 3px solid var(--monogram); outline-offset: 2px",
+        "purpose": "Semua :focus-visible."
+      },
+      {
+        "name": "halo-isian",
+        "value": "0 0 0 3px color-mix(in srgb, var(--monogram) 30%, transparent)",
+        "purpose": "Isian saat fokus, bersama garis aksi."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-senja",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Easing standar: bilah ciut, kartu terangkat, navigasi bawah, bilah lekat, penanda surya, toast."
+      },
+      {
+        "name": "durasi-cepat",
+        "value": "150ms",
+        "purpose": "Warna tombol, garis isian, pilihan Varian."
+      },
+      {
+        "name": "durasi-sedang",
+        "value": "200-250ms",
+        "purpose": "Hover kartu dan chip, bilah atas 64 ke 52 px."
+      },
+      {
+        "name": "durasi-panel",
+        "value": "300ms",
+        "purpose": "Navigasi bawah sembunyi/muncul, bilah lekat, toast."
+      },
+      {
+        "name": "durasi-surya",
+        "value": "450ms",
+        "purpose": "Penanda surya bergeser antar-tab."
+      },
+      {
+        "name": "kurangi-gerakan",
+        "value": "prefers-reduced-motion: reduce -> transition/animation none",
+        "purpose": "Semua gerak mati."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "ponsel-min",
+        "value": "360px"
+      },
+      {
+        "name": "lebar",
+        "value": "900px"
+      },
+      {
+        "name": "isi-maks",
+        "value": "1120px"
+      }
+    ],
+    "pemandanganSenja": {
+      "t": {
+        "0": "sore keemasan",
+        "0.5": "matahari menyentuh punggung gunung",
+        "1": "malam berbintang"
+      },
+      "langit": {
+        "atas": [
+          [
+            0,
+            "#2A1F4D"
+          ],
+          [
+            0.5,
+            "#251B47"
+          ],
+          [
+            1,
+            "#0E0A22"
+          ]
+        ],
+        "tengah": [
+          [
+            0,
+            "#8C5A86"
+          ],
+          [
+            0.5,
+            "#7C4573"
+          ],
+          [
+            1,
+            "#22183D"
+          ]
+        ],
+        "bawah": [
+          [
+            0,
+            "#E7A07E"
+          ],
+          [
+            0.5,
+            "#DD7660"
+          ],
+          [
+            1,
+            "#3B2852"
+          ]
+        ],
+        "ufuk": [
+          [
+            0,
+            "#FCE3A8"
+          ],
+          [
+            0.5,
+            "#F6B467"
+          ],
+          [
+            1,
+            "#69405F"
+          ]
+        ]
+      },
+      "punggungJauhKeDekat": [
+        [
+          [
+            0,
+            "#EDB792"
+          ],
+          [
+            0.5,
+            "#D9907E"
+          ],
+          [
+            1,
+            "#57426F"
+          ]
+        ],
+        [
+          [
+            0,
+            "#D49A90"
+          ],
+          [
+            0.5,
+            "#BD7880"
+          ],
+          [
+            1,
+            "#47365F"
+          ]
+        ],
+        [
+          [
+            0,
+            "#B07C8D"
+          ],
+          [
+            0.5,
+            "#9A6280"
+          ],
+          [
+            1,
+            "#382B52"
+          ]
+        ],
+        [
+          [
+            0,
+            "#77506F"
+          ],
+          [
+            0.5,
+            "#683F66"
+          ],
+          [
+            1,
+            "#261D40"
+          ]
+        ],
+        [
+          [
+            0,
+            "#47305D"
+          ],
+          [
+            0.5,
+            "#3D2853"
+          ],
+          [
+            1,
+            "#17122B"
+          ]
+        ]
+      ],
+      "kabut": [
+        [
+          0,
+          "#F7D3A6"
+        ],
+        [
+          0.5,
+          "#EFA27A"
+        ],
+        [
+          1,
+          "#4B3863"
+        ]
+      ],
+      "punggung": "midpoint displacement 128 segmen, LCG benih 7+j*13, amplitudo T*(.26-k*.026), kekasaran .40+k*.055, kabut .52-k*.115, dua lapis terjauh blur 1.4/.7",
+      "pemakaian": {
+        "pita": "236/320px, 5 lapis, t .16 terang / .82 gelap, ufuk .5, mx .72, amp 1.25",
+        "tepi": "44/56px, 3 lapis, amp .5, kabut .8, tanpa matahari/bintang/awan, butiran .14",
+        "bayar": "136/280px radius 24, t = 1 - sisa/15 menit, kabut ke --permukaan, teks #2A1F4D atau putih menurut luminans (>=4.5:1)"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Tombol Utama",
+      "kind": "button",
+      "refersTo": "tombol-utama",
+      "description": "Satu aksi utama per layar; latar ungu aksi dengan teks putih.",
+      "html": "<button class=\"ds-btn-utama\">Bayar dengan QRIS</button>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-btn-utama{height:52px;padding:0 24px;border:0;border-radius:14px;background:var(--aksi);color:#fff;font:800 16px var(--font);display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:background .15s,transform .1s} .ds-btn-utama:hover{background:var(--aksi-tekan)} .ds-btn-utama:active{transform:scale(.98)} .ds-btn-utama:focus-visible{outline:3px solid var(--monogram);outline-offset:2px} .ds-btn-utama[disabled]{background:var(--permukaan-2);color:var(--tinta-redup);cursor:not-allowed}"
+    },
+    {
+      "name": "Tombol Garis",
+      "kind": "button",
+      "refersTo": "tombol-garis",
+      "description": "Aksi kedua: Batalkan, Pakai voucher, Daftar, WhatsApp.",
+      "html": "<button class=\"ds-btn-garis\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21 12a8 8 0 0 1-11.8 7L3 21l2-6.2A8 8 0 1 1 21 12z\"/></svg>Tanya lewat WhatsApp</button>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-btn-garis{height:52px;padding:0 24px;border:1.5px solid var(--garis);border-radius:14px;background:var(--permukaan);color:var(--tinta);font:800 16px var(--font);display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:border-color .15s,transform .1s} .ds-btn-garis:hover{border-color:var(--monogram)} .ds-btn-garis:active{transform:scale(.98)} .ds-btn-garis:focus-visible{outline:3px solid var(--monogram);outline-offset:2px}"
+    },
+    {
+      "name": "Isian",
+      "kind": "input",
+      "refersTo": "isian",
+      "description": "Isian 52 px dengan label di atas dan teks bantuan di bawah.",
+      "html": "<label class=\"ds-lbl\" for=\"ds-email\">Email</label><input class=\"ds-isian\" id=\"ds-email\" type=\"email\" placeholder=\"nama@email.com\"><p class=\"ds-bantuan\">Pastikan email benar, detail pesanan dikirim ke sini.</p>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-lbl{display:block;font:700 14px var(--font);color:var(--tinta);margin-bottom:8px} .ds-isian{width:100%;max-width:360px;height:52px;border:1.5px solid var(--garis);border-radius:14px;background:var(--permukaan);color:var(--tinta);padding:0 16px;font:400 16px var(--font);outline:0;transition:border-color .15s} .ds-isian:hover{border-color:var(--monogram)} .ds-isian:focus{border-color:var(--aksi);box-shadow:0 0 0 3px color-mix(in srgb,var(--monogram) 30%,transparent)} .ds-bantuan{font:400 13px var(--font);color:var(--tinta-redup);margin-top:8px}"
+    },
+    {
+      "name": "Chip Kategori",
+      "kind": "chip",
+      "refersTo": "chip-kategori",
+      "description": "Penyaring Kategori di Beranda; terpilih berlatar langit.",
+      "html": "<div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">Semua</button><button class=\"ds-chip\" aria-pressed=\"false\">Streaming</button><button class=\"ds-chip\" aria-pressed=\"false\">Musik</button></div>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-chips{display:flex;gap:8px} .ds-chip{height:40px;padding:0 16px;border-radius:999px;background:var(--permukaan);border:1.5px solid var(--garis);color:var(--tinta);font:700 14px var(--font);cursor:pointer;transition:background .2s,border-color .2s} .ds-chip:hover{border-color:var(--monogram)} .ds-chip:focus-visible{outline:3px solid var(--monogram);outline-offset:2px} .ds-chip[aria-pressed=true]{background:var(--langit);border-color:var(--langit);color:#fff}"
+    },
+    {
+      "name": "Kartu Produk",
+      "kind": "card",
+      "refersTo": "kartu-produk",
+      "description": "Kartu katalog: foto sampul, nama, harga Mulai, Harga normal dicoret, Hemat dari Varian sumber harga.",
+      "html": "<a class=\"ds-kartu\" href=\"#\"><div class=\"ds-foto\"><span>Y</span></div><div class=\"ds-nama\">YouTube Premium</div><div class=\"ds-harga\">Mulai Rp 55.000</div><div class=\"ds-banding\"><span class=\"ds-coret\">Rp 65.000</span><span class=\"ds-hemat\">Hemat 15%</span></div></a>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-kartu{display:flex;flex-direction:column;width:180px;background:var(--permukaan);border-radius:20px;padding:12px;box-shadow:var(--bayang);color:var(--tinta);text-decoration:none;font-family:var(--font);font-variant-numeric:tabular-nums;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s} .ds-kartu:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik)} .ds-kartu:focus-visible{outline:3px solid var(--monogram);outline-offset:2px} .ds-foto{height:112px;border-radius:16px;background:var(--aksi);color:#fff;display:flex;align-items:flex-end;padding:12px;font-weight:800;font-size:32px;line-height:1} .ds-nama{font-weight:800;font-size:16px;line-height:1.25;letter-spacing:-.01em;margin-top:12px} .ds-harga{font-weight:800;font-size:18px;letter-spacing:-.02em;margin-top:4px} .ds-banding{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px} .ds-coret{font-size:14px;font-weight:600;color:var(--tinta-redup);text-decoration:line-through} .ds-hemat{background:var(--persik);color:var(--persik-teks);font-weight:800;font-size:12px;padding:4px 8px;border-radius:999px}"
+    },
+    {
+      "name": "Pil Status Pesanan",
+      "kind": "chip",
+      "refersTo": "status-menunggu",
+      "description": "Enam status Pesanan: warna, ikon, dan label selalu bersama.",
+      "html": "<div class=\"ds-st-wadah\"><span class=\"ds-st ds-st-tunggu\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/></svg>Menunggu Pembayaran</span><span class=\"ds-st ds-st-selesai\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Selesai</span><span class=\"ds-st ds-st-kedaluwarsa\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9\"/></svg>Kedaluwarsa</span><span class=\"ds-st ds-st-batal\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m15 9-6 6M9 9l6 6\"/></svg>Dibatalkan</span><span class=\"ds-st ds-st-masalah\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z\"/><path d=\"M12 9v4M12 17h.01\"/></svg>Bermasalah</span><span class=\"ds-st ds-st-kembali\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 1 0 2.6-6.4\"/><path d=\"M3 4v5h5\"/></svg>Dana Dikembalikan</span></div>",
+      "css": " .ds-st-wadah{display:flex;flex-wrap:wrap;gap:8px} .ds-st{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 12px 0 8px;border-radius:999px;font:800 13px 'Manrope',system-ui,sans-serif;white-space:nowrap} .ds-st-tunggu{background:#FFF1C9;color:#6E4B00} .ds-st-selesai{background:#DAF3E5;color:#18603E} .ds-st-kedaluwarsa{background:#ECE7F2;color:#554D68} .ds-st-batal{background:#ECEDF0;color:#4E5460} .ds-st-masalah{background:#FCE0DD;color:#9C2820} .ds-st-kembali{background:#DFE8FC;color:#22448F}"
+    },
+    {
+      "name": "Navigasi Bawah dengan Penanda Surya",
+      "kind": "nav",
+      "refersTo": "navigasi-bawah",
+      "description": "Empat tab di ponsel; matahari terbit setengah lingkaran menandai tab aktif dan bergeser saat tab berpindah.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z\"/></svg>Beranda</a><a href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"2\"/></svg>Kategori</a><a href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 1 0 3-6.7L3 8\"/><path d=\"M3 3v5h5\"/><path d=\"M12 7v5l3 2\"/></svg>Riwayat</a><a href=\"#\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg>Akun</a><span class=\"ds-surya\" aria-hidden=\"true\"></span></nav>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-nav{position:relative;display:grid;grid-template-columns:repeat(4,1fr);width:390px;height:76px;margin-top:20px;background:var(--permukaan);border-top:1px solid var(--garis)} .ds-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:700 12px var(--font);color:var(--tinta-redup);text-decoration:none} .ds-nav a:hover{color:var(--tinta)} .ds-nav a:focus-visible{outline:3px solid var(--monogram);outline-offset:-3px;border-radius:10px} .ds-nav a[aria-current=page]{color:var(--tinta)} .ds-surya{position:absolute;top:-1px;left:0;width:25%;height:14px;pointer-events:none;transition:transform .45s cubic-bezier(.16,1,.3,1)} .ds-surya:before{content:'';position:absolute;left:50%;top:-13px;width:28px;height:14px;margin-left:-14px;border-radius:14px 14px 0 0;background:var(--matahari);box-shadow:0 -2px 14px 3px rgba(235,201,103,.55)} .ds-nav:has(a:nth-child(2):hover) .ds-surya{transform:translateX(100%)} .ds-nav:has(a:nth-child(3):hover) .ds-surya{transform:translateX(200%)} .ds-nav:has(a:nth-child(4):hover) .ds-surya{transform:translateX(300%)}"
+    },
+    {
+      "name": "Blok Item stok",
+      "kind": "custom",
+      "refersTo": "blok-item-stok",
+      "description": "Item stok di Halaman Pesanan: blok langit, nilai mono, tombol Salin per kolom.",
+      "html": "<div class=\"ds-item\"><div class=\"ds-item-baris\"><div><small>Email</small><span>miwe.akun07@contoh.id</span></div><button class=\"ds-salin\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15V5a2 2 0 0 1 2-2h10\"/></svg>Salin</button></div><div class=\"ds-item-baris\"><div><small>Password</small><span>Senja-7419</span></div><button class=\"ds-salin\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15V5a2 2 0 0 1 2-2h10\"/></svg>Salin</button></div></div>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-item{max-width:380px;background:var(--langit);color:var(--langit-teks);border-radius:24px;padding:8px 16px;font-family:var(--font)} .ds-item-baris{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--langit-garis)} .ds-item-baris:last-child{border-bottom:0} .ds-item-baris small{display:block;font-size:12px;font-weight:700;color:var(--langit-redup)} .ds-item-baris span{font-family:var(--mono);font-size:15px;font-weight:500;color:#fff;overflow-wrap:anywhere} .ds-salin{height:40px;padding:0 12px;border-radius:12px;background:var(--langit-2);color:var(--langit-teks);border:1.5px solid var(--langit-garis);font:800 14px var(--font);display:inline-flex;align-items:center;gap:8px;cursor:pointer} .ds-salin:hover{border-color:var(--monogram)} .ds-salin:focus-visible{outline:3px solid var(--monogram);outline-offset:2px} .ds-salin:active{background:#DAF3E5;color:#18603E;border-color:transparent}"
+    },
+    {
+      "name": "Pilihan Varian",
+      "kind": "custom",
+      "refersTo": "pilihan-varian",
+      "description": "Radiogroup Varian di Halaman Produk: Stok Varian, Harga jual, Harga normal dicoret, Hemat; Varian habis tidak bisa dipilih.",
+      "html": "<div class=\"ds-varian\" role=\"radiogroup\"><button class=\"ds-var\" role=\"radio\" aria-checked=\"true\"><span class=\"ds-radio\"></span><span><b>1 Bulan</b><small>Stok 12</small></span><span class=\"ds-r\"><b>Rp 50.000</b><s>Rp 75.000</s></span></button><button class=\"ds-var\" role=\"radio\" aria-checked=\"false\" disabled><span class=\"ds-radio\"></span><span><b>6 Bulan</b><small>Habis</small></span><span class=\"ds-r\"><b>Rp 250.000</b></span></button></div>",
+      "css": ":host{--langit:#2A1F4D;--langit-2:#3A2D66;--langit-garis:#5B4A92;--langit-teks:#E9E2FF;--langit-redup:#C7BDEA;--monogram:#8F61FF;--aksi:#7548F2;--aksi-tekan:#6236DE;--aksi-teks:#6A3FE0;--matahari:#EBC967;--persik:#ED9065;--persik-teks:#3A1D0E;--tanah:#F7F3FC;--permukaan:#FFFFFF;--permukaan-2:#EFE9FA;--garis:#E4DCF5;--tinta:#1E1838;--tinta-redup:#625879;--bayang:0 8px 24px -12px rgba(42,31,77,.38);--bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);--font:'Manrope',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace} .ds-varian{display:grid;gap:8px;max-width:380px} .ds-var{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:12px;background:var(--permukaan);border:2px solid var(--garis);border-radius:20px;padding:16px;text-align:left;color:var(--tinta);font-family:var(--font);font-variant-numeric:tabular-nums;cursor:pointer;transition:border-color .15s,background .15s} .ds-var:hover:not([disabled]){border-color:var(--monogram)} .ds-var:focus-visible{outline:3px solid var(--monogram);outline-offset:2px} .ds-var[aria-checked=true]{border-color:var(--aksi);background:color-mix(in srgb,var(--monogram) 9%,var(--permukaan))} .ds-var[disabled]{opacity:.6;cursor:not-allowed} .ds-var b{display:block;font-size:16px;font-weight:800} .ds-var small{font-size:13px;font-weight:700;color:var(--tinta-redup)} .ds-r{text-align:right} .ds-r b{font-size:18px} .ds-r s{display:block;font-size:14px;font-weight:600;color:var(--tinta-redup)} .ds-radio{width:24px;height:24px;border-radius:50%;border:2px solid var(--garis);display:grid;place-items:center} .ds-var[aria-checked=true] .ds-radio{border-color:var(--aksi)} .ds-var[aria-checked=true] .ds-radio:after{content:'';width:12px;height:12px;border-radius:50%;background:var(--aksi)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Langit Senja",
+    "overview": "Toko ini hidup di jam senja. Bagian atas setiap layar adalah langit malam-ungu yang memuat monogram MDS dan pemandangan gunung yang dilukis dengan kode. Di bawahnya terbentang tanah yang tenang: lavender pucat di mode terang, malam pekat di mode gelap. Di tanah itu kartu putih bersudut bulat melayang dengan bayangan ungu yang lembut. Matahari menjadi satu-satunya tanda yang bergerak di sistem ini. Ia menandai tab aktif, dan di Halaman bayar ia tenggelam mengikuti sisa waktu QRIS.\n\nKepadatannya kepadatan aplikasi belanja di ponsel. Ruangnya cukup untuk satu jempol: kontrol utama setinggi 52 px, chip 40 px, dan modul jarak 8 px. Huruf Manrope tebal dengan angka tabular membuat harga, Stok Varian, Total bayar, dan hitung mundur tidak menggeser tata letak saat angkanya berganti. Rasa percaya datang dari rincian yang jujur, bukan dari hiasan. Arah ini menolak grid kartu putih berheader ungu khas toko top-up, juga gradien ungu-neon yang berpendar.",
+    "keyCharacteristics": [
+      "Langit ungu malam di atas, tanah tenang di bawah, kartu bulat di antaranya.",
+      "Pemandangan senja buatan kode, tidak memakai foto. Gradien hanya ada di langit dan kabut pemandangan.",
+      "Matahari menjadi penanda tab aktif dan jam hitung mundur.",
+      "Manrope tebal dengan angka tabular. JetBrains Mono hanya untuk Item stok dan Nomor Pesanan.",
+      "Status selalu tampil sebagai warna, ikon, dan label sekaligus.",
+      "Mode terang dan gelap setara. Keduanya divalidasi."
+    ],
+    "rules": [
+      {
+        "name": "Aturan Dua Ungu",
+        "body": "Teks putih hanya diletakkan di atas `aksi` atau `aksi-tekan`, tidak pernah di atas `monogram`. `monogram` adalah warna merek untuk monogram dan huruf tampilan besar, bukan latar tombol.",
+        "section": "colors"
+      },
+      {
+        "name": "Aturan Gradien Senja",
+        "body": "Gradien hanya ada di langit dan kabut pemandangan senja. Teks, tombol, kartu, chip, dan panel selalu berwarna datar. Efek kaca (backdrop-filter, blur di belakang permukaan) tidak dipakai di mana pun.",
+        "section": "colors"
+      },
+      {
+        "name": "Aturan Mono untuk Data Salinan",
+        "body": "JetBrains Mono hanya dipakai untuk nilai Item stok dan Nomor Pesanan. Harga, tanggal, dan label tetap Manrope, termasuk tanggal yang bersebelahan dengan Nomor Pesanan di Riwayat.",
+        "section": "typography"
+      },
+      {
+        "name": "Aturan Angka Bersel Tetap",
+        "body": "Stok Varian, Harga jual, Total bayar, dan hitung mundur memakai angka tabular, jadi pergantian angka tidak menggeser tata letak.",
+        "section": "typography"
+      },
+      {
+        "name": "Aturan Bayangan Berjarak",
+        "body": "Bayangan kartu selalu lembut, lebar, dan menjauh dari tepi. Kartu tidak diberi garis tepi. Garis hanya untuk kontrol (isian, chip, tombol garis, pilihan Varian).",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do pakai token dari berkas ini lewat utilitas Tailwind atau `var(--…)`. Jangan menulis hex di komponen.",
+      "Do letakkan teks putih hanya di atas `aksi` (5,3:1) atau `aksi-tekan`, dan pakai `monogram` untuk monogram, cincin fokus, garis hover, dan huruf tampilan besar.",
+      "Do tampilkan setiap status Pesanan sebagai pil dengan warna, ikon lucide, dan label sekaligus.",
+      "Do pakai angka tabular untuk Harga jual, Stok Varian, Total bayar, dan hitung mundur.",
+      "Do pakai JetBrains Mono hanya untuk nilai Item stok dan Nomor Pesanan.",
+      "Do ambil Harga normal yang dicoret dan Hemat di kartu \"Mulai Rp X\" dari Varian ber-stok yang menjadi sumber harga itu (PRD §3.8).",
+      "Do letakkan aksi utama di bilah lekat berlatar `tanah` pekat di atas navigasi bawah pada layar di bawah 900 px.",
+      "Do matikan semua transisi dan animasi, termasuk pergeseran matahari dan penggulungan navigasi, di bawah `prefers-reduced-motion: reduce`.",
+      "Do jaga jarak dalam kelipatan 8 px, dan pakai 4 atau 12 px hanya di dalam komponen."
+    ],
+    "donts": [
+      "Don't letakkan teks putih di atas `monogram` (3,9:1), termasuk warna sorotan teks (`::selection`).",
+      "Don't pakai gradien di luar langit dan kabut pemandangan senja: tidak di teks, tombol, kartu, chip, atau panel.",
+      "Don't pakai efek kaca (backdrop-filter) di mana pun.",
+      "Don't ganti pemandangan senja dengan foto. Pemandangan itu dilukis dengan kode supaya tajam dan bisa menjadi jam hitung mundur.",
+      "Don't tampilkan angka stok gabungan di kartu Produk. Kartu hanya menampilkan \"Habis\" bila semua Varian aktif habis.",
+      "Don't tampilkan status hanya dengan warna.",
+      "Don't tambahkan testimoni, rating, jumlah Pembeli, atau logo layanan pihak ketiga. Nama layanan hanya muncul sebagai nama Produk.",
+      "Don't pakai bayangan keras bergeser, dan jangan beri garis tepi pada kartu."
+    ]
+  }
+}

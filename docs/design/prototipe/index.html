@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A1F4D">
+<title>MIWE Digital Store · Prototipe Langit Senja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Prototipe statis sistem desain. Data di halaman ini contoh buatan. */
+:root{
+  --langit:#2A1F4D; --langit-2:#3A2D66; --langit-garis:#5B4A92; --langit-teks:#E9E2FF; --langit-redup:#C7BDEA;
+  --monogram:#8F61FF; --aksi:#7548F2; --aksi-tekan:#6236DE; --aksi-teks:#6A3FE0;
+  --matahari:#EBC967; --persik:#ED9065; --persik-teks:#3A1D0E; --mauve:#9F5F70;
+  --tanah:#F7F3FC; --permukaan:#FFFFFF; --permukaan-2:#EFE9FA; --garis:#E4DCF5;
+  --tinta:#1E1838; --tinta-redup:#625879;
+  --bayang:0 8px 24px -12px rgba(42,31,77,.38); --bayang-naik:0 14px 32px -14px rgba(42,31,77,.5);
+  --st-tunggu-bg:#FFF1C9; --st-tunggu:#6E4B00;
+  --st-selesai-bg:#DAF3E5; --st-selesai:#18603E;
+  --st-kedaluwarsa-bg:#ECE7F2; --st-kedaluwarsa:#554D68;
+  --st-batal-bg:#ECEDF0; --st-batal:#4E5460;
+  --st-masalah-bg:#FCE0DD; --st-masalah:#9C2820;
+  --st-kembali-bg:#DFE8FC; --st-kembali:#22448F;
+  --r-chip:999px; --r-input:14px; --r-foto:16px; --r-kartu:20px; --r-besar:24px;
+  --font:'Manrope',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-mode="terang"]){
+  --langit:#231A42; --langit-2:#33295C; --langit-garis:#4E4180;
+  --aksi-teks:#B49BFF; --tanah:#15112A; --permukaan:#211A3D; --permukaan-2:#2C2350; --garis:#3A2F63;
+  --tinta:#F3EEFF; --tinta-redup:#B9AFD9; --bayang:0 10px 26px -12px rgba(0,0,0,.65); --bayang-naik:0 16px 34px -14px rgba(0,0,0,.75);
+  --st-tunggu-bg:#3B2F0E; --st-tunggu:#F2D27A; --st-selesai-bg:#11352A; --st-selesai:#7FDDB0;
+  --st-kedaluwarsa-bg:#2A2440; --st-kedaluwarsa:#C2B9D8; --st-batal-bg:#26272E; --st-batal:#C1C5CE;
+  --st-masalah-bg:#3E1B1B; --st-masalah:#FF9C94; --st-kembali-bg:#18244A; --st-kembali:#A4BCFF; color-scheme:dark}}
+:root[data-mode="gelap"]{
+  --langit:#231A42; --langit-2:#33295C; --langit-garis:#4E4180;
+  --aksi-teks:#B49BFF; --tanah:#15112A; --permukaan:#211A3D; --permukaan-2:#2C2350; --garis:#3A2F63;
+  --tinta:#F3EEFF; --tinta-redup:#B9AFD9; --bayang:0 10px 26px -12px rgba(0,0,0,.65); --bayang-naik:0 16px 34px -14px rgba(0,0,0,.75);
+  --st-tunggu-bg:#3B2F0E; --st-tunggu:#F2D27A; --st-selesai-bg:#11352A; --st-selesai:#7FDDB0;
+  --st-kedaluwarsa-bg:#2A2440; --st-kedaluwarsa:#C2B9D8; --st-batal-bg:#26272E; --st-batal:#C1C5CE;
+  --st-masalah-bg:#3E1B1B; --st-masalah:#FF9C94; --st-kembali-bg:#18244A; --st-kembali:#A4BCFF; color-scheme:dark}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--tanah);-webkit-text-size-adjust:100%}
+body{font-family:var(--font);color:var(--tinta);background:var(--tanah);font-size:16px;line-height:1.5;font-variant-numeric:tabular-nums;min-height:100vh;caret-color:var(--aksi)}
+::selection{background:var(--aksi);color:#fff}
+*{scrollbar-width:thin;scrollbar-color:var(--garis) transparent}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--monogram);outline-offset:2px;border-radius:10px}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.mono{font-family:var(--mono);font-variant-numeric:normal}
+
+/* ===== Bilah atas (langit) ===== */
+.bilah{position:sticky;top:0;z-index:30;background:var(--langit);color:var(--langit-teks);transition:box-shadow .25s,height .25s}
+.bilah-isi{height:64px;display:flex;align-items:center;gap:16px;padding:0 16px;max-width:1120px;margin:0 auto;transition:height .25s cubic-bezier(.16,1,.3,1)}
+.bilah.ciut .bilah-isi{height:52px}
+.bilah.ciut{box-shadow:0 10px 24px -14px rgba(20,14,40,.7)}
+.mds{font-weight:800;font-size:28px;letter-spacing:-.045em;color:var(--monogram);line-height:1;transition:font-size .25s}
+.bilah.ciut .mds{font-size:24px}
+.mds small{display:none;font-size:13px;font-weight:700;letter-spacing:0;color:var(--langit-redup);margin-left:8px}
+.bilah-kanan{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tbl-langit{height:40px;padding:0 16px;border-radius:var(--r-chip);border:1.5px solid var(--langit-garis);font-weight:700;font-size:14px;color:var(--langit-teks);display:inline-flex;align-items:center}
+.tbl-langit:hover{background:var(--langit-2)}
+.navatas{display:none}
+.judul-bilah{font-weight:800;font-size:18px;letter-spacing:-.01em}
+.kembali{width:40px;height:40px;margin-left:-8px;border-radius:12px;display:grid;place-items:center;color:var(--langit-teks)}
+.kembali:hover{background:var(--langit-2)}
+
+.pita{background:var(--langit);color:var(--langit-teks);position:relative;height:236px;padding:0 16px;overflow:hidden}
+.pita-isi{max-width:1120px;margin:0 auto;position:relative;z-index:1}
+.pemandangan{position:absolute;inset:0;overflow:hidden}
+.pemandangan svg{position:absolute;inset:0;display:block;width:100%;height:100%}
+.butir{position:absolute;inset:0;opacity:.28;mix-blend-mode:soft-light;pointer-events:none}
+.cari{display:flex;align-items:center;gap:8px;height:48px;border-radius:16px;background:rgba(24,17,48,.78);border:1px solid rgba(233,226,255,.14);padding:0 16px;color:var(--langit-redup)}
+.cari input{flex:1;background:none;border:0;outline:0;color:var(--langit-teks);font-size:16px;min-width:0}
+.cari input::placeholder{color:var(--langit-redup)}
+.cari:focus-within{outline:3px solid var(--monogram);outline-offset:2px}
+.tepi{display:block;position:relative;width:100%;height:44px;background:var(--langit);overflow:hidden}
+
+/* ===== Isi ===== */
+main{max-width:1120px;margin:0 auto;padding:8px 16px 112px}
+main:has(.lekat){padding-bottom:216px}
+h1{font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-.03em}
+h2{font-size:22px;line-height:1.2;font-weight:800;letter-spacing:-.02em;margin:32px 0 16px}
+.redup{color:var(--tinta-redup)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;margin:0 -16px;padding-inline:16px;scrollbar-width:none}
+.chip{flex:none;height:40px;padding:0 16px;border-radius:var(--r-chip);background:var(--permukaan);border:1.5px solid var(--garis);font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:8px;transition:background .2s,border-color .2s}
+.chip:hover{border-color:var(--monogram)}
+.chip[aria-pressed="true"]{background:var(--langit);border-color:var(--langit);color:#fff}
+.foto{border-radius:var(--r-foto);display:flex;align-items:flex-end;padding:12px;color:#fff;font-weight:800;letter-spacing:-.04em;position:relative;overflow:hidden}
+.foto span{font-size:32px;line-height:1}
+.w-mauve{background:var(--mauve)} .w-persik{background:var(--persik);color:var(--persik-teks)} .w-ungu{background:var(--aksi)} .w-langit{background:#4A3A80} .w-lavender{background:#CFC4EA;color:#2A1F4D}
+.unggul{display:grid;grid-template-columns:112px 1fr;gap:16px;background:var(--permukaan);border-radius:var(--r-besar);padding:16px;box-shadow:var(--bayang);transition:transform .2s,box-shadow .2s}
+.unggul .foto{min-height:120px}
+.kartu{background:var(--permukaan);border-radius:var(--r-kartu);padding:12px;box-shadow:var(--bayang);display:flex;flex-direction:column;transition:transform .2s cubic-bezier(.16,1,.3,1),box-shadow .2s}
+.kartu .foto{height:112px}
+@media (hover:hover){.kartu:hover,.unggul:hover{transform:translateY(-2px);box-shadow:var(--bayang-naik)}}
+.nama{font-weight:800;font-size:16px;letter-spacing:-.01em;line-height:1.25;margin-top:12px}
+.unggul .nama{font-size:20px;margin-top:0}
+.harga{font-weight:800;font-size:18px;letter-spacing:-.02em;margin-top:4px}
+.unggul .harga{font-size:22px;margin-top:8px}
+.banding{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.banding .coret{margin-left:0}
+.unggul-varian{display:none;list-style:none}
+.coret{font-size:14px;color:var(--tinta-redup);text-decoration:line-through;font-weight:600;margin-left:8px}
+.baris-kecil{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:13px;font-weight:700;color:var(--tinta-redup)}
+.hemat{background:var(--persik);color:var(--persik-teks);font-weight:800;font-size:12px;padding:4px 8px;border-radius:var(--r-chip)}
+.habis-lbl{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;color:var(--tinta-redup);background:var(--permukaan-2);padding:4px 8px;border-radius:var(--r-chip)}
+.kartu.habis .foto{filter:grayscale(.85);opacity:.55}
+.kartu.habis .harga{color:var(--tinta-redup)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.kosong{grid-column:1/-1;background:var(--permukaan);border-radius:var(--r-kartu);padding:24px;text-align:center}
+.kosong p{margin-top:8px}
+
+/* ===== Tombol & isian ===== */
+.btn{height:52px;border-radius:var(--r-input);padding:0 24px;font-weight:800;font-size:16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .1s}
+.btn:active{transform:scale(.98)}
+.btn-utama{background:var(--aksi);color:#fff}
+.btn-utama:hover{background:var(--aksi-tekan)}
+.btn-utama[disabled]{background:var(--permukaan-2);color:var(--tinta-redup);cursor:not-allowed}
+.btn-garis{border:1.5px solid var(--garis);color:var(--tinta);background:var(--permukaan)}
+.btn-garis:hover{border-color:var(--monogram)}
+.btn-lebar{width:100%}
+.btn-kecil{height:36px;padding:0 12px;font-size:14px;border-radius:10px}
+.lbl{display:block;font-weight:700;font-size:14px;margin-bottom:8px}
+.isian{width:100%;height:52px;border-radius:var(--r-input);border:1.5px solid var(--garis);background:var(--permukaan);padding:0 16px;font-size:16px;outline:0;transition:border-color .15s}
+.isian:focus{border-color:var(--aksi);box-shadow:0 0 0 3px color-mix(in srgb,var(--monogram) 30%,transparent)}
+.isian[aria-invalid="true"]{border-color:var(--st-masalah)}
+.bantuan{font-size:13px;color:var(--tinta-redup);margin-top:8px}
+.galat{font-size:13px;font-weight:700;color:var(--st-masalah);margin-top:8px;display:flex;gap:4px;align-items:center}
+.ok{font-size:13px;font-weight:700;color:var(--st-selesai);margin-top:8px}
+.gabung{display:flex;gap:8px}
+.gabung .isian{flex:1;text-transform:uppercase}
+.dua-kolom{display:grid;gap:24px}
+.panel{background:var(--permukaan);border-radius:var(--r-kartu);padding:16px;box-shadow:var(--bayang)}
+.panel+.panel{margin-top:16px}
+
+/* ===== Halaman Produk ===== */
+.produk-atas .foto{height:220px;border-radius:var(--r-besar)}
+.produk-atas .foto span{font-size:72px}
+.meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--tinta-redup);margin-top:8px}
+.kat-chip{background:var(--permukaan-2);color:var(--aksi-teks);padding:4px 10px;border-radius:var(--r-chip);font-weight:800}
+.varian{display:grid;gap:8px;margin-top:16px}
+.var{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:12px;background:var(--permukaan);border:2px solid var(--garis);border-radius:var(--r-kartu);padding:16px;text-align:left;transition:border-color .15s,background .15s}
+.var:hover:not([disabled]){border-color:var(--monogram)}
+.var[aria-checked="true"]{border-color:var(--aksi);background:color-mix(in srgb,var(--monogram) 9%,var(--permukaan))}
+.var[disabled]{opacity:.6;cursor:not-allowed}
+.radio{width:24px;height:24px;border-radius:50%;border:2px solid var(--garis);display:grid;place-items:center}
+.var[aria-checked="true"] .radio{border-color:var(--aksi)}
+.var[aria-checked="true"] .radio:after{content:"";width:12px;height:12px;border-radius:50%;background:var(--aksi)}
+.var b{font-size:16px;font-weight:800;display:block}
+.var .r{text-align:right}
+.var .r b{font-size:18px}
+.teks{font-size:15px;line-height:1.6;color:var(--tinta);max-width:65ch}
+.garansi{display:flex;gap:12px;align-items:flex-start}
+.garansi svg{color:var(--st-selesai)}
+.lekat{position:fixed;left:0;right:0;bottom:76px;z-index:20;padding:12px 16px 26px;background:var(--tanah);border-top:1px solid var(--garis);box-shadow:0 -10px 20px -18px rgba(42,31,77,.45);transition:bottom .3s cubic-bezier(.16,1,.3,1)}
+.lekat-isi{max-width:1120px;margin:0 auto;display:flex;gap:12px;align-items:center}
+.lekat .btn{flex:1}
+body.nav-sembunyi .lekat{bottom:0;padding-bottom:12px}
+
+/* ===== Halaman bayar (tanda khas) ===== */
+.senja{position:relative;height:136px;border-radius:var(--r-besar);overflow:hidden;background:var(--langit);isolation:isolate;box-shadow:var(--bayang)}
+.waktu{position:absolute;left:16px;top:16px;z-index:2}
+.waktu b{display:block;font-size:36px;line-height:1;font-weight:800;letter-spacing:-.03em}
+.waktu span{font-size:13px;font-weight:700}
+.qr-wadah{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:start;margin:16px 0}
+.qr{width:152px;height:152px;background:#fff;border-radius:16px;padding:12px;box-shadow:var(--bayang)}
+.qr svg{width:100%;height:100%;display:block}
+.contoh{font-size:12px;font-weight:700;color:var(--tinta-redup);margin-top:8px}
+.rinci{width:100%;border-collapse:collapse;font-size:15px}
+.rinci td{padding:8px 0}
+.rinci td:last-child{text-align:right;font-weight:700}
+.rinci tr.total td{border-top:1.5px dashed var(--garis);padding-top:16px;font-size:20px;font-weight:800}
+.total-langit{position:absolute;right:16px;top:16px;z-index:2;text-align:right}
+.total-langit span{display:block;font-size:13px;font-weight:700}
+.total-langit b{font-size:24px;font-weight:800;letter-spacing:-.02em}
+
+/* ===== Status ===== */
+.status{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 12px 0 8px;border-radius:var(--r-chip);font-size:13px;font-weight:800;white-space:nowrap}
+.status svg.i{width:16px;height:16px;stroke-width:2.4}
+.st-tunggu{background:var(--st-tunggu-bg);color:var(--st-tunggu)}
+.st-selesai{background:var(--st-selesai-bg);color:var(--st-selesai)}
+.st-kedaluwarsa{background:var(--st-kedaluwarsa-bg);color:var(--st-kedaluwarsa)}
+.st-batal{background:var(--st-batal-bg);color:var(--st-batal)}
+.st-masalah{background:var(--st-masalah-bg);color:var(--st-masalah)}
+.st-kembali{background:var(--st-kembali-bg);color:var(--st-kembali)}
+
+/* ===== Halaman Pesanan ===== */
+.nomor{font-family:var(--mono);font-weight:700;font-size:30px;letter-spacing:.01em;line-height:1.1;margin-top:8px;word-break:break-all}
+.item{background:var(--langit);color:var(--langit-teks);border-radius:var(--r-besar);padding:8px 16px;margin-top:16px}
+.item-baris{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:12px 0;border-bottom:1px solid var(--langit-garis)}
+.item-baris:last-child{border-bottom:0}
+.item-baris small{display:block;font-size:12px;font-weight:700;color:var(--langit-redup)}
+.item-baris .mono{font-size:15px;font-weight:500;color:#fff;overflow-wrap:anywhere}
+.salin{height:40px;padding:0 12px;border-radius:12px;background:var(--langit-2);color:var(--langit-teks);font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--langit-garis)}
+.salin:hover{border-color:var(--monogram)}
+.salin.tersalin{background:var(--st-selesai-bg);color:var(--st-selesai);border-color:transparent}
+.salin svg.i{width:18px;height:18px}
+.ajakan{border:2px solid var(--monogram)}
+
+/* ===== Riwayat ===== */
+.daftar{display:grid;gap:12px}
+.psn{background:var(--permukaan);border-radius:var(--r-kartu);padding:16px;box-shadow:var(--bayang);display:grid;grid-template-columns:1fr auto;gap:8px 16px;align-items:center}
+.psn .nm{grid-column:1/-1;font-weight:800}
+.psn .status{justify-self:start}
+.psn .mono{font-size:13px;font-weight:700;color:var(--tinta-redup)}
+.psn .tot{font-weight:800;text-align:right}
+
+/* ===== Akun ===== */
+.segmen{display:grid;grid-template-columns:repeat(3,1fr);background:var(--permukaan-2);border-radius:var(--r-input);padding:4px;gap:4px}
+.segmen button{height:44px;border-radius:10px;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--tinta-redup)}
+.segmen button[aria-checked="true"]{background:var(--permukaan);color:var(--tinta);box-shadow:var(--bayang)}
+.segmen svg.i{width:18px;height:18px}
+.tautan{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;font-weight:700;color:var(--aksi-teks);margin-top:24px}
+.tautan a{text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1.5px}
+
+/* ===== Navigasi bawah ===== */
+.navbawah{position:fixed;left:0;right:0;bottom:0;z-index:40;height:76px;padding-bottom:env(safe-area-inset-bottom);background:var(--permukaan);border-top:1px solid var(--garis);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+body.nav-sembunyi .navbawah{transform:translateY(100%)}
+.navbawah ul{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);height:100%;position:relative}
+.navbawah a{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;color:var(--tinta-redup)}
+.navbawah a[aria-current="page"]{color:var(--tinta)}
+.surya{position:absolute;top:-1px;left:0;width:25%;height:14px;pointer-events:none;transition:transform .45s cubic-bezier(.16,1,.3,1)}
+.surya:before{content:"";position:absolute;left:50%;top:-13px;width:28px;height:14px;margin-left:-14px;border-radius:14px 14px 0 0;background:var(--matahari);box-shadow:0 -2px 14px 3px rgba(235,201,103,.55)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,16px);opacity:0;z-index:50;background:var(--langit);color:#fff;font-weight:700;font-size:14px;padding:12px 16px;border-radius:var(--r-chip);box-shadow:var(--bayang-naik);transition:opacity .2s,transform .3s cubic-bezier(.16,1,.3,1);pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.sim{margin-top:16px;padding:12px;border:1.5px dashed var(--garis);border-radius:var(--r-input);font-size:13px;color:var(--tinta-redup)}
+.sim b{color:var(--tinta)}
+.sim .gabung{margin-top:8px;flex-wrap:wrap}
+
+/* ===== Layar lebar ===== */
+@media (min-width:900px){
+  .navbawah,.lekat .ket-ponsel{display:none}
+  .navatas{display:flex;gap:4px;margin-left:24px;position:relative}
+  .navatas a{height:40px;padding:0 16px;border-radius:12px;display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--langit-redup);position:relative}
+  .navatas a:hover{background:var(--langit-2);color:var(--langit-teks)}
+  .navatas a[aria-current="page"]{color:#fff}
+  .navatas .surya{top:auto;bottom:-12px;width:auto;height:10px}
+  .navatas .surya:before{width:20px;height:10px;margin-left:-10px;border-radius:10px 10px 0 0;top:0;box-shadow:0 -2px 12px 2px rgba(235,201,103,.6)}
+  .mds small{display:inline}
+  main{padding-bottom:64px}
+  .pita{height:320px}.tepi{height:56px}
+  .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+  .kartu .foto{height:148px}
+  .unggul{grid-template-columns:240px minmax(0,1fr) minmax(0,1fr);padding:24px;gap:24px;align-items:center}
+  .unggul-varian{display:grid;gap:12px;border-left:1px solid var(--garis);padding-left:24px}
+  .unggul-varian li{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:15px;font-weight:700}
+  .unggul-varian s{color:var(--tinta-redup);font-weight:600;margin-right:8px}
+  .unggul .foto{min-height:180px}
+  .dua-kolom{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px;align-items:start}
+  .produk-atas .foto{height:420px}
+  .lekat{position:static;background:none;border:0;padding:0;margin-top:24px}
+  .senja{height:280px}
+  .waktu b{font-size:48px}
+  .toast{bottom:32px}
+  h1{font-size:36px}
+}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-rumah" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-kategori" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-riwayat" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-akun" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+  <symbol id="i-cari" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-kiri" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></symbol>
+  <symbol id="i-salin" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+  <symbol id="i-cek" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-jam" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-pasir" viewBox="0 0 24 24"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9"/></symbol>
+  <symbol id="i-silang" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  <symbol id="i-awas" viewBox="0 0 24 24"><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-kembali" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></symbol>
+  <symbol id="i-unduh" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.8 7L3 21l2-6.2A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-perisai" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-matahari" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-bulan" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+  <symbol id="i-layar" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="3"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-tiket" viewBox="0 0 24 24"><path d="M3 9a3 3 0 0 0 0 6v3a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-3a3 3 0 0 1 0-6V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M13 5v2M13 11v2M13 17v2"/></symbol>
+</svg>
+
+<header class="bilah" id="bilah">
+  <div class="bilah-isi" id="bilah-isi"></div>
+</header>
+<div id="pita"></div>
+<main id="isi" tabindex="-1"></main>
+
+<nav class="navbawah" aria-label="Navigasi utama">
+  <ul>
+    <li><a href="#/" data-tab="0"><svg class="i"><use href="#i-rumah"/></svg>Beranda</a></li>
+    <li><a href="#/kategori" data-tab="1"><svg class="i"><use href="#i-kategori"/></svg>Kategori</a></li>
+    <li><a href="#/riwayat" data-tab="2"><svg class="i"><use href="#i-riwayat"/></svg>Riwayat</a></li>
+    <li><a href="#/akun" data-tab="3"><svg class="i"><use href="#i-akun"/></svg>Akun</a></li>
+    <span class="surya" id="surya-bawah" aria-hidden="true"></span>
+  </ul>
+</nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* Data contoh buatan untuk prototipe. */
+const PRODUK = [
+  {id:'netflix', nama:'Netflix Premium', kat:'Streaming', w:'w-mauve', unggul:true,
+   desk:'Akun sharing satu profil untuk menonton di satu perangkat. Item stok berisi email, password, dan nama profil.',
+   garansi:'Garansi 30 hari. Bila akun tidak bisa dipakai, hubungi WhatsApp MIWE dengan Nomor Pesanan.',
+   kolom:['Email','Password','Profil'],
+   varian:[{id:'1b',nama:'1 Bulan',harga:50000,normal:75000,stok:12},{id:'3b',nama:'3 Bulan',harga:135000,normal:null,stok:4},{id:'6b',nama:'6 Bulan',harga:250000,normal:null,stok:0}]},
+  {id:'spotify', nama:'Spotify Premium', kat:'Musik', w:'w-persik', varian:[{id:'1b',nama:'1 Bulan',harga:25000,normal:null,stok:8}],
+   desk:'Akun individu tanpa iklan.', garansi:'Garansi 30 hari.', kolom:['Email','Password']},
+  {id:'youtube', nama:'YouTube Premium', kat:'Streaming', w:'w-ungu', varian:[{id:'1b',nama:'1 Bulan',harga:20000,normal:null,stok:0},{id:'3b',nama:'3 Bulan',harga:55000,normal:65000,stok:3}],
+   desk:'Undangan keluarga YouTube Premium.', garansi:'Garansi 30 hari.', kolom:['Email','Password']},
+  {id:'canva', nama:'Canva Pro', kat:'Desain', w:'w-lavender', varian:[{id:'1b',nama:'1 Bulan',harga:15000,normal:null,stok:0}],
+   desk:'Undangan tim Canva Pro.', garansi:'Garansi 14 hari.', kolom:['Email']},
+  {id:'disney', nama:'Disney+ Hotstar', kat:'Streaming', w:'w-langit', varian:[{id:'1b',nama:'1 Bulan',harga:35000,normal:40000,stok:21}],
+   desk:'Akun sharing satu profil.', garansi:'Garansi 30 hari.', kolom:['Email','Password','Profil']},
+  {id:'genshin', nama:'Kode Redeem Game', kat:'Game', w:'w-mauve', varian:[{id:'60',nama:'60 Kristal',harga:16000,normal:null,stok:40}],
+   desk:'Kode redeem resmi, tukar di halaman isi ulang game.', garansi:'Kode dijamin belum pernah dipakai.', kolom:['Kode']},
+];
+const KATEGORI = ['Streaming','Musik','Desain','Game'];
+const VOUCHER = {HEMAT5:{jenis:'nominal',nilai:5000}, HEMAT10:{jenis:'persen',nilai:10,maks:10000,minimal:50000}};
+const RIWAYAT = [
+  {no:'MIWE-7K3P9Q', p:'Netflix Premium · 1 Bulan', t:'11 Nov 2026, 20.14 WIB', tot:45123, st:'Selesai'},
+  {no:'MIWE-H4ZR2M', p:'Spotify Premium · 1 Bulan', t:'11 Nov 2026, 19.52 WIB', tot:25211, st:'Menunggu Pembayaran'},
+  {no:'MIWE-QW8C5T', p:'YouTube Premium · 3 Bulan', t:'10 Nov 2026, 22.05 WIB', tot:55389, st:'Bermasalah'},
+  {no:'MIWE-B6NXJ3', p:'Canva Pro · 1 Bulan', t:'9 Nov 2026, 08.40 WIB', tot:15077, st:'Kedaluwarsa'},
+  {no:'MIWE-5PDK7A', p:'Disney+ Hotstar · 1 Bulan', t:'8 Nov 2026, 13.22 WIB', tot:35498, st:'Dibatalkan'},
+  {no:'MIWE-T9GM4E', p:'Netflix Premium · 3 Bulan', t:'2 Nov 2026, 21.10 WIB', tot:135302, st:'Dana Dikembalikan'},
+];
+const STATUS = {'Menunggu Pembayaran':['st-tunggu','i-jam'],'Selesai':['st-selesai','i-cek'],'Kedaluwarsa':['st-kedaluwarsa','i-pasir'],
+  'Dibatalkan':['st-batal','i-silang'],'Bermasalah':['st-masalah','i-awas'],'Dana Dikembalikan':['st-kembali','i-kembali']};
+
+const rp = n => 'Rp ' + n.toLocaleString('id-ID');
+const persenHemat = (normal, jual) => Math.floor((normal - jual) * 100 / normal);
+const tersedia = p => p.varian.filter(v => v.stok > 0);
+const ikon = id => `<svg class="i" aria-hidden="true"><use href="#${id}"/></svg>`;
+const badge = st => `<span class="status ${STATUS[st][0]}">${ikon(STATUS[st][1])}${st}</span>`;
+let kondisi = {kat:null, cari:'', produk:'netflix', varian:'1b', email:'', voucher:null, pesanan:null, timer:null, member:new URLSearchParams(location.search).get('member') === '1'};
+
+function hargaKartu(p){
+  const ada = tersedia(p), aktif = p.varian;
+  const sumber = ada.length ? ada : aktif;
+  const min = Math.min(...sumber.map(v => v.harga));
+  return {mulai: aktif.length > 1, harga: min, habis: !ada.length};
+}
+function kartu(p, besar){
+  const h = hargaKartu(p), ada = tersedia(p);
+  const v = (ada.length ? ada : p.varian).find(x => x.harga === h.harga);
+  const coret = v && v.normal ? `<span class="coret">${rp(v.normal)}</span>` : '';
+  const hemat = v && v.normal && !h.habis ? `<span class="hemat">Hemat ${persenHemat(v.normal, v.harga)}%</span>` : '';
+  const habis = h.habis ? `<span class="habis-lbl">Habis</span>` : '';
+  const banding = coret || hemat || habis ? `<div class="banding">${coret}${hemat}${habis}</div>` : '';
+  const label = `${h.mulai ? 'Mulai ' : ''}${rp(h.harga)}`;
+  if (besar) return `<a class="unggul" href="#/produk/${p.id}"><div class="foto ${p.w}" aria-hidden="true"><span>${p.nama[0]}</span></div>
+    <div><div class="nama">${p.nama}</div><div class="meta"><span class="kat-chip">${p.kat}</span><span>${p.varian.length} Varian</span></div>
+    <div class="harga">${label}</div>${banding}</div>
+    <ul class="unggul-varian">${p.varian.map(x => `<li><span>${x.nama}</span><span>${x.stok ? `${x.normal ? `<s>${rp(x.normal)}</s>` : ''}${rp(x.harga)}` : '<span class="habis-lbl">Habis</span>'}</span></li>`).join('')}</ul></a>`;
+  return `<a class="kartu${h.habis?' habis':''}" href="#/produk/${p.id}"><div class="foto ${p.w}" aria-hidden="true"><span>${p.nama[0]}</span></div>
+    <div class="nama">${p.nama}</div><div class="harga">${label}</div>${banding}</a>`;
+}
+
+/* ===== Bilah atas per halaman ===== */
+const NAVATAS = `<nav class="navatas" aria-label="Navigasi utama"><a href="#/" data-tab="0">Beranda</a><a href="#/kategori" data-tab="1">Kategori</a><a href="#/riwayat" data-tab="2">Riwayat</a><a href="#/akun" data-tab="3">Akun</a><span class="surya" id="surya-atas" aria-hidden="true"></span></nav>`;
+function bilahUtama(){
+  return `<a class="mds" href="#/" aria-label="MIWE Digital Store, beranda">MDS<small>MIWE Digital Store</small></a>${NAVATAS}
+    <div class="bilah-kanan">${kondisi.member ? `<a class="tbl-langit" href="#/akun" aria-label="Akun Budi">${ikon('i-akun')}Budi</a>` : `<a class="tbl-langit" href="#/akun">Masuk</a>`}</div>`;
+}
+function bilahDalam(judul, ke){
+  return `<a class="kembali" href="${ke}" aria-label="Kembali">${ikon('i-kiri')}</a><span class="judul-bilah">${judul}</span>${NAVATAS}`;
+}
+const GUNUNG = `<div class="pemandangan" data-pemandangan="pita" aria-hidden="true"></div>`;
+const TEPI = `<div class="tepi" aria-hidden="true"><div class="pemandangan" data-pemandangan="tepi"></div></div>`;
+
+/* ===== Halaman ===== */
+function beranda(){
+  const q = kondisi.cari.toLowerCase();
+  const daftar = PRODUK.filter(p => (!kondisi.kat || p.kat === kondisi.kat) && p.nama.toLowerCase().includes(q));
+  const unggul = PRODUK.filter(p => p.unggul);
+  return {
+    bilah: bilahUtama(),
+    pita: `<section class="pita">${GUNUNG}<div class="pita-isi"><label class="cari">${ikon('i-cari')}<span class="sr">Cari Produk</span>
+      <input id="cari" type="search" placeholder="Cari Netflix, Spotify, Canva…" value="${kondisi.cari}" autocomplete="off"></label></div></section>`,
+    isi: `<div class="chips" role="group" aria-label="Saring menurut Kategori">
+      <button class="chip" aria-pressed="${!kondisi.kat}" data-kat="">Semua</button>
+      ${KATEGORI.map(k => `<button class="chip" aria-pressed="${kondisi.kat===k}" data-kat="${k}">${k}</button>`).join('')}</div>
+      ${!kondisi.kat && !q ? `<h2>Produk Unggulan</h2>${unggul.map(p => kartu(p, true)).join('')}` : ''}
+      <h2>${kondisi.kat || (q ? 'Hasil pencarian' : 'Semua Produk')}</h2>
+      <div class="grid">${daftar.length ? daftar.map(p => kartu(p)).join('') :
+        `<div class="kosong"><b>Produk "${kondisi.cari}" belum ada</b><p class="redup">Coba nama lain, atau lihat semua Kategori.</p></div>`}</div>`
+  };
+}
+function kategori(){
+  return {bilah: bilahUtama(), pita: TEPI, isi: `<h1 style="margin-top:16px">Kategori</h1><div class="daftar" style="margin-top:24px">
+    ${KATEGORI.map(k => { const n = PRODUK.filter(p=>p.kat===k).length;
+      return `<a class="psn" href="#/" data-kat-ke="${k}"><b style="font-size:18px">${k}</b><span class="redup" style="text-align:right">${n} Produk</span></a>`; }).join('')}</div>`};
+}
+function produk(id){
+  const p = PRODUK.find(x => x.id === id) || PRODUK[0];
+  if (kondisi.produk !== p.id){ kondisi.produk = p.id; kondisi.varian = (tersedia(p)[0] || p.varian[0]).id; }
+  const v = p.varian.find(x => x.id === kondisi.varian);
+  const satu = p.varian.length === 1;
+  return {bilah: bilahDalam(p.nama, '#/'), pita: TEPI, isi: `<div class="dua-kolom produk-atas">
+    <div class="foto ${p.w}" aria-hidden="true"><span>${p.nama[0]}</span></div>
+    <div><h1>${p.nama}</h1><div class="meta"><a class="kat-chip" href="#/" data-kat-ke="${p.kat}">${p.kat}</a><span>${p.varian.length} Varian</span></div>
+      ${satu ? `<div class="harga" style="font-size:28px;margin-top:8px">${rp(v.harga)}</div><div class="baris-kecil" style="justify-content:flex-start">${v.stok?`Stok ${v.stok}`:'<span class="habis-lbl">Habis</span>'}</div>` :
+      `<h2 style="margin:24px 0 0;font-size:18px">Pilih Varian</h2><div class="varian" role="radiogroup" aria-label="Varian">${p.varian.map(x => `
+        <button class="var" role="radio" aria-checked="${x.id===kondisi.varian}" data-var="${x.id}" ${x.stok?'':'disabled aria-disabled="true"'}>
+          <span class="radio" aria-hidden="true"></span>
+          <span><b>${x.nama}</b><span class="redup" style="font-size:13px;font-weight:700">${x.stok?`Stok ${x.stok}`:'Habis'}</span></span>
+          <span class="r"><b>${rp(x.harga)}</b>${x.normal?`<span class="coret" style="display:block;margin:0">${rp(x.normal)}</span><span class="hemat">Hemat ${persenHemat(x.normal,x.harga)}%</span>`:''}</span>
+        </button>`).join('')}</div>`}
+      <div class="panel" style="margin-top:24px"><p class="teks">${p.desk}</p></div>
+      <div class="panel"><div class="garansi">${ikon('i-perisai')}<p class="teks">${p.garansi}</p></div>
+        <a class="btn btn-garis btn-kecil" style="margin-top:16px" href="#/produk/${p.id}">${ikon('i-chat')}Tanya lewat WhatsApp</a></div>
+      <div class="lekat"><div class="lekat-isi"><button class="btn btn-utama" id="beli" ${v.stok?'':'disabled'}>${v.stok?`Beli · ${rp(v.harga)}`:'Habis'}</button></div></div>
+    </div></div>`};
+}
+function potongan(harga){
+  const kode = kondisi.voucher; if (!kode) return 0;
+  const vc = VOUCHER[kode]; let dasar = vc.jenis === 'nominal' ? vc.nilai : Math.floor(harga * vc.nilai / 100);
+  if (vc.maks) dasar = Math.min(dasar, vc.maks);
+  return Math.max(0, Math.min(dasar, harga - 1000));
+}
+function checkout(){
+  const p = PRODUK.find(x => x.id === kondisi.produk), v = p.varian.find(x => x.id === kondisi.varian);
+  const pot = potongan(v.harga);
+  return {bilah: bilahDalam('Checkout', '#/produk/' + p.id), pita: TEPI, isi: `<div class="dua-kolom">
+    <form id="form-co" novalidate>
+      <h1 style="margin-top:16px">Checkout</h1>
+      <div class="panel" style="margin-top:24px"><b>${p.nama}</b> <span class="redup">· ${v.nama}</span></div>
+      <div style="margin-top:24px"><label class="lbl" for="email">Email</label>
+        <input class="isian" id="email" type="email" inputmode="email" autocomplete="email" placeholder="nama@email.com" value="${kondisi.email}" aria-describedby="email-ket">
+        <p class="bantuan" id="email-ket">Pastikan email benar, detail pesanan dikirim ke sini.</p></div>
+      <div style="margin-top:24px"><label class="lbl" for="voucher">Kode voucher <span class="redup" style="font-weight:600">(opsional)</span></label>
+        <div class="gabung"><input class="isian" id="voucher" autocomplete="off" placeholder="HEMAT5" value="${kondisi.voucher||''}">
+        <button class="btn btn-garis" type="button" id="pakai">Pakai</button></div><div id="voucher-ket" aria-live="polite">${kondisi.voucher?`<p class="ok">Voucher ${kondisi.voucher} dipakai: potongan ${rp(pot)}</p>`:''}</div></div>
+    </form>
+    <div><div class="panel" style="margin-top:24px"><table class="rinci"><tbody>
+      <tr><td>Harga jual</td><td>${rp(v.harga)}</td></tr>
+      <tr><td>Potongan voucher</td><td>${pot?'− '+rp(pot):'Rp 0'}</td></tr>
+      <tr><td>Kode unik</td><td class="redup">Rp 1–499, dari Qrispy</td></tr>
+      <tr class="total"><td>Perkiraan bayar</td><td>${rp(v.harga - pot)} + kode unik</td></tr></tbody></table></div>
+      <p class="bantuan">Dengan membayar, Anda menyetujui <a href="#/akun" style="color:var(--aksi-teks);text-decoration:underline;text-underline-offset:3px">Syarat &amp; Ketentuan</a>.</p>
+      <div class="lekat"><div class="lekat-isi"><button class="btn btn-utama" id="bayar" form="form-co" type="submit">Bayar dengan QRIS</button></div></div></div></div>`};
+}
+function qrContoh(){
+  let s = 7, rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280, n = 29, out = '';
+  const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#15112A"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#15112A"/>`;
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++){
+    const diFinder = (x < 8 && y < 8) || (x > n-9 && y < 8) || (x < 8 && y > n-9);
+    if (!diFinder && rnd() > .52) out += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges" role="img" aria-label="Gambar QR contoh"><g fill="#15112A">${out}</g>${finder(0,0)}${finder(n-7,0)}${finder(0,n-7)}</svg>`;
+}
+function bayar(){
+  if (!kondisi.pesanan) kondisi.pesanan = {no:'MIWE-7K3P9Q', produk:'Netflix Premium', varian:'1 Bulan', harga:50000, pot:5000, kode:123, kolom:['Email','Password','Profil'], email:'budi@contoh.id', batas:Date.now() + 900000 - (+new URLSearchParams(location.search).get('lewat') || 0) * 1000};
+  const o = kondisi.pesanan;
+  return {bilah: bilahDalam('Pembayaran', '#/checkout'), pita: TEPI, isi: `<div class="dua-kolom" style="margin-top:16px">
+    <div><div class="senja" id="senja"><div class="pemandangan" data-pemandangan="bayar" aria-hidden="true"></div>
+      <div class="waktu" id="waktu"><b id="sisa" aria-hidden="true">15:00</b><span id="sisa-ket">sisa waktu bayar</span></div>
+      <div class="total-langit"><span>Total bayar</span><b>${rp(o.harga - o.pot + o.kode)}</b></div></div>
+      <p class="sr" id="sisa-sr" aria-live="polite"></p>
+      <div class="qr-wadah"><div class="qr">${qrContoh()}</div>
+        <div><p style="font-weight:800;font-size:15px;line-height:1.35">Bayar sebelum matahari tenggelam</p><p class="bantuan">Simpan gambar QR, lalu buka dari aplikasi e-wallet di ponsel ini.</p><p class="contoh">QR contoh, bukan tagihan sungguhan</p></div></div></div>
+    <div><div class="panel"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap"><div><p class="redup" style="font-size:13px;font-weight:700">Nomor Pesanan</p><p class="mono" style="font-weight:700;font-size:20px">${o.no}</p></div>${badge('Menunggu Pembayaran')}</div>
+      <p style="margin-top:8px"><b>${o.produk}</b> <span class="redup">· ${o.varian}</span></p></div>
+      <div class="panel"><table class="rinci"><tbody>
+        <tr><td>Harga jual</td><td>${rp(o.harga)}</td></tr><tr><td>Potongan voucher</td><td>${o.pot?'− '+rp(o.pot):'Rp 0'}</td></tr>
+        <tr><td>Kode unik</td><td>${rp(o.kode)}</td></tr>
+        <tr class="total"><td>Total bayar</td><td>${rp(o.harga - o.pot + o.kode)}</td></tr></tbody></table></div>
+      <div class="lekat"><div class="lekat-isi"><button class="btn btn-garis" id="batal" style="flex:0 0 auto;padding:0 16px">Batalkan</button><button class="btn btn-utama" id="simpan-qr" style="white-space:nowrap">${ikon('i-unduh')}Simpan gambar QR</button></div></div>
+      <div class="sim"><b>Kontrol prototipe</b>, tidak ada di aplikasi:<div class="gabung">
+        <button class="btn btn-garis btn-kecil" id="sim-maju">Majukan 5 menit</button><button class="btn btn-garis btn-kecil" id="sim-bayar">Anggap sudah dibayar</button></div></div></div></div>`};
+}
+function pesanan(){
+  const o = kondisi.pesanan || {no:'MIWE-7K3P9Q', produk:'Netflix Premium', varian:'1 Bulan', harga:50000, pot:5000, kode:123, kolom:['Email','Password','Profil'], email:'budi@contoh.id'};
+  const nilai = {Email:'miwe.akun07@contoh.id', Password:'Senja-7419', Profil:'Profil 3', Kode:'GNS-8Q2K-L7PX'};
+  return {bilah: bilahDalam('Pesanan', '#/riwayat'), pita: TEPI, isi: `<div class="dua-kolom" style="margin-top:16px">
+    <div><p class="redup" style="font-size:14px;font-weight:700">Nomor Pesanan</p><p class="nomor">${o.no}</p>
+      <div style="margin-top:12px">${badge('Selesai')}</div>
+      <h2 style="margin-top:24px;margin-bottom:0">Item stok Anda</h2><p class="redup" style="font-size:14px">${o.produk} · ${o.varian}. Juga dikirim ke ${o.email}.</p>
+      <div class="item">${o.kolom.map(k => `<div class="item-baris"><div><small>${k}</small><span class="mono">${nilai[k]}</span></div>
+        <button class="salin" data-salin="${nilai[k]}" aria-label="Salin ${k}">${ikon('i-salin')}<span>Salin</span></button></div>`).join('')}</div></div>
+    <div><div class="panel ajakan"><h2 style="margin:0 0 8px;font-size:20px">Buat akun untuk menyimpan riwayat</h2>
+      <p class="redup" style="font-size:14px">Akun memakai email ${o.email}. Kami kirim Kode verifikasi ke email itu.</p>
+      <label class="lbl" for="pw" style="margin-top:16px">Password</label><input class="isian" id="pw" type="password" autocomplete="new-password" placeholder="Minimal 8 karakter">
+      <button class="btn btn-utama btn-lebar" style="margin-top:16px" id="buat-akun">Buat akun</button></div>
+      <div class="panel"><table class="rinci"><tbody><tr><td>Harga jual</td><td>${rp(o.harga)}</td></tr><tr><td>Potongan voucher</td><td>${o.pot?'− '+rp(o.pot):'Rp 0'}</td></tr>
+        <tr><td>Kode unik</td><td>${rp(o.kode)}</td></tr><tr class="total"><td>Total bayar</td><td>${rp(o.harga-o.pot+o.kode)}</td></tr></tbody></table></div>
+      <a class="btn btn-garis btn-lebar" style="margin-top:16px" href="#/pesanan">${ikon('i-chat')}Butuh bantuan? WhatsApp</a></div></div>`};
+}
+function riwayat(){
+  if (!kondisi.member) return {bilah: bilahUtama(), pita: TEPI, isi: `<div class="dua-kolom"><div><h1 style="margin-top:16px">Riwayat Pesanan</h1>
+    <p class="redup" style="margin-top:8px">Masuk sebagai Member untuk melihat semua Pesanan Anda, termasuk yang dibuat sebelum mendaftar.</p>
+    <div style="display:grid;gap:8px;margin-top:24px"><a class="btn btn-utama" href="#/akun">Masuk</a><a class="btn btn-garis" href="#/akun">Daftar</a></div></div>
+    <div class="panel" style="margin-top:16px"><div class="garansi">${ikon('i-tiket')}<div><b>Belum punya akun?</b>
+      <p class="teks" style="margin-top:4px">Setiap Pesanan Selesai punya Tautan Pesanan di email "Pesanan selesai". Buka tautan itu untuk melihat dan menyalin Item stok tanpa login.</p></div></div></div></div>
+    <div class="sim"><b>Kontrol prototipe</b>, tidak ada di aplikasi:<div class="gabung"><button class="btn btn-garis btn-kecil" id="sim-member">Lihat sebagai Member</button></div></div>`};
+  return {bilah: bilahUtama(), pita: TEPI, isi: `<h1 style="margin-top:16px">Riwayat Pesanan</h1><p class="redup" style="margin-top:4px">Terbaru di atas.</p>
+    <div class="daftar" style="margin-top:24px">${RIWAYAT.map(r => `<a class="psn" href="#/pesanan">${badge(r.st)}<span class="tot">${rp(r.tot)}</span>
+      <span class="nm">${r.p}</span><span class="mono" style="grid-column:1/-1">${r.no} <span class="redup" style="font-family:var(--font);font-weight:600">· ${r.t}</span></span></a>`).join('')}</div>`};
+}
+function akun(){
+  const m = bacaMode();
+  const atas = kondisi.member ? `<div><h1 style="margin-top:16px">Akun</h1><div class="panel" style="margin-top:24px"><p class="redup" style="font-size:13px;font-weight:700">Email</p><p style="font-weight:800">budi@contoh.id</p>
+      <p class="bantuan">Email tidak bisa diganti karena menautkan semua Pesanan Anda.</p></div>
+      <div style="display:grid;gap:8px;margin-top:16px"><a class="btn btn-garis" href="#/riwayat">${ikon('i-riwayat')}Riwayat Pesanan</a><a class="btn btn-garis" href="#/akun">Ganti password</a><button class="btn btn-garis" id="keluar">Keluar</button></div></div>`
+    : `<div><h1 style="margin-top:16px">Akun</h1>
+    <p class="redup" style="margin-top:8px">Masuk untuk melihat Riwayat Pesanan dan memakai Voucher khusus Member.</p>
+    <div style="display:grid;gap:8px;margin-top:24px"><a class="btn btn-utama" href="#/akun">Masuk</a><a class="btn btn-garis" href="#/akun">Daftar</a></div>
+    <div class="sim"><b>Kontrol prototipe</b>, tidak ada di aplikasi:<div class="gabung"><button class="btn btn-garis btn-kecil" id="sim-member">Masuk sebagai Member</button></div></div></div>`;
+  return {bilah: bilahUtama(), pita: TEPI, isi: `<div class="dua-kolom">${atas}
+    <div><h2>Tampilan</h2><div class="segmen" role="radiogroup" aria-label="Mode tampilan">
+      <button role="radio" aria-checked="${m==='perangkat'}" data-mode="perangkat">${ikon('i-layar')}Perangkat</button>
+      <button role="radio" aria-checked="${m==='terang'}" data-mode="terang">${ikon('i-matahari')}Terang</button>
+      <button role="radio" aria-checked="${m==='gelap'}" data-mode="gelap">${ikon('i-bulan')}Gelap</button></div>
+    <p class="bantuan">Pilihan ini hanya diingat di perangkat ini.</p>
+    <nav class="tautan" aria-label="Halaman hukum"><a href="#/akun">Syarat &amp; Ketentuan</a><a href="#/akun">Kebijakan Privasi</a></nav></div></div>`};
+}
+
+/* ===== Mode tampilan ===== */
+function bacaMode(){ try { return localStorage.getItem('miwe-mode') || 'perangkat'; } catch(e){ return 'perangkat'; } }
+function terapkanMode(m){
+  if (m === 'perangkat') document.documentElement.removeAttribute('data-mode'); else document.documentElement.setAttribute('data-mode', m);
+  try { localStorage.setItem('miwe-mode', m); } catch(e){}
+}
+terapkanMode(new URLSearchParams(location.search).get('mode') || bacaMode());
+
+/* ===== Hitung mundur sebagai matahari terbenam ===== */
+
+/* ===== Pemandangan senja realistis (dilukis dengan kode) =====
+   Lima lapis punggung gunung dari midpoint displacement, kabut di lembah,
+   langit bergradasi, matahari berpendar, bintang, dan butiran halus.
+   t: 0 = sore keemasan, 0.5 = matahari menyentuh punggung gunung, 1 = malam. */
+const hex = h => { h = h.replace('#',''); return [0,2,4].map(i => parseInt(h.slice(i,i+2),16)); };
+const keHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2,'0')).join('');
+const campur = (a, b, k) => keHex(hex(a).map((v, i) => v + (hex(b)[i] - v) * k));
+function antara(kunci, t){
+  // kunci: [[t, nilai], ...] dengan nilai warna hex atau angka
+  for (let i = 1; i < kunci.length; i++) if (t <= kunci[i][0]){
+    const [a, va] = kunci[i-1], [b, vb] = kunci[i], k = (t - a) / (b - a || 1);
+    return typeof va === 'number' ? va + (vb - va) * k : campur(va, vb, k);
+  }
+  return kunci[kunci.length-1][1];
+}
+const LANGIT = { // atas, tengah, bawah, cakrawala
+  atas:    [[0,'#2A1F4D'],[.5,'#251B47'],[1,'#0E0A22']],
+  tengah:  [[0,'#8C5A86'],[.5,'#7C4573'],[1,'#22183D']],
+  bawah:   [[0,'#E7A07E'],[.5,'#DD7660'],[1,'#3B2852']],
+  ufuk:    [[0,'#FCE3A8'],[.5,'#F6B467'],[1,'#69405F']],
+};
+const PUNGGUNG = [ // jauh -> dekat
+  [[0,'#EDB792'],[.5,'#D9907E'],[1,'#57426F']],
+  [[0,'#D49A90'],[.5,'#BD7880'],[1,'#47365F']],
+  [[0,'#B07C8D'],[.5,'#9A6280'],[1,'#382B52']],
+  [[0,'#77506F'],[.5,'#683F66'],[1,'#261D40']],
+  [[0,'#47305D'],[.5,'#3D2853'],[1,'#17122B']],
+];
+const KABUT = [[0,'#F7D3A6'],[.5,'#EFA27A'],[1,'#4B3863']];
+function acak(benih){ let s = benih >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+function punggung(lebar, dasar, amp, kasar, benih){
+  // Titik ujung dijaga dekat garis dasar dan path dilebarkan melewati tepi, supaya tidak ada baji di pinggir.
+  const n = 128, r = acak(benih), y = new Array(n + 1), tepi = lebar * .05, x = i => -tepi + i * (lebar + 2 * tepi) / n;
+  y[0] = dasar + (r() - .5) * amp * .3; y[n] = dasar + (r() - .5) * amp * .3;
+  for (let langkah = n, a = amp; langkah > 1; langkah /= 2, a *= kasar)
+    for (let i = langkah / 2; i < n; i += langkah) y[i] = (y[i - langkah/2] + y[i + langkah/2]) / 2 + (r() - .5) * a;
+  let d = `M${x(0).toFixed(1)} ${y[0].toFixed(1)}`;
+  for (let i = 1; i < n; i++){ const xm = (x(i) + x(i + 1)) / 2, ym = (y[i] + y[i+1]) / 2; d += ` Q${x(i).toFixed(1)} ${y[i].toFixed(1)} ${xm.toFixed(1)} ${ym.toFixed(1)}`; }
+  return {d: d + ` L${x(n).toFixed(1)} ${y[n].toFixed(1)} L${x(n).toFixed(1)}`, puncak: Math.min(...y)};
+}
+let butirURL = null;
+function butir(){
+  if (butirURL) return butirURL;
+  const c = document.createElement('canvas'); c.width = c.height = 96; const g = c.getContext('2d'), img = g.createImageData(96, 96);
+  for (let i = 0; i < img.data.length; i += 4){ const v = 110 + Math.random() * 145; img.data[i] = img.data[i+1] = img.data[i+2] = v; img.data[i+3] = 255; }
+  g.putImageData(img, 0, 0); return (butirURL = c.toDataURL());
+}
+let nomorLukis = 0;
+function lukis(el, o){
+  if (!el) return '#2A1F4D';
+  const L = el.clientWidth || 390, T = el.clientHeight || 200, t = o.t, id = 'pm' + (el.dataset.id || (el.dataset.id = ++nomorLukis));
+  const css = getComputedStyle(document.documentElement);
+  const atas = o.atas || antara(LANGIT.atas, t);
+  const ufukY = T * (o.ufuk || .62);
+  const lapis = o.lapis || 5, mulai = 5 - lapis;
+  let ridges = '';
+  for (let k = 0; k < lapis; k++){
+    const j = mulai + k, warna = antara(PUNGGUNG[j], t), kabut = antara(KABUT, t);
+    const dasar = ufukY + (T - ufukY) * (k / lapis) * .82 + T * .03, amp = T * (.26 - k * .026) * (o.amp || 1);
+    const kabutLapis = .52 - k * .115, kasar = .4 + k * .055;  // jauh: halus & berkabut; dekat: kasar & bersiluet
+    const {d} = punggung(L, dasar, amp, kasar, 7 + j * 13 + (o.benih || 0));
+    ridges += `<linearGradient id="${id}r${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${warna}"/><stop offset=".5" stop-color="${campur(warna, kabut, kabutLapis * .45)}"/><stop offset="1" stop-color="${campur(warna, kabut, kabutLapis)}"/></linearGradient>
+      <path d="${d} ${T} L${-L * .05} ${T}Z" fill="url(#${id}r${k})" ${k < 2 ? `filter="url(#${id}h${k})"` : ''}/>`;
+  }
+  const sunY = antara([[0, .3], [.5, .6], [.78, .9], [1, 1.1]], t) * T, sunR = Math.max(12, Math.min(T * .085, 34)), sunX = L * (o.mx || .7);
+  const sinar = antara([[0, .95], [.5, .85], [.85, .25], [1, 0]], t);
+  let bintang = '';
+  if (o.bintang !== false && t > .6){ const r = acak(91), a = Math.min(1, (t - .6) / .3);
+    for (let i = 0; i < 46; i++) bintang += `<circle cx="${(r() * L).toFixed(1)}" cy="${(r() * T * .45).toFixed(1)}" r="${(r() * .9 + .35).toFixed(2)}" fill="#fff" opacity="${(a * (r() * .6 + .25)).toFixed(2)}"/>`; }
+  const kabutAkhir = o.kabutKe || css.getPropertyValue('--tanah').trim();
+  el.innerHTML = `<svg viewBox="0 0 ${L} ${T}" preserveAspectRatio="none">
+    <defs><linearGradient id="${id}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${atas}"/><stop offset=".42" stop-color="${antara(LANGIT.tengah, t)}"/>
+      <stop offset=".78" stop-color="${antara(LANGIT.bawah, t)}"/><stop offset="1" stop-color="${antara(LANGIT.ufuk, t)}"/></linearGradient>
+      <radialGradient id="${id}g"><stop offset="0" stop-color="#FFF4CF" stop-opacity="${sinar}"/><stop offset=".25" stop-color="#FFD98C" stop-opacity="${sinar * .55}"/><stop offset="1" stop-color="#FFB66B" stop-opacity="0"/></radialGradient>
+      <radialGradient id="${id}u" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE0A0" stop-opacity="${sinar * .55}"/><stop offset="1" stop-color="#FFE0A0" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${id}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${kabutAkhir}" stop-opacity="0"/><stop offset="1" stop-color="${kabutAkhir}"/></linearGradient>
+      <filter id="${id}h0"><feGaussianBlur stdDeviation="1.4"/></filter><filter id="${id}h1"><feGaussianBlur stdDeviation=".7"/></filter>
+      <filter id="${id}a" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="${Math.max(2, T * .012)}"/></filter></defs>
+    <rect width="${L}" height="${T}" fill="url(#${id}l)"/>${bintang}
+    <ellipse cx="${sunX}" cy="${ufukY}" rx="${L * .75}" ry="${T * .34}" fill="url(#${id}u)"/>
+    ${o.awan === false ? '' : awan(L, T, ufukY, sunY, t, id)}
+    ${o.matahari === false ? '' : `<circle cx="${sunX}" cy="${sunY}" r="${sunR * 6}" fill="url(#${id}g)"/><circle cx="${sunX}" cy="${sunY}" r="${sunR}" fill="#FFF1C4" opacity="${Math.max(0, Math.min(1, sinar + .1))}"/>`}
+    ${ridges}<rect y="${T * (o.kabut || .84)}" width="${L}" height="${T * (1 - (o.kabut || .84)) + 1}" fill="url(#${id}k)"/></svg><div class="butir" style="background-image:url(${butir()});opacity:${o.butir ?? .28}"></div>`;
+  return atas;
+}
+function awan(L, T, ufukY, sunY, t, id){
+  // Guratan awan tipis: elips kabur yang menyala hangat dekat matahari.
+  const r = acak(37), warna = antara([[0,'#FFE9C2'],[.5,'#FFC59A'],[1,'#8E6A8E']], t), terang = antara([[0,.55],[.5,.5],[1,.22]], t);
+  let out = '';
+  for (let i = 0; i < 6; i++){
+    const y = ufukY - T * (.06 + r() * .32), lebar = L * (.18 + r() * .32), x = r() * L;
+    out += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${(lebar / 2).toFixed(1)}" ry="${(T * (.006 + r() * .012)).toFixed(1)}" fill="${warna}" opacity="${(terang * (.4 + r() * .6)).toFixed(2)}" filter="url(#${id}a)"/>`;
+  }
+  return out;
+}
+function gelapKah(){ const m = document.documentElement.getAttribute('data-mode'); return m === 'gelap' || (m !== 'terang' && matchMedia('(prefers-color-scheme: dark)').matches); }
+function lukisSemua(){
+  const g = gelapKah(), langit = getComputedStyle(document.documentElement).getPropertyValue('--langit').trim();
+  lukis(document.querySelector('[data-pemandangan="pita"]'), {t: g ? .82 : .16, atas: langit, ufuk: .5, mx: .72, amp: 1.25});
+  lukis(document.querySelector('[data-pemandangan="tepi"]'), {t: g ? .82 : .16, atas: langit, ufuk: .52, lapis: 3, amp: .5, kabut: .8, mx: .7, matahari: false, bintang: false, awan: false, butir: .14});
+}
+
+const lum = c => { const s = c.map(v => { v /= 255; return v <= .03928 ? v/12.92 : ((v+.055)/1.055) ** 2.4; }); return .2126*s[0] + .7152*s[1] + .0722*s[2]; };
+function jalankanTimer(){
+  clearInterval(kondisi.timer);
+  const tick = () => {
+    const o = kondisi.pesanan; const el = document.getElementById('sisa'); if (!o || !el) return clearInterval(kondisi.timer);
+    const sisa = Math.max(0, o.batas - Date.now()), t = 1 - sisa / 900000;
+    const mm = String(Math.floor(sisa / 60000)).padStart(2, '0'), ss = String(Math.floor(sisa % 60000 / 1000)).padStart(2, '0');
+    el.textContent = `${mm}:${ss}`;
+    const scene = document.querySelector('[data-pemandangan="bayar"]');
+    const atas = lukis(scene, {t, matahari:true, bintang:true, kabutKe:getComputedStyle(document.documentElement).getPropertyValue('--permukaan').trim()});
+    document.getElementById('senja').style.color = (lum(hex(atas)) + .05) / .069 >= 4.5 ? '#2A1F4D' : '#FFFFFF';
+    const sr = document.getElementById('sisa-sr'), menit = Math.ceil(sisa / 60000);
+    if (sr.dataset.m !== String(menit)) { sr.dataset.m = menit; sr.textContent = `Sisa waktu bayar ${menit} menit`; }
+    if (sisa === 0){ clearInterval(kondisi.timer); document.getElementById('sisa-ket').textContent = 'QRIS kedaluwarsa'; }
+  };
+  tick(); kondisi.timer = setInterval(tick, 1000);
+}
+
+/* ===== Router ===== */
+const RUTE = [[/^#\/?$/, beranda, 0], [/^#\/kategori/, kategori, 1], [/^#\/produk\/(\w+)/, produk, 0], [/^#\/checkout/, checkout, 0],
+  [/^#\/bayar/, bayar, 0], [/^#\/pesanan/, pesanan, 2], [/^#\/riwayat/, riwayat, 2], [/^#\/akun/, akun, 3]];
+function tampilkan(){
+  const h = location.hash || '#/';
+  const [re, fn, tab] = RUTE.find(([r]) => r.test(h)) || RUTE[0];
+  const m = h.match(re), hal = fn(m && m[1]);
+  document.getElementById('bilah-isi').innerHTML = hal.bilah;
+  document.getElementById('pita').innerHTML = hal.pita;
+  document.getElementById('isi').innerHTML = hal.isi;
+  document.querySelectorAll('[data-tab]').forEach(a => { if (+a.dataset.tab === tab) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  geserSurya(tab);
+  lukisSemua();
+  if (/^#\/bayar/.test(h)) jalankanTimer(); else clearInterval(kondisi.timer);
+  document.body.classList.remove('nav-sembunyi');
+  if (!/^#\/?$/.test(h) || !kondisi.cari) window.scrollTo(0, 0);
+  pasang();
+}
+function geserSurya(tab){
+  const b = document.getElementById('surya-bawah'); b.style.transform = `translateX(${tab * 100}%)`;
+  const a = document.getElementById('surya-atas'), link = document.querySelector(`.navatas [data-tab="${tab}"]`);
+  if (a && link){ a.style.left = '0px'; a.style.width = link.offsetWidth + 'px'; a.style.transform = `translateX(${link.offsetLeft}px)`; }
+}
+
+/* ===== Interaksi ===== */
+function toast(t){ const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1800); }
+function pasang(){
+  const cari = document.getElementById('cari');
+  if (cari) cari.addEventListener('input', e => { kondisi.cari = e.target.value; const pos = e.target.selectionStart; tampilkan(); const c = document.getElementById('cari'); c.focus(); c.setSelectionRange(pos, pos); });
+  document.querySelectorAll('[data-kat]').forEach(b => b.onclick = () => { kondisi.kat = b.dataset.kat || null; tampilkan(); });
+  document.querySelectorAll('[data-kat-ke]').forEach(a => a.onclick = () => { kondisi.kat = a.dataset.katKe; });
+  document.querySelectorAll('[data-var]').forEach(b => b.onclick = () => { kondisi.varian = b.dataset.var; tampilkan(); });
+  const beli = document.getElementById('beli'); if (beli) beli.onclick = () => { location.hash = '#/checkout'; };
+  const pakai = document.getElementById('pakai');
+  if (pakai) pakai.onclick = () => {
+    const kode = document.getElementById('voucher').value.trim().toUpperCase(), ket = document.getElementById('voucher-ket');
+    kondisi.email = document.getElementById('email').value;
+    if (!kode){ kondisi.voucher = null; return tampilkan(); }
+    if (!VOUCHER[kode]){ ket.innerHTML = `<p class="galat">${ikon('i-awas')}Kode voucher tidak ditemukan</p>`; document.getElementById('voucher').setAttribute('aria-invalid','true'); return; }
+    const p = PRODUK.find(x => x.id === kondisi.produk), v = p.varian.find(x => x.id === kondisi.varian), vc = VOUCHER[kode];
+    if (vc.minimal && v.harga < vc.minimal){ ket.innerHTML = `<p class="galat">${ikon('i-awas')}Minimal pembelian ${rp(vc.minimal)}</p>`; return; }
+    kondisi.voucher = kode; tampilkan();
+  };
+  const form = document.getElementById('form-co');
+  if (form) form.onsubmit = e => {
+    e.preventDefault(); const em = document.getElementById('email'); kondisi.email = em.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(kondisi.email)){
+      em.setAttribute('aria-invalid','true'); document.getElementById('email-ket').outerHTML = `<p class="galat" id="email-ket">${ikon('i-awas')}Tulis email yang lengkap, misalnya nama@email.com</p>`; em.focus(); return; }
+    const p = PRODUK.find(x => x.id === kondisi.produk), v = p.varian.find(x => x.id === kondisi.varian);
+    kondisi.pesanan = {no:'MIWE-7K3P9Q', produk:p.nama, varian:v.nama, harga:v.harga, pot:potongan(v.harga), kode:123, kolom:p.kolom, email:kondisi.email, batas:Date.now() + 900000};
+    location.hash = '#/bayar';
+  };
+  const ids = {'simpan-qr':() => toast('Gambar QR tersimpan ke galeri'), 'batal':() => { kondisi.pesanan = null; toast('Pesanan dibatalkan'); location.hash = '#/'; },
+    'sim-maju':() => { kondisi.pesanan.batas -= 300000; }, 'sim-member':() => { kondisi.member = true; tampilkan(); toast('Masuk sebagai Member'); }, 'keluar':() => { kondisi.member = false; tampilkan(); toast('Anda sudah keluar'); }, 'sim-bayar':() => { location.hash = '#/pesanan'; toast('Pembayaran masuk'); },
+    'buat-akun':() => { const pw = document.getElementById('pw'); if (pw.value.length < 8){ pw.setAttribute('aria-invalid','true'); toast('Password minimal 8 karakter'); pw.focus(); } else toast('Kode verifikasi dikirim ke email'); }};
+  Object.entries(ids).forEach(([id, f]) => { const el = document.getElementById(id); if (el) el.onclick = f; });
+  document.querySelectorAll('[data-salin]').forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.salin); } catch(e){}
+    b.classList.add('tersalin'); b.querySelector('span').textContent = 'Tersalin'; b.querySelector('use').setAttribute('href', '#i-cek');
+    setTimeout(() => { b.classList.remove('tersalin'); b.querySelector('span').textContent = 'Salin'; b.querySelector('use').setAttribute('href', '#i-salin'); }, 1600);
+  });
+  document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { terapkanMode(b.dataset.mode); tampilkan(); });
+}
+
+/* ===== Bilah mengecil dan navigasi bawah bersembunyi saat digulir ===== */
+let yLalu = window.scrollY;
+window.addEventListener('scroll', () => {
+  const y = window.scrollY, turun = y > yLalu;
+  document.getElementById('bilah').classList.toggle('ciut', y > 24);
+  if (Math.abs(y - yLalu) > 6){ document.body.classList.toggle('nav-sembunyi', turun && y > 120); yLalu = y; }
+}, {passive:true});
+window.addEventListener('hashchange', tampilkan);
+let jedaUbah; window.addEventListener('resize', () => { clearTimeout(jedaUbah); jedaUbah = setTimeout(() => { lukisSemua(); const b = document.querySelector('[data-pemandangan="bayar"]'); if (b) b.innerHTML = ''; }, 120); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', lukisSemua);
+window.addEventListener('resize', () => geserSurya(+(document.querySelector('[data-tab][aria-current]')||{dataset:{tab:0}}).dataset.tab));
+tampilkan();
+</script>
+</body>
+</html>
