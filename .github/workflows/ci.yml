@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled, ready_for_review]
+  push:
+    branches: [main]
+
+# A new push, edit or label on the same PR cancels the older run. Runs on main are never cancelled.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  kebersihan-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: PR must close one issue
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if ! printf '%s' "$BODY" | grep -Eiq '(closes|fixes|resolves) #[0-9]+'; then
+            echo "::error::The PR description must contain 'Closes #<issue number>'."
+            exit 1
+          fi
+      - name: PR size warning
+        env:
+          ADD: ${{ github.event.pull_request.additions }}
+          DEL: ${{ github.event.pull_request.deletions }}
+        run: |
+          TOTAL=$((ADD + DEL))
+          if [ "$TOTAL" -gt 400 ]; then
+            echo "::warning::This PR changes $TOTAL lines (more than 400). Make sure it holds one ticket only."
+          fi
+      # The protected list and the label name come from the base branch, so a PR cannot loosen the check for itself.
+      - name: Protected paths need the owner-approved label
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          CONFIG=$(git show "origin/$BASE:.github/jalankan-tiket.json" 2>/dev/null || cat .github/jalankan-tiket.json)
+          LABEL=$(printf '%s' "$CONFIG" | jq -r '.labels.ownerApproved')
+          PATTERNS=$(git show "origin/$BASE:.github/protected-paths.txt" 2>/dev/null || cat .github/protected-paths.txt)
+          CHANGED=$(git diff --name-only "origin/$BASE...HEAD")
+          PROTECTED=""
+          while IFS= read -r p; do
+            case "$p" in ''|'#'*) continue;; esac
+            while IFS= read -r f; do
+              case "$f" in "$p"*) PROTECTED="$PROTECTED$f"$'\n';; esac
+            done <<< "$CHANGED"
+          done <<< "$PATTERNS"
+          if [ -n "$PROTECTED" ]; then
+            if ! jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" | grep -qxF "$LABEL"; then
+              echo "::error::This PR changes protected paths without the '$LABEL' label:"
+              printf '%s' "$PROTECTED"
+              exit 1
+            fi
+          fi
+      # Without the owner-approved label the allowlist comes from the base branch. With it, the PR's own list counts.
+      - name: Dependencies must be on the allowlist
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          [ -f package.json ] || exit 0
+          CONFIG=$(git show "origin/$BASE:.github/jalankan-tiket.json" 2>/dev/null || cat .github/jalankan-tiket.json)
+          LABEL=$(printf '%s' "$CONFIG" | jq -r '.labels.ownerApproved')
+          if jq -r '.pull_request.labels[].name' "$GITHUB_EVENT_PATH" | grep -qxF "$LABEL"; then
+            ALLOW=$(cat .github/dependency-allowlist.txt)
+          else
+            ALLOW=$(git show "origin/$BASE:.github/dependency-allowlist.txt" 2>/dev/null || cat .github/dependency-allowlist.txt)
+          fi
+          FAIL=0
+          for dep in $(jq -r '((.dependencies // {}) + (.devDependencies // {})) | keys[]' package.json); do
+            OK=0
+            while IFS= read -r pat; do
+              case "$pat" in ''|'#'*) continue;; esac
+              case "$dep" in $pat) OK=1; break;; esac
+            done <<< "$ALLOW"
+            if [ "$OK" -eq 0 ]; then echo "::error::Dependency outside the allowlist: $dep"; FAIL=1; fi
+          done
+          exit $FAIL
+
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - id: check
+        run: |
+          if [ -f package.json ]; then echo "ready=1" >> "$GITHUB_OUTPUT"
+          else echo "::notice::No package.json yet: waiting for the foundation ticket."; fi
+      - name: Load the test environment from .env.ci
+        if: steps.check.outputs.ready == '1'
+        run: |
+          # .env.ci points at the project's local PostgreSQL port. Here it must point at the postgres service above.
+          if [ -f .env.ci ]; then
+            sed -i -E "s#@localhost:[0-9]+/#@localhost:5432/#" .env.ci
+            grep -Ev '^\s*(#|$)' .env.ci >> "$GITHUB_ENV"
+          fi
+      - if: steps.check.outputs.ready == '1'
+        uses: pnpm/action-setup@v6
+      - if: steps.check.outputs.ready == '1'
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.check.outputs.ready == '1'
+        run: pnpm install --frozen-lockfile
+      - if: steps.check.outputs.ready == '1'
+        run: pnpm verify
+      - name: End-to-end tests, when the project has them
+        if: steps.check.outputs.ready == '1'
+        run: |
+          if jq -e '.scripts["test:e2e"]' package.json > /dev/null; then
+            pnpm exec playwright install --with-deps chromium
+            pnpm test:e2e
+          else
+            echo "::notice::No test:e2e script yet."
+          fi

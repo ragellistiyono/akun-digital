@@ -1,0 +1,53 @@
+# Dependency yang sudah disetujui pemilik (ADR-0001). Satu nama atau pola glob per baris.
+# Dependency di luar daftar ini membuat CI merah, dan tiketnya diparkir sampai pemilik memutuskan.
+
+# Kerangka
+next
+react
+react-dom
+typescript
+@types/*
+@next/*
+
+# Tampilan (Tailwind 4 + shadcn/ui)
+tailwindcss
+@tailwindcss/*
+postcss
+tw-animate-css
+radix-ui
+@radix-ui/*
+class-variance-authority
+clsx
+tailwind-merge
+lucide-react
+sonner
+react-hook-form
+@hookform/resolvers
+
+# Data
+drizzle-orm
+drizzle-kit
+postgres
+zod
+
+# Bila dibutuhkan produk (ADR-0001)
+better-auth
+pg-boss
+
+# Alat
+vitest
+@vitest/*
+@playwright/test
+@testing-library/*
+jsdom
+eslint
+eslint-config-*
+eslint-plugin-*
+@eslint/*
+typescript-eslint
+@typescript-eslint/*
+knip
+dependency-cruiser
+dotenv
+tsx
+prettier

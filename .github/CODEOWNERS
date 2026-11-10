@@ -1,0 +1,15 @@
+# Generated from .github/protected-paths.txt by the jalankan-tiket kit. Edit that file, then run buat-codeowners.sh again.
+/docs/PRD.md @ragellistiyono
+/docs/OPEN-DECISIONS.md @ragellistiyono
+/docs/UAT.md @ragellistiyono
+/docs/DESIGN.md @ragellistiyono
+/docs/adr/ @ragellistiyono
+/docs/agents/ @ragellistiyono
+/GLOSSARY.md @ragellistiyono
+/AGENTS.md @ragellistiyono
+/CLAUDE.md @ragellistiyono
+/CODING_STANDARDS.md @ragellistiyono
+/src/domain/AGENTS.md @ragellistiyono
+/tests/golden/ @ragellistiyono
+/.github/ @ragellistiyono
+/.claude/ @ragellistiyono
