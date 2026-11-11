@@ -22,6 +22,9 @@ const PESAN_IKON_DITOLAK = {
   "terlalu-besar": `Gambar ini lebih besar dari ${BATAS_UKURAN_GAMBAR_MB} MB. Perkecil gambarnya, lalu pilih lagi.`,
 };
 
+const PESAN_NAMA_DIPAKAI =
+  "Nama ini sudah dipakai Kategori lain, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap Kategori berbeda.";
+
 const Nama = z
   .string()
   .trim()
@@ -66,6 +69,9 @@ export async function aksiBuatKategori(
 
   // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk membuat.
   const hasil = await buatKategori(masukan.data);
+  if (hasil.hasil === "nama-dipakai") {
+    return { nama, galat: { nama: PESAN_NAMA_DIPAKAI } };
+  }
   if (hasil.hasil === "ditolak") {
     return { nama, galat: { ikon: PESAN_IKON_DITOLAK[hasil.alasan] } };
   }
@@ -91,6 +97,9 @@ export async function aksiUbahKategori(
 
   const hasil = await ubahKategori({ id: id.data, ...masukan.data });
   if (hasil.hasil === "tidak-ada") notFound();
+  if (hasil.hasil === "nama-dipakai") {
+    return { nama, galat: { nama: PESAN_NAMA_DIPAKAI } };
+  }
   if (hasil.hasil === "ditolak") {
     return { nama, galat: { ikon: PESAN_IKON_DITOLAK[hasil.alasan] } };
   }

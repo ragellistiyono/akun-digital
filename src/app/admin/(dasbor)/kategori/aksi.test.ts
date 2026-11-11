@@ -8,7 +8,12 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { koneksi } from "@/server/db";
 import { buatKategori, daftarKategori } from "@/server/kategori";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
-import { FOLDER_UNGGAHAN_TEST, PNG } from "@/server/uji-unggahan";
+import {
+  adaBerkasBerisi,
+  FOLDER_UNGGAHAN_TEST,
+  PNG,
+  pngUnik,
+} from "@/server/uji-unggahan";
 
 import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
 
@@ -51,6 +56,9 @@ async function kategoriAda(nama: string) {
 const namaUnik = (nama: string) => `${nama} ${randomUUID().slice(0, 8)}`;
 
 const keadaanAwal = () => ({ nama: "" });
+
+const PESAN_NAMA_DIPAKAI =
+  "Nama ini sudah dipakai Kategori lain, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap Kategori berbeda.";
 
 afterAll(async () => {
   await koneksi.end();
@@ -160,6 +168,25 @@ describe("membuat Kategori (PRD §3.1)", () => {
       },
     });
     expect(await kategoriBernama(nama)).toEqual([]);
+  });
+
+  it('bila Kategori "Streaming" sudah ada, Kategori "streaming" ditolak dengan pesan, dan tidak dibuat (UAT-C7)', async () => {
+    // Akhiran unik menjaga test ini dari Kategori test lain di app_test.
+    const akhiran = randomUUID().slice(0, 8);
+    const streaming = await kategoriAda(`Streaming ${akhiran}`);
+    sebagaiPengunjung(await cookieAdminBaru());
+    const nama = ` streaming ${akhiran}  `;
+
+    const keadaan = await aksiBuatKategori(
+      keadaanAwal(),
+      formulir({ nama, ikon: ikonPng() }),
+    );
+
+    expect(keadaan).toEqual({ nama, galat: { nama: PESAN_NAMA_DIPAKAI } });
+    const senama = (await daftarKategori()).filter(
+      (k) => k.nama.toLowerCase() === `streaming ${akhiran}`,
+    );
+    expect(senama).toEqual([streaming]);
   });
 
   it("gambar ikon lebih dari 2 MB ditolak dengan pesan, dan Kategori tidak dibuat", async () => {
@@ -283,6 +310,57 @@ describe("mengubah Kategori (PRD §3.1)", () => {
       },
     });
     expect(await kategoriBernama(lama.nama)).toEqual([lama]);
+  });
+
+  it('mengganti nama Kategori "Musik" menjadi "Streaming" ditolak dengan pesan, dan kedua Kategori tetap seperti semula (UAT-C7)', async () => {
+    const akhiran = randomUUID().slice(0, 8);
+    const streaming = await kategoriAda(`Streaming ${akhiran}`);
+    const musik = await kategoriAda(`Musik ${akhiran}`);
+    const ikonPengganti = pngUnik();
+    sebagaiPengunjung(await cookieAdminBaru());
+    const nama = `Streaming ${akhiran}`;
+
+    const keadaan = await aksiUbahKategori(
+      keadaanAwal(),
+      formulir({
+        id: musik.id,
+        nama,
+        ikon: new File([ikonPengganti], "ikon.png", { type: "image/png" }),
+      }),
+    );
+
+    expect(keadaan).toEqual({ nama, galat: { nama: PESAN_NAMA_DIPAKAI } });
+    expect(await kategoriBernama(streaming.nama)).toEqual([streaming]);
+    expect(await kategoriBernama(musik.nama)).toEqual([musik]);
+    expect(await isiIkon(musik.alamatIkon)).toEqual(PNG);
+    // Gambar ikon pengganti yang sempat disimpan tidak tertinggal di folder unggahan.
+    expect(await adaBerkasBerisi(ikonPengganti)).toBe(false);
+  });
+
+  it("Kategori tetap bisa disimpan dengan namanya sendiri, termasuk bila hanya huruf besar-kecilnya yang diganti", async () => {
+    const akhiran = randomUUID().slice(0, 8);
+    const lama = await kategoriAda(`Streaming ${akhiran}`);
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiUbahKategori(
+        keadaanAwal(),
+        formulir({ id: lama.id, nama: lama.nama }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin/kategori"));
+    expect(await kategoriBernama(lama.nama)).toEqual([lama]);
+
+    const namaBaru = `STREAMING ${akhiran}`;
+    await expect(
+      aksiUbahKategori(
+        keadaanAwal(),
+        formulir({ id: lama.id, nama: namaBaru }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin/kategori"));
+    expect(await kategoriBernama(lama.nama)).toEqual([]);
+    expect(await kategoriBernama(namaBaru)).toEqual([
+      { ...lama, nama: namaBaru },
+    ]);
   });
 
   for (const id of ["00000000-0000-4000-8000-000000000000", "bukan-id"]) {
