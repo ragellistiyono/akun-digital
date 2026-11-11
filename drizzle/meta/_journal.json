@@ -8,6 +8,13 @@
       "when": 1794369429208,
       "tag": "0000_awal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794373334842,
+      "tag": "0001_login_admin",
+      "breakpoints": true
     }
   ]
 }
