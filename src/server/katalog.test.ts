@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { koneksi } from "./db";
-import { daftarProdukBeranda } from "./katalog";
-import { sisipkanProduk } from "./uji-katalog";
+import { daftarKategoriToko, daftarProdukBeranda } from "./katalog";
+import { sisipkanKategori, sisipkanProduk } from "./uji-katalog";
 
 // Test integrasi dengan database app_test dari .env.ci. Database ini dipakai bersama test lain, jadi
 // setiap Produk diberi nama unik dan hasilnya disaring menurut nama itu. Data Produknya mengikuti
@@ -250,5 +250,150 @@ describe("daftarProdukBeranda", () => {
     ];
     expect(urutan(semua)).toEqual(harapan);
     expect(urutan(unggulan)).toEqual(harapan);
+  });
+});
+
+/**
+ * Kategori persiapan bersama docs/UAT.md [CONTOH] dengan nama unik: Streaming berisi Netflix Premium,
+ * Musik berisi Spotify Premium, Game hanya berisi Produk nonaktif, dan satu Kategori tanpa Produk.
+ */
+async function sisipkanKatalogUat() {
+  const akhiran = randomUUID().slice(0, 8);
+  const nama = {
+    streaming: `Streaming ${akhiran}`,
+    musik: `Musik ${akhiran}`,
+    game: `Game ${akhiran}`,
+    kosong: `Desain ${akhiran}`,
+    netflix: `Netflix Premium ${akhiran}`,
+    spotify: `Spotify Premium ${akhiran}`,
+    gameLama: `Game Lama ${akhiran}`,
+  };
+  const id = {
+    streaming: await sisipkanKategori({ nama: nama.streaming }),
+    musik: await sisipkanKategori({ nama: nama.musik }),
+    game: await sisipkanKategori({ nama: nama.game }),
+    kosong: await sisipkanKategori({ nama: nama.kosong }),
+  };
+  await sisipkanProduk({
+    nama: nama.netflix,
+    kategoriId: id.streaming,
+    unggulan: true,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 10 }],
+  });
+  await sisipkanProduk({
+    nama: nama.spotify,
+    kategoriId: id.musik,
+    varian: [{ nama: "1 Bulan", hargaJual: 25000 }],
+  });
+  await sisipkanProduk({
+    nama: nama.gameLama,
+    kategoriId: id.game,
+    aktif: false,
+    varian: [{ nama: "1 Bulan", hargaJual: 15000, Tersedia: 2 }],
+  });
+  return { akhiran, nama, id };
+}
+
+const namaBerakhiran = (daftar: { nama: string }[], akhiran: string) =>
+  daftar.map((d) => d.nama).filter((n) => n.endsWith(akhiran));
+
+describe("daftarKategoriToko", () => {
+  it("hanya Kategori yang berisi Produk di katalog yang tampil, urut menurut nama (PRD §3.1)", async () => {
+    const { akhiran, nama, id } = await sisipkanKatalogUat();
+
+    const kategori = await daftarKategoriToko();
+
+    // Game hanya berisi Produk nonaktif, dan Desain tidak berisi Produk.
+    expect(namaBerakhiran(kategori, akhiran)).toEqual([
+      nama.musik,
+      nama.streaming,
+    ]);
+    expect(kategori.find((k) => k.id === id.musik)).toEqual({
+      id: id.musik,
+      nama: nama.musik,
+      alamatIkon: "/unggahan/ikon-uji.png",
+    });
+  });
+
+  it("Kategori yang Produk aktifnya tidak punya Varian aktif tidak tampil, karena Produk itu tidak ada di katalog", async () => {
+    const namaKategori = namaUnik("Vidio");
+    const kategoriId = await sisipkanKategori({ nama: namaKategori });
+    await sisipkanProduk({
+      nama: namaUnik("Vidio Platinum"),
+      kategoriId,
+      varian: [{ nama: "1 Bulan", hargaJual: 15000, aktif: false }],
+    });
+
+    expect((await daftarKategoriToko()).map((k) => k.id)).not.toContain(
+      kategoriId,
+    );
+  });
+});
+
+describe("daftarProdukBeranda dengan pencarian dan saringan", () => {
+  it("deret Kategori Beranda sama dengan Kategori di tab Kategori", async () => {
+    const { akhiran } = await sisipkanKatalogUat();
+
+    const { kategori } = await daftarProdukBeranda();
+
+    expect(namaBerakhiran(kategori, akhiran)).toEqual(
+      namaBerakhiran(await daftarKategoriToko(), akhiran),
+    );
+  });
+
+  // Issue T12: mencari "NETFLIX" memberi hasil yang sama dengan "netflix".
+  it.each(["netflix", "NETFLIX"])(
+    'mencari "%s" menampilkan Netflix Premium tanpa Spotify Premium',
+    async (kataCari) => {
+      const { akhiran, nama } = await sisipkanKatalogUat();
+
+      const { semua, kategoriTerpilih } = await daftarProdukBeranda({
+        kataCari,
+        kategoriId: null,
+      });
+
+      expect(namaBerakhiran(semua, akhiran)).toEqual([nama.netflix]);
+      expect(semua.every((k) => /netflix/i.test(k.nama))).toBe(true);
+      expect(kategoriTerpilih).toBeNull();
+    },
+  );
+
+  // UAT-C1: saringan Musik hanya menampilkan Spotify Premium.
+  it("saringan Kategori Musik hanya menampilkan Spotify Premium", async () => {
+    const { nama, id } = await sisipkanKatalogUat();
+
+    const { semua, kategoriTerpilih } = await daftarProdukBeranda({
+      kataCari: "",
+      kategoriId: id.musik,
+    });
+
+    expect(semua.map((k) => k.nama)).toEqual([nama.spotify]);
+    expect(kategoriTerpilih).toMatchObject({ id: id.musik, nama: nama.musik });
+  });
+
+  it("Kategori yang tidak tampil di toko tidak menyaring, jadi semua Produk tampil", async () => {
+    const { akhiran, nama, id } = await sisipkanKatalogUat();
+
+    const { semua, kategoriTerpilih } = await daftarProdukBeranda({
+      kataCari: "",
+      kategoriId: id.game,
+    });
+
+    expect(kategoriTerpilih).toBeNull();
+    expect(namaBerakhiran(semua, akhiran)).toEqual([
+      nama.netflix,
+      nama.spotify,
+    ]);
+  });
+
+  it("Produk Unggulan tidak ikut disaring", async () => {
+    const { akhiran, nama, id } = await sisipkanKatalogUat();
+
+    const { unggulan } = await daftarProdukBeranda({
+      kataCari: "spotify",
+      kategoriId: id.musik,
+    });
+
+    expect(namaBerakhiran(unggulan, akhiran)).toEqual([nama.netflix]);
   });
 });

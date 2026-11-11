@@ -6,7 +6,6 @@ import { expect, test, type Page } from "@playwright/test";
 
 // Bahan test bersama. DATABASE_URL dan UPLOAD_DIR berasal dari .env.ci yang dimuat playwright.config.ts,
 // jadi data ini masuk ke database app_test dan folder unggahan test.
-import { koneksi } from "../src/server/db";
 import { sisipkanProduk } from "../src/server/uji-katalog";
 import { FOLDER_UNGGAHAN_TEST, PNG } from "../src/server/uji-unggahan";
 
@@ -82,9 +81,8 @@ test.beforeAll(async () => {
   });
 });
 
-test.afterAll(async () => {
-  await koneksi.end();
-});
+// Koneksi database tidak ditutup di afterAll. Satu worker Playwright bisa menjalankan beberapa berkas spec
+// yang memakai koneksi bersama ini, dan worker itu mengakhiri prosesnya sendiri setelah semua selesai.
 
 const bagian = (page: Page, nama: "Produk Unggulan" | "Semua Produk") =>
   page.getByRole("region", { name: nama });
@@ -210,7 +208,8 @@ test("kartu tidak menampilkan angka stok gabungan, dan Beranda tidak punya banne
   );
   expect(teks).not.toMatch(/stok|\b14\b|\b10\b|\b4\b/i);
 
-  // Di bawah pita langit hanya ada judul halaman, bagian Produk Unggulan, dan bagian Semua Produk.
+  // Di bawah pita langit hanya ada judul halaman, deret Kategori, bagian Produk Unggulan, dan bagian
+  // Semua Produk (PRD §3.6).
   const isi = await page
     .getByRole("main")
     .locator(":scope > *")
@@ -218,10 +217,17 @@ test("kartu tidak menampilkan angka stok gabungan, dan Beranda tidak punya banne
       anak.map((el) =>
         el.tagName === "SECTION"
           ? `bagian ${el.querySelector("h2")?.textContent}`
-          : el.tagName,
+          : el.getAttribute("role") === "group"
+            ? `deret ${el.getAttribute("aria-label")}`
+            : el.tagName,
       ),
     );
-  expect(isi).toEqual(["H1", "bagian Produk Unggulan", "bagian Semua Produk"]);
+  expect(isi).toEqual([
+    "H1",
+    "deret Saring menurut Kategori",
+    "bagian Produk Unggulan",
+    "bagian Semua Produk",
+  ]);
 });
 
 test("di lebar 360 px, Beranda tidak bisa digulir ke samping", async ({
