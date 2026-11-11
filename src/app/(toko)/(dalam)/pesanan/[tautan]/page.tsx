@@ -2,6 +2,7 @@ import {
   Check,
   CircleX,
   Clock,
+  Download,
   Hourglass,
   type LucideIcon,
   RotateCcw,
@@ -11,19 +12,21 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { z } from "zod";
 
 import type { StatusPesanan } from "@/domain/status-pesanan";
 import { rupiah } from "@/lib/rupiah";
 import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
-import { bacaPesananLewatTautan } from "@/server/pesanan";
+import { bacaPesananLewatTautan, TautanPesanan } from "@/server/pesanan";
 
+import {
+  BilahLekat,
+  KELAS_TOMBOL_UTAMA,
+} from "../../../_components/bilah-lekat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
+import { KartuSenja } from "./_components/kartu-senja";
+import { PantauStatusPesanan } from "./_components/pantau-status";
 
 const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
-
-/** Tautan Pesanan berupa 32 byte acak dalam base64url (src/server/pesanan.ts). */
-const TautanPesanan = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
 // Tautan Pesanan bersifat rahasia (PRD §6.2): alamatnya tidak dikirim ke situs lain lewat Referer, dan
 // halamannya tidak diindeks mesin pencari.
@@ -68,10 +71,13 @@ function PilStatusPesanan({ status }: { status: StatusPesanan }) {
 }
 
 // Halaman di Tautan Pesanan. Selama Pesanan Menunggu Pembayaran, halaman ini adalah Halaman bayar (PRD
-// §5.6): gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, dan rincian nominal yang
-// dicatat di Pesanan (PRD §5.5). Di layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout).
-// Untuk status lain, pil menampilkan status terkini tanpa gambar QR; tampilan lengkapnya dibangun di
-// tiket Halaman Pesanan. Tautan Pesanan yang tidak dikenal menampilkan halaman tidak ditemukan.
+// §5.6): kartu senja dengan hitung mundur QRIS dan Total bayar, gambar QR, lalu Nomor Pesanan dalam huruf
+// mono dengan pil status, rincian nominal yang dicatat di Pesanan (PRD §5.5), dan tombol "Simpan gambar
+// QR" di bilah lekat. Di layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout). Halaman bayar
+// menanyakan status ke server toko secara berkala, dan begitu statusnya berubah, halaman ini dibuat ulang
+// tanpa dimuat ulang. Untuk status lain, pil menampilkan status terkini tanpa gambar QR; tampilan
+// lengkapnya dibangun di tiket Halaman Pesanan. Tautan Pesanan yang tidak dikenal menampilkan halaman
+// tidak ditemukan.
 export default async function HalamanTautanPesanan({
   params,
 }: PageProps<"/pesanan/[tautan]">) {
@@ -92,15 +98,23 @@ export default async function HalamanTautanPesanan({
       <h1 className="mt-4">{menunggu ? "Pembayaran" : "Pesanan"}</h1>
       <div className="mt-6 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
         {menunggu && (
-          <div className="w-fit rounded-[16px] bg-permukaan p-3 shadow-bayang">
-            <Image
-              unoptimized
-              src={pesanan.gambarQr}
-              alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
-              width={128}
-              height={128}
-              className="block size-32"
+          <div className="flex min-w-0 flex-col gap-4">
+            <KartuSenja
+              kedaluwarsaPada={pesanan.kedaluwarsaPada.getTime()}
+              sekarang={pesanan.dibacaPada.getTime()}
+              totalBayar={rupiah(rincian.totalBayar)}
             />
+            <div className="w-fit rounded-[16px] bg-permukaan p-3 shadow-bayang">
+              <Image
+                unoptimized
+                src={pesanan.gambarQr}
+                alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
+                width={128}
+                height={128}
+                className="block size-32"
+              />
+            </div>
+            <PantauStatusPesanan tautan={tautan.data} status={pesanan.status} />
           </div>
         )}
 
@@ -141,6 +155,20 @@ export default async function HalamanTautanPesanan({
               }}
             />
           </section>
+          {menunggu && (
+            <BilahLekat>
+              {/* Gambar QR Pesanan ini diunduh sebagai PNG, supaya Pembeli di ponsel bisa membukanya dari
+                  aplikasi e-wallet (PRD §5.6). */}
+              <a
+                href={pesanan.gambarQr}
+                download={`QRIS-${pesanan.nomorPesanan}.png`}
+                className={`${KELAS_TOMBOL_UTAMA} whitespace-nowrap`}
+              >
+                <Download aria-hidden="true" className="size-6 shrink-0" />
+                Simpan gambar QR
+              </a>
+            </BilahLekat>
+          )}
         </div>
       </div>
     </>

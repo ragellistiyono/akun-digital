@@ -171,6 +171,18 @@ const SUSUNAN = {
     awan: false,
     butir: 0.14,
   },
+  // Kartu senja Halaman bayar, mengikuti prototipe: cakrawala di 62% tinggi kartu dan matahari di 70% lebar.
+  bayar: {
+    ufuk: 0.62,
+    lapis: 5,
+    amp: 1,
+    kabut: 0.84,
+    mx: 0.7,
+    matahari: true,
+    bintang: true,
+    awan: true,
+    butir: 0.28,
+  },
 } satisfies Record<string, Susunan>;
 
 export type JenisPemandangan = keyof typeof SUSUNAN;
@@ -341,4 +353,39 @@ export function lukisPemandangan(jenis: JenisPemandangan, kanvas: Kanvas) {
     },
     butir: s.butir,
   };
+}
+
+/** Dua warna teks di atas langit kartu senja (DESIGN.md "Pemandangan senja"). */
+export const WARNA_TEKS_LANGIT = { gelap: "#2A1F4D", putih: "#FFFFFF" };
+
+/** Luminans relatif sebuah warna hex menurut WCAG. */
+function luminans(hex: string) {
+  const [r, g, b] = keRgb(hex).map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Rasio kontras dua warna hex menurut WCAG, misalnya 4,5 untuk 4,5:1. */
+function kontras(a: string, b: string) {
+  const [terang, gelap] = [luminans(a), luminans(b)].sort((x, y) => y - x);
+  return (terang + 0.05) / (gelap + 0.05);
+}
+
+/**
+ * Warna angka waktu dan Total bayar yang ditulis di atas langit kartu senja (DESIGN.md "Pemandangan
+ * senja"): #2A1F4D atau putih, mengikuti luminans langit di belakang teks, yaitu kunci atas dan tengah
+ * langit pada waktu t. Yang dipilih adalah warna dengan kontras terendah yang lebih tinggi terhadap kedua
+ * kunci itu. Kunci atas bawaannya diinterpolasi terhadap t, seperti di kartu senja.
+ */
+export function warnaTeksLangit({ t, atas }: { t: number; atas?: string }) {
+  const langit = [
+    atas ?? antaraWarna(LANGIT.atas, t),
+    antaraWarna(LANGIT.tengah, t),
+  ];
+  const terendah = (teks: string) =>
+    Math.min(...langit.map((warna) => kontras(teks, warna)));
+  const { gelap, putih } = WARNA_TEKS_LANGIT;
+  return terendah(gelap) > terendah(putih) ? gelap : putih;
 }

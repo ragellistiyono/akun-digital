@@ -17,6 +17,7 @@ type Wadah = {
   gelap: boolean;
   langit: string;
   tanah: string;
+  permukaan: string;
   butir: string;
 };
 
@@ -66,6 +67,7 @@ export function PemandanganSenja({
         gelap: gaya.colorScheme === "dark",
         langit: gaya.getPropertyValue("--langit").trim(),
         tanah: gaya.getPropertyValue("--tanah").trim(),
+        permukaan: gaya.getPropertyValue("--permukaan").trim(),
         butir: buatTeksturButir(),
       });
     };
@@ -88,14 +90,17 @@ export function PemandanganSenja({
     };
   }, []);
 
+  // Pita dan strip tepi memakai token `langit` sebagai kunci atas dan kabutnya larut ke `tanah`. Kartu senja
+  // Halaman bayar memakai kunci atas yang mengikuti waktu senja, dan kabutnya larut ke `permukaan` (DESIGN.md).
+  const kartuBayar = jenis === "bayar";
   const lukisan =
     wadah && wadah.lebar > 0 && wadah.tinggi > 0
       ? lukisPemandangan(jenis, {
           lebar: wadah.lebar,
           tinggi: wadah.tinggi,
           t: typeof t === "number" ? t : wadah.gelap ? t.gelap : t.terang,
-          atas: wadah.langit,
-          kabutKe: wadah.tanah,
+          atas: kartuBayar ? undefined : wadah.langit,
+          kabutKe: kartuBayar ? wadah.permukaan : wadah.tanah,
         })
       : null;
 

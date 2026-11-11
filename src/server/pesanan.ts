@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 
 import { and, DrizzleQueryError, eq } from "drizzle-orm";
 import postgres from "postgres";
+import { z } from "zod";
 
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { varianHabis } from "@/domain/stok-varian";
@@ -32,6 +33,9 @@ const nomorPesananAcak = () => nomorPesanan(randomBytes(6));
 
 /** Tautan Pesanan (PRD §6.2): 32 byte acak (256 bit) dalam base64url, sehingga tidak bisa ditebak. */
 const tautanPesananAcak = () => randomBytes(32).toString("base64url");
+
+/** Bentuk Tautan Pesanan, yaitu 32 byte acak dalam base64url, untuk memvalidasi tautan dari URL. */
+export const TautanPesanan = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
 
 /** Apakah penulisan ditolak indeks unik Nomor Pesanan, karena nomor acaknya sudah dipakai Pesanan lain. */
 const nomorSudahDipakai = (galat: unknown) =>
@@ -227,8 +231,9 @@ export async function buatPesanan(
 
 /**
  * Pesanan yang dibuka lewat Tautan Pesanan (PRD §6.2), untuk Halaman bayar: Nomor Pesanan, status, nama
- * Produk dan Varian, gambar QR, dan rincian nominal yang dicatat di Pesanan (PRD §5.5). Hasilnya null
- * bila tidak ada Pesanan dengan Tautan Pesanan itu.
+ * Produk dan Varian, gambar QR beserta waktu kedaluwarsa QRIS-nya, dan rincian nominal yang dicatat di
+ * Pesanan (PRD §5.5). `dibacaPada` adalah jam server saat Pesanan dibaca, yang menjadi titik awal hitung
+ * mundur di Halaman bayar. Hasilnya null bila tidak ada Pesanan dengan Tautan Pesanan itu.
  */
 export async function bacaPesananLewatTautan(tautan: string) {
   const [baris] = await db
@@ -238,6 +243,7 @@ export async function bacaPesananLewatTautan(tautan: string) {
       namaProduk: produk.nama,
       namaVarian: varian.nama,
       gambarQr: pesanan.gambarQr,
+      kedaluwarsaPada: pesanan.kedaluwarsaPada,
       hargaJual: pesanan.hargaJual,
       potonganVoucher: pesanan.potonganVoucher,
       kodeUnik: pesanan.kodeUnik,
@@ -254,5 +260,15 @@ export async function bacaPesananLewatTautan(tautan: string) {
   return {
     ...lainnya,
     rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
+    dibacaPada: new Date(),
   };
+}
+
+/** Status Pesanan di Tautan Pesanan itu, atau null bila tidak ada Pesanan dengan Tautan Pesanan itu. */
+export async function bacaStatusPesanan(tautan: string) {
+  const [baris] = await db
+    .select({ status: pesanan.status })
+    .from(pesanan)
+    .where(eq(pesanan.tautan, tautan));
+  return baris?.status ?? null;
 }
