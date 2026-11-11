@@ -45,7 +45,7 @@ export default async function HalamanAwal({ searchParams }: PageProps<"/">) {
           <KotakCari kataCari={saringan.q} />
         </div>
       </div>
-      <main className="mx-auto max-w-[1120px] px-4 pt-2 pb-28 lebar:pb-16">
+      <main className="mx-auto max-w-[1120px] px-4 pt-2 pb-8">
         <h1 className="sr-only">MIWE Digital Store</h1>
 
         <DeretKategori
