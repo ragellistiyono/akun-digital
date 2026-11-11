@@ -27,6 +27,7 @@ import {
 } from "./db/schema";
 import { bukaItemStok } from "./enkripsi-item-stok";
 import { bacaStokVarian } from "./item-stok";
+import { jadwalkanKedaluwarsaPesanan } from "./pekerjaan-latar";
 import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
 
 /** Voucher baru ada di M2 (PRD §13), jadi potongan voucher setiap Pesanan saat ini Rp 0. */
@@ -118,8 +119,9 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
  *   gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
  *   tidak ada Pesanan yang tersisa.
- * - Pesanan, baris pertama Riwayat status Pesanan, dan Penahanan satu Item stok Tersedia dari Varian itu
- *   (PRD §5.3) ditulis dalam satu transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
+ * - Pesanan, baris pertama Riwayat status Pesanan, Penahanan satu Item stok Tersedia dari Varian itu
+ *   (PRD §5.3), dan pekerjaan kedaluwarsa pada waktu kedaluwarsa QRIS-nya (PRD §5.8) ditulis dalam satu
+ *   transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
  * - Bila Item stok terakhirnya sudah ditahan checkout lain setelah QRIS terbit, QRIS itu dibatalkan dan
  *   checkout ditolak karena stok habis, tanpa Pesanan.
  * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, QRIS-nya dibatalkan, lalu nomor dan QRIS
@@ -218,6 +220,10 @@ export async function buatPesanan(
           .update(itemStok)
           .set({ status: "Ditahan", pesananId: id })
           .where(eq(itemStok.id, tersedia.id));
+        await jadwalkanKedaluwarsaPesanan(
+          { pesananId: id, kedaluwarsaPada: qris.expiredAt },
+          tx,
+        );
         return true;
       });
       if (!ditahan) {
