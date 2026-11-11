@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import golden from "../../tests/golden/stok-varian.json";
-import { stokVarian } from "./stok-varian";
+import { stokVarian, varianHabis } from "./stok-varian";
 
 // PRD §5.3: Stok Varian = jumlah Item stok Varian yang belum terkirim dan tidak sedang ditahan, yaitu
 // yang berstatus Tersedia.
@@ -17,5 +17,16 @@ describe("stokVarian", () => {
       stokVarian: 8,
       jumlahPerStatus: { Tersedia: 8, Ditahan: 2, Terkirim: 5 },
     });
+  });
+});
+
+// PRD §3.4: Varian dengan Stok Varian 0 tampil "Habis" dan tidak bisa dipilih.
+describe("varianHabis", () => {
+  it("Varian dengan Stok Varian 0 habis", () => {
+    expect(varianHabis(0)).toBe(true);
+  });
+
+  it('Varian dengan "Stok 12" tidak habis', () => {
+    expect(varianHabis(12)).toBe(false);
   });
 });

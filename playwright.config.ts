@@ -23,7 +23,9 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     command: `pnpm build && pnpm start --port ${port}`,
-    url: baseURL,
+    // Playwright menunggu server siap sebelum globalSetup memigrasi database. Beranda membaca katalog
+    // dari database, jadi kesiapan diperiksa di tab Riwayat, yang tidak membaca database.
+    url: `${baseURL}/riwayat`,
     // Server yang sudah berjalan bisa saja memuat .env pengembangan, jadi tidak dipakai ulang.
     reuseExistingServer: false,
     timeout: 180_000,
