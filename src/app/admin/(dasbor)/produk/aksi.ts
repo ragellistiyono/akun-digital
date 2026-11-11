@@ -105,7 +105,7 @@ function pesanFormat(masalah: MasalahFormatItemStok) {
     case "kolom-kosong":
       return `Nama kolom ${sebutNomor(masalah.nomorKolom)} belum diisi. Isi namanya, atau hapus kolom itu.`;
     case "kolom-kembar":
-      return `Nama kolom ${sebutNomor(masalah.nomorKolom)} sudah dipakai kolom sebelumnya. Ganti namanya supaya setiap kolom berbeda.`;
+      return `Nama kolom ${sebutNomor(masalah.nomorKolom)} sudah dipakai kolom sebelumnya, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap kolom berbeda.`;
   }
 }
 

@@ -196,7 +196,7 @@ test("Produk tanpa Kategori dan Format Item stok tanpa kolom, dengan nama kolom 
     ),
   ).toBeVisible();
 
-  // Nama kolom kembar: sama persis setelah spasi di awal dan akhir dibuang.
+  // Nama kolom kembar: sama setelah spasi di awal dan akhir dibuang.
   await page.getByLabel("Nama", { exact: true }).fill(nama);
   await page.getByLabel("Produk Unggulan").check();
   await page.getByLabel("Nama kolom 1").fill("Email");
@@ -205,7 +205,7 @@ test("Produk tanpa Kategori dan Format Item stok tanpa kolom, dengan nama kolom 
   await page.getByRole("button", { name: "Simpan" }).click();
   await expect(
     page.getByText(
-      "Nama kolom 2 sudah dipakai kolom sebelumnya. Ganti namanya supaya setiap kolom berbeda.",
+      "Nama kolom 2 sudah dipakai kolom sebelumnya, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap kolom berbeda.",
     ),
   ).toBeVisible();
   await expect(page.getByLabel("Nama kolom 2")).toHaveAttribute(
@@ -235,4 +235,61 @@ test("Produk tanpa Kategori dan Format Item stok tanpa kolom, dengan nama kolom 
 
   await page.goto("/admin/produk");
   await expect(barisProduk(page, nama)).toHaveCount(0);
+});
+
+test("UAT-D4: Format Item stok Email, Password, email ditolak karena kolom 3 kembar, lalu tersimpan setelah kolom 3 diganti Profil", async ({
+  page,
+}) => {
+  const akhiran = randomUUID().slice(0, 8);
+  const streaming = `Streaming ${akhiran}`;
+  const nama = `Netflix Premium ${akhiran}`;
+  await masukSebagaiAdmin(page);
+  await buatKategori(page, streaming);
+
+  await page.goto("/admin/produk/baru");
+  await page.getByLabel("Nama", { exact: true }).fill(nama);
+  await page.getByLabel("Kategori").selectOption({ label: streaming });
+  await page
+    .getByLabel("Deskripsi")
+    .fill("Akun Netflix Premium untuk satu profil.");
+  await page
+    .getByLabel("Ketentuan garansi")
+    .fill("Garansi 30 hari sejak Item stok diterima.");
+  await page.getByLabel("Nama kolom 1").fill("Email");
+  await page.getByRole("button", { name: "Tambah kolom" }).click();
+  await page.getByLabel("Nama kolom 2").fill("Password");
+  await page.getByRole("button", { name: "Tambah kolom" }).click();
+  await page.getByLabel("Nama kolom 3").fill("email");
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  // Nama kolom dianggap kembar tanpa membedakan huruf besar dan kecil (PRD §4.1).
+  await expect(
+    page.getByText(
+      "Nama kolom 3 sudah dipakai kolom sebelumnya, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap kolom berbeda.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByLabel("Nama kolom 3")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(page.getByLabel("Nama kolom 1")).not.toHaveAttribute(
+    "aria-invalid",
+  );
+  // Isian lain, termasuk Kategori yang dipilih, tetap terisi setelah ditolak.
+  await expect(page).toHaveURL("/admin/produk/baru");
+  await expect(
+    page.getByLabel("Kategori").locator("option:checked"),
+  ).toHaveText(streaming);
+  await expect(page.getByLabel("Nama kolom 3")).toHaveValue("email");
+
+  await page.getByLabel("Nama kolom 3").fill("Profil");
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  await expect(page).toHaveURL("/admin/produk");
+  const netflix = barisProduk(page, nama);
+  await expect(netflix).toHaveCount(1);
+  await netflix.getByRole("link", { name: `Ubah ${nama}` }).click();
+  await expect(
+    page.getByRole("list", { name: "Format Item stok" }).getByRole("listitem"),
+  ).toHaveText(["Email", "Password", "Profil"]);
 });

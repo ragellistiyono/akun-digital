@@ -232,7 +232,7 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
     expect(await produkBernama(nama)).toEqual([]);
   });
 
-  it("Format Item stok dengan nama kolom kembar", async () => {
+  it("Format Item stok dengan nama kolom kembar tanpa membedakan huruf besar dan kecil (UAT-D4)", async () => {
     const streaming = await kategoriBaru();
     const nama = namaUnik("Netflix Premium");
     sebagaiPengunjung(await cookieAdminBaru());
@@ -241,13 +241,14 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
       keadaanAwal(),
       formulir({
         ...isianNetflix(streaming.id, nama),
-        kolom: ["Email", "Password", " Email "],
+        kolom: ["Email", "Password", "email"],
       }),
     );
 
+    expect(keadaan.formatItemStok).toEqual(["Email", "Password", "email"]);
     expect(keadaan.galat).toEqual({
       formatItemStok:
-        "Nama kolom 3 sudah dipakai kolom sebelumnya. Ganti namanya supaya setiap kolom berbeda.",
+        "Nama kolom 3 sudah dipakai kolom sebelumnya, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap kolom berbeda.",
       kolomDitolak: [3],
     });
     expect(await produkBernama(nama)).toEqual([]);
@@ -290,7 +291,7 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
 
     expect(keadaan.galat).toEqual({
       formatItemStok:
-        "Nama kolom 1, 3, dan 4 belum diisi. Isi namanya, atau hapus kolom itu. Nama kolom 5 sudah dipakai kolom sebelumnya. Ganti namanya supaya setiap kolom berbeda.",
+        "Nama kolom 1, 3, dan 4 belum diisi. Isi namanya, atau hapus kolom itu. Nama kolom 5 sudah dipakai kolom sebelumnya, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap kolom berbeda.",
       kolomDitolak: [1, 3, 4, 5],
     });
     expect(await produkBernama(nama)).toEqual([]);
