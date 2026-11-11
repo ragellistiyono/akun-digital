@@ -1,9 +1,62 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/* Varian dark: mengikuti aturan yang sama dengan token di bawah (perangkat, kecuali data-mode memaksa). */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-mode="terang"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-mode="gelap"] *) {
+    @slot;
+  }
+}
+
+@theme {
+  --breakpoint-lebar: 900px;
+}
 
 @theme inline {
+  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  /* Token docs/DESIGN.md */
+  --color-langit: var(--langit);
+  --color-langit-2: var(--langit-2);
+  --color-langit-garis: var(--langit-garis);
+  --color-langit-teks: var(--langit-teks);
+  --color-langit-redup: var(--langit-redup);
+  --color-monogram: var(--monogram);
+  --color-aksi: var(--aksi);
+  --color-aksi-tekan: var(--aksi-tekan);
+  --color-aksi-teks: var(--aksi-teks);
+  --color-teks-di-aksi: var(--teks-di-aksi);
+  --color-matahari: var(--matahari);
+  --color-persik: var(--persik);
+  --color-persik-teks: var(--persik-teks);
+  --color-mauve: var(--mauve);
+  --color-tanah: var(--tanah);
+  --color-permukaan: var(--permukaan);
+  --color-permukaan-2: var(--permukaan-2);
+  --color-garis: var(--garis);
+  --color-tinta: var(--tinta);
+  --color-tinta-redup: var(--tinta-redup);
+  --color-st-tunggu-bg: var(--st-tunggu-bg);
+  --color-st-tunggu: var(--st-tunggu);
+  --color-st-selesai-bg: var(--st-selesai-bg);
+  --color-st-selesai: var(--st-selesai);
+  --color-st-kedaluwarsa-bg: var(--st-kedaluwarsa-bg);
+  --color-st-kedaluwarsa: var(--st-kedaluwarsa);
+  --color-st-batal-bg: var(--st-batal-bg);
+  --color-st-batal: var(--st-batal);
+  --color-st-masalah-bg: var(--st-masalah-bg);
+  --color-st-masalah: var(--st-masalah);
+  --color-st-kembali-bg: var(--st-kembali-bg);
+  --color-st-kembali: var(--st-kembali);
+  --shadow-bayang: var(--bayang);
+
+  /* Variabel shadcn/ui (tabel "Pemetaan ke Tailwind 4 dan shadcn/ui") */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -22,92 +75,153 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Nilai dari frontmatter docs/DESIGN.md. Hanya berkas ini yang memegang nilai warna. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --langit: #2a1f4d;
+  --langit-2: #3a2d66;
+  --langit-garis: #5b4a92;
+  --langit-teks: #e9e2ff;
+  --langit-redup: #c7bdea;
+  --monogram: #8f61ff;
+  --aksi: #7548f2;
+  --aksi-tekan: #6236de;
+  --aksi-teks: #6a3fe0;
+  --teks-di-aksi: #ffffff;
+  --matahari: #ebc967;
+  --persik: #ed9065;
+  --persik-teks: #3a1d0e;
+  --mauve: #9f5f70;
+  --tanah: #f7f3fc;
+  --permukaan: #ffffff;
+  --permukaan-2: #efe9fa;
+  --garis: #e4dcf5;
+  --tinta: #1e1838;
+  --tinta-redup: #625879;
+  --st-tunggu-bg: #fff1c9;
+  --st-tunggu: #6e4b00;
+  --st-selesai-bg: #daf3e5;
+  --st-selesai: #18603e;
+  --st-kedaluwarsa-bg: #ece7f2;
+  --st-kedaluwarsa: #554d68;
+  --st-batal-bg: #ecedf0;
+  --st-batal: #4e5460;
+  --st-masalah-bg: #fce0dd;
+  --st-masalah: #9c2820;
+  --st-kembali-bg: #dfe8fc;
+  --st-kembali: #22448f;
+
+  --langit-gelap: #231a42;
+  --langit-2-gelap: #33295c;
+  --langit-garis-gelap: #4e4180;
+  --aksi-teks-gelap: #b49bff;
+  --tanah-gelap: #15112a;
+  --permukaan-gelap: #211a3d;
+  --permukaan-2-gelap: #2c2350;
+  --garis-gelap: #3a2f63;
+  --tinta-gelap: #f3eeff;
+  --tinta-redup-gelap: #b9afd9;
+  --st-tunggu-bg-gelap: #3b2f0e;
+  --st-tunggu-gelap: #f2d27a;
+  --st-selesai-bg-gelap: #11352a;
+  --st-selesai-gelap: #7fddb0;
+  --st-kedaluwarsa-bg-gelap: #2a2440;
+  --st-kedaluwarsa-gelap: #c2b9d8;
+  --st-batal-bg-gelap: #26272e;
+  --st-batal-gelap: #c1c5ce;
+  --st-masalah-bg-gelap: #3e1b1b;
+  --st-masalah-gelap: #ff9c94;
+  --st-kembali-bg-gelap: #18244a;
+  --st-kembali-gelap: #a4bcff;
+
+  /* Bayang (DESIGN.md, Shadow Vocabulary) */
+  --bayang: 0 8px 24px -12px rgba(42, 31, 77, 0.38);
+  --bayang-gelap: 0 10px 26px -12px rgba(0, 0, 0, 0.65);
+
+  --background: var(--tanah);
+  --foreground: var(--tinta);
+  --card: var(--permukaan);
+  --card-foreground: var(--tinta);
+  --popover: var(--permukaan);
+  --popover-foreground: var(--tinta);
+  --primary: var(--aksi);
+  --primary-foreground: var(--teks-di-aksi);
+  --secondary: var(--permukaan-2);
+  --secondary-foreground: var(--tinta);
+  --muted: var(--permukaan-2);
+  --muted-foreground: var(--tinta-redup);
+  --accent: var(--permukaan-2);
+  --accent-foreground: var(--tinta);
+  --destructive: var(--st-masalah);
+  --border: var(--garis);
+  --input: var(--garis);
+  --ring: var(--monogram);
+  --radius: 14px;
+
+  color-scheme: light;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="terang"]) {
+    --langit: var(--langit-gelap);
+    --langit-2: var(--langit-2-gelap);
+    --langit-garis: var(--langit-garis-gelap);
+    --aksi-teks: var(--aksi-teks-gelap);
+    --tanah: var(--tanah-gelap);
+    --permukaan: var(--permukaan-gelap);
+    --permukaan-2: var(--permukaan-2-gelap);
+    --garis: var(--garis-gelap);
+    --tinta: var(--tinta-gelap);
+    --tinta-redup: var(--tinta-redup-gelap);
+    --st-tunggu-bg: var(--st-tunggu-bg-gelap);
+    --st-tunggu: var(--st-tunggu-gelap);
+    --st-selesai-bg: var(--st-selesai-bg-gelap);
+    --st-selesai: var(--st-selesai-gelap);
+    --st-kedaluwarsa-bg: var(--st-kedaluwarsa-bg-gelap);
+    --st-kedaluwarsa: var(--st-kedaluwarsa-gelap);
+    --st-batal-bg: var(--st-batal-bg-gelap);
+    --st-batal: var(--st-batal-gelap);
+    --st-masalah-bg: var(--st-masalah-bg-gelap);
+    --st-masalah: var(--st-masalah-gelap);
+    --st-kembali-bg: var(--st-kembali-bg-gelap);
+    --st-kembali: var(--st-kembali-gelap);
+    --bayang: var(--bayang-gelap);
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-mode="gelap"] {
+  --langit: var(--langit-gelap);
+  --langit-2: var(--langit-2-gelap);
+  --langit-garis: var(--langit-garis-gelap);
+  --aksi-teks: var(--aksi-teks-gelap);
+  --tanah: var(--tanah-gelap);
+  --permukaan: var(--permukaan-gelap);
+  --permukaan-2: var(--permukaan-2-gelap);
+  --garis: var(--garis-gelap);
+  --tinta: var(--tinta-gelap);
+  --tinta-redup: var(--tinta-redup-gelap);
+  --st-tunggu-bg: var(--st-tunggu-bg-gelap);
+  --st-tunggu: var(--st-tunggu-gelap);
+  --st-selesai-bg: var(--st-selesai-bg-gelap);
+  --st-selesai: var(--st-selesai-gelap);
+  --st-kedaluwarsa-bg: var(--st-kedaluwarsa-bg-gelap);
+  --st-kedaluwarsa: var(--st-kedaluwarsa-gelap);
+  --st-batal-bg: var(--st-batal-bg-gelap);
+  --st-batal: var(--st-batal-gelap);
+  --st-masalah-bg: var(--st-masalah-bg-gelap);
+  --st-masalah: var(--st-masalah-gelap);
+  --st-kembali-bg: var(--st-kembali-bg-gelap);
+  --st-kembali: var(--st-kembali-gelap);
+  --bayang: var(--bayang-gelap);
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -115,6 +229,22 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Cincin fokus (DESIGN.md, Shadow Vocabulary): semua elemen dengan :focus-visible. */
+  :focus-visible {
+    outline: 3px solid var(--monogram);
+    outline-offset: 2px;
+  }
+  /* Headline (DESIGN.md Typography): satu judul halaman per layar. */
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    @variant lebar {
+      font-size: 36px;
+    }
   }
 }
