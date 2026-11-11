@@ -5,11 +5,15 @@ import {
   boolean,
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+
+import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
@@ -145,4 +149,32 @@ export const varian = pgTable(
     aktif: boolean("aktif").default(true).notNull(),
   },
   (tabel) => [index("varian_produk_id_idx").on(tabel.produkId)],
+);
+
+// Status Item stok (GLOSSARY): Tersedia, Ditahan, atau Terkirim. Stok Varian dihitung dari status ini
+// oleh stokVarian di domain (PRD §5.3).
+export const statusItemStok = pgEnum("status_item_stok", STATUS_ITEM_STOK);
+
+// Item stok (PRD §4) milik satu Varian. Isinya, yaitu isi kolom-kolom Format Item stok, disimpan
+// terenkripsi (PRD §12) oleh src/server/enkripsi-item-stok.ts. Sidik jari HMAC dari isinya dipakai
+// untuk menolak Item stok yang sama persis di Varian yang sama (PRD §4.2) tanpa membuka Item stok
+// lain; indeks unik menjaganya juga bila dua Admin mengisi bersamaan. Item stok tidak ada tanpa
+// Variannya, jadi ikut terhapus bersama Varian.
+export const itemStok = pgTable(
+  "item_stok",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    varianId: uuid("varian_id")
+      .notNull()
+      .references(() => varian.id, { onDelete: "cascade" }),
+    isiTerenkripsi: text("isi_terenkripsi").notNull(),
+    sidikJari: text("sidik_jari").notNull(),
+    status: statusItemStok("status").default("Tersedia").notNull(),
+  },
+  (tabel) => [
+    uniqueIndex("item_stok_varian_id_sidik_jari_idx").on(
+      tabel.varianId,
+      tabel.sidikJari,
+    ),
+  ],
 );

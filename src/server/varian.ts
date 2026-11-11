@@ -31,6 +31,31 @@ export async function daftarVarian(produkId: string) {
     .orderBy(asc(varian.hargaJual), asc(varian.nama), asc(varian.id));
 }
 
+/**
+ * Satu Varian milik sebuah Produk beserta nama dan Format Item stok Produknya, untuk halaman Varian di
+ * dasbor admin. Hasilnya null bila Varian tidak ada atau milik Produk lain.
+ */
+export async function bacaVarian({
+  id,
+  produkId,
+}: {
+  id: string;
+  produkId: string;
+}) {
+  const [baris] = await db
+    .select({
+      id: varian.id,
+      nama: varian.nama,
+      produkId: produk.id,
+      namaProduk: produk.nama,
+      formatItemStok: produk.formatItemStok,
+    })
+    .from(varian)
+    .innerJoin(produk, eq(varian.produkId, produk.id))
+    .where(and(eq(varian.id, id), eq(varian.produkId, produkId)));
+  return baris ?? null;
+}
+
 /** Menambah Varian ke sebuah Produk. Bila Produk itu tidak ada, Varian tidak dibuat. */
 export async function tambahVarian({
   produkId,

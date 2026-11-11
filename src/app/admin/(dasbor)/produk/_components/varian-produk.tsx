@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import {
@@ -30,6 +31,10 @@ type Varian = {
 };
 
 const KELAS_TOMBOL_SIMPAN = `${KELAS_TOMBOL_GARIS} disabled:bg-permukaan-2 disabled:text-tinta-redup`;
+
+/** Tombol kecil 36 px di baris Varian (DESIGN.md Buttons). */
+const KELAS_TOMBOL_KECIL =
+  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold hover:border-monogram";
 
 /**
  * Form Varian untuk menambah (tanpa `varian`) atau mengubah Varian yang sudah ada. Setelah Varian
@@ -176,12 +181,18 @@ function BarisVarian({
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <PilAktif aktif={varian.aktif} />
+        <Link
+          href={`/admin/produk/${produkId}/varian/${varian.id}`}
+          className={KELAS_TOMBOL_KECIL}
+        >
+          Item stok<span className="sr-only"> Varian {varian.nama}</span>
+        </Link>
         <button
           type="button"
           onClick={() => setDiubah(true)}
-          className="inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold hover:border-monogram"
+          className={KELAS_TOMBOL_KECIL}
         >
           Ubah<span className="sr-only"> Varian {varian.nama}</span>
         </button>
@@ -192,8 +203,8 @@ function BarisVarian({
 
 /**
  * Varian di halaman Ubah Produk (PRD §3.2, §3.5, §3.7): daftar Varian beserta Harga jual, Harga
- * normal, dan keadaannya, serta form tambah dan ubah. Setiap Varian langsung tersimpan, terpisah dari
- * tombol Simpan di form Produk.
+ * normal, dan keadaannya, form tambah dan ubah, serta tautan ke halaman Varian untuk mengisi Item
+ * stok. Setiap Varian langsung tersimpan, terpisah dari tombol Simpan di form Produk.
  */
 export function VarianProduk({
   produkId,

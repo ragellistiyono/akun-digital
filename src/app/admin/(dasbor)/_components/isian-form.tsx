@@ -12,7 +12,8 @@ export const KELAS_TOMBOL_GARIS =
 
 /**
  * Isian teks satu baris atau beberapa baris, dengan label di atas dan keterangan di bawah. `id` hanya
- * perlu diisi bila halaman memuat lebih dari satu isian dengan `nama` yang sama.
+ * perlu diisi bila halaman memuat lebih dari satu isian dengan `nama` yang sama. `mono` dipakai untuk
+ * isian nilai Item stok, yang ditulis dengan JetBrains Mono (DESIGN.md Typography).
  */
 export function IsianTeks({
   nama,
@@ -24,6 +25,7 @@ export function IsianTeks({
   banyakBaris = false,
   inputMode,
   autoFocus,
+  mono = false,
 }: {
   nama: string;
   id?: string;
@@ -34,6 +36,7 @@ export function IsianTeks({
   banyakBaris?: boolean;
   inputMode?: "numeric";
   autoFocus?: boolean;
+  mono?: boolean;
 }) {
   const idKeterangan = `${id}-keterangan`;
   const atribut = {
@@ -41,6 +44,7 @@ export function IsianTeks({
     name: nama,
     defaultValue: nilaiAwal,
     autoFocus,
+    spellCheck: mono ? false : undefined,
     "aria-invalid": galat ? true : undefined,
     "aria-describedby": galat || bantuan ? idKeterangan : undefined,
   };
@@ -53,14 +57,18 @@ export function IsianTeks({
         <textarea
           {...atribut}
           rows={5}
-          className={cn(KELAS_ISIAN, "min-h-32 py-3 leading-[1.6]")}
+          className={cn(
+            KELAS_ISIAN,
+            "min-h-32 py-3 leading-[1.6]",
+            mono && "font-mono",
+          )}
         />
       ) : (
         <input
           {...atribut}
           autoComplete="off"
           inputMode={inputMode}
-          className={cn(KELAS_ISIAN, "h-[52px]")}
+          className={cn(KELAS_ISIAN, "h-[52px]", mono && "font-mono")}
         />
       )}
       <Keterangan id={idKeterangan} galat={galat} bantuan={bantuan} />
