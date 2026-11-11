@@ -22,6 +22,69 @@ afterAll(async () => {
   await koneksi.end();
 });
 
+describe("nama Kategori unik saat dua penyimpanan terjadi bersamaan (PRD §3.1)", () => {
+  // Kategori yang kalah tidak meninggalkan berkas ikon, jadi tepat satu dari kedua isi ikon tersimpan.
+  async function jumlahIkonTersimpan(isi: Buffer[]) {
+    const ada = await Promise.all(isi.map(adaBerkasBerisi));
+    return ada.filter(Boolean).length;
+  }
+
+  const namaSama = (nama: string) => async () =>
+    (await daftarKategori()).filter(
+      (k) => k.nama.trim().toLowerCase() === nama.toLowerCase(),
+    );
+
+  it("dua Kategori baru dengan nama yang sama: hanya satu yang dibuat", async () => {
+    const nama = namaUnik("Streaming");
+    const isi = [pngUnik(), pngUnik()];
+
+    const hasil = await Promise.all([
+      buatKategori({ nama, ikon: gambar(isi[0]) }),
+      buatKategori({ nama: nama.toLowerCase(), ikon: gambar(isi[1]) }),
+    ]);
+
+    expect(hasil.map((h) => h.hasil).sort()).toEqual([
+      "dibuat",
+      "nama-dipakai",
+    ]);
+    expect(await namaSama(nama)()).toHaveLength(1);
+    expect(await jumlahIkonTersimpan(isi)).toBe(1);
+  });
+
+  it("dua Kategori yang diganti namanya menjadi nama yang sama: hanya satu yang berganti", async () => {
+    const isiLama = [pngUnik(), pngUnik()];
+    const asal = [namaUnik("Musik"), namaUnik("Game")];
+    await buatKategori({ nama: asal[0], ikon: gambar(isiLama[0]) });
+    await buatKategori({ nama: asal[1], ikon: gambar(isiLama[1]) });
+    const [musik] = await kategoriBernama(asal[0]);
+    const [game] = await kategoriBernama(asal[1]);
+    const nama = namaUnik("Streaming");
+    const isiPengganti = [pngUnik(), pngUnik()];
+
+    const hasil = await Promise.all([
+      ubahKategori({ id: musik.id, nama, ikon: gambar(isiPengganti[0]) }),
+      ubahKategori({
+        id: game.id,
+        nama: nama.toUpperCase(),
+        ikon: gambar(isiPengganti[1]),
+      }),
+    ]);
+
+    expect(hasil.map((h) => h.hasil).sort()).toEqual([
+      "diubah",
+      "nama-dipakai",
+    ]);
+    expect(await namaSama(nama)()).toHaveLength(1);
+    // Kategori yang kalah tetap memakai nama dan ikon lamanya.
+    const tetap = (await daftarKategori()).filter(
+      (k) => k.id === musik.id || k.id === game.id,
+    );
+    expect(tetap).toContainEqual(hasil[0].hasil === "diubah" ? game : musik);
+    expect(await jumlahIkonTersimpan(isiPengganti)).toBe(1);
+    expect(await jumlahIkonTersimpan(isiLama)).toBe(1);
+  });
+});
+
 describe("berkas ikon saat Kategori tidak bisa ditulis", () => {
   it("membuat Kategori: gambar ikon yang baru disimpan dihapus lagi", async () => {
     const isi = pngUnik();

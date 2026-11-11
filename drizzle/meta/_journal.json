@@ -64,6 +64,13 @@
       "when": 1794399424287,
       "tag": "0008_pengaturan_toko",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794400478244,
+      "tag": "0009_nama_kategori_unik",
+      "breakpoints": true
     }
   ]
 }

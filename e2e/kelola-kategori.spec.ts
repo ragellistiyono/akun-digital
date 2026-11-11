@@ -170,3 +170,61 @@ test("Kategori tanpa nama dan ikon, atau dengan berkas yang bukan gambar, ditola
   await page.goto("/admin/kategori");
   await expect(barisKategori(page, nama)).toHaveCount(0);
 });
+
+test("UAT-C7: nama Kategori yang sudah dipakai ditolak dengan pesan, tanpa membedakan huruf besar dan kecil", async ({
+  page,
+}) => {
+  // Akhiran unik menjaga test ini dari Kategori test lain di app_test, termasuk "Streaming" di atas.
+  const akhiran = randomUUID().slice(0, 8);
+  const streaming = `Streaming ${akhiran}`;
+  const musik = `Musik ${akhiran}`;
+  const pesan =
+    "Nama ini sudah dipakai Kategori lain, tanpa membedakan huruf besar dan kecil. Ganti namanya supaya setiap Kategori berbeda.";
+  await masukSebagaiAdmin(page);
+  for (const nama of [streaming, musik]) {
+    await page.goto("/admin/kategori/baru");
+    await page.getByLabel("Nama").fill(nama);
+    await page.getByLabel("Gambar ikon").setInputFiles({
+      name: "ikon.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    });
+    await page.getByRole("button", { name: "Simpan" }).click();
+    await expect(page).toHaveURL("/admin/kategori");
+  }
+
+  // Langkah 1: membuat Kategori "streaming".
+  await page.goto("/admin/kategori/baru");
+  await page.getByLabel("Nama").fill(`streaming ${akhiran}`);
+  await page.getByLabel("Gambar ikon").setInputFiles({
+    name: "ikon.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  await expect(page.getByText(pesan)).toBeVisible();
+  await expect(page).toHaveURL("/admin/kategori/baru");
+  await expect(page.getByLabel("Nama")).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByLabel("Nama")).toHaveValue(`streaming ${akhiran}`);
+
+  // Langkah 2: mengganti nama Kategori "Musik" menjadi "Streaming".
+  await page.goto("/admin/kategori");
+  await barisKategori(page, musik)
+    .getByRole("link", { name: `Ubah ${musik}` })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Ubah Kategori" }),
+  ).toBeVisible();
+  await page.getByLabel("Nama").fill(streaming);
+  await page.getByRole("button", { name: "Simpan" }).click();
+
+  await expect(page.getByText(pesan)).toBeVisible();
+  await expect(page.getByLabel("Nama")).toHaveAttribute("aria-invalid", "true");
+
+  // Kategori "Streaming" dan "Musik" tetap seperti semula.
+  await page.goto("/admin/kategori");
+  await expect(barisKategori(page, streaming)).toHaveCount(1);
+  await expect(barisKategori(page, musik)).toHaveCount(1);
+  await expect(barisKategori(page, `streaming ${akhiran}`)).toHaveCount(0);
+});

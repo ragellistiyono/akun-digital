@@ -104,12 +104,20 @@ export const batasLogin = pgTable("batas_login", {
 });
 
 // Kategori (PRD §3.1): satu tingkat, dengan nama dan gambar ikon. Kolom ikon berisi nama berkas
-// gambar di folder unggahan (src/server/berkas-unggahan.ts).
-export const kategori = pgTable("kategori", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  nama: text("nama").notNull(),
-  ikon: text("ikon").notNull(),
-});
+// gambar di folder unggahan (src/server/berkas-unggahan.ts). Nama Kategori unik (PRD §3.1 ▶ Keputusan
+// 2026-11-11); aturannya diperiksa namaKategoriDipakai di domain. Indeks unik atas nama tanpa huruf
+// besar-kecil dan tanpa spasi tepi menjaganya juga bila dua Admin menyimpan bersamaan.
+export const kategori = pgTable(
+  "kategori",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nama: text("nama").notNull(),
+    ikon: text("ikon").notNull(),
+  },
+  (tabel) => [
+    uniqueIndex("kategori_nama_unik").on(sql`lower(btrim(${tabel.nama}))`),
+  ],
+);
 
 // Produk (PRD §3.2, §3.3, §3.6, §3.7) di tepat satu Kategori. Kategori yang masih berisi Produk tidak
 // bisa dihapus (PRD §3.1), jadi rujukannya restrict. Format Item stok (PRD §4.1) disimpan sebagai
