@@ -5,10 +5,9 @@ import path from "node:path";
 import { headers } from "next/headers";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
-import { auth } from "@/server/auth/auth";
-import { buatAdmin } from "@/server/auth/buat-admin";
 import { koneksi } from "@/server/db";
 import { buatKategori, daftarKategori } from "@/server/kategori";
+import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
 import { FOLDER_UNGGAHAN_TEST, PNG } from "@/server/uji-unggahan";
 
 import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
@@ -16,8 +15,6 @@ import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
 // Test integrasi Server Action dengan database app_test dan folder unggahan dari .env.ci. Header
 // permintaan yang dibaca aksi lewat next/headers diganti dengan cookie milik pengunjung di setiap test.
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
-
-const PASSWORD = "sandi-uji-admin-123";
 
 function sebagaiPengunjung(kepala: Headers) {
   vi.mocked(headers).mockResolvedValue(kepala);
@@ -27,21 +24,6 @@ function formulir(isian: Record<string, string | File>) {
   const data = new FormData();
   for (const [nama, nilai] of Object.entries(isian)) data.set(nama, nilai);
   return data;
-}
-
-async function cookieAdminBaru() {
-  const email = `admin-${randomUUID()}@example.test`;
-  await buatAdmin({ email, password: PASSWORD });
-  const { headers: kepalaRespons } = await auth.api.signInEmail({
-    body: { email, password: PASSWORD },
-    returnHeaders: true,
-  });
-  // Ambil pasangan nama=nilai cookie sesi dari Set-Cookie, seperti yang dikirim browser kembali.
-  const cookie = kepalaRespons
-    .getSetCookie()
-    .map((baris) => baris.split(";")[0])
-    .join("; ");
-  return new Headers({ cookie });
 }
 
 async function kategoriBernama(nama: string) {
@@ -67,24 +49,6 @@ async function kategoriAda(nama: string) {
 
 /** Nama Kategori unik per test, karena database test dipakai bersama oleh semua test. */
 const namaUnik = (nama: string) => `${nama} ${randomUUID().slice(0, 8)}`;
-
-function arahKe(alamat: string) {
-  return (galat: unknown) =>
-    typeof galat === "object" &&
-    galat !== null &&
-    "digest" in galat &&
-    typeof galat.digest === "string" &&
-    galat.digest.split(";")[2] === alamat;
-}
-
-function tidakDitemukan(galat: unknown) {
-  return (
-    typeof galat === "object" &&
-    galat !== null &&
-    "digest" in galat &&
-    galat.digest === "NEXT_HTTP_ERROR_FALLBACK;404"
-  );
-}
 
 const keadaanAwal = () => ({ nama: "" });
 

@@ -5,6 +5,7 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
+  Package,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -23,6 +24,7 @@ type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/ringkasan", label: "Ringkasan", ikon: LayoutDashboard },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
+  { href: "/admin/produk", label: "Produk", ikon: Package },
 ];
 
 // Kerangka menu dasbor admin (PRD §11.1, DESIGN.md Navigation): menu lipat di bawah 900 px,

@@ -103,3 +103,23 @@ export const kategori = pgTable("kategori", {
   nama: text("nama").notNull(),
   ikon: text("ikon").notNull(),
 });
+
+// Produk (PRD §3.2, §3.3, §3.6, §3.7) di tepat satu Kategori. Kategori yang masih berisi Produk tidak
+// bisa dihapus (PRD §3.1), jadi rujukannya restrict. Format Item stok (PRD §4.1) disimpan sebagai
+// daftar nama kolom berurutan; aturan isinya (issue T07) diperiksa periksaFormatItemStok di domain.
+export const produk = pgTable(
+  "produk",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nama: text("nama").notNull(),
+    kategoriId: uuid("kategori_id")
+      .notNull()
+      .references(() => kategori.id, { onDelete: "restrict" }),
+    deskripsi: text("deskripsi").notNull(),
+    ketentuanGaransi: text("ketentuan_garansi").notNull(),
+    unggulan: boolean("unggulan").default(false).notNull(),
+    aktif: boolean("aktif").default(true).notNull(),
+    formatItemStok: text("format_item_stok").array().notNull(),
+  },
+  (tabel) => [index("produk_kategori_id_idx").on(tabel.kategoriId)],
+);
