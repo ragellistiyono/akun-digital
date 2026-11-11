@@ -166,7 +166,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
     expect((await bacaStokVarian(netflix.tigaBulan)).stokVarian).toBe(4);
   });
 
-  it("Halaman bayar membaca Pesanan itu lewat Tautan Pesanan", async () => {
+  it("Halaman bayar membaca Pesanan itu lewat Tautan Pesanan, beserta waktu kedaluwarsa QRIS-nya", async () => {
     const netflix = await netflixPremium();
     const email = emailUnik();
     const hasil = await buatPesanan(
@@ -182,12 +182,14 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
       namaProduk: netflix.nama,
       namaVarian: "1 Bulan",
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
+      kedaluwarsaPada: new Date("2026-11-11T10:15:00+07:00"),
       rincian: {
         hargaJual: 50000,
         potonganVoucher: 0,
         kodeUnik: 123,
         totalBayar: 50123,
       },
+      dibacaPada: expect.any(Date),
     });
   });
 
