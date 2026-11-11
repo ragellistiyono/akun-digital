@@ -1,0 +1,12 @@
+# Dokumen dan berkas terlindungi (.github/protected-paths.txt) tidak dirapikan Prettier.
+*.md
+docs/
+tests/golden/
+.github/
+.impeccable/
+# Termasuk .claude/worktrees/, tempat Claude Code membuat worktree.
+.claude/
+
+# Berkas buatan alat
+drizzle/
+pnpm-lock.yaml
