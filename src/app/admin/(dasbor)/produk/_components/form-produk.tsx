@@ -6,18 +6,18 @@ import { useActionState, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
+import {
+  IsianTeks,
+  KELAS_ISIAN,
+  KELAS_TOMBOL_GARIS,
+  KotakCentang,
+} from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
 import {
   aksiBuatProduk,
   aksiUbahProduk,
   type KeadaanFormProduk,
 } from "../aksi";
-
-const KELAS_ISIAN =
-  "rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
-
-const KELAS_TOMBOL_GARIS =
-  "inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram";
 
 type ProdukAda = {
   id: string;
@@ -29,85 +29,6 @@ type ProdukAda = {
   aktif: boolean;
   formatItemStok: string[];
 };
-
-/** Isian teks satu baris atau beberapa baris, dengan label di atas dan keterangan di bawah. */
-function IsianTeks({
-  nama,
-  label,
-  nilaiAwal,
-  galat,
-  bantuan,
-  banyakBaris = false,
-}: {
-  nama: string;
-  label: string;
-  nilaiAwal: string;
-  galat?: string;
-  bantuan?: string;
-  banyakBaris?: boolean;
-}) {
-  const idKeterangan = `${nama}-keterangan`;
-  const atribut = {
-    id: nama,
-    name: nama,
-    defaultValue: nilaiAwal,
-    "aria-invalid": galat ? true : undefined,
-    "aria-describedby": galat || bantuan ? idKeterangan : undefined,
-  };
-  return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={nama} className="text-sm font-bold">
-        {label}
-      </label>
-      {banyakBaris ? (
-        <textarea
-          {...atribut}
-          rows={5}
-          className={cn(KELAS_ISIAN, "min-h-32 py-3 leading-[1.6]")}
-        />
-      ) : (
-        <input
-          {...atribut}
-          autoComplete="off"
-          className={cn(KELAS_ISIAN, "h-[52px]")}
-        />
-      )}
-      <Keterangan id={idKeterangan} galat={galat} bantuan={bantuan} />
-    </div>
-  );
-}
-
-/** Kotak centang dengan label di sampingnya dan teks bantuan di bawahnya. */
-function KotakCentang({
-  nama,
-  label,
-  bantuan,
-  dicentang,
-}: {
-  nama: string;
-  label: string;
-  bantuan: string;
-  dicentang: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="flex min-h-10 items-center gap-3">
-        <input
-          id={nama}
-          name={nama}
-          type="checkbox"
-          defaultChecked={dicentang}
-          aria-describedby={`${nama}-keterangan`}
-          className="size-6 shrink-0 accent-aksi"
-        />
-        <label htmlFor={nama} className="text-sm font-bold">
-          {label}
-        </label>
-      </div>
-      <Keterangan id={`${nama}-keterangan`} bantuan={bantuan} />
-    </div>
-  );
-}
 
 /**
  * Daftar nama kolom Format Item stok saat membuat Produk (PRD §4.1). Admin bisa menambah dan

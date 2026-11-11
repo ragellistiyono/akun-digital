@@ -47,7 +47,7 @@ async function buatProduk(page: Page, nama: string) {
   await page.goto("/admin/produk/baru");
   await expect(
     page.getByText(
-      "Foto Produk diunggah setelah Produk disimpan, lewat tombol Ubah di daftar Produk.",
+      "Varian dan foto Produk ditambahkan setelah Produk disimpan, lewat tombol Ubah di daftar Produk.",
     ),
   ).toBeVisible();
   await page.getByLabel("Nama", { exact: true }).fill(nama);
