@@ -102,7 +102,10 @@ for (const lebar of [390, 1440]) {
     page,
   }) => {
     await page.setViewportSize({ width: lebar, height: 900 });
-    await page.goto("/");
+    // Di ponsel navigasi bawah berada setelah isi halaman dalam urutan Tab. Beranda kini berisi kartu
+    // Produk yang juga tautan, jadi test ini memakai tab Riwayat, yang isinya tanpa tautan sebelum M2
+    // (PRD §11.1 ▶ Keputusan 2026-11-11). Tautan kerangkanya sama di semua halaman toko.
+    await page.goto("/riwayat");
 
     for (const nama of ["MIWE Digital Store, beranda", ...TAB_TOKO]) {
       await page.keyboard.press("Tab");

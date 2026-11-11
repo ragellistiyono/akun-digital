@@ -113,7 +113,14 @@ test("pemandangan dilukis ulang saat mode berubah", async ({ page }) => {
 test("pemandangan tidak memakai foto atau berkas gambar", async ({ page }) => {
   const gambar: string[] = [];
   page.on("request", (permintaan) => {
-    if (permintaan.resourceType() === "image") gambar.push(permintaan.url());
+    // Foto sampul Produk di kartu Beranda adalah gambar unggahan Admin (/unggahan/…), bukan bagian
+    // pemandangan, jadi tidak dihitung.
+    const unggahan = new URL(permintaan.url()).pathname.startsWith(
+      "/unggahan/",
+    );
+    if (permintaan.resourceType() === "image" && !unggahan) {
+      gambar.push(permintaan.url());
+    }
   });
 
   for (const halaman of ["/", "/kategori"]) {

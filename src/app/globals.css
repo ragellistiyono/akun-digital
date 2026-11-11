@@ -55,6 +55,7 @@
   --color-st-kembali-bg: var(--st-kembali-bg);
   --color-st-kembali: var(--st-kembali);
   --shadow-bayang: var(--bayang);
+  --shadow-bayang-naik: var(--bayang-naik);
 
   /* Variabel shadcn/ui (tabel "Pemetaan ke Tailwind 4 dan shadcn/ui") */
   --color-background: var(--background);
@@ -142,6 +143,8 @@
   /* Bayang (DESIGN.md, Shadow Vocabulary) */
   --bayang: 0 8px 24px -12px rgba(42, 31, 77, 0.38);
   --bayang-gelap: 0 10px 26px -12px rgba(0, 0, 0, 0.65);
+  --bayang-naik: 0 14px 32px -14px rgba(42, 31, 77, 0.5);
+  --bayang-naik-gelap: 0 16px 34px -14px rgba(0, 0, 0, 0.75);
 
   --background: var(--tanah);
   --foreground: var(--tinta);
@@ -191,6 +194,7 @@
     --st-kembali-bg: var(--st-kembali-bg-gelap);
     --st-kembali: var(--st-kembali-gelap);
     --bayang: var(--bayang-gelap);
+    --bayang-naik: var(--bayang-naik-gelap);
 
     color-scheme: dark;
   }
@@ -220,6 +224,7 @@
   --st-kembali-bg: var(--st-kembali-bg-gelap);
   --st-kembali: var(--st-kembali-gelap);
   --bayang: var(--bayang-gelap);
+  --bayang-naik: var(--bayang-naik-gelap);
 
   color-scheme: dark;
 }
