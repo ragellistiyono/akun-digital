@@ -1,6 +1,13 @@
 // Skema database Drizzle. Tabel ditambahkan oleh tiket yang membutuhkannya,
 // lalu migrasinya dibuat dengan `pnpm exec drizzle-kit generate`.
-import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
@@ -79,3 +86,11 @@ export const verification = pgTable(
   },
   (tabel) => [index("verification_identifier_idx").on(tabel.identifier)],
 );
+
+// Batas salah password login (PRD §7.7), satu baris per email dalam bentuk bakunya (PRD §7.4).
+// Baris juga dibuat untuk email yang tidak terdaftar, supaya penolakannya sama dengan email Admin.
+export const batasLogin = pgTable("batas_login", {
+  email: text("email").primaryKey(),
+  jumlahSalah: integer("jumlah_salah").default(0).notNull(),
+  terkunciSampai: instan("terkunci_sampai"),
+});

@@ -15,6 +15,13 @@
       "when": 1794373334842,
       "tag": "0001_login_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794375021987,
+      "tag": "0002_batas_login",
+      "breakpoints": true
     }
   ]
 }
