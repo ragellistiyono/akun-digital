@@ -1,0 +1,77 @@
+{
+  "aturan": "Merapikan nomor WhatsApp toko",
+  "prd": "§9.8",
+  "keterangan": "Admin menulis nomor WhatsApp di Pengaturan toko. Toko membuang spasi, tanda hubung, dan tanda +, lalu mengganti satu angka 0 di depan dengan 62. Hasilnya harus berupa angka saja, diawali 62, dan paling banyak 15 angka. Isian kosong, atau yang hanya berisi spasi, berarti nomor belum diisi (nomor null). Urutan pemeriksaan: kosong, bukan-angka, bukan-nomor-indonesia, terlalu-panjang. ▶ Keputusan 2026-11-11 (#53).",
+  "kasus": [
+    {
+      "nama": "Bentuk 08 dengan tanda hubung",
+      "input": { "isian": "0812-3456-7890" },
+      "output": { "sah": true, "nomor": "6281234567890" }
+    },
+    {
+      "nama": "Bentuk +62 dengan spasi",
+      "input": { "isian": "+62 812 3456 7890" },
+      "output": { "sah": true, "nomor": "6281234567890" }
+    },
+    {
+      "nama": "Bentuk 62 tanpa pemisah",
+      "input": { "isian": "6281234567890" },
+      "output": { "sah": true, "nomor": "6281234567890" }
+    },
+    {
+      "nama": "Bentuk +62 dengan tanda hubung",
+      "input": { "isian": "+62-812-3456-7890" },
+      "output": { "sah": true, "nomor": "6281234567890" }
+    },
+    {
+      "nama": "Spasi di awal dan akhir",
+      "input": { "isian": "  0812 3456 7890  " },
+      "output": { "sah": true, "nomor": "6281234567890" }
+    },
+    {
+      "nama": "Kosong berarti belum diisi",
+      "input": { "isian": "" },
+      "output": { "sah": true, "nomor": null }
+    },
+    {
+      "nama": "Hanya spasi berarti belum diisi",
+      "input": { "isian": "   " },
+      "output": { "sah": true, "nomor": null }
+    },
+    {
+      "nama": "Berisi huruf",
+      "input": { "isian": "0812-ABCD-7890" },
+      "output": { "sah": false, "alasan": "bukan-angka" }
+    },
+    {
+      "nama": "Titik tidak termasuk pemisah yang dibuang",
+      "input": { "isian": "0812.3456.7890" },
+      "output": { "sah": false, "alasan": "bukan-angka" }
+    },
+    {
+      "nama": "Nomor luar negeri (UAT-I5)",
+      "input": { "isian": "+1 555 0100" },
+      "output": { "sah": false, "alasan": "bukan-nomor-indonesia" }
+    },
+    {
+      "nama": "Tanpa 0 atau 62 di depan",
+      "input": { "isian": "81234567890" },
+      "output": { "sah": false, "alasan": "bukan-nomor-indonesia" }
+    },
+    {
+      "nama": "Tepat 15 angka diterima",
+      "input": { "isian": "621234567890123" },
+      "output": { "sah": true, "nomor": "621234567890123" }
+    },
+    {
+      "nama": "16 angka ditolak",
+      "input": { "isian": "6212345678901234" },
+      "output": { "sah": false, "alasan": "terlalu-panjang" }
+    },
+    {
+      "nama": "Bentuk 08 yang menjadi 16 angka ditolak",
+      "input": { "isian": "081234567890123" },
+      "output": { "sah": false, "alasan": "terlalu-panjang" }
+    }
+  ]
+}
