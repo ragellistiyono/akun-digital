@@ -86,6 +86,95 @@ async function bukaDenganJamUji(page: Page, tautan: string) {
   await expect(kartuSenja(page).locator("svg")).toBeVisible();
 }
 
+/**
+ * Kontras setiap baris teks di kartu senja terhadap pemandangan yang benar-benar ada di belakangnya. Teks
+ * disembunyikan sebentar, kartu difoto, lalu untuk setiap baris dihitung kotak tinta hurufnya dari ukuran
+ * huruf (canvas measureText). Latar diwakili petak 4 × 4 piksel paling terang di dalam kotak tinta itu,
+ * supaya butiran derau satu piksel tidak dihitung sendiri-sendiri, dan kontrasnya dihitung terhadap warna
+ * teks yang sedang dipakai (WCAG).
+ */
+async function kontrasTeksKartu(page: Page) {
+  const kartu = kartuSenja(page);
+  const baris = await kartu.evaluate((wadah) => {
+    const konteks = document.createElement("canvas").getContext("2d")!;
+    const dasar = wadah.getBoundingClientRect();
+    return Array.from(wadah.querySelectorAll("p")).map((el) => {
+      const gaya = getComputedStyle(el);
+      konteks.font = `${gaya.fontWeight} ${gaya.fontSize} ${gaya.fontFamily}`;
+      konteks.letterSpacing = gaya.letterSpacing;
+      const ukuran = konteks.measureText(el.textContent ?? "");
+      const kotak = el.getBoundingClientRect();
+      const garisDasar =
+        kotak.top -
+        dasar.top +
+        (kotak.height -
+          ukuran.fontBoundingBoxAscent -
+          ukuran.fontBoundingBoxDescent) /
+          2 +
+        ukuran.fontBoundingBoxAscent;
+      const awal =
+        (gaya.textAlign === "right" ? kotak.right - ukuran.width : kotak.left) -
+        dasar.left;
+      return {
+        teks: el.textContent ?? "",
+        warna: gaya.color,
+        x1: awal - ukuran.actualBoundingBoxLeft,
+        x2: awal + ukuran.actualBoundingBoxRight,
+        y1: garisDasar - ukuran.actualBoundingBoxAscent,
+        y2: garisDasar + ukuran.actualBoundingBoxDescent,
+      };
+    });
+  });
+  const lapisTeks = kartu.locator("div:has(> div > p)");
+  await lapisTeks.evaluate((el) => (el.style.visibility = "hidden"));
+  const foto = (await kartu.screenshot()).toString("base64");
+  await lapisTeks.evaluate((el) => (el.style.visibility = ""));
+
+  return page.evaluate(
+    async ({ foto, baris }) => {
+      const gambar = new Image();
+      gambar.src = `data:image/png;base64,${foto}`;
+      await gambar.decode();
+      const { width: L, height: T } = gambar;
+      const kanvas = document.createElement("canvas");
+      kanvas.width = L;
+      kanvas.height = T;
+      const konteks = kanvas.getContext("2d")!;
+      konteks.drawImage(gambar, 0, 0);
+      const piksel = konteks.getImageData(0, 0, L, T).data;
+      const linear = (v: number) => {
+        const s = v / 255;
+        return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      };
+      const luminans = (r: number, g: number, b: number) =>
+        0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+      return baris.map(({ teks, warna, x1, x2, y1, y2 }) => {
+        let latar = 0;
+        for (let y = Math.floor(y1); y < Math.ceil(y2); y += 4) {
+          for (let x = Math.floor(x1); x < Math.ceil(x2); x += 4) {
+            let jumlah = 0;
+            let n = 0;
+            for (let dy = y; dy < Math.min(y + 4, Math.ceil(y2)); dy++) {
+              for (let dx = x; dx < Math.min(x + 4, Math.ceil(x2)); dx++) {
+                const i = (dy * L + dx) * 4;
+                jumlah += luminans(piksel[i], piksel[i + 1], piksel[i + 2]);
+                n++;
+              }
+            }
+            latar = Math.max(latar, jumlah / n);
+          }
+        }
+        const [r, g, b] = (warna.match(/\d+/g) ?? []).map(Number);
+        const depan = luminans(r, g, b);
+        const kontras =
+          (Math.max(depan, latar) + 0.05) / (Math.min(depan, latar) + 0.05);
+        return { teks, warna, kontras: Math.round(kontras * 100) / 100 };
+      });
+    },
+    { foto, baris },
+  );
+}
+
 // Issue T18: hitung mundur dihitung dari waktu kedaluwarsa QRIS yang tersimpan di Pesanan, dan
 // menggerakkan waktu senja pemandangan (DESIGN.md "Pemandangan senja").
 test("hitung mundur di kartu senja menunjukkan sisa waktu sampai waktu kedaluwarsa QRIS dari Qrispy tiruan", async ({
@@ -277,6 +366,35 @@ test("di layar lebar, bilah lekat Halaman bayar menjadi blok biasa di kolomnya",
     "position",
     "static",
   );
+});
+
+// DESIGN.md "Pemandangan senja": warna angka waktu dan Total bayar berganti antara #2A1F4D dan putih
+// mengikuti luminans langit, supaya kontrasnya selalu minimal 4,5:1.
+test("di lebar 360 px, teks kartu senja kontrasnya minimal 4,5:1 terhadap pemandangan di belakangnya sepanjang hitung mundur", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  const dipesan = await checkoutSampaiHalamanBayar(page);
+  const kedaluwarsa = dipesan.kedaluwarsaPada.getTime();
+  await bukaDenganJamUji(page, dipesan.tautan);
+  await page.evaluate(() => document.fonts.ready);
+
+  // t ≈ 0,02; 0,25; 0,5; 0,75; dan 1.
+  for (const sisa of [880, 675, 450, 225, 0]) {
+    await page.clock.pauseAt(kedaluwarsa - sisa * 1000);
+    await expect(angkaWaktu(page)).toHaveText(mmss(sisa));
+
+    const kontras = await kontrasTeksKartu(page);
+    expect(kontras.map(({ teks }) => teks)).toEqual([
+      sisa === 0 ? "QRIS kedaluwarsa" : "sisa waktu bayar",
+      mmss(sisa),
+      "Total bayar",
+      `Rp ${dipesan.totalBayar.toLocaleString("id-ID")}`,
+    ]);
+    for (const baris of kontras) {
+      expect(baris.kontras, JSON.stringify(baris)).toBeGreaterThanOrEqual(4.5);
+    }
+  }
 });
 
 test("di lebar 360 px, Halaman bayar dengan kartu senja tidak bisa digulir ke samping", async ({

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   lukisPemandangan,
+  WARNA_TEKS_LANGIT,
+  warnaTeksLangit,
   type Henti as HentiGradien,
   type JenisPemandangan,
+  type Kotak,
 } from "./pelukis-pemandangan";
 
 /** Waktu senja: satu angka, atau satu angka per mode tampilan. */
@@ -44,13 +47,22 @@ function buatTeksturButir() {
  * Pemandangan senja yang dilukis dengan kode sebagai SVG (DESIGN.md, "Pemandangan senja").
  * Mengisi wadah induknya, yang harus `relative` dan menentukan tingginya sendiri.
  * Dilukis ulang saat ukuran wadah atau mode tampilan berubah.
+ *
+ * Teks yang ditulis di atas langit dikirim sebagai `teks`, yaitu kotak-kotaknya di dalam wadah. Matahari,
+ * cahaya ufuk, awan, dan bintang dijauhkan dari kotak itu, lalu `children` dipanggil dengan warna teks
+ * yang dipilih terhadap latar di belakangnya. Selama `teks` masih null (belum diukur), pemandangan belum
+ * dilukis dan warna teksnya putih.
  */
 export function PemandanganSenja({
   jenis,
   t,
+  teks,
+  children,
 }: {
   jenis: JenisPemandangan;
   t: WaktuSenja;
+  teks?: Kotak[] | null;
+  children?: (warnaTeks: string) => ReactNode;
 }) {
   const id = useId();
   const elemen = useRef<HTMLDivElement>(null);
@@ -94,151 +106,159 @@ export function PemandanganSenja({
   // Halaman bayar memakai kunci atas yang mengikuti waktu senja, dan kabutnya larut ke `permukaan` (DESIGN.md).
   const kartuBayar = jenis === "bayar";
   const lukisan =
-    wadah && wadah.lebar > 0 && wadah.tinggi > 0
+    wadah && wadah.lebar > 0 && wadah.tinggi > 0 && teks !== null
       ? lukisPemandangan(jenis, {
           lebar: wadah.lebar,
           tinggi: wadah.tinggi,
           t: typeof t === "number" ? t : wadah.gelap ? t.gelap : t.terang,
           atas: kartuBayar ? undefined : wadah.langit,
           kabutKe: kartuBayar ? wadah.permukaan : wadah.tanah,
+          teks,
         })
       : null;
+  const warnaTeks =
+    lukisan && teks
+      ? warnaTeksLangit(lukisan, teks).warna
+      : WARNA_TEKS_LANGIT.putih;
 
   return (
-    <div
-      ref={elemen}
-      aria-hidden="true"
-      data-pemandangan={jenis}
-      className="absolute inset-0 overflow-hidden"
-    >
-      {wadah && lukisan && (
-        <>
-          <svg
-            viewBox={`0 0 ${lukisan.lebar} ${lukisan.tinggi}`}
-            preserveAspectRatio="none"
-            className="absolute inset-0 block size-full"
-          >
-            <defs>
-              <linearGradient id={`${id}l`} x1="0" y1="0" x2="0" y2="1">
-                <Henti henti={lukisan.langit} />
-              </linearGradient>
-              <radialGradient id={`${id}u`} cx=".5" cy=".5" r=".5">
-                <Henti henti={lukisan.cahayaUfuk.henti} />
-              </radialGradient>
-              {lukisan.matahari && (
-                <radialGradient id={`${id}g`}>
-                  <Henti henti={lukisan.matahari.pendar.henti} />
-                </radialGradient>
-              )}
-              <filter
-                id={`${id}a`}
-                x="-20%"
-                y="-200%"
-                width="140%"
-                height="500%"
-              >
-                <feGaussianBlur stdDeviation={lukisan.awan.kabur} />
-              </filter>
-              {lukisan.punggung.map((lapis, k) => (
-                <linearGradient
-                  key={k}
-                  id={`${id}r${k}`}
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
-                  <Henti henti={lapis.henti} />
+    <>
+      <div
+        ref={elemen}
+        aria-hidden="true"
+        data-pemandangan={jenis}
+        className="absolute inset-0 overflow-hidden"
+      >
+        {wadah && lukisan && (
+          <>
+            <svg
+              viewBox={`0 0 ${lukisan.lebar} ${lukisan.tinggi}`}
+              preserveAspectRatio="none"
+              className="absolute inset-0 block size-full"
+            >
+              <defs>
+                <linearGradient id={`${id}l`} x1="0" y1="0" x2="0" y2="1">
+                  <Henti henti={lukisan.langit} />
                 </linearGradient>
+                <radialGradient id={`${id}u`} cx=".5" cy=".5" r=".5">
+                  <Henti henti={lukisan.cahayaUfuk.henti} />
+                </radialGradient>
+                {lukisan.matahari && (
+                  <radialGradient id={`${id}g`}>
+                    <Henti henti={lukisan.matahari.pendar.henti} />
+                  </radialGradient>
+                )}
+                <filter
+                  id={`${id}a`}
+                  x="-20%"
+                  y="-200%"
+                  width="140%"
+                  height="500%"
+                >
+                  <feGaussianBlur stdDeviation={lukisan.awan.kabur} />
+                </filter>
+                {lukisan.punggung.map((lapis, k) => (
+                  <linearGradient
+                    key={k}
+                    id={`${id}r${k}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <Henti henti={lapis.henti} />
+                  </linearGradient>
+                ))}
+                {lukisan.punggung.map(
+                  (lapis, k) =>
+                    lapis.kabur !== null && (
+                      <filter key={k} id={`${id}h${k}`}>
+                        <feGaussianBlur stdDeviation={lapis.kabur} />
+                      </filter>
+                    ),
+                )}
+                <linearGradient id={`${id}k`} x1="0" y1="0" x2="0" y2="1">
+                  <Henti henti={lukisan.kabut.henti} />
+                </linearGradient>
+              </defs>
+              <rect
+                width={lukisan.lebar}
+                height={lukisan.tinggi}
+                fill={`url(#${id}l)`}
+              />
+              {lukisan.bintang.map((b, i) => (
+                <circle
+                  key={i}
+                  cx={b.cx}
+                  cy={b.cy}
+                  r={b.r}
+                  fill={b.warna}
+                  opacity={b.opasitas}
+                />
               ))}
-              {lukisan.punggung.map(
-                (lapis, k) =>
-                  lapis.kabur !== null && (
-                    <filter key={k} id={`${id}h${k}`}>
-                      <feGaussianBlur stdDeviation={lapis.kabur} />
-                    </filter>
-                  ),
-              )}
-              <linearGradient id={`${id}k`} x1="0" y1="0" x2="0" y2="1">
-                <Henti henti={lukisan.kabut.henti} />
-              </linearGradient>
-            </defs>
-            <rect
-              width={lukisan.lebar}
-              height={lukisan.tinggi}
-              fill={`url(#${id}l)`}
-            />
-            {lukisan.bintang.map((b, i) => (
-              <circle
-                key={i}
-                cx={b.cx}
-                cy={b.cy}
-                r={b.r}
-                fill={b.warna}
-                opacity={b.opasitas}
-              />
-            ))}
-            <ellipse
-              cx={lukisan.cahayaUfuk.cx}
-              cy={lukisan.cahayaUfuk.cy}
-              rx={lukisan.cahayaUfuk.rx}
-              ry={lukisan.cahayaUfuk.ry}
-              fill={`url(#${id}u)`}
-            />
-            {lukisan.awan.elips.map((a, i) => (
               <ellipse
-                key={i}
-                cx={a.cx}
-                cy={a.cy}
-                rx={a.rx}
-                ry={a.ry}
-                fill={a.warna}
-                opacity={a.opasitas}
-                filter={`url(#${id}a)`}
+                cx={lukisan.cahayaUfuk.cx}
+                cy={lukisan.cahayaUfuk.cy}
+                rx={lukisan.cahayaUfuk.rx}
+                ry={lukisan.cahayaUfuk.ry}
+                fill={`url(#${id}u)`}
               />
-            ))}
-            {lukisan.matahari && (
-              <>
-                <circle
-                  cx={lukisan.matahari.cx}
-                  cy={lukisan.matahari.cy}
-                  r={lukisan.matahari.pendar.r}
-                  fill={`url(#${id}g)`}
+              {lukisan.awan.elips.map((a, i) => (
+                <ellipse
+                  key={i}
+                  cx={a.cx}
+                  cy={a.cy}
+                  rx={a.rx}
+                  ry={a.ry}
+                  fill={a.warna}
+                  opacity={a.opasitas}
+                  filter={`url(#${id}a)`}
                 />
-                <circle
-                  cx={lukisan.matahari.cx}
-                  cy={lukisan.matahari.cy}
-                  r={lukisan.matahari.r}
-                  fill={lukisan.matahari.warna}
-                  opacity={lukisan.matahari.opasitas}
+              ))}
+              {lukisan.matahari && (
+                <>
+                  <circle
+                    cx={lukisan.matahari.cx}
+                    cy={lukisan.matahari.cy}
+                    r={lukisan.matahari.pendar.r}
+                    fill={`url(#${id}g)`}
+                  />
+                  <circle
+                    cx={lukisan.matahari.cx}
+                    cy={lukisan.matahari.cy}
+                    r={lukisan.matahari.r}
+                    fill={lukisan.matahari.warna}
+                    opacity={lukisan.matahari.opasitas}
+                  />
+                </>
+              )}
+              {lukisan.punggung.map((lapis, k) => (
+                <path
+                  key={k}
+                  d={lapis.d}
+                  fill={`url(#${id}r${k})`}
+                  filter={lapis.kabur !== null ? `url(#${id}h${k})` : undefined}
                 />
-              </>
-            )}
-            {lukisan.punggung.map((lapis, k) => (
-              <path
-                key={k}
-                d={lapis.d}
-                fill={`url(#${id}r${k})`}
-                filter={lapis.kabur !== null ? `url(#${id}h${k})` : undefined}
+              ))}
+              <rect
+                y={lukisan.kabut.y}
+                width={lukisan.lebar}
+                height={lukisan.kabut.tinggi}
+                fill={`url(#${id}k)`}
               />
-            ))}
-            <rect
-              y={lukisan.kabut.y}
-              width={lukisan.lebar}
-              height={lukisan.kabut.tinggi}
-              fill={`url(#${id}k)`}
+            </svg>
+            <div
+              className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+              style={{
+                backgroundImage: `url(${wadah.butir})`,
+                opacity: lukisan.butir,
+              }}
             />
-          </svg>
-          <div
-            className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-            style={{
-              backgroundImage: `url(${wadah.butir})`,
-              opacity: lukisan.butir,
-            }}
-          />
-        </>
-      )}
-    </div>
+          </>
+        )}
+      </div>
+      {children?.(warnaTeks)}
+    </>
   );
 }
 
