@@ -1,0 +1,1 @@
+ALTER TABLE "produk" ADD COLUMN "foto" text[] DEFAULT '{}' NOT NULL;

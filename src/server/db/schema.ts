@@ -107,6 +107,8 @@ export const kategori = pgTable("kategori", {
 // Produk (PRD §3.2, §3.3, §3.6, §3.7) di tepat satu Kategori. Kategori yang masih berisi Produk tidak
 // bisa dihapus (PRD §3.1), jadi rujukannya restrict. Format Item stok (PRD §4.1) disimpan sebagai
 // daftar nama kolom berurutan; aturan isinya (issue T07) diperiksa periksaFormatItemStok di domain.
+// Foto Produk (PRD §3.3) adalah daftar nama berkas gambar di folder unggahan menurut urutannya; foto
+// pertama menjadi sampul. Batas 5 foto diperiksa tambahFoto di domain.
 export const produk = pgTable(
   "produk",
   {
@@ -120,6 +122,7 @@ export const produk = pgTable(
     unggulan: boolean("unggulan").default(false).notNull(),
     aktif: boolean("aktif").default(true).notNull(),
     formatItemStok: text("format_item_stok").array().notNull(),
+    foto: text("foto").array().default([]).notNull(),
   },
   (tabel) => [index("produk_kategori_id_idx").on(tabel.kategoriId)],
 );
