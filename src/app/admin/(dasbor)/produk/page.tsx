@@ -1,33 +1,11 @@
-import { Eye, EyeOff, Plus, Star, type LucideIcon } from "lucide-react";
+import { Plus, Star } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { daftarProduk } from "@/server/produk";
 
-/** Pil keadaan Produk dengan warna, ikon, dan label sekaligus (DESIGN.md Status Pesanan). */
-function Pil({
-  ikon: Ikon,
-  label,
-  className,
-}: {
-  ikon: LucideIcon;
-  label: string;
-  className: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-extrabold whitespace-nowrap",
-        className,
-      )}
-    >
-      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.4} />
-      {label}
-    </span>
-  );
-}
+import { Pil, PilAktif } from "../_components/pil";
 
 // Daftar Produk di dasbor admin (PRD §3.2, §3.6, §3.7), urut menurut nama.
 export default async function HalamanDaftarProduk() {
@@ -84,19 +62,7 @@ export default async function HalamanDaftarProduk() {
                   </th>
                   <td className="py-2 pr-2">
                     <div className="flex flex-wrap gap-2">
-                      {produk.aktif ? (
-                        <Pil
-                          ikon={Eye}
-                          label="Aktif"
-                          className="bg-st-selesai-bg text-st-selesai"
-                        />
-                      ) : (
-                        <Pil
-                          ikon={EyeOff}
-                          label="Nonaktif"
-                          className="bg-st-batal-bg text-st-batal"
-                        />
-                      )}
+                      <PilAktif aktif={produk.aktif} />
                       {produk.unggulan && (
                         <Pil
                           ikon={Star}

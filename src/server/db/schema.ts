@@ -1,6 +1,7 @@
 // Skema database Drizzle. Tabel ditambahkan oleh tiket yang membutuhkannya,
 // lalu migrasinya dibuat dengan `pnpm exec drizzle-kit generate`.
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -125,4 +126,23 @@ export const produk = pgTable(
     foto: text("foto").array().default([]).notNull(),
   },
   (tabel) => [index("produk_kategori_id_idx").on(tabel.kategoriId)],
+);
+
+// Varian (PRD §3.2, §3.5, §3.7): pilihan di dalam sebuah Produk, dengan Harga jual dan Harga normal
+// opsional dalam rupiah bulat. Aturan harganya diperiksa periksaHarga di domain. Harga normal tidak
+// dibatasi maksimum, jadi disimpan sebagai bigint. Varian tidak ada tanpa Produknya, jadi ikut
+// terhapus bersama Produk (T29).
+export const varian = pgTable(
+  "varian",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    produkId: uuid("produk_id")
+      .notNull()
+      .references(() => produk.id, { onDelete: "cascade" }),
+    nama: text("nama").notNull(),
+    hargaJual: integer("harga_jual").notNull(),
+    hargaNormal: bigint("harga_normal", { mode: "number" }),
+    aktif: boolean("aktif").default(true).notNull(),
+  },
+  (tabel) => [index("varian_produk_id_idx").on(tabel.produkId)],
 );
