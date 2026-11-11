@@ -10,19 +10,20 @@ import { HargaNormal, LabelHemat } from "./kartu-produk";
  * jual beserta Harga normal yang dicoret dan label Hemat. Varian habis bertulisan "Habis", beropasitas
  * 60%, dan radionya nonaktif sehingga tidak bisa dipilih.
  *
- * Radionya radio bawaan browser (`name="varianId"`), jadi pilihan bekerja tanpa JavaScript dan bisa
- * dikirim lewat form. Varian ber-stok pertama sudah terpilih saat halaman dibuka.
+ * Radionya radio bawaan browser (`name="varianId"`), jadi pilihan bekerja tanpa JavaScript dan dikirim
+ * lewat form beli Halaman Produk.
  */
 export function PilihanVarian({
   varian,
+  terpilihId,
   labelledBy,
 }: {
   varian: HalamanProduk["varian"];
+  /** id Varian yang sudah terpilih saat halaman dibuka, atau null bila tidak ada. */
+  terpilihId: string | null;
   /** id judul yang menamai radiogroup ini. */
   labelledBy: string;
 }) {
-  const terpilihId = varian.find((v) => !v.habis)?.id;
-
   return (
     <div role="radiogroup" aria-labelledby={labelledBy} className="grid gap-2">
       {varian.map((v) => (

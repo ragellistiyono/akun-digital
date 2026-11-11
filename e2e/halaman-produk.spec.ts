@@ -280,7 +280,9 @@ test('Produk dengan satu Varian aktif yang habis menampilkan "Habis"', async ({
 
   await expect(page.getByRole("radiogroup")).toHaveCount(0);
   await expect(isi.getByText("Rp 25.000", { exact: true })).toBeVisible();
-  await expect(isi.getByText("Habis", { exact: true })).toBeVisible();
+  // Label Habis di bawah harga, dan tombol utama yang juga berbunyi "Habis" (T14).
+  await expect(isi.getByText("Habis", { exact: true })).toHaveCount(2);
+  await expect(isi.getByRole("button", { name: "Habis" })).toBeDisabled();
   await expect(isi.getByText(/Stok/)).toHaveCount(0);
 });
 

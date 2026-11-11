@@ -56,6 +56,7 @@
   --color-st-kembali: var(--st-kembali);
   --shadow-bayang: var(--bayang);
   --shadow-bayang-naik: var(--bayang-naik);
+  --shadow-bayang-lekat: var(--bayang-lekat);
 
   /* Variabel shadcn/ui (tabel "Pemetaan ke Tailwind 4 dan shadcn/ui") */
   --color-background: var(--background);
@@ -145,6 +146,7 @@
   --bayang-gelap: 0 10px 26px -12px rgba(0, 0, 0, 0.65);
   --bayang-naik: 0 14px 32px -14px rgba(42, 31, 77, 0.5);
   --bayang-naik-gelap: 0 16px 34px -14px rgba(0, 0, 0, 0.75);
+  --bayang-lekat: 0 -10px 20px -18px rgba(42, 31, 77, 0.45);
 
   --background: var(--tanah);
   --foreground: var(--tinta);
