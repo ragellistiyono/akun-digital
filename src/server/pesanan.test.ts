@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import type { StatusItemStok } from "@/domain/item-stok";
@@ -16,7 +16,9 @@ import {
 } from "./db/schema";
 import { prosesKabarPembayaran } from "./kabar-pembayaran";
 import { bacaStokVarian, tambahItemStok } from "./item-stok";
+import { prosesKedaluwarsaPesanan } from "./kedaluwarsa-pesanan";
 import { jadwalKedaluwarsaPesanan } from "./pekerjaan-latar";
+import { batalkanPesanan } from "./pembatalan-pesanan";
 import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { qrispyTiruan } from "./qrispy-tiruan";
@@ -517,6 +519,158 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
         totalBayar: 135123,
       },
     });
+  });
+});
+
+// PRD §5.4 ▶ Keputusan 2026-11-11: satu email hanya boleh punya 1 Pesanan Menunggu Pembayaran, dengan email
+// dibandingkan menurut §7.4. Browser tempat Pesanan dibuat memegang Tautan Pesanan-nya.
+describe("buatPesanan dengan email yang masih punya Pesanan Menunggu Pembayaran (PRD §5.4)", () => {
+  /** Checkout Netflix Premium 1 Bulan sampai Pesanan Menunggu Pembayaran dengan waktu kedaluwarsa 10.15 WIB dibuat. */
+  async function checkoutPertama(email: string) {
+    const netflix = await netflixPremium();
+    const hasil = await buatPesanan(
+      { varianId: netflix.satuBulan, email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+    if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+    const [{ id }] = await db
+      .select({ id: pesanan.id })
+      .from(pesanan)
+      .where(eq(pesanan.tautan, hasil.tautan));
+    return { netflix, id, tautan: hasil.tautan };
+  }
+
+  /** Status semua Pesanan yang emailnya ditulis persis seperti salah satu tulisan itu. */
+  const statusPesananDenganEmail = (...tulisan: string[]) =>
+    db
+      .select({ status: pesanan.status })
+      .from(pesanan)
+      .where(inArray(pesanan.email, tulisan));
+
+  const tautanLain = () => randomBytes(32).toString("base64url");
+
+  it("dari browser yang memegang Tautan Pesanan-nya, email yang ditulis huruf besar diarahkan ke Pesanan itu tanpa QRIS baru", async () => {
+    const email = emailUnik();
+    const pertama = await checkoutPertama(email);
+    const qrispy = qrispyKodeUnik123();
+
+    const hasil = await buatPesanan(
+      {
+        varianId: pertama.netflix.tigaBulan,
+        email: email.toUpperCase(),
+        tautanDiBrowser: [tautanLain(), pertama.tautan],
+      },
+      { qrispy },
+    );
+
+    expect(hasil).toEqual({
+      hasil: "pesanan-menunggu-di-browser-ini",
+      tautan: pertama.tautan,
+    });
+    expect(qrispy.buatQris).not.toHaveBeenCalled();
+    expect(await statusPesananDenganEmail(email, email.toUpperCase())).toEqual([
+      { status: "Menunggu Pembayaran" },
+    ]);
+  });
+
+  it("dari browser lain, checkout ditolak dengan waktu kedaluwarsa Pesanan itu, tanpa Tautan Pesanan, QRIS, maupun Pesanan baru", async () => {
+    const email = emailUnik();
+    const pertama = await checkoutPertama(email);
+    const qrispy = qrispyKodeUnik123();
+
+    const hasil = await buatPesanan(
+      {
+        varianId: pertama.netflix.tigaBulan,
+        email: ` ${email.toUpperCase()} `,
+        tautanDiBrowser: [tautanLain()],
+      },
+      { qrispy },
+    );
+
+    expect(hasil).toEqual({
+      hasil: "pesanan-menunggu-di-browser-lain",
+      kedaluwarsaPada: new Date("2026-11-11T10:15:00+07:00"),
+    });
+    expect(qrispy.buatQris).not.toHaveBeenCalled();
+    expect(await statusPesananDenganEmail(email)).toEqual([
+      { status: "Menunggu Pembayaran" },
+    ]);
+  });
+
+  for (const [status, akhiri] of [
+    [
+      "Dibatalkan",
+      ({ tautan }: { tautan: string }) =>
+        batalkanPesanan(tautan, { qrispy: qrispyKodeUnik123() }),
+    ],
+    [
+      "Kedaluwarsa",
+      ({ id }: { id: string }) =>
+        prosesKedaluwarsaPesanan(id, {
+          qrispy: qrispyTiruan,
+          sekarang: new Date("2026-11-11T10:15:00+07:00"),
+        }),
+    ],
+  ] as const) {
+    it(`setelah Pesanan itu ${status}, email itu bisa checkout lagi dari browser mana pun`, async () => {
+      const email = emailUnik();
+      const pertama = await checkoutPertama(email);
+      expect(await akhiri(pertama)).toEqual({ hasil: status.toLowerCase() });
+
+      const hasil = await buatPesanan(
+        { varianId: pertama.netflix.satuBulan, email, tautanDiBrowser: [] },
+        { qrispy: qrispyKodeUnik123() },
+      );
+
+      expect(hasil).toEqual({ hasil: "dibuat", tautan: expect.any(String) });
+      expect(await statusPesananDenganEmail(email)).toEqual(
+        expect.arrayContaining([{ status }, { status: "Menunggu Pembayaran" }]),
+      );
+    });
+  }
+
+  it("dua checkout bersamaan dengan email yang sama menghasilkan paling banyak satu Pesanan Menunggu Pembayaran", async () => {
+    const netflix = await netflixPremium();
+    const email = emailUnik();
+    const qrispy = qrispyKodeUnik123();
+    // QRIS baru terbit setelah kedua checkout memintanya, jadi keduanya sudah lolos pemeriksaan sebelum
+    // salah satunya menyimpan Pesanan.
+    const terbitkan = qrispy.buatQris.getMockImplementation()!;
+    let lepaskan = () => {};
+    const keduanyaMeminta = new Promise<void>((r) => (lepaskan = r));
+    qrispy.buatQris.mockImplementation(async (permintaan) => {
+      if (qrispy.buatQris.mock.calls.length === 2) lepaskan();
+      await keduanyaMeminta;
+      return terbitkan(permintaan);
+    });
+
+    const hasil = await Promise.all(
+      [email, email.toUpperCase()].map((tulisan) =>
+        buatPesanan(
+          { varianId: netflix.satuBulan, email: tulisan, tautanDiBrowser: [] },
+          { qrispy },
+        ),
+      ),
+    );
+
+    expect(hasil.map((h) => h.hasil).sort()).toEqual([
+      "dibuat",
+      "pesanan-menunggu-di-browser-lain",
+    ]);
+    const dibuat = await db
+      .select({ qrisId: pesanan.qrisId, status: pesanan.status })
+      .from(pesanan)
+      .where(inArray(pesanan.email, [email, email.toUpperCase()]));
+    expect(dibuat).toEqual([
+      { qrisId: expect.any(String), status: "Menunggu Pembayaran" },
+    ]);
+    const semuaQris = await Promise.all(
+      qrispy.buatQris.mock.results.map((r) => r.value),
+    );
+    const qrisDitolak = semuaQris.find((q) => q.qrisId !== dibuat[0].qrisId);
+    expect(qrispy.batalkanQris).toHaveBeenCalledExactlyOnceWith(
+      qrisDitolak?.qrisId,
+    );
   });
 });
 
