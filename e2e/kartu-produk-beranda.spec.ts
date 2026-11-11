@@ -20,6 +20,9 @@ const NAMA = {
   gameLama: `Game Lama ${akhiran}`,
   // tests/golden/harga-kartu-produk.json, kasus "Varian nonaktif lebih murah diabaikan".
   varianNonaktif: `Disney Plus ${akhiran}`,
+  // Produk Unggulan dengan Varian habis yang punya Harga normal (issue T11-b). Harganya dari
+  // tests/golden/persen-hemat.json: 30.000 → 20.000 dan 150.000 → 135.000 (Hemat 10%).
+  unggulanHabis: `YouTube Premium Keluarga ${akhiran}`,
   // Nama panjang dan Harga normal yang sangat besar (tanpa batas maksimum, PRD §3.2) untuk menguji
   // lebar 360 px.
   panjang: `Langganan Keluarga Premium Sepanjang Tahun Tanpa Iklan ${akhiran}`,
@@ -69,6 +72,14 @@ test.beforeAll(async () => {
     ],
   });
   await sisipkanProduk({
+    nama: NAMA.unggulanHabis,
+    unggulan: true,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 20000, hargaNormal: 30000 },
+      { nama: "3 Bulan", hargaJual: 135000, hargaNormal: 150000, Tersedia: 4 },
+    ],
+  });
+  await sisipkanProduk({
     nama: NAMA.panjang,
     unggulan: true,
     varian: [
@@ -96,6 +107,9 @@ const bisaDigulirKeSamping = (page: Page) =>
       document.documentElement.scrollWidth >
       document.documentElement.clientWidth,
   );
+
+// app_test lokal bisa berisi ribuan Produk sisa test lain, jadi Beranda diberi waktu muat lebih lama.
+const NAVIGASI = { timeout: 15_000 };
 
 test.use({ viewport: { width: 390, height: 800 } });
 
@@ -174,26 +188,46 @@ test("Produk Unggulan tampil di bagian Produk Unggulan, sebelum semua Produk", a
   );
 });
 
-test("di layar lebar, kartu Produk Unggulan menampilkan daftar Varian dengan Harga normal dicoret atau label Habis", async ({
+const daftarVarianUnggulan = (page: Page, nama: string) =>
+  bagian(page, "Produk Unggulan").getByRole("list", { name: `Varian ${nama}` });
+
+// UAT-C4, issue T11-b, dan docs/DESIGN.md ▶ Keputusan 2026-11-11 (#53).
+test("di lebar 1440 px, kartu Produk Unggulan Netflix Premium menampilkan Varian 1 Bulan dengan Rp 75.000 dicoret dan Hemat 33%", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto("/", NAVIGASI);
 
-  const daftar = bagian(page, "Produk Unggulan").getByRole("list", {
-    name: `Varian ${NAMA.netflix}`,
-  });
+  const daftar = daftarVarianUnggulan(page, NAMA.netflix);
+  const satuBulan = daftar.getByRole("listitem").filter({ hasText: "1 Bulan" });
+  await expect(satuBulan).toBeVisible(NAVIGASI);
+  await expect(satuBulan.locator("s")).toHaveText("Harga normal Rp 75.000");
+  await expect(satuBulan.getByText("Hemat 33%", { exact: true })).toBeVisible();
   await expect(daftar.getByRole("listitem")).toHaveText([
-    "1 BulanHarga normal Rp 75.000Rp 50.000",
+    "1 BulanHarga normal Rp 75.000Hemat 33%Rp 50.000",
     "3 BulanRp 135.000",
   ]);
+});
 
-  const daftarHabis = bagian(page, "Produk Unggulan").getByRole("list", {
-    name: `Varian ${NAMA.panjang}`,
-  });
-  await expect(daftarHabis.getByRole("listitem")).toHaveText([
-    "Keluarga 12 BulanHabis",
-  ]);
+test("di lebar 1440 px, Varian habis di daftar Varian kartu Produk Unggulan menampilkan label Habis tanpa Hemat", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/", NAVIGASI);
+
+  const daftar = daftarVarianUnggulan(page, NAMA.unggulanHabis);
+  await expect(daftar.getByRole("listitem")).toHaveText(
+    ["1 BulanHabis", "3 BulanHarga normal Rp 150.000Hemat 10%Rp 135.000"],
+    NAVIGASI,
+  );
+  const habis = daftar.getByRole("listitem").filter({ hasText: "1 Bulan" });
+  await expect(habis.getByText("Habis", { exact: true })).toBeVisible();
+  await expect(habis.getByText(/Hemat/)).toHaveCount(0);
+
+  // Produk Unggulan yang semua Variannya habis.
+  await expect(
+    daftarVarianUnggulan(page, NAMA.panjang).getByRole("listitem"),
+  ).toHaveText(["Keluarga 12 BulanHabis"]);
 });
 
 test("kartu tidak menampilkan angka stok gabungan, dan Beranda tidak punya banner promo", async ({

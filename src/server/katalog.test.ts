@@ -64,6 +64,7 @@ describe("daftarProdukBeranda", () => {
             hargaJual: 50000,
             hargaNormal: 75000,
             habis: false,
+            persenHemat: 33,
           },
           {
             id: expect.any(String),
@@ -71,6 +72,7 @@ describe("daftarProdukBeranda", () => {
             hargaJual: 135000,
             hargaNormal: null,
             habis: false,
+            persenHemat: null,
           },
         ],
       },
@@ -101,6 +103,32 @@ describe("daftarProdukBeranda", () => {
         { nama: "3 Bulan", habis: false },
       ],
     });
+  });
+
+  // Issue T11-b, docs/DESIGN.md ▶ Keputusan 2026-11-11 (#53). Harga dari tests/golden/persen-hemat.json:
+  // 30.000 → 20.000 dan 150.000 → 135.000 (Hemat 10%).
+  it("daftar Varian kartu Produk Unggulan membawa Persen hemat per Varian, dan Varian habis tanpa Hemat", async () => {
+    const nama = namaUnik("YouTube Premium");
+    await sisipkanProduk({
+      nama,
+      unggulan: true,
+      varian: [
+        { nama: "1 Bulan", hargaJual: 20000, hargaNormal: 30000 },
+        {
+          nama: "3 Bulan",
+          hargaJual: 135000,
+          hargaNormal: 150000,
+          Tersedia: 4,
+        },
+      ],
+    });
+
+    const [kartu] = (await kartuBernama(nama)).unggulan;
+
+    expect(kartu.varian).toMatchObject([
+      { nama: "1 Bulan", hargaNormal: 30000, habis: true, persenHemat: null },
+      { nama: "3 Bulan", hargaNormal: 150000, habis: false, persenHemat: 10 },
+    ]);
   });
 
   it("kartu Uji Bayar: Rp 1.000 tanpa kata Mulai", async () => {

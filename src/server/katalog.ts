@@ -6,9 +6,9 @@ import { asc, count, eq } from "drizzle-orm";
 import { fotoSampul } from "@/domain/foto-produk";
 import { hargaKartuProduk } from "@/domain/harga-kartu-produk";
 import type { StatusItemStok } from "@/domain/item-stok";
-import { persenHemat } from "@/domain/persen-hemat";
+import { persenHemat, persenHematVarian } from "@/domain/persen-hemat";
 import { kategoriTampil, saringProdukBeranda } from "@/domain/saringan-katalog";
-import { stokVarian, varianHabis } from "@/domain/stok-varian";
+import { stokVarian } from "@/domain/stok-varian";
 
 import { alamatBerkasUnggahan } from "./berkas-unggahan";
 import { db } from "./db";
@@ -22,6 +22,8 @@ type VarianKartu = {
   hargaJual: number;
   hargaNormal: number | null;
   habis: boolean;
+  /** Persen hemat Varian ini, atau null bila Varian ini habis atau tanpa Harga normal. */
+  persenHemat: number | null;
 };
 
 /** Isi satu kartu Produk di katalog (PRD §3.8, docs/DESIGN.md "Cards / Containers"). */
@@ -138,13 +140,17 @@ async function produkKatalog(): Promise<ProdukKatalog[]> {
         habis: harga.habis,
         hargaNormal,
         persenHemat: persenHemat({ hargaNormal, hargaJual }).persenHemat,
-        varian: harga.varianAktif.map((v) => ({
-          id: v.id,
-          nama: v.nama,
-          hargaJual: v.hargaJual,
-          hargaNormal: v.hargaNormal,
-          habis: varianHabis(v.stokVarian),
-        })),
+        varian: harga.varianAktif.map((v) => {
+          const hemat = persenHematVarian(v);
+          return {
+            id: v.id,
+            nama: v.nama,
+            hargaJual: v.hargaJual,
+            hargaNormal: v.hargaNormal,
+            habis: hemat.habis,
+            persenHemat: hemat.persenHemat,
+          };
+        }),
       },
     });
   }
