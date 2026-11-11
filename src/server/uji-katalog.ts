@@ -15,30 +15,44 @@ type VarianUji = {
   aktif?: boolean;
 } & Partial<Record<StatusItemStok, number>>;
 
+/** Menyisipkan Kategori dengan gambar ikon pengganti. Hasilnya id Kategori itu. */
+export async function sisipkanKategori({
+  nama,
+  ikon = "ikon-uji.png",
+}: {
+  nama: string;
+  ikon?: string;
+}) {
+  const [{ id }] = await db
+    .insert(kategori)
+    .values({ nama, ikon })
+    .returning({ id: kategori.id });
+  return id;
+}
+
 /**
- * Menyisipkan Produk di Kategori barunya sendiri, beserta Varian dan Item stoknya. Isi Item stok tidak
- * dibaca katalog, jadi isinya cukup teks pengganti dengan sidik jari acak. Hasilnya id Produk itu.
+ * Menyisipkan Produk beserta Varian dan Item stoknya, di Kategori yang diberikan atau di Kategori barunya
+ * sendiri. Isi Item stok tidak dibaca katalog, jadi isinya cukup teks pengganti dengan sidik jari acak.
+ * Hasilnya id Produk itu.
  */
 export async function sisipkanProduk({
   nama,
+  kategoriId,
   unggulan = false,
   aktif = true,
   foto = [],
   varian: semuaVarian,
 }: {
   nama: string;
+  kategoriId?: string;
   unggulan?: boolean;
   aktif?: boolean;
   foto?: string[];
   varian: VarianUji[];
 }) {
-  const [{ id: kategoriId }] = await db
-    .insert(kategori)
-    .values({
-      nama: `Streaming ${randomUUID().slice(0, 8)}`,
-      ikon: "ikon-uji.png",
-    })
-    .returning({ id: kategori.id });
+  kategoriId ??= await sisipkanKategori({
+    nama: `Streaming ${randomUUID().slice(0, 8)}`,
+  });
   const [{ id: produkId }] = await db
     .insert(produk)
     .values({

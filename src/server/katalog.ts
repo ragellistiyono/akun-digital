@@ -1,16 +1,19 @@
-// Katalog toko: kartu Produk di Beranda (PRD §3.4–§3.8). Aturan harganya ada di
-// src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts, dan src/domain/stok-varian.ts.
+// Katalog toko: kartu Produk, pencarian, dan Kategori di Beranda serta tab Kategori (PRD §3.1, §3.4–§3.8).
+// Aturan harganya ada di src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts, dan
+// src/domain/stok-varian.ts; aturan Kategori yang tampil dan pencarian ada di src/domain/saringan-katalog.ts.
 import { asc, count, eq } from "drizzle-orm";
 
 import { fotoSampul } from "@/domain/foto-produk";
 import { hargaKartuProduk } from "@/domain/harga-kartu-produk";
 import type { StatusItemStok } from "@/domain/item-stok";
 import { persenHemat } from "@/domain/persen-hemat";
+import { kategoriTampil, saringProdukBeranda } from "@/domain/saringan-katalog";
 import { stokVarian, varianHabis } from "@/domain/stok-varian";
 
 import { alamatBerkasUnggahan } from "./berkas-unggahan";
 import { db } from "./db";
 import { itemStok, produk, varian } from "./db/schema";
+import { daftarKategori, type Kategori } from "./kategori";
 
 /** Satu Varian aktif di kartu Produk Unggulan, tanpa angka Stok Varian. */
 type VarianKartu = {
@@ -81,23 +84,28 @@ async function varianProdukAktif() {
   }));
 }
 
+/** Produk yang tampil di katalog: kartunya, beserta Kategori dan tanda Produk Unggulan. */
+type ProdukKatalog = {
+  nama: string;
+  kategoriId: string;
+  unggulan: boolean;
+  kartu: KartuProduk;
+};
+
 /**
- * Kartu Produk untuk Beranda (PRD §3.6): bagian Produk Unggulan, dan bagian semua Produk aktif yang
- * juga memuat Produk Unggulan. Produk nonaktif (PRD §3.7) dan Produk tanpa Varian aktif tidak tampil.
+ * Semua Produk yang tampil di katalog, urut menurut nama Produk. Produk nonaktif (PRD §3.7) dan Produk
+ * tanpa Varian aktif tidak tampil. Urutan nama ini keputusan teknis, karena PRD tidak mengaturnya.
  *
  * Harga normal yang dicoret dan Persen hemat diambil dari Varian sumber harga (docs/DESIGN.md,
- * keputusan teknis "Mulai Rp X"). Kedua bagian urut menurut nama Produk; urutan ini keputusan teknis,
- * karena PRD tidak mengaturnya.
+ * keputusan teknis "Mulai Rp X").
  */
-export async function daftarProdukBeranda(): Promise<{
-  unggulan: KartuProduk[];
-  semua: KartuProduk[];
-}> {
+async function produkKatalog(): Promise<ProdukKatalog[]> {
   const [semuaProduk, semuaVarian] = await Promise.all([
     db
       .select({
         id: produk.id,
         nama: produk.nama,
+        kategoriId: produk.kategoriId,
         foto: produk.foto,
         unggulan: produk.unggulan,
       })
@@ -108,8 +116,7 @@ export async function daftarProdukBeranda(): Promise<{
   ]);
 
   const varianPerProduk = Map.groupBy(semuaVarian, (v) => v.produkId);
-  const unggulan: KartuProduk[] = [];
-  const semua: KartuProduk[] = [];
+  const hasil: ProdukKatalog[] = [];
   for (const p of semuaProduk) {
     const harga = hargaKartuProduk({
       varian: varianPerProduk.get(p.id) ?? [],
@@ -118,25 +125,76 @@ export async function daftarProdukBeranda(): Promise<{
 
     const { hargaNormal, hargaJual } = harga.sumber;
     const sampul = fotoSampul(p.foto);
-    const kartu: KartuProduk = {
-      id: p.id,
+    hasil.push({
       nama: p.nama,
-      fotoSampul: sampul === null ? null : alamatBerkasUnggahan(sampul),
-      mulai: harga.mulai,
-      harga: harga.harga,
-      habis: harga.habis,
-      hargaNormal,
-      persenHemat: persenHemat({ hargaNormal, hargaJual }).persenHemat,
-      varian: harga.varianAktif.map((v) => ({
-        id: v.id,
-        nama: v.nama,
-        hargaJual: v.hargaJual,
-        hargaNormal: v.hargaNormal,
-        habis: varianHabis(v.stokVarian),
-      })),
-    };
-    semua.push(kartu);
-    if (p.unggulan) unggulan.push(kartu);
+      kategoriId: p.kategoriId,
+      unggulan: p.unggulan,
+      kartu: {
+        id: p.id,
+        nama: p.nama,
+        fotoSampul: sampul === null ? null : alamatBerkasUnggahan(sampul),
+        mulai: harga.mulai,
+        harga: harga.harga,
+        habis: harga.habis,
+        hargaNormal,
+        persenHemat: persenHemat({ hargaNormal, hargaJual }).persenHemat,
+        varian: harga.varianAktif.map((v) => ({
+          id: v.id,
+          nama: v.nama,
+          hargaJual: v.hargaJual,
+          hargaNormal: v.hargaNormal,
+          habis: varianHabis(v.stokVarian),
+        })),
+      },
+    });
   }
-  return { unggulan, semua };
+  return hasil;
+}
+
+/**
+ * Kategori yang tampil di toko (PRD §3.1), urut menurut nama: deret Kategori di Beranda dan isi tab
+ * Kategori. Urutan nama ini keputusan teknis, karena PRD tidak mengaturnya.
+ */
+export async function daftarKategoriToko(): Promise<Kategori[]> {
+  const [kategori, produkTampil] = await Promise.all([
+    daftarKategori(),
+    produkKatalog(),
+  ]);
+  return kategoriTampil({ kategori, produkTampil });
+}
+
+/**
+ * Isi Beranda (PRD §3.6): deret Kategori, kartu Produk Unggulan, dan kartu semua Produk aktif yang
+ * cocok dengan pencarian dan saringan Kategori. Bagian semua Produk juga memuat Produk Unggulan, dan
+ * bagian Produk Unggulan tidak ikut disaring.
+ *
+ * Saringan Kategori hanya berlaku untuk Kategori yang tampil di toko; Kategori lain diabaikan, jadi
+ * kategoriTerpilih null dan semua Produk ikut.
+ */
+export async function daftarProdukBeranda({
+  kataCari = "",
+  kategoriId = null,
+}: { kataCari?: string; kategoriId?: string | null } = {}): Promise<{
+  kategori: Kategori[];
+  kategoriTerpilih: Kategori | null;
+  unggulan: KartuProduk[];
+  semua: KartuProduk[];
+}> {
+  const [semuaKategori, produkTampil] = await Promise.all([
+    daftarKategori(),
+    produkKatalog(),
+  ]);
+  const kategori = kategoriTampil({ kategori: semuaKategori, produkTampil });
+  const kategoriTerpilih = kategori.find((k) => k.id === kategoriId) ?? null;
+
+  return {
+    kategori,
+    kategoriTerpilih,
+    unggulan: produkTampil.filter((p) => p.unggulan).map((p) => p.kartu),
+    semua: saringProdukBeranda({
+      produk: produkTampil,
+      kataCari,
+      kategoriId: kategoriTerpilih?.id ?? null,
+    }).map((p) => p.kartu),
+  };
 }

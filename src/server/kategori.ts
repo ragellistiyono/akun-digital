@@ -9,7 +9,7 @@ import { db } from "./db";
 import { kategori } from "./db/schema";
 
 /** Kategori untuk ditampilkan: nama dan alamat gambar ikonnya. */
-type Kategori = { id: string; nama: string; alamatIkon: string };
+export type Kategori = { id: string; nama: string; alamatIkon: string };
 
 const untukTampilan = ({ id, nama, ikon }: typeof kategori.$inferSelect) => ({
   id,
