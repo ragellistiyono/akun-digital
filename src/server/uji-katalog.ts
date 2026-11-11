@@ -41,6 +41,8 @@ export async function sisipkanProduk({
   unggulan = false,
   aktif = true,
   foto = [],
+  deskripsi = "Deskripsi uji.",
+  ketentuanGaransi = "Garansi uji.",
   varian: semuaVarian,
 }: {
   nama: string;
@@ -48,6 +50,8 @@ export async function sisipkanProduk({
   unggulan?: boolean;
   aktif?: boolean;
   foto?: string[];
+  deskripsi?: string;
+  ketentuanGaransi?: string;
   varian: VarianUji[];
 }) {
   kategoriId ??= await sisipkanKategori({
@@ -58,8 +62,8 @@ export async function sisipkanProduk({
     .values({
       nama,
       kategoriId,
-      deskripsi: "Deskripsi uji.",
-      ketentuanGaransi: "Garansi uji.",
+      deskripsi,
+      ketentuanGaransi,
       unggulan,
       aktif,
       formatItemStok: ["Kode"],

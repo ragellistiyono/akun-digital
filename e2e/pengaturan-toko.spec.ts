@@ -3,11 +3,30 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
+// Bahan test katalog. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk ini masuk
+// ke database app_test.
+import { sisipkanProduk } from "../src/server/uji-katalog";
+
 // Pengaturan toko berlaku untuk seluruh toko, jadi test di berkas ini berjalan berurutan dan setiap
-// test menyimpan sendiri nilai yang ia periksa.
+// test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13) juga diuji di sini,
+// karena hanya berkas ini yang mengubah nomor WhatsApp.
 test.describe.configure({ mode: "serial" });
 
 const PASSWORD = "sandi-uji-admin-123";
+
+// Netflix Premium dari persiapan bersama docs/UAT.md [CONTOH], dengan akhiran unik per run.
+let alamatHalamanProduk = "";
+
+test.beforeAll(async () => {
+  const id = await sisipkanProduk({
+    nama: `Netflix Premium ${randomUUID().slice(0, 8)}`,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 50000, hargaNormal: 75000, Tersedia: 10 },
+      { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4 },
+    ],
+  });
+  alamatHalamanProduk = `/produk/${id}`;
+});
 
 // Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
 // DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
@@ -89,6 +108,22 @@ test("setelah Admin mengubah nomor WhatsApp, tombol WhatsApp di tab Akun membuka
   await page.getByRole("link", { name: "Hubungi kami di WhatsApp" }).click();
   const whatsapp = await halamanWhatsapp;
   await expect(whatsapp).toHaveURL("https://wa.me/6281200000002");
+});
+
+// UAT-C2 dan PRD §3.3: Halaman Produk menampilkan tombol kontak WhatsApp dari Pengaturan toko.
+test("setelah Admin mengisi nomor WhatsApp, Halaman Produk menampilkan tombol WhatsApp yang membuka wa.me dengan nomor itu", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+
+  await page.goto(alamatHalamanProduk);
+  const garansi = page.getByRole("region", { name: "Ketentuan garansi" });
+  await expect(
+    garansi.getByRole("link", { name: "Tanya lewat WhatsApp" }),
+  ).toHaveAttribute("href", "https://wa.me/6281234567890");
 });
 
 // UAT-I5
@@ -187,6 +222,14 @@ test("selama nomor WhatsApp belum diisi, tab Akun tidak menampilkan tombol Whats
   await page.goto("/akun");
   await expect(
     page.getByRole("heading", { level: 1, name: "Akun" }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
+  await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
+
+  // Halaman Produk juga tidak menampilkan tombol WhatsApp.
+  await page.goto(alamatHalamanProduk);
+  await expect(
+    page.getByRole("region", { name: "Ketentuan garansi" }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
   await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);

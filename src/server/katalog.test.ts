@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { koneksi } from "./db";
-import { daftarKategoriToko, daftarProdukBeranda } from "./katalog";
+import {
+  bacaHalamanProduk,
+  daftarKategoriToko,
+  daftarProdukBeranda,
+} from "./katalog";
 import { sisipkanKategori, sisipkanProduk } from "./uji-katalog";
 
 // Test integrasi dengan database app_test dari .env.ci. Database ini dipakai bersama test lain, jadi
@@ -423,5 +427,122 @@ describe("daftarProdukBeranda dengan pencarian dan saringan", () => {
     });
 
     expect(namaBerakhiran(unggulan, akhiran)).toEqual([nama.netflix]);
+  });
+});
+
+describe("bacaHalamanProduk", () => {
+  // UAT persiapan bersama [CONTOH] dan UAT-C2–C4: Netflix Premium.
+  it("Netflix Premium: nama, Kategori, foto, deskripsi, ketentuan garansi, dan kedua Varian beserta Stok Varian dan Persen hemat", async () => {
+    const nama = namaUnik("Netflix Premium");
+    const namaKategori = namaUnik("Streaming");
+    const kategoriId = await sisipkanKategori({ nama: namaKategori });
+    const id = await sisipkanProduk({
+      nama,
+      kategoriId,
+      foto: ["sampul-uji.png", "kedua-uji.png"],
+      deskripsi: "Akun Netflix Premium satu profil.",
+      ketentuanGaransi: "Garansi 30 hari.",
+      varian: [
+        { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4 },
+        { nama: "1 Bulan", hargaJual: 50000, hargaNormal: 75000, Tersedia: 10 },
+      ],
+    });
+
+    expect(await bacaHalamanProduk(id)).toEqual({
+      id,
+      nama,
+      kategori: { id: kategoriId, nama: namaKategori },
+      foto: ["/unggahan/sampul-uji.png", "/unggahan/kedua-uji.png"],
+      deskripsi: "Akun Netflix Premium satu profil.",
+      ketentuanGaransi: "Garansi 30 hari.",
+      pilihanVarian: true,
+      varian: [
+        {
+          id: expect.any(String),
+          nama: "1 Bulan",
+          hargaJual: 50000,
+          hargaNormal: 75000,
+          stokVarian: 10,
+          habis: false,
+          persenHemat: 33,
+        },
+        {
+          id: expect.any(String),
+          nama: "3 Bulan",
+          hargaJual: 135000,
+          hargaNormal: null,
+          stokVarian: 4,
+          habis: false,
+          persenHemat: null,
+        },
+      ],
+    });
+  });
+
+  it("Uji Bayar dengan satu Varian aktif tidak menampilkan pilihan Varian", async () => {
+    const id = await sisipkanProduk({
+      nama: namaUnik("Uji Bayar"),
+      varian: [{ nama: "Uji", hargaJual: 1000, Tersedia: 10 }],
+    });
+
+    expect(await bacaHalamanProduk(id)).toMatchObject({
+      pilihanVarian: false,
+      varian: [{ nama: "Uji", hargaJual: 1000, stokVarian: 10, habis: false }],
+    });
+  });
+
+  // tests/golden/stok-varian.json, kasus "Contoh PRD" dan "Semua ditahan".
+  it("Stok Varian hanya menghitung Item stok Tersedia", async () => {
+    const id = await sisipkanProduk({
+      nama: namaUnik("Canva Pro"),
+      varian: [
+        {
+          nama: "1 Bulan",
+          hargaJual: 15000,
+          Tersedia: 8,
+          Ditahan: 2,
+          Terkirim: 5,
+        },
+        { nama: "3 Bulan", hargaJual: 40000, Ditahan: 3 },
+      ],
+    });
+
+    expect((await bacaHalamanProduk(id))?.varian).toMatchObject([
+      { nama: "1 Bulan", stokVarian: 8, habis: false },
+      { nama: "3 Bulan", stokVarian: 0, habis: true },
+    ]);
+  });
+
+  it("Varian nonaktif tidak tampil", async () => {
+    const id = await sisipkanProduk({
+      nama: namaUnik("Disney Plus"),
+      varian: [
+        { nama: "Promo", hargaJual: 10000, aktif: false, Tersedia: 9 },
+        { nama: "1 Bulan", hargaJual: 50000, Tersedia: 2 },
+        { nama: "3 Bulan", hargaJual: 135000, Tersedia: 1 },
+      ],
+    });
+
+    const halaman = await bacaHalamanProduk(id);
+
+    expect(halaman?.varian.map((v) => v.nama)).toEqual(["1 Bulan", "3 Bulan"]);
+  });
+
+  it("Produk nonaktif, Produk tanpa Varian aktif, dan Produk yang tidak ada tidak punya Halaman Produk", async () => {
+    const nonaktif = await sisipkanProduk({
+      nama: namaUnik("Game Lama"),
+      aktif: false,
+      varian: [{ nama: "1 Bulan", hargaJual: 15000, Tersedia: 2 }],
+    });
+    const tanpaVarianAktif = await sisipkanProduk({
+      nama: namaUnik("Vidio Platinum"),
+      varian: [
+        { nama: "1 Bulan", hargaJual: 15000, aktif: false, Tersedia: 2 },
+      ],
+    });
+
+    expect(await bacaHalamanProduk(nonaktif)).toBeNull();
+    expect(await bacaHalamanProduk(tanpaVarianAktif)).toBeNull();
+    expect(await bacaHalamanProduk(randomUUID())).toBeNull();
   });
 });

@@ -76,8 +76,8 @@ function Harga({
 }
 
 // Harga normal tidak dibatasi maksimum (PRD §3.2), jadi angkanya boleh patah baris supaya kartu tidak
-// melebar melewati layar 360 px.
-function HargaNormal({ nilai }: { nilai: number }) {
+// melebar melewati layar 360 px. Ketiga label ini dipakai juga di Halaman Produk.
+export function HargaNormal({ nilai }: { nilai: number }) {
   return (
     <s className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] text-tinta-redup">
       <span className="sr-only">Harga normal </span>
@@ -86,7 +86,7 @@ function HargaNormal({ nilai }: { nilai: number }) {
   );
 }
 
-function LabelHemat({ persen }: { persen: number }) {
+export function LabelHemat({ persen }: { persen: number }) {
   return (
     <span className="rounded-full bg-persik px-2 py-1 text-xs font-extrabold whitespace-nowrap text-persik-teks">
       Hemat {persen}%
@@ -94,7 +94,7 @@ function LabelHemat({ persen }: { persen: number }) {
   );
 }
 
-function LabelHabis() {
+export function LabelHabis() {
   return (
     <span className="rounded-full bg-permukaan-2 px-2 py-1 text-xs font-extrabold text-tinta-redup">
       Habis
