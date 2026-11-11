@@ -47,11 +47,10 @@ async function ubahFoto<H extends HasilUbahFoto>(
     if (!lama) return null;
 
     const hasil = ubah(lama.foto);
-    const sah: HasilUbahFoto = hasil;
-    if (sah.sah) {
+    if (hasil.sah) {
       await tx
         .update(produk)
-        .set({ foto: sah.foto })
+        .set({ foto: hasil.foto })
         .where(eq(produk.id, produkId));
     }
     return hasil;
@@ -108,7 +107,7 @@ export async function pindahkanFotoProduk({
   if (hasil === null) return { hasil: "tidak-ada" } as const;
   return hasil.sah
     ? ({ hasil: "dipindah" } as const)
-    : ({ hasil: "tidak-dipindah", alasan: hasil.alasan } as const);
+    : ({ hasil: "tidak-dipindah" } as const);
 }
 
 /**

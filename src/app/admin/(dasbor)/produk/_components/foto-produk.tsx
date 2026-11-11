@@ -188,7 +188,7 @@ export function FotoProduk({
   return (
     <section
       aria-labelledby="foto-judul"
-      className="mt-6 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="mt-4 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
     >
       <div className="flex flex-col gap-2">
         <h2

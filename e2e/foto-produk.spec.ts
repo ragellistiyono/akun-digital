@@ -5,16 +5,11 @@ import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
+// Bahan test unggahan bersama. Modul ini hanya memakai modul bawaan Node dan membaca .env.ci, tanpa
+// database, jadi aman diimpor dari test e2e. pngUnik membuat setiap foto bisa dikenali dari berkasnya.
+import { FOLDER_UNGGAHAN_TEST, PNG, pngUnik } from "../src/server/uji-unggahan";
+
 const PASSWORD = "sandi-uji-admin-123";
-
-// Gambar PNG 1×1 piksel yang sah.
-const PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-/** PNG yang isinya unik, supaya setiap foto bisa dikenali dari berkasnya di folder unggahan. */
-const pngUnik = () => Buffer.concat([PNG, Buffer.from(randomUUID())]);
 
 // Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
 // DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
@@ -79,12 +74,7 @@ async function unggah(page: Page, nama: string, isi: Buffer) {
 
 /** Isi berkas sebuah foto di folder unggahan dari .env.ci, menurut alamat gambarnya. */
 function isiBerkas(alamat: string) {
-  return readFile(
-    path.join(
-      path.resolve(process.env.UPLOAD_DIR ?? ""),
-      path.basename(alamat),
-    ),
-  );
+  return readFile(path.join(FOLDER_UNGGAHAN_TEST, path.basename(alamat)));
 }
 
 const tanpaGulirSamping = (page: Page) =>
@@ -131,7 +121,7 @@ test("Admin mengunggah 5 foto Produk, foto keenam dan berkas yang bukan gambar d
   await expect(bagianFoto.getByText("Belum ada foto.")).toBeVisible();
 
   // Lima foto diunggah satu per satu; foto pertama menjadi sampul.
-  const isi = Array.from({ length: 5 }, pngUnik);
+  const isi = Array.from({ length: 5 }, () => pngUnik());
   for (const [indeks, satu] of isi.entries()) {
     await unggah(page, `foto-${indeks + 1}.png`, satu);
     await expect(barisFoto).toHaveCount(indeks + 1);
@@ -187,9 +177,7 @@ test("Admin mengunggah 5 foto Produk, foto keenam dan berkas yang bukan gambar d
   await expect.poll(alamatSampul).toBe(a1);
   await expect(bagianFoto.getByText(/4 dari 5 foto\./)).toBeVisible();
   await expect(
-    access(
-      path.join(path.resolve(process.env.UPLOAD_DIR ?? ""), path.basename(a3)),
-    ),
+    access(path.join(FOLDER_UNGGAHAN_TEST, path.basename(a3))),
   ).rejects.toThrow("ENOENT");
 
   // Urutan foto tetap sama setelah halaman dibuka ulang.
