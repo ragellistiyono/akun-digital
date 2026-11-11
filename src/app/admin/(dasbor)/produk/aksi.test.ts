@@ -239,7 +239,7 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
       keadaanAwal(),
       formulir({
         ...isianNetflix(streaming.id, nama),
-        kolom: ["Email", "Password", "email"],
+        kolom: ["Email", "Password", " Email "],
       }),
     );
 
@@ -247,6 +247,28 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
       formatItemStok:
         "Nama kolom 3 sudah dipakai kolom sebelumnya. Ganti namanya supaya setiap kolom berbeda.",
       kolomDitolak: [3],
+    });
+    expect(await produkBernama(nama)).toEqual([]);
+  });
+
+  it("isian kolom berupa berkas dibaca sebagai nama kolom kosong pada urutannya", async () => {
+    const streaming = await kategoriBaru();
+    const nama = namaUnik("Netflix Premium");
+    sebagaiPengunjung(await cookieAdminBaru());
+    const data = formulir({
+      ...isianNetflix(streaming.id, nama),
+      kolom: ["Email"],
+    });
+    data.append("kolom", new File(["Password"], "kolom.txt"));
+    data.append("kolom", "Profil");
+
+    const keadaan = await aksiBuatProduk(keadaanAwal(), data);
+
+    expect(keadaan.formatItemStok).toEqual(["Email", "", "Profil"]);
+    expect(keadaan.galat).toEqual({
+      formatItemStok:
+        "Nama kolom 2 belum diisi. Isi namanya, atau hapus kolom itu.",
+      kolomDitolak: [2],
     });
     expect(await produkBernama(nama)).toEqual([]);
   });

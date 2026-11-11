@@ -119,10 +119,10 @@ export async function aksiBuatProduk(
   await wajibSesiAdmin(await headers());
 
   const isian = bacaIsian(formData);
-  // Isian selain teks (misalnya berkas) bukan nama kolom, jadi seluruh daftarnya dianggap kosong.
+  // Isian kolom selain teks (misalnya berkas) tidak berisi nama kolom, jadi dibaca sebagai nama
+  // kosong pada urutannya. Nomor kolom di pesan galat tetap sama dengan urutan isian di form.
   const formatItemStok = z
-    .array(z.string())
-    .catch([])
+    .array(z.string().catch(""))
     .parse(formData.getAll("kolom"));
   const masukan = MasukanProduk.safeParse(isian);
   const format = periksaFormatItemStok(formatItemStok);

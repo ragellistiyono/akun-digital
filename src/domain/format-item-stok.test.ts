@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { periksaFormatItemStok } from "./format-item-stok";
 
-// PRD §4.1 dan issue T07: Format Item stok berupa daftar nama kolom, minimal satu kolom, dan nama
+// Issue T07 (#14): Format Item stok berupa daftar nama kolom (PRD §4.1), minimal satu kolom, dan nama
 // kolom tidak boleh kosong atau kembar. Belum ada fixture golden untuk aturan ini, jadi ekspektasinya
 // diambil dari contoh di PRD §4.1 dan issue (`Email`, `Password`, `Profil`; satu kolom `Kode`).
 describe("periksaFormatItemStok", () => {
@@ -50,10 +50,17 @@ describe("periksaFormatItemStok", () => {
     });
   });
 
-  it("menganggap kembar nama kolom yang hanya berbeda huruf besar-kecil atau spasi di tepi", () => {
-    expect(periksaFormatItemStok(["Email", " email", "EMAIL "])).toEqual({
+  it("menganggap kembar nama kolom yang hanya berbeda spasi di awal atau akhir", () => {
+    expect(periksaFormatItemStok(["Email", " Email", "Email\t"])).toEqual({
       sah: false,
       masalah: [{ alasan: "kolom-kembar", nomorKolom: [2, 3] }],
+    });
+  });
+
+  it("tidak menganggap kembar nama kolom yang berbeda huruf besar-kecil", () => {
+    expect(periksaFormatItemStok(["Email", "email", "EMAIL"])).toEqual({
+      sah: true,
+      kolom: ["Email", "email", "EMAIL"],
     });
   });
 

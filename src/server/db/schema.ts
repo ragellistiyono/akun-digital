@@ -106,7 +106,7 @@ export const kategori = pgTable("kategori", {
 
 // Produk (PRD §3.2, §3.3, §3.6, §3.7) di tepat satu Kategori. Kategori yang masih berisi Produk tidak
 // bisa dihapus (PRD §3.1), jadi rujukannya restrict. Format Item stok (PRD §4.1) disimpan sebagai
-// daftar nama kolom berurutan.
+// daftar nama kolom berurutan; aturan isinya (issue T07) diperiksa periksaFormatItemStok di domain.
 export const produk = pgTable(
   "produk",
   {

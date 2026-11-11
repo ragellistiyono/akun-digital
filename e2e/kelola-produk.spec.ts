@@ -196,12 +196,12 @@ test("Produk tanpa Kategori dan Format Item stok tanpa kolom, dengan nama kolom 
     ),
   ).toBeVisible();
 
-  // Nama kolom kembar, tanpa membedakan huruf besar dan kecil.
+  // Nama kolom kembar: sama persis setelah spasi di awal dan akhir dibuang.
   await page.getByLabel("Nama", { exact: true }).fill(nama);
   await page.getByLabel("Produk Unggulan").check();
   await page.getByLabel("Nama kolom 1").fill("Email");
   await page.getByRole("button", { name: "Tambah kolom" }).click();
-  await page.getByLabel("Nama kolom 2").fill("email");
+  await page.getByLabel("Nama kolom 2").fill(" Email ");
   await page.getByRole("button", { name: "Simpan" }).click();
   await expect(
     page.getByText(
@@ -220,7 +220,7 @@ test("Produk tanpa Kategori dan Format Item stok tanpa kolom, dengan nama kolom 
   await expect(page.getByLabel("Nama", { exact: true })).toHaveValue(nama);
   await expect(page.getByLabel("Produk Unggulan")).toBeChecked();
   await expect(page.getByLabel("Nama kolom 1")).toHaveValue("Email");
-  await expect(page.getByLabel("Nama kolom 2")).toHaveValue("email");
+  await expect(page.getByLabel("Nama kolom 2")).toHaveValue(" Email ");
 
   // Semua kolom dihapus.
   await page.getByRole("button", { name: "Hapus kolom 2" }).click();
