@@ -2,6 +2,7 @@
 
 import {
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Menu,
   X,
@@ -21,6 +22,7 @@ type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 // Isi menu bertambah bersama halaman dasbor admin di tiket berikutnya (PRD §9).
 const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/ringkasan", label: "Ringkasan", ikon: LayoutDashboard },
+  { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
 ];
 
 // Kerangka menu dasbor admin (PRD §11.1, DESIGN.md Navigation): menu lipat di bawah 900 px,

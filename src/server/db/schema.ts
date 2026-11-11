@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
@@ -93,4 +94,12 @@ export const batasLogin = pgTable("batas_login", {
   email: text("email").primaryKey(),
   jumlahSalah: integer("jumlah_salah").default(0).notNull(),
   terkunciSampai: instan("terkunci_sampai"),
+});
+
+// Kategori (PRD §3.1): satu tingkat, dengan nama dan gambar ikon. Kolom ikon berisi nama berkas
+// gambar di folder unggahan (src/server/berkas-unggahan.ts).
+export const kategori = pgTable("kategori", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  nama: text("nama").notNull(),
+  ikon: text("ikon").notNull(),
 });

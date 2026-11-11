@@ -9,6 +9,9 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 
+# Uploaded files (UPLOAD_DIR in .env.example and .env.ci)
+.unggahan/
+
 # Test output
 test-results/
 playwright-report/
