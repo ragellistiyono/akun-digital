@@ -16,6 +16,7 @@ import {
 } from "./db/schema";
 import { prosesKabarPembayaran } from "./kabar-pembayaran";
 import { bacaStokVarian, tambahItemStok } from "./item-stok";
+import { jadwalKedaluwarsaPesanan } from "./pekerjaan-latar";
 import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { qrispyTiruan } from "./qrispy-tiruan";
@@ -157,6 +158,22 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
           ),
         ),
     ).toEqual([{ nomorPesanan }]);
+  });
+
+  // Issue T21 dan ADR-0004: pekerjaan latar pg-boss dijadwalkan pada waktu kedaluwarsa QRIS dari Qrispy.
+  it("checkout menjadwalkan satu pekerjaan kedaluwarsa pada waktu kedaluwarsa Pesanan itu", async () => {
+    const netflix = await netflixPremium();
+    const email = emailUnik();
+
+    await buatPesanan(
+      { varianId: netflix.satuBulan, email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+
+    const [{ id }] = await pesananDenganEmail(email);
+    expect(await jadwalKedaluwarsaPesanan(id)).toEqual([
+      new Date("2026-11-11T10:15:00+07:00"),
+    ]);
   });
 
   // Dasbor admin membaca Stok Varian lewat bacaStokVarian (UAT-E1: dari 10 menjadi 9 setelah checkout).

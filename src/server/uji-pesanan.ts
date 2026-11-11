@@ -20,16 +20,19 @@ type ItemStokPesananUji = {
 /**
  * Menyisipkan Pesanan sebuah Varian dengan status itu, dan bila diminta satu Item stok yang tertaut ke
  * Pesanan itu. Rinciannya contoh PRD §5.5: Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik
- * Rp 123, dan Total bayar Rp 45.123. Hasilnya id, Tautan Pesanan, dan Nomor Pesanan-nya.
+ * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, kecuali diatur lain. Hasilnya
+ * id, Tautan Pesanan, dan Nomor Pesanan-nya.
  */
 export async function sisipkanPesanan({
   varianId,
   status,
   itemStok: item,
+  kedaluwarsaPada = new Date(Date.now() + 15 * 60 * 1000),
 }: {
   varianId: string;
   status: StatusPesanan;
   itemStok?: ItemStokPesananUji;
+  kedaluwarsaPada?: Date;
 }) {
   const tautan = randomBytes(32).toString("base64url");
   const nomor = nomorPesanan(randomBytes(6));
@@ -45,7 +48,7 @@ export async function sisipkanPesanan({
       kodeUnik: 123,
       totalBayar: 45123,
       qrisId: randomUUID(),
-      kedaluwarsaPada: new Date(Date.now() + 15 * 60 * 1000),
+      kedaluwarsaPada,
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
       status,
     })
