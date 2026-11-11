@@ -221,7 +221,11 @@ export function FormProduk({
         <label htmlFor="kategoriId" className="text-sm font-bold">
           Kategori
         </label>
+        {/* Dipasang ulang setiap kali server menjawab, karena select tidak mengikuti defaultValue
+            yang berubah setelah dipasang, sehingga pengaturan ulang form setelah aksi akan
+            mengosongkan Kategori yang sudah dipilih. */}
         <select
+          key={versi}
           id="kategoriId"
           name="kategoriId"
           defaultValue={keadaan.kategoriId}

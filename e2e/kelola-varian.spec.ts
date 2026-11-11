@@ -5,6 +5,12 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const PASSWORD = "sandi-uji-admin-123";
 
+// Daftar Produk dan daftar Kategori di dasbor admin memuat semua baris. app_test lokal bisa berisi
+// ribuan Produk dan Kategori sisa run sebelumnya, dan saat banyak worker berjalan bersamaan,
+// perpindahan ke atau dari halaman itu bisa melewati bawaan 5 detik. Jadi perpindahan alamatnya
+// diberi waktu lebih longgar, sama seperti di cari-kategori-beranda.spec.ts.
+const NAVIGASI = { timeout: 15_000 };
+
 // Gambar PNG 1×1 piksel yang sah, untuk ikon Kategori.
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -46,7 +52,7 @@ async function bukaProdukBaru(page: Page) {
     buffer: PNG,
   });
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
 
   await page.goto("/admin/produk/baru");
   await expect(
@@ -64,10 +70,10 @@ async function bukaProdukBaru(page: Page) {
     .fill("Garansi 30 hari sejak Item stok diterima.");
   await page.getByLabel("Nama kolom 1").fill("Email");
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
 
   await page.getByRole("link", { name: `Ubah ${nama}` }).click();
-  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/, NAVIGASI);
   return page.getByRole("region", { name: "Varian" });
 }
 

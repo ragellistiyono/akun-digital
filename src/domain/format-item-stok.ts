@@ -9,12 +9,13 @@ export type HasilFormatItemStok =
   | { sah: false; masalah: MasalahFormatItemStok[] };
 
 /**
- * Memeriksa Format Item stok sebuah Produk, yaitu daftar nama kolom (PRD §4.1). Aturannya dari
- * issue T07 (#14): minimal satu kolom, dan nama kolom tidak boleh kosong atau kembar.
+ * Memeriksa Format Item stok sebuah Produk, yaitu daftar nama kolom (PRD §4.1 ▶ Keputusan
+ * 2026-11-11): minimal satu kolom, dan nama kolom tidak boleh kosong atau kembar.
  *
- * Spasi di awal dan akhir nama kolom dibuang. Dua nama kolom dianggap kembar bila sama persis
- * setelah itu, termasuk huruf besar dan kecilnya. Dari nama yang kembar, kolom pertama
- * dipertahankan dan kolom berikutnya disebut. Kolom kosong tidak dihitung kembar.
+ * Spasi di awal dan akhir nama kolom dibuang. Dua nama kolom dianggap kembar tanpa membedakan
+ * huruf besar dan kecil, jadi `Email` dan `email` kembar. Dari nama yang kembar, kolom pertama
+ * dipertahankan dan kolom berikutnya disebut. Kolom kosong tidak dihitung kembar. Bila sah, nama
+ * kolom dikembalikan dengan huruf seperti yang ditulis Admin.
  */
 export function periksaFormatItemStok(kolom: string[]): HasilFormatItemStok {
   if (kolom.length === 0) {
@@ -30,8 +31,9 @@ export function periksaFormatItemStok(kolom: string[]): HasilFormatItemStok {
       kosong.push(indeks + 1);
       return;
     }
-    if (sudahAda.has(nama)) kembar.push(indeks + 1);
-    sudahAda.add(nama);
+    const namaBaku = nama.toLowerCase();
+    if (sudahAda.has(namaBaku)) kembar.push(indeks + 1);
+    sudahAda.add(namaBaku);
   });
 
   const masalah: MasalahFormatItemStok[] = [];

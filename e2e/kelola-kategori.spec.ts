@@ -8,6 +8,12 @@ import postgres from "postgres";
 
 const PASSWORD = "sandi-uji-admin-123";
 
+// Daftar Produk dan daftar Kategori di dasbor admin memuat semua baris. app_test lokal bisa berisi
+// ribuan Produk dan Kategori sisa run sebelumnya, dan saat banyak worker berjalan bersamaan,
+// perpindahan ke atau dari halaman itu bisa melewati bawaan 5 detik. Jadi perpindahan alamatnya
+// diberi waktu lebih longgar, sama seperti di cari-kategori-beranda.spec.ts.
+const NAVIGASI = { timeout: 15_000 };
+
 // Gambar PNG 1×1 piksel yang sah.
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -63,13 +69,13 @@ test('Admin membuat Kategori "Streaming" dengan ikon, lalu mengganti namanya', a
     .getByRole("navigation", { name: "Menu admin" })
     .getByRole("link", { name: "Kategori" })
     .click();
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
   await expect(
     page.getByRole("heading", { level: 1, name: "Kategori" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Tambah Kategori" }).click();
-  await expect(page).toHaveURL("/admin/kategori/baru");
+  await expect(page).toHaveURL("/admin/kategori/baru", NAVIGASI);
   await page.getByLabel("Nama").fill("Streaming");
   await page.getByLabel("Gambar ikon").setInputFiles({
     name: "streaming.png",
@@ -78,7 +84,7 @@ test('Admin membuat Kategori "Streaming" dengan ikon, lalu mengganti namanya', a
   });
   await page.getByRole("button", { name: "Simpan" }).click();
 
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
   const streaming = barisKategori(page, "Streaming");
   await expect(streaming).toHaveCount(1);
   // Ikon tampil di daftar, disajikan lewat rute toko dari folder unggahan .env.ci.
@@ -99,7 +105,10 @@ test('Admin membuat Kategori "Streaming" dengan ikon, lalu mengganti namanya', a
   expect(tersaji.headers()["content-type"]).toBe("image/png");
 
   await streaming.getByRole("link", { name: "Ubah Streaming" }).click();
-  await expect(page).toHaveURL(/^.*\/admin\/kategori\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(
+    /^.*\/admin\/kategori\/[0-9a-f-]{36}$/,
+    NAVIGASI,
+  );
   await expect(
     page.getByRole("heading", { level: 1, name: "Ubah Kategori" }),
   ).toBeVisible();
@@ -107,7 +116,7 @@ test('Admin membuat Kategori "Streaming" dengan ikon, lalu mengganti namanya', a
   await page.getByLabel("Nama").fill(namaBaru);
   await page.getByRole("button", { name: "Simpan" }).click();
 
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
   await expect(barisKategori(page, "Streaming")).toHaveCount(0);
   // Nama berganti, ikonnya tetap yang tadi.
   await expect(barisKategori(page, namaBaru).locator("img")).toHaveAttribute(
@@ -190,7 +199,7 @@ test("UAT-C7: nama Kategori yang sudah dipakai ditolak dengan pesan, tanpa membe
       buffer: PNG,
     });
     await page.getByRole("button", { name: "Simpan" }).click();
-    await expect(page).toHaveURL("/admin/kategori");
+    await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
   }
 
   // Langkah 1: membuat Kategori "streaming".
