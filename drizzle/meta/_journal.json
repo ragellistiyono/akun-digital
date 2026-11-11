@@ -29,6 +29,13 @@
       "when": 1794378891832,
       "tag": "0003_kelola_kategori",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794380904296,
+      "tag": "0004_kelola_produk",
+      "breakpoints": true
     }
   ]
 }
