@@ -6,6 +6,12 @@ import postgres from "postgres";
 
 const PASSWORD = "sandi-uji-admin-123";
 
+// Daftar Produk dan daftar Kategori di dasbor admin memuat semua baris. app_test lokal bisa berisi
+// ribuan Produk dan Kategori sisa run sebelumnya, dan saat banyak worker berjalan bersamaan,
+// perpindahan ke atau dari halaman itu bisa melewati bawaan 5 detik. Jadi perpindahan alamatnya
+// diberi waktu lebih longgar, sama seperti di cari-kategori-beranda.spec.ts.
+const NAVIGASI = { timeout: 15_000 };
+
 // Gambar PNG 1×1 piksel yang sah, untuk ikon Kategori.
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
@@ -46,7 +52,7 @@ async function buatKategori(page: Page, nama: string) {
     buffer: PNG,
   });
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
 }
 
 const barisProduk = (page: Page, nama: string) =>
@@ -76,6 +82,9 @@ test.beforeAll(async () => {
 test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item stok Email, Password, Profil dan tanda Produk Unggulan, lalu menonaktifkan dan mengaktifkannya kembali', async ({
   page,
 }) => {
+  // Test ini membuka daftar Produk empat kali dan daftar Kategori sekali, jadi diberi waktu tiga kali
+  // bawaan supaya beberapa perpindahan yang lambat tidak menghabiskan waktu seluruh test.
+  test.slow();
   const streaming = `Streaming ${randomUUID().slice(0, 8)}`;
   await masukSebagaiAdmin(page);
   await buatKategori(page, streaming);
@@ -84,13 +93,13 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
     .getByRole("navigation", { name: "Menu admin" })
     .getByRole("link", { name: "Produk" })
     .click();
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
   await expect(
     page.getByRole("heading", { level: 1, name: "Produk" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "Tambah Produk" }).click();
-  await expect(page).toHaveURL("/admin/produk/baru");
+  await expect(page).toHaveURL("/admin/produk/baru", NAVIGASI);
   await page.getByLabel("Nama", { exact: true }).fill("Netflix Premium");
   await page.getByLabel("Kategori").selectOption({ label: streaming });
   await page
@@ -111,7 +120,7 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
   await page.getByLabel("Nama kolom 3").fill("Profil");
   await page.getByRole("button", { name: "Simpan" }).click();
 
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
   const netflix = barisProduk(page, "Netflix Premium");
   await expect(netflix).toHaveCount(1);
   await expect(netflix.getByText(streaming, { exact: true })).toBeVisible();
@@ -124,7 +133,7 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
   await page.setViewportSize({ width: 1280, height: 800 });
 
   await netflix.getByRole("link", { name: "Ubah Netflix Premium" }).click();
-  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/, NAVIGASI);
   await expect(
     page.getByRole("heading", { level: 1, name: "Ubah Produk" }),
   ).toBeVisible();
@@ -154,7 +163,7 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
 
   await page.getByLabel("Aktif").uncheck();
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
   await expect(netflix.getByText("Nonaktif", { exact: true })).toBeVisible();
   await expect(netflix.getByText("Aktif", { exact: true })).toHaveCount(0);
   await expect(netflix.getByText("Unggulan", { exact: true })).toBeVisible();
@@ -163,7 +172,7 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
   await expect(page.getByLabel("Aktif")).not.toBeChecked();
   await page.getByLabel("Aktif").check();
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
   await expect(netflix.getByText("Aktif", { exact: true })).toBeVisible();
   await expect(netflix.getByText("Nonaktif", { exact: true })).toHaveCount(0);
 });
@@ -285,10 +294,11 @@ test("UAT-D4: Format Item stok Email, Password, email ditolak karena kolom 3 kem
   await page.getByLabel("Nama kolom 3").fill("Profil");
   await page.getByRole("button", { name: "Simpan" }).click();
 
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
   const netflix = barisProduk(page, nama);
   await expect(netflix).toHaveCount(1);
   await netflix.getByRole("link", { name: `Ubah ${nama}` }).click();
+  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/, NAVIGASI);
   await expect(
     page.getByRole("list", { name: "Format Item stok" }).getByRole("listitem"),
   ).toHaveText(["Email", "Password", "Profil"]);

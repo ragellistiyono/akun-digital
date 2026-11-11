@@ -11,6 +11,12 @@ import { FOLDER_UNGGAHAN_TEST, PNG, pngUnik } from "../src/server/uji-unggahan";
 
 const PASSWORD = "sandi-uji-admin-123";
 
+// Daftar Produk dan daftar Kategori di dasbor admin memuat semua baris. app_test lokal bisa berisi
+// ribuan Produk dan Kategori sisa run sebelumnya, dan saat banyak worker berjalan bersamaan,
+// perpindahan ke atau dari halaman itu bisa melewati bawaan 5 detik. Jadi perpindahan alamatnya
+// diberi waktu lebih longgar, sama seperti di cari-kategori-beranda.spec.ts.
+const NAVIGASI = { timeout: 15_000 };
+
 // Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
 // DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
 function buatAdminLewatPerintah() {
@@ -42,7 +48,7 @@ async function buatProduk(page: Page, nama: string) {
     buffer: PNG,
   });
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/kategori");
+  await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
 
   await page.goto("/admin/produk/baru");
   await expect(
@@ -60,7 +66,7 @@ async function buatProduk(page: Page, nama: string) {
     .fill("Garansi 30 hari sejak Item stok diterima.");
   await page.getByLabel("Nama kolom 1").fill("Email");
   await page.getByRole("button", { name: "Simpan" }).click();
-  await expect(page).toHaveURL("/admin/produk");
+  await expect(page).toHaveURL("/admin/produk", NAVIGASI);
 }
 
 async function unggah(page: Page, nama: string, isi: Buffer) {
@@ -91,7 +97,7 @@ test("Admin mengunggah 5 foto Produk, foto keenam dan berkas yang bukan gambar d
   await masukSebagaiAdmin(page);
   await buatProduk(page, nama);
   await page.getByRole("link", { name: `Ubah ${nama}` }).click();
-  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/);
+  await expect(page).toHaveURL(/^.*\/admin\/produk\/[0-9a-f-]{36}$/, NAVIGASI);
 
   const bagianFoto = page.getByRole("region", { name: "Foto" });
   await expect(
