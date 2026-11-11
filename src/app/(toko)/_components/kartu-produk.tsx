@@ -86,6 +86,14 @@ function HargaNormal({ nilai }: { nilai: number }) {
   );
 }
 
+function LabelHemat({ persen }: { persen: number }) {
+  return (
+    <span className="rounded-full bg-persik px-2 py-1 text-xs font-extrabold whitespace-nowrap text-persik-teks">
+      Hemat {persen}%
+    </span>
+  );
+}
+
 function LabelHabis() {
   return (
     <span className="rounded-full bg-permukaan-2 px-2 py-1 text-xs font-extrabold text-tinta-redup">
@@ -99,16 +107,12 @@ function LabelHabis() {
  * semua Varian aktif habis (DESIGN.md, keputusan teknis "Mulai Rp X").
  */
 function Banding({ kartu }: { kartu: IsiKartuProduk }) {
-  const hemat = !kartu.habis && kartu.persenHemat !== null;
-  if (kartu.hargaNormal === null && !hemat && !kartu.habis) return null;
+  const hemat = kartu.habis ? null : kartu.persenHemat;
+  if (kartu.hargaNormal === null && hemat === null && !kartu.habis) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2">
       {kartu.hargaNormal !== null && <HargaNormal nilai={kartu.hargaNormal} />}
-      {hemat && (
-        <span className="rounded-full bg-persik px-2 py-1 text-xs font-extrabold whitespace-nowrap text-persik-teks">
-          Hemat {kartu.persenHemat}%
-        </span>
-      )}
+      {hemat !== null && <LabelHemat persen={hemat} />}
       {kartu.habis && <LabelHabis />}
     </div>
   );
@@ -136,8 +140,8 @@ export function KartuProduk({ kartu }: { kartu: IsiKartuProduk }) {
 
 /**
  * Kartu Produk Unggulan: satu anak tangga lebih besar dari kartu Produk, tanpa lencana tambahan. Di
- * layar lebar kartu ini menampilkan daftar Varian aktif beserta Harga normal yang dicoret atau label
- * Habis (DESIGN.md "Cards / Containers").
+ * layar lebar kartu ini menampilkan daftar Varian aktif beserta Harga normal yang dicoret dan label
+ * "Hemat N%", atau label Habis (DESIGN.md "Cards / Containers", ▶ Keputusan 2026-11-11 #53).
  */
 export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
   return (
@@ -164,21 +168,30 @@ export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
         className="hidden min-w-0 content-center gap-3 self-stretch border-l border-garis pl-6 lebar:grid"
       >
         {kartu.varian.map((v) => (
+          // Bila kolomnya sempit (mulai 900 px), harga turun ke baris berikutnya dan tetap rata kanan,
+          // supaya nama Varian tidak terpotong per huruf.
           <li
             key={v.id}
-            className="flex items-center justify-between gap-3 text-[15px] font-bold"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[15px] font-bold"
           >
             <span className="min-w-0 [overflow-wrap:anywhere]">{v.nama}</span>
-            {v.habis ? (
-              <LabelHabis />
-            ) : (
-              <span className="flex min-w-0 flex-wrap items-center justify-end gap-x-2">
-                {v.hargaNormal !== null && (
-                  <HargaNormal nilai={v.hargaNormal} />
-                )}
-                <span className="whitespace-nowrap">{rupiah(v.hargaJual)}</span>
-              </span>
-            )}
+            <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+              {v.habis ? (
+                <LabelHabis />
+              ) : (
+                <>
+                  {v.hargaNormal !== null && (
+                    <HargaNormal nilai={v.hargaNormal} />
+                  )}
+                  {v.persenHemat !== null && (
+                    <LabelHemat persen={v.persenHemat} />
+                  )}
+                  <span className="whitespace-nowrap">
+                    {rupiah(v.hargaJual)}
+                  </span>
+                </>
+              )}
+            </span>
           </li>
         ))}
       </ul>
