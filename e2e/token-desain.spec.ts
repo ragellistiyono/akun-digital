@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
@@ -112,4 +112,25 @@ test('data-mode="gelap" mengganti token ke pasangan -gelap walau perangkat teran
   });
 
   expect(await warnaToken(page)).toEqual(harapan("gelap"));
+});
+
+// DESIGN.md: kode memakai token, tidak pernah hex. Satu-satunya pengecualian adalah pelukis
+// pemandangan senja, karena warnanya hasil interpolasi kunci langit, bukan warna antarmuka.
+test("nilai hex mentah di kode src/ hanya ada di modul pelukis pemandangan", () => {
+  const akar = path.resolve(__dirname, "../src");
+  const PELUKIS = "app/(toko)/_components/pelukis-pemandangan.ts";
+  const HEX = /#[0-9A-Fa-f]{3,8}\b/;
+  const adaHex = (berkas: string) =>
+    HEX.test(readFileSync(path.join(akar, berkas), "utf8"));
+
+  const berkasKode = readdirSync(akar, { recursive: true, encoding: "utf8" })
+    .filter((berkas) => /\.tsx?$/.test(berkas))
+    .map((berkas) => berkas.split(path.sep).join("/"));
+
+  // Pengecualian tetap menunjuk berkas yang ada dan memang memegang hex.
+  expect(berkasKode).toContain(PELUKIS);
+  expect(adaHex(PELUKIS)).toBe(true);
+  expect(
+    berkasKode.filter((berkas) => berkas !== PELUKIS && adaHex(berkas)),
+  ).toEqual([]);
 });
