@@ -84,6 +84,35 @@ test("password yang salah ditolak dengan pesan yang menyebut sebab dan langkah b
   await expect(page).toHaveURL("/admin");
 });
 
+// UAT-G6 langkah 4 (PRD §7.7). Jam kunci yang tepat diuji di test integrasi dengan jam palsu;
+// server e2e memakai jam asli, jadi di sini cukup bentuk jam WIB-nya.
+test("setelah password salah 5 kali berturut-turut, password benar pun ditolak dengan jam login boleh dicoba lagi dalam WIB", async ({
+  page,
+}) => {
+  const email = buatAdminLewatPerintah();
+  const peringatan = page.getByRole("main").getByRole("alert");
+  const pesanTerkunci =
+    /^Password salah 5 kali berturut-turut, jadi login dengan email ini dikunci 15 menit\. Coba masuk lagi mulai pukul \d{2}\.\d{2} WIB\.$/;
+
+  for (let i = 1; i <= 4; i++) {
+    await masuk(page, email, "password-yang-salah");
+    await expect(peringatan).toHaveText(
+      "Email atau password salah. Periksa keduanya, lalu coba masuk lagi.",
+    );
+  }
+
+  await masuk(page, email, "password-yang-salah");
+  await expect(peringatan).toHaveText(pesanTerkunci);
+
+  // Email ditulis dengan huruf besar tetap dihitung sebagai email yang sama.
+  await masuk(page, email.toUpperCase());
+  await expect(peringatan).toHaveText(pesanTerkunci);
+  await expect(page).toHaveURL("/admin");
+
+  await page.goto("/admin/ringkasan");
+  await expect(page).toHaveURL("/admin");
+});
+
 test("isian kosong ditolak dengan pesan di setiap isian", async ({ page }) => {
   await page.goto("/admin");
   await page.getByRole("button", { name: "Masuk" }).click();
