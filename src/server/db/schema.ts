@@ -172,9 +172,10 @@ export const statusItemStok = pgEnum("status_item_stok", STATUS_ITEM_STOK);
 // untuk menolak Item stok yang sama persis di Varian yang sama (PRD §4.2) tanpa membuka Item stok
 // lain; indeks unik menjaganya juga bila dua Admin mengisi bersamaan. Item stok tidak ada tanpa
 // Variannya, jadi ikut terhapus bersama Varian.
-// Item stok Ditahan mencatat Pesanan yang menahannya di pesanan_id (PRD §5.3). Satu Pesanan hanya
-// pernah mendapat satu Item stok (PRD §5.7), jadi pesanan_id unik; Item stok Tersedia tidak punya
-// Pesanan.
+// Item stok Ditahan mencatat Pesanan yang menahannya di pesanan_id (PRD §5.3), dan Item stok Terkirim
+// mencatat Pesanan penerimanya. Satu Pesanan hanya pernah mendapat satu Item stok (PRD §5.7), jadi
+// pesanan_id unik; Item stok Tersedia tidak punya Pesanan. Item stok Terkirim juga mencatat nama kolom
+// Format Item stok saat dikirim, karena Item stok Terkirim tetap tampil dengan kolom lamanya (PRD §4.1).
 export const itemStok = pgTable(
   "item_stok",
   {
@@ -188,6 +189,7 @@ export const itemStok = pgTable(
     pesananId: uuid("pesanan_id").references((): AnyPgColumn => pesanan.id, {
       onDelete: "restrict",
     }),
+    formatSaatTerkirim: text("format_saat_terkirim").array(),
   },
   (tabel) => [
     uniqueIndex("item_stok_varian_id_sidik_jari_idx").on(
@@ -218,7 +220,8 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // jadi perubahan harga sesudahnya tidak mengubah Pesanan ini. Kode unik, Total bayar, waktu kedaluwarsa,
 // dan gambar QR diambil dari QRIS yang diterbitkan Qrispy (ADR-0004); qris_id menautkan Pesanan ke QRIS
 // itu. Nomor Pesanan (PRD §9.6) dan Tautan Pesanan (PRD §6.2) unik. Varian yang sudah pernah dipesan
-// tidak bisa dihapus (PRD §3.7), jadi rujukannya restrict.
+// tidak bisa dihapus (PRD §3.7), jadi rujukannya restrict. Waktu bayar dari kabar pembayaran Qrispy
+// dicatat begitu kabar itu diproses, dan null selama belum dibayar.
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -238,6 +241,7 @@ export const pesanan = pgTable(
     /** Gambar QR dari Qrispy sebagai data URL PNG (qris_image_base64). */
     gambarQr: text("gambar_qr").notNull(),
     status: statusPesanan("status").notNull(),
+    waktuBayar: instan("waktu_bayar"),
   },
   (tabel) => [
     uniqueIndex("pesanan_nomor_pesanan_unik").on(tabel.nomorPesanan),

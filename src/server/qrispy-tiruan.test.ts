@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { qrispyAktif } from "./qrispy";
-import { qrispyTiruan } from "./qrispy-tiruan";
+import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
 
 // ADR-0004 dan issue T14: Qrispy tiruan menerbitkan QRIS dengan Kode unik acak Rp 1–499, waktu
 // kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh. Bentuk datanya mengikuti respons Qrispy di
@@ -65,6 +65,54 @@ describe("Qrispy tiruan", () => {
     expect([...png.subarray(0, 8)]).toEqual([
       0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
     ]);
+  });
+});
+
+// Issue T16 dan docs/referensi/qrispy-api.md bagian 4: Qrispy tiruan menjawab cek status QRIS. QRIS
+// berstatus `paid` setelah pembayarannya dipicu, dengan nominal yang diatur pemicunya sebagai `amount`.
+describe("cek status Qrispy tiruan", () => {
+  it("QRIS yang belum dibayar dijawab pending", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 50000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toEqual({
+      paymentStatus: "pending",
+    });
+  });
+
+  it("setelah pembayaran Total bayar dipicu, QRIS dijawab paid dengan nominal dan waktu bayarnya", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 50000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+    const waktuBayar = new Date("2026-11-11T10:05:00+07:00");
+
+    bayarQrisTiruan(
+      { qrisId: qris.qrisId, amount: qris.amount },
+      { sekarang: waktuBayar },
+    );
+
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toEqual({
+      paymentStatus: "paid",
+      amount: qris.amount,
+      paidAt: waktuBayar,
+    });
+  });
+
+  it("nominal yang dibayar bisa kurang dari Total bayar", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 45000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+
+    bayarQrisTiruan({ qrisId: qris.qrisId, amount: 45000 });
+
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toMatchObject({
+      paymentStatus: "paid",
+      amount: 45000,
+    });
   });
 });
 

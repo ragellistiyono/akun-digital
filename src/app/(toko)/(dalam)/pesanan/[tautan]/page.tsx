@@ -1,11 +1,21 @@
-import { Clock } from "lucide-react";
+import {
+  Check,
+  CircleX,
+  Clock,
+  Hourglass,
+  type LucideIcon,
+  RotateCcw,
+  TriangleAlert,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
 
+import type { StatusPesanan } from "@/domain/status-pesanan";
 import { rupiah } from "@/lib/rupiah";
+import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
 import { bacaPesananLewatTautan } from "@/server/pesanan";
 
 import { RincianNominal } from "../../../_components/rincian-nominal";
@@ -22,21 +32,47 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-/** Pil status Menunggu Pembayaran (DESIGN.md Status Pesanan): warna, ikon Clock, dan label sekaligus. */
-function PilMenungguPembayaran() {
+/** Ikon dan warna pil setiap status Pesanan (DESIGN.md Status Pesanan). */
+const PIL_STATUS: Record<StatusPesanan, { Ikon: LucideIcon; warna: string }> = {
+  "Menunggu Pembayaran": {
+    Ikon: Clock,
+    warna: "bg-st-tunggu-bg text-st-tunggu",
+  },
+  Selesai: { Ikon: Check, warna: "bg-st-selesai-bg text-st-selesai" },
+  Kedaluwarsa: {
+    Ikon: Hourglass,
+    warna: "bg-st-kedaluwarsa-bg text-st-kedaluwarsa",
+  },
+  Dibatalkan: { Ikon: CircleX, warna: "bg-st-batal-bg text-st-batal" },
+  Bermasalah: {
+    Ikon: TriangleAlert,
+    warna: "bg-st-masalah-bg text-st-masalah",
+  },
+  "Dana Dikembalikan": {
+    Ikon: RotateCcw,
+    warna: "bg-st-kembali-bg text-st-kembali",
+  },
+};
+
+/** Pil status Pesanan (DESIGN.md Status Pesanan): warna, ikon, dan label sekaligus. */
+function PilStatusPesanan({ status }: { status: StatusPesanan }) {
+  const { Ikon, warna } = PIL_STATUS[status];
   return (
-    <span className="inline-flex h-7 items-center gap-1 rounded-full bg-st-tunggu-bg pr-3 pl-2 text-[13px] font-bold whitespace-nowrap text-st-tunggu">
-      <Clock aria-hidden="true" className="size-4" strokeWidth={2.4} />
-      Menunggu Pembayaran
+    <span
+      className={`inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-bold whitespace-nowrap ${warna}`}
+    >
+      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.4} />
+      {status}
     </span>
   );
 }
 
-// Halaman bayar (PRD §5.6) di Tautan Pesanan, selama Pesanan Menunggu Pembayaran: gambar QR, lalu Nomor
-// Pesanan dalam huruf mono dengan pil status, dan rincian nominal yang dicatat di Pesanan (PRD §5.5). Di
-// layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout). Tautan Pesanan yang tidak dikenal
-// menampilkan halaman tidak ditemukan.
-export default async function HalamanBayar({
+// Halaman di Tautan Pesanan. Selama Pesanan Menunggu Pembayaran, halaman ini adalah Halaman bayar (PRD
+// §5.6): gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, dan rincian nominal yang
+// dicatat di Pesanan (PRD §5.5). Di layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout).
+// Untuk status lain, pil menampilkan status terkini tanpa gambar QR; tampilan lengkapnya dibangun di
+// tiket Halaman Pesanan. Tautan Pesanan yang tidak dikenal menampilkan halaman tidak ditemukan.
+export default async function HalamanTautanPesanan({
   params,
 }: PageProps<"/pesanan/[tautan]">) {
   // Status Pesanan dibaca setiap kali halaman dibuka, bukan sekali saat build.
@@ -44,26 +80,29 @@ export default async function HalamanBayar({
   const tautan = TautanPesanan.safeParse((await params).tautan);
   if (!tautan.success) notFound();
 
+  // Jalur cek status (ADR-0004): kabar pembayaran dari Qrispy diproses sebelum Pesanan dibaca.
+  await cekStatusPembayaran(tautan.data);
   const pesanan = await bacaPesananLewatTautan(tautan.data);
-  // Halaman Pesanan untuk status lain dibangun di tiket berikutnya; saat ini Pesanan hanya bisa
-  // Menunggu Pembayaran.
-  if (!pesanan || pesanan.status !== "Menunggu Pembayaran") notFound();
+  if (!pesanan) notFound();
   const { rincian } = pesanan;
+  const menunggu = pesanan.status === "Menunggu Pembayaran";
 
   return (
     <>
-      <h1 className="mt-4">Pembayaran</h1>
+      <h1 className="mt-4">{menunggu ? "Pembayaran" : "Pesanan"}</h1>
       <div className="mt-6 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
-        <div className="w-fit rounded-[16px] bg-permukaan p-3 shadow-bayang">
-          <Image
-            unoptimized
-            src={pesanan.gambarQr}
-            alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
-            width={128}
-            height={128}
-            className="block size-32"
-          />
-        </div>
+        {menunggu && (
+          <div className="w-fit rounded-[16px] bg-permukaan p-3 shadow-bayang">
+            <Image
+              unoptimized
+              src={pesanan.gambarQr}
+              alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
+              width={128}
+              height={128}
+              className="block size-32"
+            />
+          </div>
+        )}
 
         <div className="flex min-w-0 flex-col gap-4">
           <section aria-label="Pesanan" className={PANEL}>
@@ -76,7 +115,7 @@ export default async function HalamanBayar({
                   {pesanan.nomorPesanan}
                 </p>
               </div>
-              <PilMenungguPembayaran />
+              <PilStatusPesanan status={pesanan.status} />
             </div>
             <p className="mt-2 [overflow-wrap:anywhere]">
               <span className="font-extrabold">{pesanan.namaProduk}</span>{" "}

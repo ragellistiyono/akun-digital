@@ -39,6 +39,7 @@ function qrispyKodeUnik123(): Qrispy & {
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
     })),
     batalkanQris: vi.fn(async () => {}),
+    cekStatusQris: qrispyTiruan.cekStatusQris,
   };
 }
 
@@ -423,6 +424,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
           gambarQr: "data:image/png;base64,iVBORw0KGgo=",
         }),
         batalkanQris,
+        cekStatusQris: qrispyTiruan.cekStatusQris,
       };
 
       const hasil = await buatPesanan(
@@ -451,6 +453,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
       batalkanQris: async () => {
         throw new Error("Qrispy tiruan dibuat gagal: tidak menjawab");
       },
+      cekStatusQris: qrispyTiruan.cekStatusQris,
     };
 
     const hasil = await buatPesanan(
