@@ -81,6 +81,16 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Admin tidak pernah melihat password Member.
 - PRD: §2.3
 
+**UAT-B4 — Password Admin baru**
+- Langkah:
+  1. Di server, jalankan `pnpm admin:buat admin-baru@miwe.example` dan ketik password 7 karakter dua kali.
+  2. Jalankan lagi dengan password 8 karakter.
+  3. Login di `/admin` dengan Admin itu.
+- Hasil:
+  - Langkah 1 ditolak dengan pesan bahwa password minimal 8 karakter, dan Admin tidak dibuat.
+  - Langkah 2 membuat Admin, dan Admin itu bisa login.
+- PRD: §2.2
+
 ## C. Katalog (§3)
 
 **UAT-C1 — Beranda dan pencarian**
@@ -117,7 +127,7 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   3. Isi Harga jual sebuah Varian dengan Rp 999, lalu simpan.
   4. Isi Harga jual sebuah Varian dengan Rp 499.001, lalu simpan.
 - Hasil:
-  - Varian 1 Bulan menampilkan Rp 75.000 dicoret dan "Hemat 33%".
+  - Varian 1 Bulan menampilkan Rp 75.000 dicoret dan "Hemat 33%", di Halaman Produk maupun di daftar Varian kartu Produk Unggulan Netflix Premium di beranda layar lebar.
   - Langkah 2 ditolak karena Harga normal tidak lebih besar dari Harga jual.
   - Langkah 3 ditolak karena Harga jual kurang dari Rp 1.000.
   - Langkah 4 ditolak karena Harga jual lebih dari Rp 499.000.
@@ -142,6 +152,15 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Netflix Premium hilang dari katalog, tetapi Pesanan lamanya tetap tampil utuh.
   - Netflix Premium tidak bisa dihapus karena sudah pernah dipesan.
 - PRD: §3.1, §3.7
+
+**UAT-C7 — Nama Kategori unik**
+- Langkah:
+  1. Sebagai Admin, buat Kategori baru bernama "streaming".
+  2. Ubah nama Kategori "Musik" menjadi "Streaming".
+- Hasil:
+  - Kedua langkah ditolak dengan pesan bahwa nama Kategori sudah dipakai.
+  - Kategori "Streaming" dan "Musik" tetap seperti semula.
+- PRD: §3.1
 
 ## D. Item stok (§4)
 
@@ -181,6 +200,13 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Langkah 1 berhasil.
   - Langkah 2 dan 3 ditolak.
 - PRD: §4.3, §4.4
+
+**UAT-D4 — Nama kolom Format Item stok kembar**
+- Langkah: sebagai Admin, buat Produk baru dengan Format Item stok `Email`, `Password`, `email`.
+- Hasil:
+  - Produk ditolak dengan pesan bahwa kolom 3 kembar dengan kolom lain.
+  - Setelah kolom 3 diganti `Profil`, Produk tersimpan.
+- PRD: §4.1
 
 ## E. Checkout dan pembayaran (§5)
 
@@ -463,10 +489,13 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 
 **UAT-I5 — Pengaturan toko**
 - Langkah:
-  1. Ubah nomor WhatsApp dan teks Syarat & Ketentuan.
+  1. Ubah nomor WhatsApp menjadi `0812-3456-7890`, lalu ubah teks Syarat & Ketentuan.
   2. Buka halaman Produk dan footer toko.
+  3. Coba simpan nomor WhatsApp `+1 555 0100`.
 - Hasil:
-  - Tombol WhatsApp membuka nomor baru.
+  - Pengaturan toko menampilkan nomor tersimpan `6281234567890`.
+  - Tombol WhatsApp membuka `https://wa.me/6281234567890`.
+  - Langkah 3 ditolak dengan pesan bahwa nomor harus nomor Indonesia.
   - Halaman Syarat & Ketentuan menampilkan teks baru.
   - Kebijakan Privasi tertaut di footer.
   - Tidak ada menu log aktivitas, ekspor CSV, atau notifikasi email Admin.

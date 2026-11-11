@@ -457,6 +457,10 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 - **Panel:** radius 20 px, padding 16 px, Bayang, dengan jarak 16 px antar-panel. Dipakai untuk deskripsi, garansi, rincian Total bayar, dan ringkasan Pesanan. Panel ajakan (Buat akun, PRD §7.1) diberi bingkai 2 px `monogram`.
 - **Rincian Total bayar** (PRD §5.5): tabel 15 px berisi Harga jual, Potongan voucher, Kode unik, dan Total bayar, dengan nilai rata kanan. Baris Total bayar dipisah garis putus 1,5 px dan berukuran 20 px tebal 800. Di Checkout, Kode unik belum diketahui, jadi barisnya berbunyi "Rp 1–499, dari Qrispy" dan totalnya "Perkiraan bayar".
 
+▶ Keputusan 2026-11-11 (#53):
+- Kartu Produk Unggulan tidak menampilkan chip Kategori atau jumlah Varian seperti di prototipe. Bila semua Variannya habis, kartu ini memakai gaya Kartu Produk habis yang sama dengan kartu biasa.
+- Di layar lebar, daftar Varian di Kartu Produk Unggulan menampilkan Harga normal yang dicoret bersama label "Hemat N%" untuk setiap Varian yang punya Harga normal (PRD §3.5). Varian yang habis tetap menampilkan label Habis tanpa Hemat.
+
 #### Keputusan teknis: harga di kartu Produk "Mulai Rp X"
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
 
@@ -469,12 +473,18 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - **Pilihan Varian** (radiogroup, PRD §3.2–§3.4): kartu 20 px bergaris 2 px. Kolomnya berisi radio 24 px, nama Varian dan "Stok N", lalu Harga jual dengan Harga normal yang dicoret dan Hemat. Varian terpilih bergaris `aksi`, berlatar `monogram` 9% di atas `permukaan`, dan titik radionya `aksi`. Varian habis bertulisan "Habis", beropasitas 60%, dan tidak bisa dipilih. Produk dengan satu Varian tidak menampilkan pilihan ini, melainkan harga 28 px dan "Stok N".
 - **Kontrol segmen mode** (PRD §11.3): tiga pilihan, yaitu Perangkat, Terang, dan Gelap, di wadah `permukaan-2` radius 14 px. Pilihan aktif berlatar `permukaan` dengan Bayang.
 
+▶ Keputusan 2026-11-11 (#53): Kotak cari menjalankan pencarian saat Pembeli menekan Enter atau tombol cari di papan ketik, tidak sambil mengetik seperti di prototipe. Hasilnya terbuka di alamat yang bisa dibagikan dan bekerja dengan tombol kembali.
+
 ### Navigation
 - **Bilah atas:** latar `langit`, lekat di atas, 64 px, dan ciut ke 52 px dengan Bayang bilah saat digulir. Monogram ikut mengecil dari 28 ke 24 px.
 - **Navigasi bawah (di bawah 900 px):** 76 px, latar `permukaan`, garis atas 1 px `garis`. Empat tab berisi ikon 24 px dan label mikro. Tab tidak aktif berwarna `tinta-redup`, tab aktif `tinta` dengan `aria-current="page"`.
 - **Navbar atas (mulai 900 px):** empat tautan 40 px, 15 px tebal 700, berwarna `langit-redup`. Saat hover latarnya `langit-2`, dan tab aktif berwarna putih.
 - **Bilah lekat:** aksi utama Halaman Produk, Checkout, dan Halaman bayar menempel di atas navigasi bawah (`bottom: 76px`). Latarnya `tanah` yang pekat dengan garis atas dan Bayang lekat. Padding-nya 12/16/26 px. Padding bawah 26 px menyediakan ruang bagi matahari penanda yang naik 13 px di atas garis navigasi. Saat navigasi bawah bersembunyi, bilah lekat turun ke dasar layar dengan padding bawah 12 px.
 - **Dasbor admin** (PRD §9, §11.1): menu samping di layar lebar, menu lipat di ponsel, tanpa navigasi bawah. **Belum divalidasi oleh build.** Dasbor ini mewarisi token dan komponen di berkas ini dengan kepadatan Operate: baris tabel yang padat, kontrol 36–40 px, panel 20 px, dan pil status yang sama.
+
+▶ Keputusan 2026-11-11 (#53):
+- Judul toko di Beranda hanya dibaca pembaca layar, karena Beranda langsung dibuka dengan pita langit. Di ponsel, monogram MDS di bilah atas sudah cukup sebagai tanda toko.
+- Setelah Admin membuat atau mengubah Kategori atau Produk, dasbor kembali ke daftarnya tanpa pesan "tersimpan". Daftar yang sudah diperbarui menjadi tandanya.
 
 ### Penanda tab aktif: matahari terbit (komponen khas)
 Setengah lingkaran `matahari` (28×14 px, radius `14px 14px 0 0`) dengan pendar `0 -2px 14px 3px` emas 55%. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seolah matahari terbit dari cakrawala. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas, ukurannya 20×10 px dan duduk di tepi bawah bilah langit, di bawah tautan aktif. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
@@ -496,8 +506,10 @@ Pemakaiannya:
 
 Pemandangan ini menggantikan aturan lama "lapisan gunung berwarna datar" atas instruksi pemilik pada 2026-11-11.
 
+▶ Keputusan 2026-11-11 (#53): Strip tepi halaman dalam tetap menggambar cahaya ufuk elips di garis cakrawala, seperti prototipe. Yang tidak digambar di strip adalah cakram matahari beserta pendar radialnya, bintang, dan awan.
+
 ### Status Pesanan (PRD §5.7)
-Setiap status adalah pil setinggi 28 px dengan ikon 16 px, label 13 px tebal 800, dan padding `0 12px 0 8px`. Warna, ikon, dan label selalu tampil bersama, tidak pernah warna saja. Labelnya memakai nama status persis seperti di GLOSSARY. Semua pasangan mencapai minimal 6,1:1.
+Setiap status adalah pil setinggi 28 px dengan ikon 16 px, label 13 px tebal 700 (`label-kecil`), dan padding `0 12px 0 8px`. Warna, ikon, dan label selalu tampil bersama, tidak pernah warna saja. Labelnya memakai nama status persis seperti di GLOSSARY. Semua pasangan mencapai minimal 6,1:1.
 
 | Status | Ikon lucide | Terang (latar / teks) | Gelap (latar / teks) |
 |---|---|---|---|
@@ -512,14 +524,24 @@ Pil status muncul di Halaman bayar (Menunggu Pembayaran, di samping Nomor Pesana
 
 Status Item stok (Tersedia, Ditahan, Terkirim) hanya tampil di dasbor admin, dan belum diprototipekan. Statusnya memakai anatomi pil yang sama: warna, ikon, dan label. Pemetaan token dan ikonnya ditetapkan saat dasbor admin dibangun, dan wajib berbeda jelas dari status Pesanan di layar yang sama.
 
+▶ Keputusan 2026-11-11 (#53): Label pil status Pesanan dan pil berbentuk sama di dasbor admin, seperti Aktif, Nonaktif, Unggulan, dan Sampul, bertebal 700 sesuai token `label-kecil` di frontmatter. Sebelumnya teks bagian ini menulis tebal 800, yang bertentangan dengan frontmatter. Label Hemat dan Habis tidak berubah: keduanya tetap memakai Mikro (800, 12 px).
+
 ### Blok Item stok dan tombol Salin (PRD §6.1, §6.2)
 Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam blok `langit` radius 24 px. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (12 px `langit-redup`), nilai mono 15 px putih, dan tombol Salin 40 px (`langit-2`, garis `langit-garis`, hover `monogram`). Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check` dan warna `st-selesai` selama 1,6 dtk. Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
+
+▶ Keputusan 2026-11-11 (#53): Sebelum M2, tab Riwayat untuk Tamu di layar lebar menaruh judul di atas dan panel penjelasan di kolom kiri. Tata letak prototipe, yaitu judul di kiri dan panel di kanan, baru dipakai bila kolom kiri sudah berisi tombol Masuk dan Daftar.
 
 ### Toast
 Pil `langit` dengan teks putih 14 px tebal 700 dan Bayang naik. Toast muncul 96 px dari dasar layar di ponsel (di atas navigasi bawah) dan 32 px di layar lebar, lalu hilang setelah 1,8 dtk. Toast diumumkan lewat `role="status"`. Di aplikasi, toast memakai `sonner` dengan gaya ini.
 
 ### Foto Produk
 Di prototipe, foto Produk diganti petak warna berisi huruf awal nama Produk. Petak itu pengganti sementara, bukan bagian dari sistem. Di aplikasi, foto diunggah Admin (PRD §3.3), dipotong mengisi bingkai radius 16 px (24 px di Halaman Produk), dan foto pertama menjadi sampul kartu.
+
+▶ Keputusan 2026-11-11 (#53):
+- Produk tanpa foto tampil sebagai petak `permukaan-2` berisi huruf awal nama Produk berwarna `tinta-redup`. Petak mauve dari prototipe tidak dipakai, karena teks putih di atasnya melanggar aturan teks putih.
+- Di dasbor admin, foto dikelola di panel Foto pada halaman ubah Produk. Setiap unggahan, perpindahan, dan penghapusan langsung tersimpan tanpa tombol Simpan. Panelnya menuliskan hal itu.
+- Urutan foto diatur dengan tombol Naikkan dan Turunkan, satu langkah per ketukan, tanpa seret-lepas.
+- Foto dihapus tanpa dialog konfirmasi, karena foto mudah diunggah ulang.
 
 ## Do's and Don'ts
 

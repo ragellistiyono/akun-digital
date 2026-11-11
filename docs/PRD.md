@@ -52,6 +52,12 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 
 ▶ Keputusan 2026-11-11: Admin tetap login selama 12 jam sejak login. Setelah itu Admin diminta login ulang, walaupun sedang aktif memakai dasbor admin. (Sebelumnya OD-2.)
 
+▶ Keputusan 2026-11-11 (#53):
+- Password Admin minimal 8 karakter, sama dengan password Member (§7.5). Perintah pembuat Admin menolak password yang lebih pendek dan menampilkan pesan.
+- Tepat 12 jam setelah login, sesi Admin sudah berakhir. Contoh: Admin login pukul 08.00. Pukul 19.59.59 sesinya masih berlaku, dan mulai pukul 20.00.00 Admin diminta login ulang.
+- Halaman depan dasbor admin adalah Ringkasan (§9.2), di `/admin/ringkasan`. Admin yang masih login dan membuka `/admin` langsung dibawa ke sana. Halaman login berjudul "Masuk ke dasbor admin" dengan tombol "Masuk".
+- Email yang tidak terdaftar dan password yang salah ditolak dengan pesan yang sama: "Email atau password salah. Periksa keduanya, lalu coba masuk lagi." Pesan yang sama itu tidak membocorkan email mana yang terdaftar sebagai Admin.
+
 ### 2.3 Kewenangan Admin atas Member
 
 - Daftar Member menampilkan email, tanggal daftar, jumlah Pesanan Selesai, dan total belanja. Total belanja dihitung seperti Pendapatan (§9.3), dari Pesanan Member itu saja.
@@ -68,6 +74,10 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Kategori yang tidak berisi Produk aktif tidak tampil di toko.
 - Kategori yang masih berisi Produk, termasuk Produk nonaktif, tidak bisa dihapus. Admin memindahkan Produknya ke Kategori lain dulu.
 
+▶ Keputusan 2026-11-11 (#53):
+- Nama Kategori harus unik. Nama dibandingkan tanpa membedakan huruf besar dan kecil, dan tanpa spasi di awal atau akhir, sama seperti nama kolom Format Item stok (§4.1). Contoh: bila sudah ada Kategori "Streaming", Kategori baru bernama "streaming" ditolak dengan pesan. Mengganti nama Kategori menjadi nama Kategori lain yang sudah ada juga ditolak.
+- Kategori tampil di toko bila berisi setidaknya satu Produk yang tampil di katalog, yaitu Produk aktif dengan setidaknya satu Varian aktif. Kategori yang hanya berisi Produk tanpa Varian aktif tidak tampil, sehingga tidak ada Kategori yang membuka daftar kosong.
+
 ### 3.2 Produk dan Varian
 
 - Setiap Produk punya satu Varian atau lebih. Setiap Varian punya nama, Harga jual, Harga normal yang opsional, dan Item stok sendiri.
@@ -81,6 +91,8 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Harga normal tidak dibatasi maksimum, karena hanya untuk tampilan (§3.5).
 - Contoh: Harga jual Rp 499.000 diterima, dan Rp 499.001 ditolak.
 
+▶ Keputusan 2026-11-11 (#53): Admin boleh menyimpan Produk sebelum menambah Variannya, dan boleh menonaktifkan semua Varian sebuah Produk. Produk tanpa Varian aktif tidak tampil di toko. Tidak ada aturan yang melarang Produk aktif tanpa Varian aktif.
+
 ### 3.3 Halaman Produk
 
 Halaman Produk menampilkan:
@@ -90,6 +102,11 @@ Halaman Produk menampilkan:
 - teks ketentuan garansi yang ditulis Admin;
 - tombol kontak WhatsApp;
 - daftar Varian beserta Harga jual, Harga normal bila ada, dan Stok Varian.
+
+▶ Keputusan 2026-11-11 (#53):
+- Teks ketentuan garansi wajib diisi Admin. Produk yang tidak bergaransi, misalnya kode lisensi, tetap diisi teks, misalnya "Tanpa garansi".
+- Foto Produk diunggah di halaman ubah Produk setelah Produk disimpan, bukan di form tambah Produk.
+- Produk boleh aktif tanpa foto. Di katalog, Produk tanpa foto tampil dengan petak pengganti (`docs/DESIGN.md`, Foto Produk).
 
 ### 3.4 Stok Varian
 
@@ -116,10 +133,17 @@ Urutan isi beranda dari atas:
 
 Tidak ada banner promo.
 
+▶ Keputusan 2026-11-11 (#53):
+- Bila tidak ada Produk Unggulan yang tampil, bagian Produk Unggulan tidak ditampilkan. Bila tidak ada Produk sama sekali, bagian semua Produk menampilkan "Belum ada Produk yang dijual saat ini."
+- Pencarian dan saringan Kategori saling menggantikan. Memilih Kategori mengosongkan kata cari, dan mencari mengembalikan saringan ke semua Kategori. Contoh: Pembeli mengetik "netflix", lalu memilih Kategori Musik. Yang tampil adalah semua Produk Musik, misalnya Spotify Premium.
+- Selama Pembeli mencari atau menyaring, bagian Produk Unggulan tidak ditampilkan. Judul daftar berganti menjadi nama Kategori yang dipilih atau "Hasil pencarian".
+
 ### 3.7 Nonaktif dan hapus
 
 - Produk atau Varian yang dinonaktifkan hilang dari katalog dan tidak bisa dibeli. Pesanan lamanya tetap tampil utuh di riwayat.
 - Produk atau Varian yang sudah pernah dipesan tidak bisa dihapus, hanya dinonaktifkan. "Pernah dipesan" berarti tercatat di Pesanan berstatus apa pun, termasuk Kedaluwarsa dan Dibatalkan.
+
+▶ Keputusan 2026-11-11 (#53): Produk dan Varian baru sudah aktif saat dibuat, dan Admin bisa menonaktifkannya di form. Produk baru tidak langsung terlihat Pembeli, karena Produk tanpa Varian aktif tidak tampil di toko (§3.2).
 
 ### 3.8 Harga di kartu Produk
 
@@ -139,6 +163,8 @@ Tidak ada banner promo.
 - Kolom hanya boleh ditambah atau dihapus bila Produk itu tidak punya Item stok yang Tersedia atau Ditahan.
 - Item stok yang sudah Terkirim tetap tampil dengan kolom lamanya.
 
+▶ Keputusan 2026-11-11 (#53): Nama kolom Format Item stok tidak boleh kosong atau kembar. Nama kolom dianggap kembar tanpa membedakan huruf besar dan kecil, dan tanpa spasi di awal atau akhir. Contoh: `Email` dan `email` kembar, begitu pula `Email` dan ` Email `. Dari kolom yang kembar, kolom pertama dipertahankan dan kolom berikutnya ditolak dengan menyebut nomornya. Contoh lengkapnya ada di `tests/golden/format-item-stok.json`.
+
 ### 4.2 Mengisi Item stok
 
 Admin mengisi Item stok sebuah Varian dengan dua cara:
@@ -152,6 +178,11 @@ Saat menempel banyak baris:
 - baris kosong diabaikan dan tidak dihitung;
 - baris yang benar tetap disimpan;
 - Admin melihat ringkasan, misalnya "48 tersimpan, 2 ditolak", beserta daftar baris yang ditolak dan alasannya.
+
+▶ Keputusan 2026-11-11 (#53):
+- Spasi di awal dan akhir setiap kolom dibuang sebelum Item stok disimpan dan dibandingkan, baik dari form maupun dari tempelan. Contoh: `a | b` dan `a|b` dianggap sama persis. Kolom yang hanya berisi spasi dianggap kosong.
+- Setelah tempelan diproses, kotak tempel dikosongkan. Baris yang ditolak tampil di daftar beserta nomor baris, isi baris, dan alasannya, supaya Admin bisa memperbaiki lalu menempelnya lagi.
+- Item stok boleh diisi ke Varian atau Produk yang nonaktif, supaya Admin bisa menyiapkan stok sebelum Produk dibuka untuk Pembeli.
 
 ### 4.3 Satu Item stok untuk satu Pesanan
 
@@ -330,6 +361,11 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 - Contoh: kesalahan kelima terjadi pukul 10.00. Login pukul 10.14 ditolak walaupun password-nya benar. Login pukul 10.15 dengan password benar diterima.
 - Aturan login ini berlaku untuk Member dan Admin.
 
+▶ Keputusan 2026-11-11 (#53):
+- Sejak kesalahan kelima, halaman login langsung menampilkan pesan kunci, bukan pesan password salah.
+- Teks pesan kunci: "Password salah 5 kali berturut-turut, jadi login dengan email ini dikunci 15 menit. Coba masuk lagi mulai pukul HH.MM WIB." Pesan yang sama tampil di setiap percobaan selama kunci berlaku.
+- Jam coba lagi dibulatkan ke atas ke menit berikutnya, supaya jam yang tampil tidak pernah lebih awal dari saat login boleh dicoba lagi. Contoh: kunci berakhir pukul 10.15.30, dan pesannya menulis "10.16".
+
 ## 8. Voucher
 
 ### 8.1 Voucher
@@ -465,6 +501,13 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Halaman Syarat & Ketentuan dan Kebijakan Privasi ditautkan di footer toko.
 - Nama toko dan logo ditetapkan di kode dan desain, bukan di pengaturan.
 
+▶ Keputusan 2026-11-11 (#53): Admin boleh menulis nomor WhatsApp dalam bentuk yang biasa dipakai di Indonesia, lalu toko merapikannya sebelum menyimpan. Nomor toko dianggap selalu nomor Indonesia.
+- Toko membuang spasi, tanda hubung, dan tanda `+`, lalu mengganti angka 0 di depan dengan 62.
+- Hasilnya harus berupa angka saja, diawali 62, dan paling banyak 15 angka. Bila tidak, isian ditolak dengan pesan yang menyebut sebabnya.
+- Contoh: `0812-3456-7890`, `+62 812 3456 7890`, dan `6281234567890` semuanya disimpan sebagai `6281234567890`, dan tombol WhatsApp membuka `https://wa.me/6281234567890`.
+- Isian yang dikosongkan berarti nomor belum diisi, dan tombol WhatsApp tidak tampil.
+- Contoh lengkapnya ada di `tests/golden/nomor-whatsapp.json`.
+
 ### 9.9 Yang tidak dibuat di dasbor admin
 
 Log aktivitas Admin, ekspor CSV, dan notifikasi email ke Admin.
@@ -513,6 +556,10 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 - Bilah atas belum punya tombol Masuk.
 
 Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
+
+▶ Keputusan 2026-11-11 (#53):
+- Tab Riwayat untuk Tamu berjudul "Riwayat Pesanan" dan berisi kalimat: "Setiap Pesanan Selesai punya Tautan Pesanan di email "Pesanan selesai". Buka tautan itu untuk melihat dan menyalin Item stok tanpa login."
+- Tab Kategori berisi daftar Kategori. Setiap Kategori membuka Beranda yang sudah disaring menurut Kategori itu, bukan halaman Kategori tersendiri.
 
 ### 11.2 Animasi navbar
 
