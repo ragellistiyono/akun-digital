@@ -192,6 +192,43 @@ test("checkout Netflix Premium 1 Bulan membuat satu Pesanan Menunggu Pembayaran,
   expect(riwayat).toEqual([{ status: "Menunggu Pembayaran" }]);
 });
 
+// UAT-E1 langkah 1–3 dan PRD §5.3: Item stok yang ditahan Pesanan tidak dihitung di Stok Varian.
+test("setelah checkout, Stok Varian di Halaman Produk berkurang satu, juga bila dilihat dari browser lain", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  // Produk sendiri, karena Stok Varian-nya dihitung di test ini.
+  const id = await sisipkanProduk({
+    nama: `Stok Ditahan ${akhiran}`,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 50000, Tersedia: 10 },
+      { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4 },
+    ],
+  });
+  const stokVarian = (halaman: Page, nama: string) =>
+    halaman
+      .getByRole("radiogroup", { name: "Pilih Varian" })
+      .locator("label")
+      .filter({ hasText: nama })
+      .getByText(/^Stok \d+$/);
+
+  await page.goto(`/produk/${id}`);
+  await expect(stokVarian(page, "1 Bulan")).toHaveText("Stok 10");
+  await tombolUtama(page).click();
+  await bayar(page, emailUnik());
+
+  const browserLain = await browser.newContext({ baseURL });
+  try {
+    const halamanLain = await browserLain.newPage();
+    await halamanLain.goto(`/produk/${id}`);
+    await expect(stokVarian(halamanLain, "1 Bulan")).toHaveText("Stok 9");
+    await expect(stokVarian(halamanLain, "3 Bulan")).toHaveText("Stok 4");
+  } finally {
+    await browserLain.close();
+  }
+});
+
 // UAT-E5 dan PRD §5.1.
 test("mengubah Harga jual setelah checkout tidak mengubah rincian Pesanan itu", async ({
   page,
@@ -371,6 +408,38 @@ test("Varian yang dinonaktifkan setelah form checkout dibuka ditolak dengan pesa
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     "Produk atau Varian ini sedang tidak dijual, jadi Pesanan tidak dibuat. Pilih Produk lain di Beranda.",
   );
+  expect(await pesananDenganEmail(email)).toEqual([]);
+});
+
+// PRD §5.2: checkout ditolak bila Stok Varian-nya 0.
+test("Varian yang stoknya habis setelah form checkout dibuka ditolak dengan pesan, tanpa Pesanan", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const id = await sisipkanProduk({
+    nama: `Stok Terakhir ${akhiran}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 1 }],
+  });
+  await bukaCheckout(page, id);
+  // Selagi form ini terbuka, Pembeli lain di browser lain checkout dan menahan Item stok terakhir.
+  const browserLain = await browser.newContext({ baseURL });
+  try {
+    const halamanLain = await browserLain.newPage();
+    await bukaCheckout(halamanLain, id);
+    await bayar(halamanLain, emailUnik());
+  } finally {
+    await browserLain.close();
+  }
+  const email = emailUnik();
+
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
+  );
+  await expect(page).toHaveURL(/\/checkout\?varianId=/);
   expect(await pesananDenganEmail(email)).toEqual([]);
 });
 

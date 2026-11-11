@@ -2,6 +2,7 @@
 // lalu migrasinya dibuat dengan `pnpm exec drizzle-kit generate`.
 import { sql } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   check,
@@ -171,6 +172,9 @@ export const statusItemStok = pgEnum("status_item_stok", STATUS_ITEM_STOK);
 // untuk menolak Item stok yang sama persis di Varian yang sama (PRD §4.2) tanpa membuka Item stok
 // lain; indeks unik menjaganya juga bila dua Admin mengisi bersamaan. Item stok tidak ada tanpa
 // Variannya, jadi ikut terhapus bersama Varian.
+// Item stok Ditahan mencatat Pesanan yang menahannya di pesanan_id (PRD §5.3). Satu Pesanan hanya
+// pernah mendapat satu Item stok (PRD §5.7), jadi pesanan_id unik; Item stok Tersedia tidak punya
+// Pesanan.
 export const itemStok = pgTable(
   "item_stok",
   {
@@ -181,12 +185,16 @@ export const itemStok = pgTable(
     isiTerenkripsi: text("isi_terenkripsi").notNull(),
     sidikJari: text("sidik_jari").notNull(),
     status: statusItemStok("status").default("Tersedia").notNull(),
+    pesananId: uuid("pesanan_id").references((): AnyPgColumn => pesanan.id, {
+      onDelete: "restrict",
+    }),
   },
   (tabel) => [
     uniqueIndex("item_stok_varian_id_sidik_jari_idx").on(
       tabel.varianId,
       tabel.sidikJari,
     ),
+    uniqueIndex("item_stok_pesanan_id_unik").on(tabel.pesananId),
   ],
 );
 
