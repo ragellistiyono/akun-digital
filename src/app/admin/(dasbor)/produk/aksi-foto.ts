@@ -87,8 +87,11 @@ export async function aksiPindahkanFotoProduk(formData: FormData) {
     urutan: formData.get("urutan"),
   });
   if (masukan.success) {
-    const hasil = await pindahkanFotoProduk({ produkId: id, ...masukan.data });
-    if (hasil.hasil === "tidak-ada") notFound();
+    const produkAda = await pindahkanFotoProduk({
+      produkId: id,
+      ...masukan.data,
+    });
+    if (!produkAda) notFound();
   }
   refresh();
 }
@@ -103,8 +106,8 @@ export async function aksiHapusFotoProduk(formData: FormData) {
   const id = idProduk(formData);
   const nama = NamaBerkasUnggahan.safeParse(formData.get("foto"));
   if (nama.success) {
-    const hasil = await hapusFotoProduk({ produkId: id, nama: nama.data });
-    if (hasil.hasil === "tidak-ada") notFound();
+    const produkAda = await hapusFotoProduk({ produkId: id, nama: nama.data });
+    if (!produkAda) notFound();
   }
   refresh();
 }

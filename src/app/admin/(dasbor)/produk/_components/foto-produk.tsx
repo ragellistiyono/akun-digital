@@ -78,7 +78,7 @@ function BarisFoto({
         <p className="flex flex-wrap items-center gap-2 text-sm font-bold">
           Foto {urutan}
           {foto.sampul && (
-            <span className="inline-flex h-7 items-center gap-1 rounded-full bg-permukaan-2 pr-3 pl-2 text-[13px] font-extrabold text-tinta">
+            <span className="inline-flex h-7 items-center gap-1 rounded-full bg-permukaan-2 pr-3 pl-2 text-[13px] font-bold text-tinta">
               <ImageIcon
                 aria-hidden="true"
                 className="size-4"
@@ -193,7 +193,7 @@ export function FotoProduk({
       <div className="flex flex-col gap-2">
         <h2
           id="foto-judul"
-          className="text-[22px] leading-[1.2] font-extrabold"
+          className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
         >
           Foto
         </h2>

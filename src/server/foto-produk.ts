@@ -91,7 +91,11 @@ export async function unggahFotoProduk({
   return { hasil: "diunggah" } as const;
 }
 
-/** Memindahkan satu foto Produk ke urutan baru (dari 1). Foto di urutan pertama menjadi sampul. */
+/**
+ * Memindahkan satu foto Produk ke urutan baru (dari 1). Foto di urutan pertama menjadi sampul. Foto
+ * atau urutan yang tidak cocok dengan foto Produk saat ini tidak mengubah apa pun. Hasilnya false bila
+ * Produk tidak ada.
+ */
 export async function pindahkanFotoProduk({
   produkId,
   nama,
@@ -100,19 +104,17 @@ export async function pindahkanFotoProduk({
   produkId: string;
   nama: string;
   urutan: number;
-}) {
+}): Promise<boolean> {
   const hasil = await ubahFoto(produkId, (lama) =>
     pindahkanFoto(lama, nama, urutan),
   );
-  if (hasil === null) return { hasil: "tidak-ada" } as const;
-  return hasil.sah
-    ? ({ hasil: "dipindah" } as const)
-    : ({ hasil: "tidak-dipindah" } as const);
+  return hasil !== null;
 }
 
 /**
  * Menghapus satu foto Produk beserta berkasnya di folder unggahan. Hanya foto milik Produk itu yang
- * bisa dihapus. Bila foto pertama dihapus, foto berikutnya menjadi sampul.
+ * bisa dihapus; nama foto lain tidak mengubah apa pun. Bila foto pertama dihapus, foto berikutnya
+ * menjadi sampul. Hasilnya false bila Produk tidak ada.
  */
 export async function hapusFotoProduk({
   produkId,
@@ -120,11 +122,8 @@ export async function hapusFotoProduk({
 }: {
   produkId: string;
   nama: string;
-}) {
+}): Promise<boolean> {
   const hasil = await ubahFoto(produkId, (lama) => hapusFoto(lama, nama));
-  if (hasil === null) return { hasil: "tidak-ada" } as const;
-  if (!hasil.sah) return { hasil: "foto-tidak-ada" } as const;
-
-  await hapusBerkasUnggahan(nama);
-  return { hasil: "dihapus" } as const;
+  if (hasil?.sah) await hapusBerkasUnggahan(nama);
+  return hasil !== null;
 }
