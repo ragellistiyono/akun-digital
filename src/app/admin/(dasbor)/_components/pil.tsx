@@ -2,7 +2,10 @@ import { Eye, EyeOff, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Pil keadaan dengan warna, ikon, dan label sekaligus (DESIGN.md Status Pesanan). */
+/**
+ * Pil keadaan dengan warna, ikon, dan label sekaligus. Labelnya `label-kecil` (13 px, tebal 700), sama
+ * seperti pil Sampul (DESIGN.md Status Pesanan, keputusan 2026-11-11 #53).
+ */
 export function Pil({
   ikon: Ikon,
   label,
@@ -15,7 +18,7 @@ export function Pil({
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-extrabold whitespace-nowrap",
+        "inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-bold whitespace-nowrap",
         className,
       )}
     >
