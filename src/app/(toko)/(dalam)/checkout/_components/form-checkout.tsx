@@ -42,7 +42,7 @@ function PesanGalat({
         className,
       )}
     >
-      <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
+      <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
       {pesan}
     </p>
   );

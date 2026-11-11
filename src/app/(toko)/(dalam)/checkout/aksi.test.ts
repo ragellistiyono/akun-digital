@@ -128,6 +128,20 @@ describe("checkout (PRD §5.2)", () => {
     });
   }
 
+  it("form tanpa isian email ditolak dengan pesan email belum diisi", async () => {
+    const varianId = await netflixSatuBulan();
+
+    const keadaan = await aksiCheckout(keadaanAwal(), formulir({ varianId }));
+
+    expect(keadaan).toEqual({
+      email: "",
+      galat: {
+        email:
+          "Email belum diisi. Tulis email Anda, misalnya nama@email.com, supaya detail pesanan bisa dikirim.",
+      },
+    });
+  });
+
   // PRD §3.7.
   for (const [kasus, pilihan] of [
     ["Varian nonaktif", { varianAktif: false }],

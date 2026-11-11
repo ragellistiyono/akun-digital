@@ -36,6 +36,10 @@ describe("nomorPesanan", () => {
   });
 
   it("menolak byte acak yang kurang dari 6", () => {
-    expect(() => nomorPesanan(Uint8Array.of(1, 2, 3))).toThrow(RangeError);
+    expect(() => nomorPesanan(Uint8Array.of(1, 2, 3))).toThrow(
+      new RangeError(
+        "Nomor Pesanan butuh 6 byte acak, tetapi hanya mendapat 3. Panggil nomorPesanan dengan 6 byte acak yang dibuat di lapisan server.",
+      ),
+    );
   });
 });

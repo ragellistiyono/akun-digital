@@ -18,7 +18,7 @@ const POLA = new RegExp(`^${AWALAN}[${KARAKTER}]{${PANJANG}}$`);
 export function nomorPesanan(byteAcak: Uint8Array): string {
   if (byteAcak.length < PANJANG) {
     throw new RangeError(
-      `Nomor Pesanan butuh ${PANJANG} byte acak, tetapi hanya mendapat ${byteAcak.length}.`,
+      `Nomor Pesanan butuh ${PANJANG} byte acak, tetapi hanya mendapat ${byteAcak.length}. Panggil nomorPesanan dengan ${PANJANG} byte acak yang dibuat di lapisan server.`,
     );
   }
   const acak = Array.from(
