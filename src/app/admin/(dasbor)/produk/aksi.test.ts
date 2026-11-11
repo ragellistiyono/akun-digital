@@ -142,6 +142,8 @@ describe("membuat Produk (PRD §3.2, §4.1)", () => {
         unggulan: true,
         aktif: true,
         formatItemStok: ["Email", "Password", "Profil"],
+        // Produk baru belum punya foto; foto diunggah di halaman Ubah Produk (T08).
+        foto: [],
       },
     ]);
   });
@@ -397,6 +399,7 @@ describe("mengubah Produk (PRD §3.2, §3.7)", () => {
       unggulan: false,
       aktif: true,
       formatItemStok: ["Email", "Password", "Profil"],
+      foto: [],
     });
   });
 

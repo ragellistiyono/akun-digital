@@ -13,6 +13,10 @@ export default async function HalamanTambahProduk() {
   return (
     <>
       <h1>Tambah Produk</h1>
+      <p className="mt-2 max-w-[65ch] text-tinta-redup">
+        Foto Produk diunggah setelah Produk disimpan, lewat tombol Ubah di
+        daftar Produk.
+      </p>
       <FormProduk
         semuaKategori={semuaKategori.map(({ id, nama }) => ({ id, nama }))}
       />
