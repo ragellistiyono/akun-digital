@@ -7,6 +7,11 @@ import { createInterface } from "node:readline";
 import { config } from "dotenv";
 import { z } from "zod";
 
+import {
+  PANJANG_PASSWORD_MINIMUM,
+  periksaPanjangPassword,
+} from "../src/domain/panjang-password";
+
 // Variabel lingkungan dari shell didahulukan; .env hanya mengisi yang belum ada.
 config({ quiet: true });
 
@@ -79,6 +84,12 @@ const password = await tanyaPassword("Password Admin baru: ");
 if (password === "") {
   gagal(
     "Password belum diisi. Jalankan ulang perintahnya, lalu ketik password Admin saat diminta.",
+  );
+}
+// Ditolak sebelum diminta mengulang, supaya pemilik tidak mengetik ulang password yang pasti ditolak.
+if (!periksaPanjangPassword(password).valid) {
+  gagal(
+    `Password terlalu pendek: password Admin minimal ${PANJANG_PASSWORD_MINIMUM} karakter. Jalankan ulang perintahnya, lalu ketik password yang panjangnya minimal ${PANJANG_PASSWORD_MINIMUM} karakter.`,
   );
 }
 const ulangan = await tanyaPassword("Ulangi password: ");

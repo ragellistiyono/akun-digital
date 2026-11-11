@@ -5,14 +5,18 @@ import { expect, test, type Page } from "@playwright/test";
 
 const PASSWORD = "sandi-uji-admin-123";
 
-// Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
-// DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
-function buatAdminLewatPerintah() {
-  const email = `admin-${randomUUID()}@example.test`;
-  const hasil = spawnSync("pnpm", ["--silent", "admin:buat", email], {
-    input: `${PASSWORD}\n${PASSWORD}\n`,
+// Menjalankan `pnpm admin:buat <email>` persis seperti pemilik di server, dengan password diketik
+// dua kali lewat input. DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
+function jalankanAdminBuat(email: string, password: string) {
+  return spawnSync("pnpm", ["--silent", "admin:buat", email], {
+    input: `${password}\n${password}\n`,
     encoding: "utf8",
   });
+}
+
+function buatAdminLewatPerintah() {
+  const email = `admin-${randomUUID()}@example.test`;
+  const hasil = jalankanAdminBuat(email, PASSWORD);
   expect(hasil.status, hasil.stderr).toBe(0);
   return email;
 }
@@ -52,6 +56,27 @@ test("Admin yang dibuat dengan pnpm admin:buat bisa login di /admin, melihat das
 
   await page.goto("/admin/ringkasan");
   await expect(page).toHaveURL("/admin");
+});
+
+// UAT-B4 (PRD §2.2, ▶ Keputusan 2026-11-11 #53): password Admin minimal 8 karakter. Password contoh
+// diambil dari kasus "7 karakter" dan "8 karakter" di tests/golden/panjang-password.json.
+test("pnpm admin:buat menolak password 7 karakter tanpa membuat Admin, lalu password 8 karakter membuat Admin yang bisa login", async ({
+  page,
+}) => {
+  const email = `admin-${randomUUID()}@example.test`;
+
+  const ditolak = jalankanAdminBuat(email, "abc1234");
+  expect(ditolak.status).not.toBe(0);
+  expect(ditolak.stderr).toContain("minimal 8 karakter");
+  expect(ditolak.stdout).not.toContain("sudah dibuat");
+
+  // Email yang sama masih bisa dipakai, jadi Admin tadi memang tidak dibuat.
+  const dibuat = jalankanAdminBuat(email, "abc12345");
+  expect(dibuat.status, dibuat.stderr).toBe(0);
+  expect(dibuat.stdout).toContain(`Admin ${email} sudah dibuat.`);
+
+  await masuk(page, email, "abc12345");
+  await expect(page).toHaveURL("/admin/ringkasan");
 });
 
 // UAT-B2
