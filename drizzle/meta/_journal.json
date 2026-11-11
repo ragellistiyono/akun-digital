@@ -78,6 +78,13 @@
       "when": 1794412733957,
       "tag": "0010_checkout_pesanan",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794415384692,
+      "tag": "0011_penahanan_item_stok",
+      "breakpoints": true
     }
   ]
 }

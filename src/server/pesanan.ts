@@ -1,16 +1,25 @@
-// Pesanan (PRD §5.1, §5.5, §6.2, §9.6) beserta QRIS-nya dari Qrispy (ADR-0004). Aturan Total bayar dan
-// pemeriksaan nominal QRIS ada di src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di
-// src/domain/nomor-pesanan.ts.
+// Pesanan (PRD §5.1, §5.5, §6.2, §9.6) beserta QRIS-nya dari Qrispy (ADR-0004) dan Item stok yang
+// ditahannya (PRD §5.3). Aturan Total bayar dan pemeriksaan nominal QRIS ada di
+// src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di src/domain/nomor-pesanan.ts; Stok Varian ada
+// di src/domain/stok-varian.ts.
 import { randomBytes } from "node:crypto";
 
 import { and, DrizzleQueryError, eq } from "drizzle-orm";
 import postgres from "postgres";
 
 import { nomorPesanan } from "@/domain/nomor-pesanan";
+import { varianHabis } from "@/domain/stok-varian";
 import { nominalTagihanQris, periksaTagihanQris } from "@/domain/total-bayar";
 
 import { db } from "./db";
-import { pesanan, produk, riwayatStatusPesanan, varian } from "./db/schema";
+import {
+  itemStok,
+  pesanan,
+  produk,
+  riwayatStatusPesanan,
+  varian,
+} from "./db/schema";
+import { bacaStokVarian } from "./item-stok";
 import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
 
 /** Voucher baru ada di M2 (PRD §13), jadi potongan voucher setiap Pesanan saat ini Rp 0. */
@@ -84,19 +93,25 @@ export async function bacaCheckout(varianId: string) {
 type HasilBuatPesanan =
   | { hasil: "dibuat"; tautan: string }
   | { hasil: "tidak-dijual" }
+  | { hasil: "stok-habis" }
   | { hasil: "qris-gagal" };
 
 const QRIS_GAGAL = { hasil: "qris-gagal" } as const;
+const STOK_HABIS = { hasil: "stok-habis" } as const;
 
 /**
  * Checkout satu Varian: membuat Pesanan Menunggu Pembayaran beserta QRIS-nya (PRD §5.1, ADR-0004).
  *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
+ * - Checkout ditolak karena stok habis bila Stok Varian-nya 0 (PRD §5.2), juga tanpa QRIS maupun Pesanan.
  * - Harga jual dan potongan voucher dicatat saat checkout. Kode unik, Total bayar, waktu kedaluwarsa, dan
  *   gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
  *   tidak ada Pesanan yang tersisa.
- * - Pesanan dan baris pertama Riwayat status Pesanan ditulis dalam satu transaksi.
+ * - Pesanan, baris pertama Riwayat status Pesanan, dan Penahanan satu Item stok Tersedia dari Varian itu
+ *   (PRD §5.3) ditulis dalam satu transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
+ * - Bila Item stok terakhirnya sudah ditahan checkout lain setelah QRIS terbit, QRIS itu dibatalkan dan
+ *   checkout ditolak karena stok habis, tanpa Pesanan.
  * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, QRIS-nya dibatalkan, lalu nomor dan QRIS
  *   dibuat ulang.
  *
@@ -111,6 +126,9 @@ export async function buatPesanan(
 ): Promise<HasilBuatPesanan> {
   const dijual = await varianDijual(varianId);
   if (!dijual) return { hasil: "tidak-dijual" };
+  if (varianHabis((await bacaStokVarian(varianId)).stokVarian)) {
+    return STOK_HABIS;
+  }
 
   const { hargaJual } = dijual;
   const potonganVoucher = POTONGAN_VOUCHER_TANPA_VOUCHER;
@@ -147,7 +165,22 @@ export async function buatPesanan(
 
     const tautan = tautanPesananAcak();
     try {
-      await db.transaction(async (tx) => {
+      const ditahan = await db.transaction(async (tx) => {
+        // Penahanan Item stok (PRD §5.3). Item stok yang sedang dikunci checkout lain dilewati, supaya
+        // dua checkout bersamaan tidak pernah menahan Item stok yang sama.
+        const [tersedia] = await tx
+          .select({ id: itemStok.id })
+          .from(itemStok)
+          .where(
+            and(
+              eq(itemStok.varianId, varianId),
+              eq(itemStok.status, "Tersedia"),
+            ),
+          )
+          .limit(1)
+          .for("update", { skipLocked: true });
+        if (!tersedia) return false;
+
         const [{ id }] = await tx
           .insert(pesanan)
           .values({
@@ -171,7 +204,16 @@ export async function buatPesanan(
           status: "Menunggu Pembayaran",
           pelaku: "Pembeli",
         });
+        await tx
+          .update(itemStok)
+          .set({ status: "Ditahan", pesananId: id })
+          .where(eq(itemStok.id, tersedia.id));
+        return true;
       });
+      if (!ditahan) {
+        await batalkanQrisTakTerpakai(qrispy, qris);
+        return STOK_HABIS;
+      }
       return { hasil: "dibuat", tautan };
     } catch (galat) {
       await batalkanQrisTakTerpakai(qrispy, qris);

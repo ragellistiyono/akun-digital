@@ -27,6 +27,9 @@ const Email = z
 const PESAN_TIDAK_DIJUAL =
   "Produk atau Varian ini sedang tidak dijual, jadi Pesanan tidak dibuat. Pilih Produk lain di Beranda.";
 
+const PESAN_STOK_HABIS =
+  "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.";
+
 const PESAN_QRIS_GAGAL =
   "QRIS gagal dibuat, jadi Pesanan belum dibuat. Tekan Bayar dengan QRIS untuk mencoba lagi.";
 
@@ -58,6 +61,9 @@ export async function aksiCheckout(
   });
   if (hasil.hasil === "tidak-dijual") {
     return { email, galat: { checkout: PESAN_TIDAK_DIJUAL } };
+  }
+  if (hasil.hasil === "stok-habis") {
+    return { email, galat: { checkout: PESAN_STOK_HABIS } };
   }
   if (hasil.hasil === "qris-gagal") {
     return { email, galat: { checkout: PESAN_QRIS_GAGAL } };

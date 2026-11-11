@@ -1,12 +1,14 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
+import type { StatusItemStok } from "@/domain/item-stok";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 
 import { db, koneksi } from "./db";
-import { pesanan, riwayatStatusPesanan, varian } from "./db/schema";
+import { itemStok, pesanan, riwayatStatusPesanan, varian } from "./db/schema";
+import { bacaStokVarian } from "./item-stok";
 import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { qrispyTiruan } from "./qrispy-tiruan";
@@ -73,6 +75,21 @@ async function netflixPremium({
   };
 }
 
+/** Disney Plus 1 Bulan Rp 50.000 [CONTOH] dengan jumlah Item stok per status itu. Hasilnya id Varian itu. */
+async function disneyPlusSatuBulan(
+  stok: Partial<Record<StatusItemStok, number>>,
+) {
+  const produkId = await sisipkanProduk({
+    nama: `Disney Plus ${akhiran()}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, ...stok }],
+  });
+  const [{ id }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  return id;
+}
+
 /** Semua Pesanan dengan email itu, langsung dari database. */
 function pesananDenganEmail(email: string) {
   return db.select().from(pesanan).where(eq(pesanan.email, email));
@@ -104,6 +121,48 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
     expect(tersimpan[0].nomorPesanan).toMatch(
       /^MIWE-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/,
     );
+  });
+
+  // PRD §5.3: begitu Pesanan dibuat dan QRIS-nya terbit, satu Item stok Varian itu ditahan untuk Pesanan
+  // tersebut, dan Stok Varian tidak menghitungnya lagi.
+  it("checkout menahan satu Item stok Tersedia, yang mencatat Nomor Pesanan yang menahannya", async () => {
+    const netflix = await netflixPremium();
+    const email = emailUnik();
+
+    await buatPesanan(
+      { varianId: netflix.satuBulan, email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+
+    const [{ nomorPesanan }] = await pesananDenganEmail(email);
+    expect(
+      await db
+        .select({ nomorPesanan: pesanan.nomorPesanan })
+        .from(itemStok)
+        .innerJoin(pesanan, eq(itemStok.pesananId, pesanan.id))
+        .where(
+          and(
+            eq(itemStok.varianId, netflix.satuBulan),
+            eq(itemStok.status, "Ditahan"),
+          ),
+        ),
+    ).toEqual([{ nomorPesanan }]);
+  });
+
+  // Dasbor admin membaca Stok Varian lewat bacaStokVarian (UAT-E1: dari 10 menjadi 9 setelah checkout).
+  it("Stok Varian Netflix Premium 1 Bulan turun dari 10 menjadi 9, dan Item stok Ditahan tidak dihitung", async () => {
+    const netflix = await netflixPremium();
+
+    await buatPesanan(
+      { varianId: netflix.satuBulan, email: emailUnik() },
+      { qrispy: qrispyKodeUnik123() },
+    );
+
+    expect(await bacaStokVarian(netflix.satuBulan)).toEqual({
+      stokVarian: 9,
+      jumlahPerStatus: { Tersedia: 9, Ditahan: 1, Terkirim: 0 },
+    });
+    expect((await bacaStokVarian(netflix.tigaBulan)).stokVarian).toBe(4);
   });
 
   it("Halaman bayar membaca Pesanan itu lewat Tautan Pesanan", async () => {
@@ -258,6 +317,62 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
       expect(await pesananDenganEmail(email)).toEqual([]);
     });
   }
+
+  // PRD §5.2: checkout ditolak bila Stok Varian-nya 0. Item stok Ditahan dan Terkirim tidak dihitung.
+  it("checkout Varian dengan Stok Varian 0 ditolak karena stok habis, tanpa membuat QRIS maupun Pesanan", async () => {
+    const varianId = await disneyPlusSatuBulan({ Ditahan: 2, Terkirim: 1 });
+    const email = emailUnik();
+    const qrispy = qrispyKodeUnik123();
+
+    const hasil = await buatPesanan({ varianId, email }, { qrispy });
+
+    expect(hasil).toEqual({ hasil: "stok-habis" });
+    expect(qrispy.buatQris).not.toHaveBeenCalled();
+    expect(await pesananDenganEmail(email)).toEqual([]);
+  });
+
+  // PRD §5.3: penahanan aman terhadap checkout yang terjadi bersamaan. Bila QRIS sudah terbit tetapi
+  // penahanan gagal, QRIS itu dibatalkan lewat adaptor (ADR-0004).
+  it("dua checkout bersamaan untuk Varian yang tinggal punya 1 Item stok: tepat satu berhasil, yang lain ditolak karena stok habis", async () => {
+    const varianId = await disneyPlusSatuBulan({ Tersedia: 1 });
+    const qrispy = qrispyKodeUnik123();
+    // QRIS baru terbit setelah kedua checkout memintanya, jadi keduanya sudah lolos pemeriksaan Stok
+    // Varian sebelum salah satunya menahan Item stok itu.
+    const terbitkan = qrispy.buatQris.getMockImplementation()!;
+    let lepaskan = () => {};
+    const keduanyaMeminta = new Promise<void>((r) => (lepaskan = r));
+    qrispy.buatQris.mockImplementation(async (permintaan) => {
+      if (qrispy.buatQris.mock.calls.length === 2) lepaskan();
+      await keduanyaMeminta;
+      return terbitkan(permintaan);
+    });
+
+    const hasil = await Promise.all(
+      [emailUnik(), emailUnik()].map((email) =>
+        buatPesanan({ varianId, email }, { qrispy }),
+      ),
+    );
+
+    expect(hasil.map((h) => h.hasil).sort()).toEqual(["dibuat", "stok-habis"]);
+    const dibuat = await db
+      .select({ id: pesanan.id, qrisId: pesanan.qrisId })
+      .from(pesanan)
+      .where(eq(pesanan.varianId, varianId));
+    expect(dibuat).toHaveLength(1);
+    expect(
+      await db
+        .select({ status: itemStok.status, pesananId: itemStok.pesananId })
+        .from(itemStok)
+        .where(eq(itemStok.varianId, varianId)),
+    ).toEqual([{ status: "Ditahan", pesananId: dibuat[0].id }]);
+    const semuaQris = await Promise.all(
+      qrispy.buatQris.mock.results.map((r) => r.value),
+    );
+    const qrisDitolak = semuaQris.find((q) => q.qrisId !== dibuat[0].qrisId);
+    expect(qrispy.batalkanQris).toHaveBeenCalledExactlyOnceWith(
+      qrisDitolak?.qrisId,
+    );
+  });
 
   // ADR-0004: bila Qrispy menolak atau tidak menjawab, tidak ada Pesanan yang tersisa.
   it("bila adaptor Qrispy gagal, checkout gagal dan tidak ada Pesanan baru di database", async () => {

@@ -32,6 +32,7 @@ function formulir(isian: Record<string, string>) {
 async function netflixSatuBulan({
   produkAktif = true,
   varianAktif = true,
+  Tersedia = 10,
 } = {}) {
   const produkId = await sisipkanProduk({
     nama: `Netflix Premium ${randomUUID().slice(0, 8)}`,
@@ -41,7 +42,7 @@ async function netflixSatuBulan({
         nama: "1 Bulan",
         hargaJual: 50000,
         aktif: varianAktif,
-        Tersedia: 10,
+        Tersedia,
       },
     ],
   });
@@ -163,6 +164,28 @@ describe("checkout (PRD §5.2)", () => {
       expect(await pesananDenganEmail(email)).toEqual([]);
     });
   }
+
+  // PRD §5.2: checkout ditolak bila Stok Varian-nya 0.
+  it("checkout Varian dengan Stok Varian 0 ditolak dengan pesan stok habis, tanpa QRIS maupun Pesanan", async () => {
+    const varianId = await netflixSatuBulan({ Tersedia: 0 });
+    const email = emailUnik();
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email }),
+    );
+
+    expect(keadaan).toEqual({
+      email,
+      galat: {
+        checkout:
+          "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
+      },
+    });
+    expect(buatQris).not.toHaveBeenCalled();
+    expect(await pesananDenganEmail(email)).toEqual([]);
+  });
 
   it("Varian yang tidak sah ditolak dengan pesan yang sama", async () => {
     const email = emailUnik();
