@@ -119,7 +119,7 @@ export async function prosesKabarPembayaran(
         .boleh
     ) {
       throw new Error(
-        `Kabar pembayaran untuk QRIS ${qrisId} akan memindahkan Pesanan dari ${dibayar.status} ke ${hasil.statusBaru}, padahal perpindahan itu tidak boleh (PRD §5.7). Pesanan tidak diubah.`,
+        `Kabar pembayaran untuk QRIS ${qrisId} akan memindahkan Pesanan dari ${dibayar.status} ke ${hasil.statusBaru}, padahal perpindahan itu tidak boleh (PRD §5.7). Pesanan tidak diubah. Periksa hasilKabarPembayaran di src/domain/kabar-pembayaran.ts terhadap tests/golden/hasil-kabar-pembayaran.json dan tests/golden/transisi-status-pesanan.json; setelah diperbaiki, kabar berikutnya untuk QRIS ini diproses lagi.`,
       );
     }
 
