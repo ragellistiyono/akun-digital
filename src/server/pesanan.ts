@@ -1,13 +1,18 @@
 // Pesanan (PRD §5.1, §5.5, §6.2, §9.6) beserta QRIS-nya dari Qrispy (ADR-0004) dan Item stok yang
-// ditahannya (PRD §5.3). Aturan Total bayar dan pemeriksaan nominal QRIS ada di
-// src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di src/domain/nomor-pesanan.ts; Stok Varian ada
-// di src/domain/stok-varian.ts.
+// ditahannya (PRD §5.3) atau dikirim kepadanya (PRD §6.1). Aturan Total bayar dan pemeriksaan nominal QRIS
+// ada di src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di src/domain/nomor-pesanan.ts; Stok Varian
+// ada di src/domain/stok-varian.ts; kapan dan bagaimana Item stok Terkirim tampil ada di
+// src/domain/item-stok-terkirim.ts.
 import { randomBytes } from "node:crypto";
 
 import { and, DrizzleQueryError, eq } from "drizzle-orm";
 import postgres from "postgres";
 import { z } from "zod";
 
+import {
+  itemStokTampil,
+  kolomItemStokTerkirim,
+} from "@/domain/item-stok-terkirim";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { varianHabis } from "@/domain/stok-varian";
 import { nominalTagihanQris, periksaTagihanQris } from "@/domain/total-bayar";
@@ -20,6 +25,7 @@ import {
   riwayatStatusPesanan,
   varian,
 } from "./db/schema";
+import { bukaItemStok } from "./enkripsi-item-stok";
 import { bacaStokVarian } from "./item-stok";
 import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
 
@@ -230,16 +236,46 @@ export async function buatPesanan(
 }
 
 /**
- * Pesanan yang dibuka lewat Tautan Pesanan (PRD §6.2), untuk Halaman bayar: Nomor Pesanan, status, nama
- * Produk dan Varian, gambar QR beserta waktu kedaluwarsa QRIS-nya, dan rincian nominal yang dicatat di
- * Pesanan (PRD §5.5). `dibacaPada` adalah jam server saat Pesanan dibaca, yang menjadi titik awal hitung
- * mundur di Halaman bayar. Hasilnya null bila tidak ada Pesanan dengan Tautan Pesanan itu.
+ * Kolom-kolom Item stok yang Terkirim ke Pesanan itu, dengan nama kolom yang dicatat saat Item stok itu
+ * Terkirim (PRD §4.1). Isinya dibuka dengan ITEM_STOK_KEY. Melempar galat bila Pesanan itu tidak punya
+ * Item stok Terkirim, karena Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7).
+ */
+async function bacaItemStokTerkirim(pesananId: string, nomor: string) {
+  const [terkirim] = await db
+    .select({
+      isiTerenkripsi: itemStok.isiTerenkripsi,
+      formatSaatTerkirim: itemStok.formatSaatTerkirim,
+    })
+    .from(itemStok)
+    .where(
+      and(eq(itemStok.pesananId, pesananId), eq(itemStok.status, "Terkirim")),
+    );
+  if (!terkirim?.formatSaatTerkirim) {
+    throw new Error(
+      `Pesanan ${nomor} Selesai tetapi tidak punya Item stok Terkirim beserta nama kolomnya, padahal Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7). Periksa item_stok dengan pesanan_id Pesanan itu di database.`,
+    );
+  }
+  return kolomItemStokTerkirim({
+    formatSaatTerkirim: terkirim.formatSaatTerkirim,
+    nilai: bukaItemStok(terkirim.isiTerenkripsi),
+  });
+}
+
+/**
+ * Pesanan yang dibuka lewat Tautan Pesanan (PRD §6.2), untuk Halaman bayar dan Halaman Pesanan: Nomor
+ * Pesanan, status, id dan nama Produk beserta nama Varian, gambar QR beserta waktu kedaluwarsa QRIS-nya,
+ * rincian nominal yang dicatat di Pesanan (PRD §5.5), dan kolom-kolom Item stok-nya. Item stok hanya
+ * dibaca untuk Pesanan Selesai (PRD §6.1); untuk status lain `itemStok` selalu null. `dibacaPada` adalah
+ * jam server saat Pesanan dibaca, yang menjadi titik awal hitung mundur di Halaman bayar. Hasilnya null
+ * bila tidak ada Pesanan dengan Tautan Pesanan itu.
  */
 export async function bacaPesananLewatTautan(tautan: string) {
   const [baris] = await db
     .select({
+      id: pesanan.id,
       nomorPesanan: pesanan.nomorPesanan,
       status: pesanan.status,
+      produkId: produk.id,
       namaProduk: produk.nama,
       namaVarian: varian.nama,
       gambarQr: pesanan.gambarQr,
@@ -255,11 +291,14 @@ export async function bacaPesananLewatTautan(tautan: string) {
     .where(eq(pesanan.tautan, tautan));
   if (!baris) return null;
 
-  const { hargaJual, potonganVoucher, kodeUnik, totalBayar, ...lainnya } =
+  const { id, hargaJual, potonganVoucher, kodeUnik, totalBayar, ...lainnya } =
     baris;
   return {
     ...lainnya,
     rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
+    itemStok: itemStokTampil(baris.status)
+      ? await bacaItemStokTerkirim(id, baris.nomorPesanan)
+      : null,
     dibacaPada: new Date(),
   };
 }

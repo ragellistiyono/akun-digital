@@ -6,6 +6,11 @@ import type { StatusItemStok } from "@/domain/item-stok";
 
 import { db } from "./db";
 import { itemStok, kategori, produk, varian } from "./db/schema";
+import {
+  bacaKunciItemStok,
+  enkripsiItemStok,
+  sidikJariItemStok,
+} from "./enkripsi-item-stok";
 
 /** Varian uji beserta jumlah Item stok per status yang ikut dibuat. */
 type VarianUji = {
@@ -14,6 +19,23 @@ type VarianUji = {
   hargaNormal?: number;
   aktif?: boolean;
 } & Partial<Record<StatusItemStok, number>>;
+
+/**
+ * Isi terenkripsi dan sidik jari sebuah Item stok uji, dengan ITEM_STOK_KEY dari .env.ci, supaya isinya
+ * bisa dibuka seperti Item stok yang diisi Admin.
+ */
+export function isiItemStokUji(nilai: string[]) {
+  const kunci = bacaKunciItemStok();
+  if (kunci.hasil !== "ada") {
+    throw new Error(
+      "ITEM_STOK_KEY di .env.ci belum diisi atau tidak sah, jadi Item stok uji tidak bisa dienkripsi. Isi ITEM_STOK_KEY di .env.ci dengan 32 byte acak dalam base64, lalu jalankan ulang test-nya.",
+    );
+  }
+  return {
+    isiTerenkripsi: enkripsiItemStok(kunci.kunci, nilai),
+    sidikJari: sidikJariItemStok(kunci.kunci, nilai),
+  };
+}
 
 /** Menyisipkan Kategori dengan gambar ikon pengganti. Hasilnya id Kategori itu. */
 export async function sisipkanKategori({
@@ -32,8 +54,9 @@ export async function sisipkanKategori({
 
 /**
  * Menyisipkan Produk beserta Varian dan Item stoknya, di Kategori yang diberikan atau di Kategori barunya
- * sendiri. Isi Item stok tidak dibaca katalog, jadi isinya cukup teks pengganti dengan sidik jari acak.
- * Hasilnya id Produk itu.
+ * sendiri. Setiap Item stok berisi teks uji acak untuk setiap kolom Format Item stok, terenkripsi seperti
+ * Item stok yang diisi Admin, supaya Item stok yang Terkirim bisa tampil di halaman Pesanan. Hasilnya id
+ * Produk itu.
  */
 export async function sisipkanProduk({
   nama,
@@ -43,6 +66,7 @@ export async function sisipkanProduk({
   foto = [],
   deskripsi = "Deskripsi uji.",
   ketentuanGaransi = "Garansi uji.",
+  formatItemStok = ["Kode"],
   varian: semuaVarian,
 }: {
   nama: string;
@@ -52,6 +76,7 @@ export async function sisipkanProduk({
   foto?: string[];
   deskripsi?: string;
   ketentuanGaransi?: string;
+  formatItemStok?: string[];
   varian: VarianUji[];
 }) {
   kategoriId ??= await sisipkanKategori({
@@ -66,7 +91,7 @@ export async function sisipkanProduk({
       ketentuanGaransi,
       unggulan,
       aktif,
-      formatItemStok: ["Kode"],
+      formatItemStok,
       foto,
     })
     .returning({ id: produk.id });
@@ -87,8 +112,9 @@ export async function sisipkanProduk({
         Array.from({ length: v[status] ?? 0 }, () => ({
           varianId,
           status,
-          isiTerenkripsi: "isi-uji",
-          sidikJari: randomUUID(),
+          ...isiItemStokUji(
+            formatItemStok.map((kolom) => `${kolom} uji ${randomUUID()}`),
+          ),
         })),
     );
     if (item.length > 0) await db.insert(itemStok).values(item);

@@ -7,12 +7,20 @@ import type { StatusItemStok } from "@/domain/item-stok";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 
 import { db, koneksi } from "./db";
-import { itemStok, pesanan, riwayatStatusPesanan, varian } from "./db/schema";
-import { bacaStokVarian } from "./item-stok";
+import {
+  itemStok,
+  pesanan,
+  produk,
+  riwayatStatusPesanan,
+  varian,
+} from "./db/schema";
+import { prosesKabarPembayaran } from "./kabar-pembayaran";
+import { bacaStokVarian, tambahItemStok } from "./item-stok";
 import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
+import { sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci. Database ini dipakai bersama test lain dan run
 // sebelumnya, jadi setiap test memakai email dan nama Produk yang unik. Data Produknya mengikuti persiapan
@@ -70,6 +78,7 @@ async function netflixPremium({
   const idVarian = (namaVarian: string) =>
     semuaVarian.find((v) => v.nama === namaVarian)?.id ?? "";
   return {
+    produkId,
     nama,
     satuBulan: idVarian("1 Bulan"),
     tigaBulan: idVarian("3 Bulan"),
@@ -179,6 +188,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
     expect(await bacaPesananLewatTautan(hasil.tautan)).toEqual({
       nomorPesanan,
       status: "Menunggu Pembayaran",
+      produkId: netflix.produkId,
       namaProduk: netflix.nama,
       namaVarian: "1 Bulan",
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
@@ -189,6 +199,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
         kodeUnik: 123,
         totalBayar: 50123,
       },
+      itemStok: null,
       dibacaPada: expect.any(Date),
     });
   });
@@ -494,6 +505,82 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
 
 // PRD §5.2 dan docs/DESIGN.md "Rincian Total bayar": form checkout menampilkan Produk dan Varian yang
 // dipilih, Harga jual, dan Perkiraan bayar sebelum Kode unik diketahui.
+describe("bacaPesananLewatTautan (PRD §6.1, §6.2)", () => {
+  // Contoh baris Item stok dari PRD §4.2 dan penggantian nama kolom dari UAT-D2.
+  it("Pesanan Selesai membaca Item stok-nya dengan nama kolom yang dicatat saat Terkirim, walaupun nama kolom Format Item stok sudah diganti", async () => {
+    const produkId = await sisipkanProduk({
+      nama: `Netflix Premium ${akhiran()}`,
+      formatItemStok: ["Email", "Password", "Profil"],
+      varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+    });
+    const [{ id: varianId }] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, produkId));
+    expect(
+      await tambahItemStok({
+        produkId,
+        varianId,
+        nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
+      }),
+    ).toEqual({ hasil: "disimpan" });
+    const email = emailUnik();
+    const hasil = await buatPesanan(
+      { varianId, email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+    if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+    const [{ qrisId }] = await pesananDenganEmail(email);
+    await prosesKabarPembayaran({
+      qrisId,
+      nominalDiterima: 50123,
+      waktuBayar: new Date("2026-11-11T10:05:00+07:00"),
+    });
+    await db
+      .update(produk)
+      .set({ formatItemStok: ["Email", "Password", "Nama Profil"] })
+      .where(eq(produk.id, produkId));
+
+    const dibaca = await bacaPesananLewatTautan(hasil.tautan);
+
+    expect(dibaca?.status).toBe("Selesai");
+    expect(dibaca?.itemStok).toEqual([
+      { nama: "Email", nilai: "budi@mail.com" },
+      { nama: "Password", nilai: "rahasia123" },
+      { nama: "Profil", nilai: "Profil 2" },
+    ]);
+  });
+
+  // Issue T19: Item stok tidak pernah tampil untuk status selain Selesai, termasuk bila sebuah Item stok
+  // tertaut ke Pesanan itu.
+  it.each([
+    ["Menunggu Pembayaran", "Ditahan"],
+    ["Kedaluwarsa", "Terkirim"],
+    ["Dibatalkan", "Terkirim"],
+    ["Bermasalah", "Terkirim"],
+    ["Dana Dikembalikan", "Terkirim"],
+  ] as const)(
+    "Pesanan %s tidak membaca Item stok yang tertaut kepadanya (%s)",
+    async (status, statusItemStok) => {
+      const varianId = await disneyPlusSatuBulan({});
+      const { tautan } = await sisipkanPesanan({
+        varianId,
+        status,
+        itemStok: {
+          status: statusItemStok,
+          nilai: ["kode-rahasia"],
+          formatSaatTerkirim: ["Kode"],
+        },
+      });
+
+      const dibaca = await bacaPesananLewatTautan(tautan);
+
+      expect(dibaca?.status).toBe(status);
+      expect(dibaca?.itemStok).toBeNull();
+    },
+  );
+});
+
 describe("bacaCheckout", () => {
   it("Netflix Premium 3 Bulan: Harga jual Rp 135.000 dan Perkiraan bayar Rp 135.000 + Kode unik", async () => {
     const netflix = await netflixPremium();

@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { nomorPesanan } from "../src/domain/nomor-pesanan";
 import { db } from "../src/server/db";
 import { itemStok, pesanan, varian } from "../src/server/db/schema";
-import { sisipkanProduk } from "../src/server/uji-katalog";
+import { isiItemStokUji, sisipkanProduk } from "../src/server/uji-katalog";
 
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 
@@ -55,8 +55,8 @@ test("webhook payment.success bersignature benar ke /api/qrispy/webhook membuat 
     varianId,
     status: "Ditahan",
     pesananId: id,
-    isiTerenkripsi: "isi-uji",
-    sidikJari: randomUUID(),
+    // Item stok yang Terkirim tampil di halaman Pesanan Selesai, jadi isinya harus bisa dibuka.
+    ...isiItemStokUji([`Kode uji ${randomUUID()}`]),
   });
 
   const body = JSON.stringify({
