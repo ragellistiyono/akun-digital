@@ -1,7 +1,8 @@
-// Katalog toko: kartu Produk, pencarian, dan Kategori di Beranda serta tab Kategori (PRD §3.1, §3.4–§3.8).
-// Aturan harganya ada di src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts, dan
-// src/domain/stok-varian.ts; aturan Kategori yang tampil dan pencarian ada di src/domain/saringan-katalog.ts.
-import { asc, count, eq } from "drizzle-orm";
+// Katalog toko: kartu Produk, pencarian, dan Kategori di Beranda serta tab Kategori, juga Halaman Produk
+// (PRD §3.1–§3.8). Aturan harganya ada di src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts,
+// dan src/domain/stok-varian.ts; aturan Kategori yang tampil dan pencarian ada di
+// src/domain/saringan-katalog.ts; aturan Varian di Halaman Produk ada di src/domain/varian-halaman-produk.ts.
+import { and, asc, count, eq } from "drizzle-orm";
 
 import { fotoSampul } from "@/domain/foto-produk";
 import { hargaKartuProduk } from "@/domain/harga-kartu-produk";
@@ -9,10 +10,11 @@ import type { StatusItemStok } from "@/domain/item-stok";
 import { persenHemat, persenHematVarian } from "@/domain/persen-hemat";
 import { kategoriTampil, saringProdukBeranda } from "@/domain/saringan-katalog";
 import { stokVarian } from "@/domain/stok-varian";
+import { varianHalamanProduk } from "@/domain/varian-halaman-produk";
 
 import { alamatBerkasUnggahan } from "./berkas-unggahan";
 import { db } from "./db";
-import { itemStok, produk, varian } from "./db/schema";
+import { itemStok, kategori, produk, varian } from "./db/schema";
 import { daftarKategori, type Kategori } from "./kategori";
 
 /** Satu Varian aktif di kartu Produk Unggulan, tanpa angka Stok Varian. */
@@ -44,10 +46,11 @@ export type KartuProduk = {
 };
 
 /**
- * Varian semua Produk aktif beserta jumlah Item stok per status, urut dari Harga jual termurah, lalu
- * nama. Urutan ini keputusan teknis, karena PRD tidak mengatur urutan Varian di kartu.
+ * Varian semua Produk aktif, atau Varian satu Produk aktif bila produkId diberikan, beserta jumlah Item
+ * stok per status, urut dari Harga jual termurah, lalu nama. Urutan ini keputusan teknis, karena PRD
+ * tidak mengatur urutan Varian di kartu maupun di Halaman Produk.
  */
-async function varianProdukAktif() {
+async function varianProdukAktif(produkId?: string) {
   const baris = await db
     .select({
       id: varian.id,
@@ -62,7 +65,12 @@ async function varianProdukAktif() {
     .from(varian)
     .innerJoin(produk, eq(varian.produkId, produk.id))
     .leftJoin(itemStok, eq(itemStok.varianId, varian.id))
-    .where(eq(produk.aktif, true))
+    .where(
+      and(
+        eq(produk.aktif, true),
+        produkId === undefined ? undefined : eq(produk.id, produkId),
+      ),
+    )
     .groupBy(varian.id, itemStok.status)
     .orderBy(asc(varian.hargaJual), asc(varian.nama), asc(varian.id));
 
@@ -202,5 +210,79 @@ export async function daftarProdukBeranda({
       kataCari,
       kategoriId: kategoriTerpilih?.id ?? null,
     }).map((p) => p.kartu),
+  };
+}
+
+/** Satu Varian aktif di Halaman Produk, beserta Stok Varian-nya. */
+type VarianHalamanProduk = {
+  id: string;
+  nama: string;
+  hargaJual: number;
+  hargaNormal: number | null;
+  stokVarian: number;
+  /** Stok Varian 0, jadi Varian ini tampil "Habis" dan tidak bisa dipilih. */
+  habis: boolean;
+  /** Persen hemat, atau null bila Varian ini tanpa Harga normal. */
+  persenHemat: number | null;
+};
+
+/** Isi Halaman Produk (PRD §3.3). */
+export type HalamanProduk = {
+  id: string;
+  nama: string;
+  kategori: { id: string; nama: string };
+  /** Alamat foto Produk menurut urutannya, paling banyak 5. */
+  foto: string[];
+  deskripsi: string;
+  ketentuanGaransi: string;
+  /** Pilihan Varian tampil karena Varian aktifnya lebih dari satu (PRD §3.2). */
+  pilihanVarian: boolean;
+  /** Varian aktif, urut dari Harga jual termurah, lalu nama. */
+  varian: VarianHalamanProduk[];
+};
+
+/**
+ * Isi Halaman Produk (PRD §3.3), atau null bila Produk itu tidak tampil di toko: Produk tidak ada,
+ * nonaktif (PRD §3.7), atau tanpa Varian aktif (PRD §3.2 ▶ Keputusan 2026-11-11 #53).
+ */
+export async function bacaHalamanProduk(
+  id: string,
+): Promise<HalamanProduk | null> {
+  const [[p], semuaVarian] = await Promise.all([
+    db
+      .select({
+        nama: produk.nama,
+        foto: produk.foto,
+        deskripsi: produk.deskripsi,
+        ketentuanGaransi: produk.ketentuanGaransi,
+        kategori: { id: kategori.id, nama: kategori.nama },
+      })
+      .from(produk)
+      .innerJoin(kategori, eq(produk.kategoriId, kategori.id))
+      .where(and(eq(produk.id, id), eq(produk.aktif, true))),
+    varianProdukAktif(id),
+  ]);
+  if (p === undefined) return null;
+
+  const isi = varianHalamanProduk({ varian: semuaVarian });
+  if (isi === null) return null;
+
+  return {
+    id,
+    nama: p.nama,
+    kategori: p.kategori,
+    foto: p.foto.map(alamatBerkasUnggahan),
+    deskripsi: p.deskripsi,
+    ketentuanGaransi: p.ketentuanGaransi,
+    pilihanVarian: isi.pilihanVarian,
+    varian: isi.varian.map((v) => ({
+      id: v.id,
+      nama: v.nama,
+      hargaJual: v.hargaJual,
+      hargaNormal: v.hargaNormal,
+      stokVarian: v.stokVarian,
+      habis: v.habis,
+      persenHemat: v.persenHemat,
+    })),
   };
 }
