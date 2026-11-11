@@ -2,20 +2,25 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
+import { eq } from "drizzle-orm";
 
-// Bahan test katalog. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk ini masuk
-// ke database app_test.
+// Bahan test katalog dan Pesanan. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk
+// dan Pesanan ini masuk ke database app_test.
+import { db } from "../src/server/db";
+import { varian } from "../src/server/db/schema";
 import { sisipkanProduk } from "../src/server/uji-katalog";
+import { sisipkanPesanan } from "../src/server/uji-pesanan";
 
 // Pengaturan toko berlaku untuk seluruh toko, jadi test di berkas ini berjalan berurutan dan setiap
-// test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13) juga diuji di sini,
-// karena hanya berkas ini yang mengubah nomor WhatsApp.
+// test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13) dan Halaman Pesanan
+// Bermasalah (T19) juga diuji di sini, karena hanya berkas ini yang mengubah nomor WhatsApp.
 test.describe.configure({ mode: "serial" });
 
 const PASSWORD = "sandi-uji-admin-123";
 
 // Netflix Premium dari persiapan bersama docs/UAT.md [CONTOH], dengan akhiran unik per run.
 let alamatHalamanProduk = "";
+let idVarianSatuBulan = "";
 
 test.beforeAll(async () => {
   const id = await sisipkanProduk({
@@ -26,6 +31,12 @@ test.beforeAll(async () => {
     ],
   });
   alamatHalamanProduk = `/produk/${id}`;
+  [{ id: idVarianSatuBulan }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, id))
+    .orderBy(varian.hargaJual)
+    .limit(1);
 });
 
 // Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
@@ -123,6 +134,32 @@ test("setelah Admin mengisi nomor WhatsApp, Halaman Produk menampilkan tombol Wh
   const garansi = page.getByRole("region", { name: "Ketentuan garansi" });
   await expect(
     garansi.getByRole("link", { name: "Tanya lewat WhatsApp" }),
+  ).toHaveAttribute("href", "https://wa.me/6281234567890");
+});
+
+// Issue T19 dan PRD §5.9: Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp dari T05.
+test("Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp yang membuka wa.me dengan nomor dari Pengaturan toko", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  const { tautan } = await sisipkanPesanan({
+    varianId: idVarianSatuBulan,
+    status: "Bermasalah",
+  });
+
+  await page.goto(`/pesanan/${tautan}`);
+  const isi = page.getByRole("main");
+  await expect(
+    isi.getByText(
+      "Pembayaran Anda sudah kami terima, tetapi Item stok belum bisa dikirim. Hubungi kami lewat WhatsApp.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    isi.getByRole("link", { name: "Hubungi kami di WhatsApp" }),
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
 });
 
