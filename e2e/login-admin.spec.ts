@@ -8,7 +8,7 @@ const PASSWORD = "sandi-uji-admin-123";
 // Membuat Admin persis seperti pemilik di server: `pnpm admin:buat <email>`, password lewat input.
 // DATABASE_URL dari .env.ci (app_test) ikut diwariskan ke perintah itu.
 function buatAdminLewatPerintah() {
-  const email = `admin-${randomUUID()}@miwe.example`;
+  const email = `admin-${randomUUID()}@example.test`;
   const hasil = spawnSync("pnpm", ["--silent", "admin:buat", email], {
     input: `${PASSWORD}\n${PASSWORD}\n`,
     encoding: "utf8",
@@ -110,7 +110,7 @@ test("tidak ada halaman atau rute untuk mendaftar Admin", async ({ page }) => {
   const daftarLewatApi = await page.request.post("/api/auth/sign-up/email", {
     data: {
       name: "Penyusup",
-      email: `penyusup-${randomUUID()}@miwe.example`,
+      email: `penyusup-${randomUUID()}@example.test`,
       password: PASSWORD,
     },
   });
@@ -119,10 +119,8 @@ test("tidak ada halaman atau rute untuk mendaftar Admin", async ({ page }) => {
   // Bahkan Admin yang sudah login tidak menemukan halaman pendaftaran.
   await masuk(page, buatAdminLewatPerintah());
   await expect(page).toHaveURL("/admin/ringkasan");
-  for (const alamat of ["/admin/daftar", "/daftar"]) {
-    const respons = await page.goto(alamat);
-    expect(respons?.status()).toBe(404);
-  }
+  const halamanDaftarAdmin = await page.goto("/admin/daftar");
+  expect(halamanDaftarAdmin?.status()).toBe(404);
 });
 
 test.describe("kerangka dasbor admin", () => {

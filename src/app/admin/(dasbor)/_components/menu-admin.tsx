@@ -41,9 +41,9 @@ export function MenuAdmin() {
           className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-langit-garis px-4 text-sm font-bold hover:bg-langit-2 lebar:hidden"
         >
           {terbuka ? (
-            <X aria-hidden="true" className="size-5" />
+            <X aria-hidden="true" className="size-6" />
           ) : (
-            <Menu aria-hidden="true" className="size-5" />
+            <Menu aria-hidden="true" className="size-6" />
           )}
           Menu
         </button>
@@ -57,7 +57,7 @@ export function MenuAdmin() {
           terbuka ? "flex" : "hidden",
         )}
       >
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-2">
           {TAUTAN_MENU.map(({ href, label, ikon: Ikon }) => {
             const aktif = pathname === href || pathname.startsWith(`${href}/`);
             return (
@@ -67,13 +67,13 @@ export function MenuAdmin() {
                   aria-current={aktif ? "page" : undefined}
                   onClick={() => setTerbuka(false)}
                   className={cn(
-                    "flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-bold",
+                    "flex h-10 items-center gap-2 rounded-md px-3 text-[15px] font-bold",
                     aktif
                       ? "bg-langit-2 text-teks-di-aksi"
                       : "text-langit-redup hover:bg-langit-2 hover:text-langit-teks",
                   )}
                 >
-                  <Ikon aria-hidden="true" className="size-5" />
+                  <Ikon aria-hidden="true" className="size-6" />
                   {label}
                 </Link>
               </li>
@@ -86,7 +86,7 @@ export function MenuAdmin() {
             type="submit"
             className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-langit-garis px-4 text-sm font-bold hover:bg-langit-2"
           >
-            <LogOut aria-hidden="true" className="size-5" />
+            <LogOut aria-hidden="true" className="size-6" />
             Keluar
           </button>
         </form>

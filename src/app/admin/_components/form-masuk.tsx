@@ -21,9 +21,9 @@ function PesanGalat({
     <p
       id={id}
       role={peran}
-      className="flex items-start gap-1.5 text-[13px] font-bold text-st-masalah"
+      className="flex items-start gap-2 text-[13px] font-bold text-st-masalah"
     >
-      <TriangleAlert aria-hidden="true" className="mt-px size-4 shrink-0" />
+      <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
       {children}
     </p>
   );

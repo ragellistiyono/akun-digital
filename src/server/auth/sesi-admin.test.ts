@@ -20,7 +20,7 @@ import { wajibSesiAdmin } from "./sesi-admin";
 const PASSWORD = "sandi-uji-admin-123";
 
 function emailAcak() {
-  return `admin-${randomUUID()}@miwe.example`;
+  return `admin-${randomUUID()}@example.test`;
 }
 
 async function loginAdmin(email: string) {

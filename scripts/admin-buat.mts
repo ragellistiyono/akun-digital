@@ -7,11 +7,6 @@ import { createInterface } from "node:readline";
 import { config } from "dotenv";
 import { z } from "zod";
 
-import {
-  PANJANG_MINIMAL_PASSWORD,
-  passwordCukupPanjang,
-} from "../src/domain/password";
-
 // Variabel lingkungan dari shell didahulukan; .env hanya mengisi yang belum ada.
 config({ quiet: true });
 
@@ -76,14 +71,14 @@ async function tanyaPassword(pertanyaan: string): Promise<string> {
 const email = z.email().safeParse(process.argv[2]?.trim().toLowerCase() ?? "");
 if (!email.success) {
   gagal(
-    "Email Admin belum diisi atau tidak sah. Jalankan `pnpm admin:buat <email>`, misalnya `pnpm admin:buat admin@miwe.example`.",
+    "Email Admin belum diisi atau tidak sah. Jalankan `pnpm admin:buat <email>`, misalnya `pnpm admin:buat admin@example.com`.",
   );
 }
 
 const password = await tanyaPassword("Password Admin baru: ");
-if (!passwordCukupPanjang(password)) {
+if (password === "") {
   gagal(
-    `Password terlalu pendek: minimal ${PANJANG_MINIMAL_PASSWORD} karakter. Jalankan ulang perintahnya dengan password yang lebih panjang.`,
+    "Password belum diisi. Jalankan ulang perintahnya, lalu ketik password Admin saat diminta.",
   );
 }
 const ulangan = await tanyaPassword("Ulangi password: ");
