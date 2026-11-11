@@ -1,6 +1,5 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useActionState } from "react";
 
@@ -12,6 +11,7 @@ import {
   BilahLekat,
   KELAS_TOMBOL_UTAMA,
 } from "../../../_components/bilah-lekat";
+import { PesanGalat } from "../../../_components/pesan-galat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
 import { aksiCheckout, type KeadaanFormCheckout } from "../aksi";
 
@@ -22,31 +22,6 @@ const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
 /** Isian 52 px (DESIGN.md Inputs / Fields): garis `garis`, fokus `aksi` dengan halo, galat `st-masalah`. */
 const KELAS_ISIAN =
   "h-[52px] rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta placeholder:text-tinta-redup focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
-
-/** Pesan galat 13 px tebal berwarna `st-masalah` dengan ikon TriangleAlert (DESIGN.md Inputs / Fields). */
-function PesanGalat({
-  id,
-  pesan,
-  className,
-}: {
-  id?: string;
-  pesan: string;
-  className?: string;
-}) {
-  return (
-    <p
-      id={id}
-      role="alert"
-      className={cn(
-        "flex items-start gap-2 text-[13px] font-bold text-st-masalah",
-        className,
-      )}
-    >
-      <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
-      {pesan}
-    </p>
-  );
-}
 
 /**
  * Form checkout satu Varian (PRD §5.2, UAT-E7): hanya isian email dengan pengingatnya, rincian perkiraan

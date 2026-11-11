@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { qrispyAktif } from "./qrispy";
-import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
+import {
+  bayarQrisTiruan,
+  qrispyTiruan,
+  tolakPembatalanTiruan,
+} from "./qrispy-tiruan";
 
 // ADR-0004 dan issue T14: Qrispy tiruan menerbitkan QRIS dengan Kode unik acak Rp 1–499, waktu
 // kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh. Bentuk datanya mengikuti respons Qrispy di
@@ -112,6 +116,69 @@ describe("cek status Qrispy tiruan", () => {
     expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toMatchObject({
       paymentStatus: "paid",
       amount: 45000,
+    });
+  });
+});
+
+// Issue T20 dan docs/referensi/qrispy-api.md bagian 5: Qrispy tiruan mendukung pembatalan QRIS, dan bisa
+// diatur supaya pembatalannya gagal.
+describe("pembatalan Qrispy tiruan", () => {
+  it("QRIS yang dibatalkan dijawab cancelled saat statusnya ditanyakan", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 50000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+
+    await qrispyTiruan.batalkanQris(qris.qrisId);
+
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toEqual({
+      paymentStatus: "cancelled",
+    });
+  });
+
+  it("bila diatur menolak pembatalan QRIS itu, pembatalannya gagal dan QRIS tetap pending", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 50000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+
+    tolakPembatalanTiruan(qris.qrisId);
+
+    await expect(qrispyTiruan.batalkanQris(qris.qrisId)).rejects.toThrow();
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toEqual({
+      paymentStatus: "pending",
+    });
+  });
+
+  it("penolakan hanya berlaku untuk QRIS yang diatur", async () => {
+    const [ditolak, biasa] = await Promise.all(
+      [1, 2].map(() =>
+        qrispyTiruan.buatQris({
+          amount: 50000,
+          paymentReference: "MIWE-7K3P9Q",
+        }),
+      ),
+    );
+
+    tolakPembatalanTiruan(ditolak.qrisId);
+
+    await expect(qrispyTiruan.batalkanQris(biasa.qrisId)).resolves.toBe(
+      undefined,
+    );
+  });
+
+  // PRD §5.8: Qrispy menolak pembatalan karena tagihannya sudah dibayar.
+  it("QRIS yang sudah dibayar tidak bisa dibatalkan, dan statusnya tetap paid", async () => {
+    const qris = await qrispyTiruan.buatQris({
+      amount: 50000,
+      paymentReference: "MIWE-7K3P9Q",
+    });
+    bayarQrisTiruan({ qrisId: qris.qrisId, amount: qris.amount });
+
+    await expect(qrispyTiruan.batalkanQris(qris.qrisId)).rejects.toThrow();
+    expect(await qrispyTiruan.cekStatusQris(qris.qrisId)).toMatchObject({
+      paymentStatus: "paid",
+      amount: qris.amount,
     });
   });
 });
