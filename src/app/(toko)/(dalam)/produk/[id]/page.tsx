@@ -11,6 +11,7 @@ import { bacaHalamanProduk } from "@/server/katalog";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { alamatSaringanKategori } from "../../../_components/alamat-saringan-kategori";
+import { FormBeli } from "../../../_components/form-beli";
 import {
   HargaNormal,
   LabelHabis,
@@ -110,8 +111,9 @@ function HargaSatuVarian({
 }
 
 // Halaman Produk (PRD §3.3): nama dan Kategori, foto, Varian, deskripsi, lalu ketentuan garansi beserta
-// tombol WhatsApp. Di layar lebar foto dan isinya menjadi dua kolom sama lebar (DESIGN.md Layout).
-// Produk yang tidak tampil di toko menampilkan halaman tidak ditemukan.
+// tombol WhatsApp, dan tombol utama yang membuka form checkout untuk Varian terpilih. Di layar lebar foto
+// dan isinya menjadi dua kolom sama lebar (DESIGN.md Layout). Produk yang tidak tampil di toko
+// menampilkan halaman tidak ditemukan.
 export default async function HalamanProduk({
   params,
 }: PageProps<"/produk/[id]">) {
@@ -125,6 +127,8 @@ export default async function HalamanProduk({
     bacaPengaturanToko(),
   ]);
   if (!produk) notFound();
+  // Varian ber-stok pertama sudah terpilih saat halaman dibuka.
+  const terpilihAwal = produk.varian.find((v) => !v.habis)?.id ?? null;
 
   return (
     <div className="mt-4 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
@@ -141,43 +145,60 @@ export default async function HalamanProduk({
           </Link>
         </p>
 
-        {produk.pilihanVarian ? (
-          <>
-            <h2
-              id="judul-pilih-varian"
-              className="mt-6 mb-4 text-lg leading-[1.2] font-extrabold"
-            >
-              Pilih Varian
-            </h2>
-            <PilihanVarian
-              varian={produk.varian}
-              labelledBy="judul-pilih-varian"
-            />
-          </>
-        ) : (
-          <HargaSatuVarian varian={produk.varian[0]} />
-        )}
-
-        <section aria-label="Deskripsi" className={`mt-6 ${PANEL}`}>
-          <p className={TEKS_PANJANG}>{produk.deskripsi}</p>
-        </section>
-        <section
-          aria-label="Ketentuan garansi"
-          className={`mt-4 flex flex-col items-start gap-4 ${PANEL}`}
+        <FormBeli
+          varian={produk.varian.map(({ id, hargaJual, habis }) => ({
+            id,
+            hargaJual,
+            habis,
+          }))}
+          terpilihAwal={terpilihAwal}
         >
-          <div className="flex min-w-0 items-start gap-3">
-            <ShieldCheck
-              aria-hidden="true"
-              className="size-6 shrink-0 text-st-selesai"
-            />
-            <p className={`min-w-0 ${TEKS_PANJANG}`}>
-              {produk.ketentuanGaransi}
-            </p>
-          </div>
-          <TombolWhatsApp nomor={nomorWhatsapp}>
-            Tanya lewat WhatsApp
-          </TombolWhatsApp>
-        </section>
+          {produk.pilihanVarian ? (
+            <>
+              <h2
+                id="judul-pilih-varian"
+                className="mt-6 mb-4 text-lg leading-[1.2] font-extrabold"
+              >
+                Pilih Varian
+              </h2>
+              <PilihanVarian
+                varian={produk.varian}
+                terpilihId={terpilihAwal}
+                labelledBy="judul-pilih-varian"
+              />
+            </>
+          ) : (
+            <>
+              <HargaSatuVarian varian={produk.varian[0]} />
+              <input
+                type="hidden"
+                name="varianId"
+                value={produk.varian[0].id}
+              />
+            </>
+          )}
+
+          <section aria-label="Deskripsi" className={`mt-6 ${PANEL}`}>
+            <p className={TEKS_PANJANG}>{produk.deskripsi}</p>
+          </section>
+          <section
+            aria-label="Ketentuan garansi"
+            className={`mt-4 flex flex-col items-start gap-4 ${PANEL}`}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <ShieldCheck
+                aria-hidden="true"
+                className="size-6 shrink-0 text-st-selesai"
+              />
+              <p className={`min-w-0 ${TEKS_PANJANG}`}>
+                {produk.ketentuanGaransi}
+              </p>
+            </div>
+            <TombolWhatsApp nomor={nomorWhatsapp}>
+              Tanya lewat WhatsApp
+            </TombolWhatsApp>
+          </section>
+        </FormBeli>
       </div>
     </div>
   );

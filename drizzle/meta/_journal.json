@@ -71,6 +71,13 @@
       "when": 1794400478244,
       "tag": "0009_nama_kategori_unik",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794412733957,
+      "tag": "0010_checkout_pesanan",
+      "breakpoints": true
     }
   ]
 }

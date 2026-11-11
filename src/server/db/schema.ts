@@ -16,6 +16,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
+import { STATUS_PESANAN } from "../../domain/status-pesanan";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
@@ -200,4 +201,58 @@ export const pengaturanToko = pgTable(
     kebijakanPrivasi: text("kebijakan_privasi").default("").notNull(),
   },
   (tabel) => [check("pengaturan_toko_satu_baris", sql`${tabel.id} = 1`)],
+);
+
+// Status Pesanan (GLOSSARY, PRD §5.7).
+export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
+
+// Pesanan (PRD §5.1): satu pembelian satu Varian. Harga jual dan potongan voucher dicatat saat checkout,
+// jadi perubahan harga sesudahnya tidak mengubah Pesanan ini. Kode unik, Total bayar, waktu kedaluwarsa,
+// dan gambar QR diambil dari QRIS yang diterbitkan Qrispy (ADR-0004); qris_id menautkan Pesanan ke QRIS
+// itu. Nomor Pesanan (PRD §9.6) dan Tautan Pesanan (PRD §6.2) unik. Varian yang sudah pernah dipesan
+// tidak bisa dihapus (PRD §3.7), jadi rujukannya restrict.
+export const pesanan = pgTable(
+  "pesanan",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nomorPesanan: text("nomor_pesanan").notNull(),
+    tautan: text("tautan").notNull(),
+    email: text("email").notNull(),
+    varianId: uuid("varian_id")
+      .notNull()
+      .references(() => varian.id, { onDelete: "restrict" }),
+    hargaJual: integer("harga_jual").notNull(),
+    potonganVoucher: integer("potongan_voucher").notNull(),
+    kodeUnik: integer("kode_unik").notNull(),
+    totalBayar: integer("total_bayar").notNull(),
+    qrisId: text("qris_id").notNull(),
+    kedaluwarsaPada: instan("kedaluwarsa_pada").notNull(),
+    /** Gambar QR dari Qrispy sebagai data URL PNG (qris_image_base64). */
+    gambarQr: text("gambar_qr").notNull(),
+    status: statusPesanan("status").notNull(),
+  },
+  (tabel) => [
+    uniqueIndex("pesanan_nomor_pesanan_unik").on(tabel.nomorPesanan),
+    uniqueIndex("pesanan_tautan_unik").on(tabel.tautan),
+    uniqueIndex("pesanan_qris_id_unik").on(tabel.qrisId),
+    index("pesanan_varian_id_idx").on(tabel.varianId),
+  ],
+);
+
+// Riwayat status Pesanan: satu baris untuk setiap perubahan status, berisi waktu, status baru, dan
+// pelakunya, misalnya Pembeli saat checkout. Baris pertama ditulis saat Pesanan dibuat.
+export const riwayatStatusPesanan = pgTable(
+  "riwayat_status_pesanan",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    pesananId: uuid("pesanan_id")
+      .notNull()
+      .references(() => pesanan.id, { onDelete: "cascade" }),
+    waktu: instan("waktu").notNull(),
+    status: statusPesanan("status").notNull(),
+    pelaku: text("pelaku").notNull(),
+  },
+  (tabel) => [
+    index("riwayat_status_pesanan_pesanan_id_idx").on(tabel.pesananId),
+  ],
 );
