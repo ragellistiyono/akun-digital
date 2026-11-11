@@ -144,10 +144,16 @@ export async function tempelItemStokVarian({
   return hasil ?? ({ hasil: "varian-tidak-ada" } as const);
 }
 
-/** Stok Varian sebuah Varian beserta jumlah Item stok per status sebagai bahan hitungnya (PRD §5.3). */
-export async function bacaStokVarian(varianId: string) {
+/**
+ * Stok Varian sebuah Varian beserta jumlah Item stok per status sebagai bahan hitungnya (PRD §5.3).
+ * Bisa dibaca di dalam transaksi yang sedang berjalan.
+ */
+export async function bacaStokVarian(
+  varianId: string,
+  eksekutor: Pick<typeof db, "select"> = db,
+) {
   const jumlahPerStatus = { Tersedia: 0, Ditahan: 0, Terkirim: 0 };
-  const semua = await db
+  const semua = await eksekutor
     .select({ status: itemStok.status, jumlah: count() })
     .from(itemStok)
     .where(eq(itemStok.varianId, varianId))

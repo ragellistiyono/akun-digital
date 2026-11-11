@@ -1,5 +1,6 @@
 // Qrispy tiruan untuk pengembangan, test, dan e2e (ADR-0004): menerbitkan QRIS dengan Kode unik acak
-// Rp 1–499, waktu kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh yang tidak bisa dibayar.
+// Rp 1–499, waktu kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh yang tidak bisa dibayar dengan
+// e-wallet. Pembayarannya dipicu lewat bayarQrisTiruan, lalu cek status QRIS itu menjawab `paid`.
 import { randomInt, randomUUID } from "node:crypto";
 import { crc32, deflateSync } from "node:zlib";
 
@@ -80,6 +81,28 @@ function buatGambarQrContoh() {
 
 let gambarQrContoh: string | undefined;
 
+/** Pembayaran QRIS tiruan yang sudah dipicu: nominal yang dibayar dan waktu bayarnya. */
+type PembayaranTiruan = { amount: number; paidAt: Date };
+
+// Pembayaran yang sudah dipicu, menurut qris_id. Disimpan di globalThis, karena Next.js bisa memuat modul
+// ini lebih dari sekali dalam satu proses server (misalnya untuk route handler dan untuk halaman),
+// padahal pemicu dan cek status harus melihat data yang sama. Data ini hilang saat server dimulai ulang.
+const wadah = globalThis as typeof globalThis & {
+  __pembayaranQrispyTiruan?: Map<string, PembayaranTiruan>;
+};
+const pembayaranTiruan = (wadah.__pembayaranQrispyTiruan ??= new Map());
+
+/**
+ * Pembeli tiruan membayar sebuah QRIS dengan nominal itu, yang boleh berbeda dari Total bayar. Sesudahnya
+ * cek status QRIS itu menjawab `paid`. Waktu bayarnya bisa diganti untuk test.
+ */
+export function bayarQrisTiruan(
+  { qrisId, amount }: { qrisId: string; amount: number },
+  { sekarang = new Date() }: { sekarang?: Date } = {},
+) {
+  pembayaranTiruan.set(qrisId, { amount, paidAt: sekarang });
+}
+
 export const qrispyTiruan: Qrispy = {
   async buatQris({ amount }) {
     const uniqueId = randomInt(1, 500);
@@ -94,4 +117,10 @@ export const qrispyTiruan: Qrispy = {
     };
   },
   async batalkanQris() {},
+  // QRIS yang pembayarannya belum dipicu, termasuk QRIS yang tidak dikenal, dijawab pending.
+  async cekStatusQris(qrisId) {
+    const dibayar = pembayaranTiruan.get(qrisId);
+    if (!dibayar) return { paymentStatus: "pending" };
+    return { paymentStatus: "paid", ...dibayar };
+  },
 };
