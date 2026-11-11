@@ -1,8 +1,10 @@
 // Skema database Drizzle. Tabel ditambahkan oleh tiket yang membutuhkannya,
 // lalu migrasinya dibuat dengan `pnpm exec drizzle-kit generate`.
+import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
+  check,
   index,
   integer,
   pgEnum,
@@ -177,4 +179,17 @@ export const itemStok = pgTable(
       tabel.sidikJari,
     ),
   ],
+);
+
+// Pengaturan toko (PRD §9.8): tepat satu baris untuk seluruh toko, dengan id 1. Nomor WhatsApp null
+// berarti belum diisi. Ambang stok menipis menyusul di M2 (PRD §13 ▶ Keputusan 2026-11-11).
+export const pengaturanToko = pgTable(
+  "pengaturan_toko",
+  {
+    id: integer("id").primaryKey().default(1),
+    nomorWhatsapp: text("nomor_whatsapp"),
+    syaratKetentuan: text("syarat_ketentuan").default("").notNull(),
+    kebijakanPrivasi: text("kebijakan_privasi").default("").notNull(),
+  },
+  (tabel) => [check("pengaturan_toko_satu_baris", sql`${tabel.id} = 1`)],
 );
