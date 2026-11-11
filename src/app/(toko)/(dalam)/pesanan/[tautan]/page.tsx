@@ -27,6 +27,7 @@ import {
 import { RincianNominal } from "../../../_components/rincian-nominal";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { BlokItemStok } from "./_components/blok-item-stok";
+import { FormBatalkan } from "./_components/form-batalkan";
 import { KartuSenja } from "./_components/kartu-senja";
 import { PantauStatusPesanan } from "./_components/pantau-status";
 
@@ -115,9 +116,10 @@ function ProdukDanVarian({ pesanan }: { pesanan: PesananDibaca }) {
 
 // Halaman bayar (PRD §5.6) selama Pesanan Menunggu Pembayaran: kartu senja dengan hitung mundur QRIS dan
 // Total bayar, gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, rincian nominal yang
-// dicatat di Pesanan (PRD §5.5), dan tombol "Simpan gambar QR" di bilah lekat. Di layar lebar keduanya
-// menjadi dua kolom sama lebar (DESIGN.md Layout). Halaman bayar menanyakan status ke server toko secara
-// berkala, dan begitu statusnya berubah, halaman dibuat ulang tanpa dimuat ulang menjadi Halaman Pesanan.
+// dicatat di Pesanan (PRD §5.5), dan tombol "Batalkan" (PRD §5.8) serta "Simpan gambar QR" di bilah lekat.
+// Di layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout). Halaman bayar menanyakan status
+// ke server toko secara berkala, dan begitu statusnya berubah, halaman dibuat ulang tanpa dimuat ulang
+// menjadi Halaman Pesanan.
 function HalamanBayar({
   pesanan,
   tautan,
@@ -164,7 +166,7 @@ function HalamanBayar({
             <ProdukDanVarian pesanan={pesanan} />
           </section>
           <PanelRincian rincian={pesanan.rincian} />
-          <BilahLekat>
+          <FormBatalkan tautan={tautan}>
             {/* Gambar QR Pesanan ini diunduh sebagai PNG, supaya Pembeli di ponsel bisa membukanya dari
                 aplikasi e-wallet (PRD §5.6). */}
             <a
@@ -175,7 +177,7 @@ function HalamanBayar({
               <Download aria-hidden="true" className="size-6 shrink-0" />
               Simpan gambar QR
             </a>
-          </BilahLekat>
+          </FormBatalkan>
         </div>
       </div>
     </>

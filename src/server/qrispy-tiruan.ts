@@ -1,6 +1,8 @@
 // Qrispy tiruan untuk pengembangan, test, dan e2e (ADR-0004): menerbitkan QRIS dengan Kode unik acak
 // Rp 1–499, waktu kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh yang tidak bisa dibayar dengan
-// e-wallet. Pembayarannya dipicu lewat bayarQrisTiruan, lalu cek status QRIS itu menjawab `paid`.
+// e-wallet. Pembayarannya dipicu lewat bayarQrisTiruan, lalu cek status QRIS itu menjawab `paid`. QRIS yang
+// belum dibayar bisa dibatalkan, lalu cek statusnya menjawab `cancelled`; pembatalannya bisa diatur gagal
+// lewat tolakPembatalanTiruan.
 import { randomInt, randomUUID } from "node:crypto";
 import { crc32, deflateSync } from "node:zlib";
 
@@ -84,13 +86,18 @@ let gambarQrContoh: string | undefined;
 /** Pembayaran QRIS tiruan yang sudah dipicu: nominal yang dibayar dan waktu bayarnya. */
 type PembayaranTiruan = { amount: number; paidAt: Date };
 
-// Pembayaran yang sudah dipicu, menurut qris_id. Disimpan di globalThis, karena Next.js bisa memuat modul
-// ini lebih dari sekali dalam satu proses server (misalnya untuk route handler dan untuk halaman),
-// padahal pemicu dan cek status harus melihat data yang sama. Data ini hilang saat server dimulai ulang.
+// Pembayaran yang sudah dipicu, QRIS yang sudah dibatalkan, dan QRIS yang pembatalannya diatur gagal,
+// menurut qris_id. Disimpan di globalThis, karena Next.js bisa memuat modul ini lebih dari sekali dalam
+// satu proses server (misalnya untuk route handler dan untuk halaman), padahal pemicu dan cek status harus
+// melihat data yang sama. Data ini hilang saat server dimulai ulang.
 const wadah = globalThis as typeof globalThis & {
   __pembayaranQrispyTiruan?: Map<string, PembayaranTiruan>;
+  __qrisDibatalkanTiruan?: Set<string>;
+  __pembatalanDitolakTiruan?: Set<string>;
 };
 const pembayaranTiruan = (wadah.__pembayaranQrispyTiruan ??= new Map());
+const qrisDibatalkan = (wadah.__qrisDibatalkanTiruan ??= new Set());
+const pembatalanDitolak = (wadah.__pembatalanDitolakTiruan ??= new Set());
 
 /**
  * Pembeli tiruan membayar sebuah QRIS dengan nominal itu, yang boleh berbeda dari Total bayar. Sesudahnya
@@ -101,6 +108,14 @@ export function bayarQrisTiruan(
   { sekarang = new Date() }: { sekarang?: Date } = {},
 ) {
   pembayaranTiruan.set(qrisId, { amount, paidAt: sekarang });
+}
+
+/**
+ * Mengatur Qrispy tiruan supaya menolak setiap permintaan pembatalan QRIS itu, misalnya untuk menguji
+ * pembatalan yang gagal (PRD §5.8, ADR-0004). Status QRIS-nya tidak berubah karena penolakan itu.
+ */
+export function tolakPembatalanTiruan(qrisId: string) {
+  pembatalanDitolak.add(qrisId);
 }
 
 export const qrispyTiruan: Qrispy = {
@@ -116,11 +131,25 @@ export const qrispyTiruan: Qrispy = {
       gambarQr: gambarQrContoh,
     };
   },
-  async batalkanQris() {},
-  // QRIS yang pembayarannya belum dipicu, termasuk QRIS yang tidak dikenal, dijawab pending.
+  async batalkanQris(qrisId) {
+    if (pembatalanDitolak.has(qrisId)) {
+      throw new Error(
+        `Qrispy tiruan diatur menolak pembatalan QRIS ${qrisId}, jadi QRIS itu tidak dibatalkan.`,
+      );
+    }
+    if (pembayaranTiruan.has(qrisId)) {
+      throw new Error(
+        `Qrispy tiruan menolak pembatalan QRIS ${qrisId}, karena QRIS itu sudah dibayar.`,
+      );
+    }
+    qrisDibatalkan.add(qrisId);
+  },
+  // QRIS yang pembayarannya belum dipicu dan belum dibatalkan, termasuk QRIS yang tidak dikenal, dijawab
+  // pending.
   async cekStatusQris(qrisId) {
     const dibayar = pembayaranTiruan.get(qrisId);
-    if (!dibayar) return { paymentStatus: "pending" };
-    return { paymentStatus: "paid", ...dibayar };
+    if (dibayar) return { paymentStatus: "paid", ...dibayar };
+    if (qrisDibatalkan.has(qrisId)) return { paymentStatus: "cancelled" };
+    return { paymentStatus: "pending" };
   },
 };
