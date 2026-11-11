@@ -1,9 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
-
-import { parse } from "dotenv";
 
 import { headers } from "next/headers";
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -12,6 +9,7 @@ import { auth } from "@/server/auth/auth";
 import { buatAdmin } from "@/server/auth/buat-admin";
 import { koneksi } from "@/server/db";
 import { buatKategori, daftarKategori } from "@/server/kategori";
+import { FOLDER_UNGGAHAN_TEST, PNG } from "@/server/uji-unggahan";
 
 import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
 
@@ -20,17 +18,6 @@ import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
 
 const PASSWORD = "sandi-uji-admin-123";
-
-// Gambar PNG 1×1 piksel yang sah.
-const PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-// Folder unggahan test dibaca langsung dari .env.ci.
-const FOLDER_UNGGAHAN_TEST = path.resolve(
-  parse(readFileSync(".env.ci")).UPLOAD_DIR ?? "",
-);
 
 function sebagaiPengunjung(kepala: Headers) {
   vi.mocked(headers).mockResolvedValue(kepala);

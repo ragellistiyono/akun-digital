@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { z } from "zod";
+
 type HasilSimpanGambar =
   | { hasil: "disimpan"; nama: string }
   | { hasil: "ditolak"; alasan: "bukan-gambar" | "terlalu-besar" };
@@ -44,10 +46,16 @@ const JENIS_GAMBAR: JenisGambar[] = [
   },
 ];
 
-// Nama berkas yang dibuat simpanGambar: UUID acak dan ekstensi jenis gambarnya. Nama lain, termasuk
-// yang memuat "/" atau "..", tidak pernah dibaca dari folder unggahan.
-const POLA_NAMA_BERKAS =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.([a-z]+)$/;
+/**
+ * Nama berkas yang dibuat simpanGambar: UUID acak dan ekstensi salah satu jenis gambar. Nama lain,
+ * termasuk yang memuat "/" atau "..", tidak pernah dibaca atau dihapus dari folder unggahan. Rute
+ * penyaji memvalidasi nama dari URL dengan skema ini, dan fungsi di modul ini memeriksanya lagi.
+ */
+export const NamaBerkasUnggahan = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|webp)$/,
+  );
 
 /** Folder unggahan dari UPLOAD_DIR. Dibaca saat dipakai, supaya `next build` tidak membutuhkannya. */
 function folderUnggahan() {
@@ -95,8 +103,8 @@ export function alamatBerkasUnggahan(nama: string) {
 export async function bacaBerkasUnggahan(
   nama: string,
 ): Promise<{ isi: Uint8Array<ArrayBuffer>; jenis: string } | null> {
-  const ekstensi = POLA_NAMA_BERKAS.exec(nama)?.[1];
-  const jenis = JENIS_GAMBAR.find((j) => j.ekstensi === ekstensi);
+  if (!NamaBerkasUnggahan.safeParse(nama).success) return null;
+  const jenis = JENIS_GAMBAR.find((j) => nama.endsWith(`.${j.ekstensi}`));
   if (!jenis) return null;
 
   try {
@@ -112,6 +120,6 @@ export async function bacaBerkasUnggahan(
 
 /** Menghapus gambar unggahan yang tidak dipakai lagi. Nama yang bukan gambar unggahan diabaikan. */
 export async function hapusBerkasUnggahan(nama: string) {
-  if (!POLA_NAMA_BERKAS.test(nama)) return;
+  if (!NamaBerkasUnggahan.safeParse(nama).success) return;
   await rm(lokasiBerkas(nama), { force: true });
 }

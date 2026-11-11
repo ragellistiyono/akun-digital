@@ -34,7 +34,7 @@ export async function bacaKategori(id: string): Promise<Kategori | null> {
 
 /**
  * Membuat Kategori baru (PRD §3.1). Gambar ikonnya disimpan di folder unggahan lebih dulu; bila
- * berkasnya ditolak, Kategori tidak dibuat.
+ * berkasnya ditolak, Kategori tidak dibuat. Bila penulisan database gagal, gambar itu dihapus lagi.
  */
 export async function buatKategori({
   nama,
@@ -46,13 +46,19 @@ export async function buatKategori({
   const gambar = await simpanGambar(ikon);
   if (gambar.hasil === "ditolak") return gambar;
 
-  await db.insert(kategori).values({ nama, ikon: gambar.nama });
+  try {
+    await db.insert(kategori).values({ nama, ikon: gambar.nama });
+  } catch (galat) {
+    await hapusBerkasUnggahan(gambar.nama);
+    throw galat;
+  }
   return { hasil: "dibuat" } as const;
 }
 
 /**
  * Mengubah nama Kategori, dan gambar ikonnya bila Admin memilih gambar baru. Tanpa gambar baru,
- * ikon lama tetap dipakai. Berkas ikon yang diganti dihapus dari folder unggahan.
+ * ikon lama tetap dipakai. Setelah ikon diganti, berkas ikon lama dihapus dari folder unggahan. Bila
+ * Kategori tidak ada atau penulisan database gagal, gambar pengganti dihapus lagi.
  */
 export async function ubahKategori({
   id,
@@ -63,30 +69,40 @@ export async function ubahKategori({
   nama: string;
   ikon?: File;
 }) {
-  const hasil = await db.transaction(async (tx) => {
-    // Baris dikunci supaya dua Admin yang mengganti ikon bersamaan tidak meninggalkan berkas yatim.
-    const [lama] = await tx
-      .select({ ikon: kategori.ikon })
-      .from(kategori)
-      .where(eq(kategori.id, id))
-      .for("update");
-    if (!lama) return { hasil: "tidak-ada" } as const;
-
-    if (!ikon) {
-      await tx.update(kategori).set({ nama }).where(eq(kategori.id, id));
-      return { hasil: "diubah", ikonDiganti: null } as const;
-    }
-
+  let ikonPengganti: string | undefined;
+  if (ikon) {
     const gambar = await simpanGambar(ikon);
     if (gambar.hasil === "ditolak") return gambar;
-    await tx
-      .update(kategori)
-      .set({ nama, ikon: gambar.nama })
-      .where(eq(kategori.id, id));
-    return { hasil: "diubah", ikonDiganti: lama.ikon } as const;
-  });
+    ikonPengganti = gambar.nama;
+  }
 
-  if (hasil.hasil !== "diubah") return hasil;
-  if (hasil.ikonDiganti) await hapusBerkasUnggahan(hasil.ikonDiganti);
+  let ikonLama: string | null;
+  try {
+    ikonLama = await db.transaction(async (tx) => {
+      // Baris dikunci supaya dua Admin yang mengganti ikon bersamaan masing-masing menghapus ikon
+      // yang memang ia ganti, dan tidak ada berkas yang tertinggal.
+      const [lama] = await tx
+        .select({ ikon: kategori.ikon })
+        .from(kategori)
+        .where(eq(kategori.id, id))
+        .for("update");
+      if (!lama) return null;
+
+      await tx
+        .update(kategori)
+        .set({ nama, ikon: ikonPengganti ?? lama.ikon })
+        .where(eq(kategori.id, id));
+      return lama.ikon;
+    });
+  } catch (galat) {
+    if (ikonPengganti) await hapusBerkasUnggahan(ikonPengganti);
+    throw galat;
+  }
+
+  if (ikonLama === null) {
+    if (ikonPengganti) await hapusBerkasUnggahan(ikonPengganti);
+    return { hasil: "tidak-ada" } as const;
+  }
+  if (ikonPengganti) await hapusBerkasUnggahan(ikonLama);
   return { hasil: "diubah" } as const;
 }
