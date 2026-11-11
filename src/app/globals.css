@@ -232,6 +232,11 @@
     @apply bg-background font-sans text-foreground;
     font-variant-numeric: tabular-nums;
   }
+  /* Cincin fokus (DESIGN.md, Shadow Vocabulary): semua elemen dengan :focus-visible. */
+  :focus-visible {
+    outline: 3px solid var(--monogram);
+    outline-offset: 2px;
+  }
   /* Headline (DESIGN.md Typography): satu judul halaman per layar. */
   h1 {
     font-size: 28px;

@@ -95,3 +95,36 @@ for (const lebar of [390, 1440]) {
     }
   });
 }
+
+// DESIGN.md, Cincin fokus: outline 3px solid monogram (#8F61FF), outline-offset 2px.
+for (const lebar of [390, 1440]) {
+  test(`di lebar ${lebar} px setiap tautan kerangka memakai cincin fokus monogram saat difokus dengan keyboard`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: lebar, height: 900 });
+    await page.goto("/");
+
+    for (const nama of ["MIWE Digital Store, beranda", ...TAB_TOKO]) {
+      await page.keyboard.press("Tab");
+      await expect(
+        page.getByRole("link", { name: nama, exact: true }),
+      ).toBeFocused();
+
+      const cincin = await page.evaluate(() => {
+        const gaya = getComputedStyle(document.activeElement!);
+        return {
+          style: gaya.outlineStyle,
+          width: gaya.outlineWidth,
+          color: gaya.outlineColor,
+          offset: gaya.outlineOffset,
+        };
+      });
+      expect(cincin).toEqual({
+        style: "solid",
+        width: "3px",
+        color: "rgb(143, 97, 255)",
+        offset: "2px",
+      });
+    }
+  });
+}

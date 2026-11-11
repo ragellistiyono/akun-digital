@@ -12,7 +12,11 @@ function bacaWarnaDesain() {
   const blok = desain.match(
     /^colors:\n((?: {2}[\w-]+: "#[0-9A-Fa-f]{6}"\n)+)/m,
   );
-  if (!blok) throw new Error("Blok colors di docs/DESIGN.md tidak terbaca.");
+  if (!blok) {
+    throw new Error(
+      'Blok `colors:` di frontmatter docs/DESIGN.md tidak terbaca, jadi nilai token tidak bisa dibandingkan. Pastikan setiap baris di bawah `colors:` berformat `  nama: "#RRGGBB"` (dua spasi, hex enam digit dalam tanda kutip), lalu jalankan ulang `pnpm test:e2e`.',
+    );
+  }
   return new Map(
     [...blok[1].matchAll(/^ {2}([\w-]+): "(#[0-9A-Fa-f]{6})"$/gm)].map(
       ([, nama, hex]) => [nama, hex],
