@@ -11,5 +11,4 @@ Setelah pemilik memutuskan lewat `/tiket:catat-keputusan`, keputusan itu ditulis
 | ID | Pertanyaan | Pemilik keputusan | Yang terblokir | Nilai contoh untuk pengujian |
 |---|---|---|---|---|
 | OD-1 | Domain apa yang dipakai untuk alamat web toko dan pengirim email? | Pemilik | Pengiriman email ke Pembeli sungguhan dan pemasangan di VPS (PRD §10.1, §12). Pengembangan dan test tidak terblokir. | Domain `miwe.example`, pengirim `MIWE Digital Store <no-reply@miwe.example>` `[CONTOH]` |
-| OD-2 | Berapa lama Member dan Admin tetap login sebelum diminta login ulang? | Pemilik | Tiket login Admin (M1) dan login Member (M2), PRD §7.5 | Member 30 hari, Admin 12 jam, dihitung sejak login `[CONTOH]` |
 | OD-3 | Bila potongan voucher menjadi Rp 0 karena batas bawah Rp 1.000 (Varian dengan Harga jual tepat Rp 1.000), apakah Voucher ditolak atau tetap tercatat dipakai? | Pemilik | Tiket penerapan Voucher di checkout (M2), PRD §8.3, §8.7 | Voucher ditolak dengan pesan "Voucher tidak memberi potongan untuk produk ini", dan tidak tercatat di Pesanan `[CONTOH]` |

@@ -17,7 +17,7 @@ Aturan PRD yang memuat angka tetapi belum atau tidak punya berkas golden:
 - **§5.5 Kode unik Rp 1–499** ditentukan Qrispy, bukan dihitung toko. Toko hanya mencatat angka yang diberikan Qrispy.
 - **§5.6 hitung mundur** hanya tampilan dari waktu kedaluwarsa. Aturan waktunya ada di `kedaluwarsa-pesanan.json`.
 - **§6.4 kirim ulang email otomatis "beberapa kali"**: jumlah dan jedanya keputusan teknis, bukan aturan bisnis.
-- **§7.5 lama sesi login** belum diputuskan (OD-2). Nilai contohnya, Member 30 hari dan Admin 12 jam, dipakai dengan tanda `[CONTOH]`.
+- **§2.2 dan §7.5 lama sesi login**: Admin 12 jam dan Member 30 hari sejak login (▶ Keputusan 2026-11-11). Ini pengaturan sesi login, bukan hitungan di modul domain, jadi diuji lewat test integrasi.
 - **§8.3 Voucher dengan potongan Rp 0** belum diputuskan (OD-3). Hitungan potongannya sendiri sudah ada di `potongan-voucher.json`.
 - **§9.2 kartu ringkasan** berupa hitungan jumlah dalam rentang dari `rentang-waktu-toko.json`. Pendapatannya ada di `pendapatan.json`.
 - **§10.1 batas paket gratis Resend** adalah batas layanan luar, bukan aturan aplikasi.

@@ -115,10 +115,12 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   1. Lihat Varian Netflix Premium 1 Bulan.
   2. Sebagai Admin, isi Harga normal Varian 3 Bulan dengan Rp 135.000, lalu simpan.
   3. Isi Harga jual sebuah Varian dengan Rp 999, lalu simpan.
+  4. Isi Harga jual sebuah Varian dengan Rp 499.001, lalu simpan.
 - Hasil:
   - Varian 1 Bulan menampilkan Rp 75.000 dicoret dan "Hemat 33%".
   - Langkah 2 ditolak karena Harga normal tidak lebih besar dari Harga jual.
   - Langkah 3 ditolak karena Harga jual kurang dari Rp 1.000.
+  - Langkah 4 ditolak karena Harga jual lebih dari Rp 499.000.
 - PRD: §3.2, §3.5
 
 **UAT-C5 — Harga di kartu Produk**
@@ -197,8 +199,11 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - Langkah:
   1. Checkout Uji Bayar dengan Email A sampai halaman bayar.
   2. Buka tab baru, lalu checkout Netflix Premium dengan `EMAIL-A` yang ditulis huruf besar.
-  3. Batalkan Pesanan Email A.
-- Hasil: langkah 2 diarahkan ke Pesanan Email A yang masih menunggu, dengan pilihan untuk membatalkannya.
+  3. Di browser lain, misalnya di laptop, checkout Netflix Premium dengan Email A.
+  4. Batalkan Pesanan Email A dari browser pertama.
+- Hasil:
+  - Langkah 2 diarahkan ke Pesanan Email A yang masih menunggu, dengan pilihan untuk membatalkannya.
+  - Langkah 3 ditolak dengan pesan bahwa email ini masih punya Pesanan yang menunggu pembayaran, beserta jam kedaluwarsanya. Pesan itu tidak memuat tautan ke Pesanan dan tidak punya tombol batal.
 - PRD: §5.4, §7.4
 
 **UAT-E3 — Halaman bayar di ponsel**
@@ -544,7 +549,7 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 
 | Milestone | Skenario |
 |---|---|
-| M1 | A1, B1, B2, C1–C6, D1–D3, E1, E2, E4–E7, F1, F2, I3, I4, I5, K1, K5, L1. Lewati bagian yang memakai Voucher atau Member: langkah Voucher di E3, dan pengecekan Riwayat Pesanan di C6 |
+| M1 | A1, B1, B2, C1–C6, D1–D3, E1, E2, E4–E7, F1, F2, I3, I4, I5, K1, K5, L1. Lewati bagian yang memakai Voucher atau Member: langkah Voucher di E3, pengecekan Riwayat Pesanan di C6, langkah 2 di B1, langkah 2 di K1, dan isian Ambang stok menipis. Di E6, ganti pengecekan kartu "Bermasalah" dengan jumlah Pesanan Bermasalah di daftar Pesanan dasbor admin. Di K1, tab Riwayat untuk Tamu cukup menjelaskan Tautan Pesanan tanpa ajakan login, dan tab Akun berisi tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan Privasi (PRD §11.1) |
 | M2 | B3, E3, G1–G7, H1–H5, I1, I2, J1 |
 | M3 | K2, K3, K4 |
 

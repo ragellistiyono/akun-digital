@@ -1,7 +1,7 @@
 {
   "aturan": "Aturan Harga jual dan Harga normal",
   "prd": "§3.2, §3.5",
-  "keterangan": "Harga jual minimal Rp 1.000 dan rupiah bulat. Harga normal opsional dan harus lebih besar dari Harga jual.",
+  "keterangan": "Harga jual minimal Rp 1.000, maksimal Rp 499.000 (▶ Keputusan 2026-11-11), dan rupiah bulat. Harga normal opsional, harus lebih besar dari Harga jual, dan tidak dibatasi maksimum.",
   "kasus": [
     {
       "nama": "Harga jual tepat minimum",
@@ -34,6 +34,39 @@
       "output": {
         "valid": false,
         "alasan": "harga-jual-kurang-dari-minimum"
+      }
+    },
+    {
+      "nama": "Harga jual tepat maksimum",
+      "input": {
+        "hargaJual": 499000,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": true,
+        "alasan": null
+      }
+    },
+    {
+      "nama": "Harga jual di atas maksimum",
+      "input": {
+        "hargaJual": 499001,
+        "hargaNormal": null
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-jual-lebih-dari-maksimum"
+      }
+    },
+    {
+      "nama": "Harga normal boleh di atas maksimum Harga jual",
+      "input": {
+        "hargaJual": 499000,
+        "hargaNormal": 600000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null
       }
     },
     {

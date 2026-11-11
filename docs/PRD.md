@@ -50,6 +50,8 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Boleh ada lebih dari satu Admin.
 - Aturan keamanan login di §7.7 juga berlaku untuk Admin.
 
+▶ Keputusan 2026-11-11: Admin tetap login selama 12 jam sejak login. Setelah itu Admin diminta login ulang, walaupun sedang aktif memakai dasbor admin. (Sebelumnya OD-2.)
+
 ### 2.3 Kewenangan Admin atas Member
 
 - Daftar Member menampilkan email, tanggal daftar, jumlah Pesanan Selesai, dan total belanja. Total belanja dihitung seperti Pendapatan (§9.3), dari Pesanan Member itu saja.
@@ -73,6 +75,11 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Produk yang hanya punya satu Varian tidak menampilkan pilihan Varian ke Pembeli.
 - Harga jual minimal Rp 1.000 dan berupa rupiah bulat, tanpa sen.
 - Format Item stok ditetapkan per Produk dan berlaku untuk semua Variannya (§4.1).
+
+▶ Keputusan 2026-11-11: Harga jual maksimal Rp 499.000. Form Admin menolak Harga jual di atasnya dan menampilkan pesan.
+- Alasannya, Qrispy hanya membuat QRIS sampai Rp 499.000 untuk merchant standar. Transaksi di atas itu juga dikenai biaya 0,7% yang ditambahkan ke tagihan Pembeli, padahal biaya itu tidak ada di rumus Total bayar (§5.5). Rinciannya ada di `docs/referensi/qrispy-api.md`.
+- Harga normal tidak dibatasi maksimum, karena hanya untuk tampilan (§3.5).
+- Contoh: Harga jual Rp 499.000 diterima, dan Rp 499.001 ditolak.
 
 ### 3.3 Halaman Produk
 
@@ -182,6 +189,12 @@ Saat menempel banyak baris:
 
 - Satu email hanya boleh punya 1 Pesanan Menunggu Pembayaran.
 - Bila Pembeli checkout lagi dengan email yang sama, ia diarahkan ke Pesanan yang masih menunggu. Ia boleh membatalkannya dulu, lalu checkout lagi.
+
+▶ Keputusan 2026-11-11: Pembeli hanya diarahkan ke Pesanan yang masih menunggu bila ia checkout dari browser tempat Pesanan itu dibuat. Alasannya, Item stok hanya boleh terlihat oleh orang yang membuat Pesanan.
+- Di browser lain, checkout ditolak dengan pesan "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul HH.MM WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu."
+- Pesan itu tidak memuat tautan ke Pesanan dan tidak punya tombol batal.
+- Setelah Pesanan itu Kedaluwarsa, paling lama 15 menit kemudian, email itu boleh checkout lagi dari browser mana pun.
+- Contoh: Andi checkout pukul 10.00 di ponselnya, dan QRIS-nya kedaluwarsa pukul 10.15. Pukul 10.05 Andi checkout lagi dari tab baru di ponsel yang sama, lalu diarahkan ke Pesanannya. Pukul 10.06 seseorang checkout dengan email Andi dari laptop lain, lalu melihat pesan "… sampai pukul 10.15 WIB …" tanpa tautan.
 
 ### 5.5 Total bayar dan Kode unik
 
@@ -300,6 +313,8 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 - Member login dengan email dan password. Password minimal 8 karakter.
 - Untuk lupa password, sistem mengirim tautan atur ulang ke email. Tautan itu berlaku 30 menit sejak dikirim dan hanya bisa dipakai sekali. Tepat 30 menit setelah dikirim, tautan sudah tidak berlaku.
 - Tidak ada login dengan Google atau layanan lain.
+
+▶ Keputusan 2026-11-11: Member tetap login selama 30 hari sejak login. Setelah itu Member diminta login ulang. (Sebelumnya OD-2.)
 
 ### 7.6 Dasbor Member
 
@@ -492,6 +507,13 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 - Di layar lebar, isi yang sama tampil sebagai navbar atas, dan navigasi bawah tidak tampil.
 - Dasbor admin memakai menu samping di layar lebar dan menu lipat di ponsel, tanpa navigasi bawah.
 
+▶ Keputusan 2026-11-11: Sebelum M2, keempat tab sudah tampil dengan isi berikut.
+- **Riwayat:** penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", tanpa ajakan login.
+- **Akun:** tombol kontak WhatsApp, serta tautan ke halaman Syarat & Ketentuan dan Kebijakan Privasi.
+- Bilah atas belum punya tombol Masuk.
+
+Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
+
 ### 11.2 Animasi navbar
 
 - Navbar atas mengecil dan mendapat bayangan saat halaman digulir.
@@ -529,3 +551,9 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 | M3 | Sentuhan aplikasi | Animasi navbar, mode gelap, dan pasang seperti aplikasi | §11.2–§11.4 |
 
 Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checkout belum punya isian kode voucher, dan halaman Pesanan belum menampilkan ajakan membuat akun.
+
+▶ Keputusan 2026-11-11: Isi M1 disesuaikan sebagai berikut.
+- Isian Ambang stok menipis di pengaturan toko (§9.8) pindah ke M2, bersama daftar Stok menipis (§9.4) yang memakainya.
+- M1 juga memuat data seed untuk UAT sesuai "Persiapan bersama" di `docs/UAT.md`, tanpa Member dan Voucher.
+- Pemasangan di VPS (§12) dikerjakan lewat dua tiket: penyiapan server, domain, dan akun layanan oleh pemilik, lalu deploy otomatis oleh agent.
+- Integrasi Qrispy mengikuti `docs/referensi/qrispy-api.md` dan ADR-0004.
