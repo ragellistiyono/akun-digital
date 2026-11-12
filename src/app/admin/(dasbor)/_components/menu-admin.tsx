@@ -6,7 +6,9 @@ import {
   LogOut,
   Menu,
   Package,
+  ReceiptText,
   Settings,
+  TriangleAlert,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -24,14 +26,34 @@ type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 // Isi menu bertambah bersama halaman dasbor admin di tiket berikutnya (PRD §9).
 const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/ringkasan", label: "Ringkasan", ikon: LayoutDashboard },
+  { href: "/admin/pesanan", label: "Pesanan", ikon: ReceiptText },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
   { href: "/admin/produk", label: "Produk", ikon: Package },
   { href: "/admin/pengaturan", label: "Pengaturan toko", ikon: Settings },
 ];
 
+/**
+ * Jumlah Pesanan Bermasalah di samping menu Pesanan (PRD §5.9), sebagai pil dengan ikon, angka, dan label
+ * untuk pembaca layar, supaya tidak tampil hanya sebagai warna (DESIGN.md Status Pesanan).
+ */
+function JumlahBermasalah({ jumlah }: { jumlah: number }) {
+  return (
+    <span className="ml-auto inline-flex h-7 items-center gap-1 rounded-full bg-st-masalah-bg pr-3 pl-2 text-[13px] font-bold text-st-masalah">
+      <TriangleAlert aria-hidden="true" className="size-4" strokeWidth={2.4} />
+      {jumlah}
+      <span className="sr-only"> Pesanan Bermasalah</span>
+    </span>
+  );
+}
+
 // Kerangka menu dasbor admin (PRD §11.1, DESIGN.md Navigation): menu lipat di bawah 900 px,
-// menu samping mulai 900 px. Dasbor admin tidak memakai navigasi bawah toko.
-export function MenuAdmin() {
+// menu samping mulai 900 px. Dasbor admin tidak memakai navigasi bawah toko. Menu Pesanan menampilkan
+// jumlah Pesanan Bermasalah bila ada (PRD §5.9).
+export function MenuAdmin({
+  jumlahPesananBermasalah,
+}: {
+  jumlahPesananBermasalah: number;
+}) {
   const pathname = usePathname();
   const [terbuka, setTerbuka] = useState(false);
 
@@ -81,6 +103,9 @@ export function MenuAdmin() {
                 >
                   <Ikon aria-hidden="true" className="size-6" />
                   {label}
+                  {href === "/admin/pesanan" && jumlahPesananBermasalah > 0 && (
+                    <JumlahBermasalah jumlah={jumlahPesananBermasalah} />
+                  )}
                 </Link>
               </li>
             );
