@@ -21,6 +21,7 @@ import { jadwalKedaluwarsaPesanan } from "./pekerjaan-latar";
 import { batalkanPesanan } from "./pembatalan-pesanan";
 import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
+import { qrispySungguhan } from "./qrispy-sungguhan";
 import { qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanPesanan } from "./uji-pesanan";
@@ -524,6 +525,94 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
 
 // PRD §5.4 ▶ Keputusan 2026-11-11: satu email hanya boleh punya 1 Pesanan Menunggu Pembayaran, dengan email
 // dibandingkan menurut §7.4. Browser tempat Pesanan dibuat memegang Tautan Pesanan-nya.
+// ADR-0004 dan issue T30: checkout dengan Qrispy sungguhan, yang fetch-nya disuntikkan dan menjawab dengan
+// contoh respons dari docs/referensi/qrispy-api.md. Qrispy sungguhan tidak pernah dipanggil; alamat dan
+// token di bawah hanya untuk test.
+describe("buatPesanan dengan Qrispy sungguhan (ADR-0004)", () => {
+  /** Qrispy sungguhan yang setiap permintaannya dijawab fetch tiruan dengan jawaban itu. */
+  const qrispySungguhanUji = (jawaban: () => Response) =>
+    qrispySungguhan({
+      alamatDasar: "https://qrispy.uji.example",
+      token: "token-uji-bukan-token-asli-9Hc4Lp",
+      fetch: async () => jawaban(),
+    });
+
+  it("contoh respons 201 menjadi Pesanan dengan Kode unik Rp 123, Total bayar Rp 50.123, dan waktu kedaluwarsa dari Qrispy", async () => {
+    const netflix = await netflixPremium();
+    const email = emailUnik();
+    // qris_id contoh diganti yang acak, karena database ini dipakai bersama run sebelumnya.
+    const qrisId = randomUUID();
+    const qrispy = qrispySungguhanUji(() =>
+      Response.json(
+        {
+          status: "success",
+          data: {
+            qris_id: qrisId,
+            qris_image_url: `https://api.qrispy.id/api/public/qris/${qrisId}.png`,
+            qris_image_base64: "data:image/png;base64,iVBORw0KGgo=",
+            amount: 50123,
+            requested_amount: 50000,
+            unique_id: 123,
+            expired_at: "2026-03-09T14:00:00+07:00",
+            expires_in_seconds: 900,
+            checkout_url: `https://qrispy.id/payment/${qrisId}`,
+            payment_reference: "MIWE-7K3P9Q",
+            return_url: null,
+          },
+        },
+        { status: 201 },
+      ),
+    );
+
+    const hasil = await buatPesanan(
+      { varianId: netflix.satuBulan, email },
+      { qrispy },
+    );
+
+    expect(hasil).toEqual({ hasil: "dibuat", tautan: expect.any(String) });
+    const tersimpan = await pesananDenganEmail(email);
+    expect(tersimpan).toHaveLength(1);
+    expect(tersimpan[0]).toMatchObject({
+      qrisId,
+      hargaJual: 50000,
+      potonganVoucher: 0,
+      kodeUnik: 123,
+      totalBayar: 50123,
+      kedaluwarsaPada: new Date("2026-03-09T14:00:00+07:00"),
+      gambarQr: "data:image/png;base64,iVBORw0KGgo=",
+    });
+  });
+
+  // Pesan 400 diambil dari contoh batas nominal di referensi bagian 3; pesan lainnya sintetis.
+  for (const [kode, pesan] of [
+    [400, "Maximum QRIS amount is Rp 499,000 for security purposes."],
+    [401, "Invalid API token."],
+    [429, "Too many requests."],
+    [500, "Internal server error."],
+  ] as const) {
+    it(`HTTP ${kode} dari Qrispy: checkout gagal, tanpa Pesanan baru dan tanpa Item stok yang ditahan`, async () => {
+      const produkId = await sisipkanProduk({
+        nama: `Canva Pro ${akhiran()}`,
+        varian: [{ nama: "1 Tahun", hargaJual: 500000, Tersedia: 2 }],
+      });
+      const [{ id: varianId }] = await db
+        .select({ id: varian.id })
+        .from(varian)
+        .where(eq(varian.produkId, produkId));
+      const email = emailUnik();
+      const qrispy = qrispySungguhanUji(() =>
+        Response.json({ status: "error", message: pesan }, { status: kode }),
+      );
+
+      const hasil = await buatPesanan({ varianId, email }, { qrispy });
+
+      expect(hasil).toEqual({ hasil: "qris-gagal" });
+      expect(await pesananDenganEmail(email)).toEqual([]);
+      expect((await bacaStokVarian(varianId)).stokVarian).toBe(2);
+    });
+  }
+});
+
 describe("buatPesanan dengan email yang masih punya Pesanan Menunggu Pembayaran (PRD §5.4)", () => {
   /** Checkout Netflix Premium 1 Bulan sampai Pesanan Menunggu Pembayaran dengan waktu kedaluwarsa 10.15 WIB dibuat. */
   async function checkoutPertama(email: string) {
