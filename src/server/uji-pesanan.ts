@@ -22,9 +22,10 @@ type ItemStokPesananUji = {
 /**
  * Menyisipkan Pesanan sebuah Varian dengan status itu, dan bila diminta satu Item stok yang tertaut ke
  * Pesanan itu. Rinciannya contoh PRD §5.5: Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik
- * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, dan emailnya acak, kecuali diatur
- * lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis seperti saat checkout,
- * yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Hasilnya id, Tautan Pesanan, dan Nomor Pesanan-nya.
+ * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, serta email dan Nomor Pesanan-nya
+ * acak, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
+ * seperti saat checkout, yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Hasilnya id, Tautan Pesanan,
+ * dan Nomor Pesanan-nya.
  */
 export async function sisipkanPesanan({
   varianId,
@@ -32,6 +33,7 @@ export async function sisipkanPesanan({
   itemStok: item,
   kedaluwarsaPada = new Date(Date.now() + 15 * 60 * 1000),
   email = `budi-${randomUUID()}@example.test`,
+  nomorPesanan: nomor = nomorPesanan(randomBytes(6)),
   dibuatPada,
   emailGagal = false,
 }: {
@@ -40,11 +42,11 @@ export async function sisipkanPesanan({
   itemStok?: ItemStokPesananUji;
   kedaluwarsaPada?: Date;
   email?: string;
+  nomorPesanan?: string;
   dibuatPada?: Date;
   emailGagal?: boolean;
 }) {
   const tautan = randomBytes(32).toString("base64url");
-  const nomor = nomorPesanan(randomBytes(6));
   const [{ id }] = await db
     .insert(pesanan)
     .values({
