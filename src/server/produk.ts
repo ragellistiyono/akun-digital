@@ -1,7 +1,13 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
+
+import {
+  bolehUbahFormatItemStok,
+  perubahanFormatItemStok,
+  type KolomFormatBaru,
+} from "@/domain/format-item-stok";
 
 import { db } from "./db";
-import { kategori, produk } from "./db/schema";
+import { itemStok, kategori, produk, varian } from "./db/schema";
 
 /** Isian Produk yang diisi Admin di form, baik saat membuat maupun mengubah (PRD §3.2, §3.3). */
 type IsianProduk = {
@@ -58,7 +64,7 @@ export async function buatProduk(
 
 /**
  * Mengubah isian Produk, termasuk Kategori, tanda Produk Unggulan, dan aktif atau nonaktif. Format
- * Item stok tidak ikut diubah; aturan mengubahnya dibuat di T28.
+ * Item stok tidak ikut diubah; Format Item stok diubah lewat ubahFormatItemStok.
  */
 export async function ubahProduk({
   id,
@@ -75,4 +81,69 @@ export async function ubahProduk({
   return diubah.length > 0
     ? ({ hasil: "diubah" } as const)
     : ({ hasil: "tidak-ada" } as const);
+}
+
+/**
+ * Mengubah Format Item stok sebuah Produk (PRD §4.1) menjadi Format baru yang nama kolomnya sudah diperiksa
+ * (periksaFormatItemStok). Perubahannya dikenali perubahanFormatItemStok, lalu setiap perubahan diperiksa
+ * bolehUbahFormatItemStok menurut jumlah Item stok Tersedia dan Ditahan di semua Varian Produk itu. Bila ada
+ * perubahan yang tidak boleh, Format tidak berubah sama sekali, dan hasilnya memuat perubahan yang ditolak
+ * beserta jumlah itu sebagai sebabnya. Item stok Terkirim tidak ikut diubah, karena tampil dengan nama kolom
+ * yang dicatat saat Terkirim.
+ *
+ * Baris Produk dikunci FOR UPDATE lebih dulu, baru Item stok-nya dihitung, supaya Item stok Tersedia yang
+ * muncul di tengah jalan tidak terlewat:
+ * - Pengisian Item stok (isiVarian di item-stok.ts) juga mengunci baris Produk itu dengan FOR UPDATE sebelum
+ *   membaca Format dan menyimpan Item stok. Jadi pengisian yang lebih dulu membuat transaksi ini menunggu,
+ *   lalu Item stok barunya ikut terhitung; pengisian yang datang belakangan menunggu transaksi ini selesai,
+ *   lalu memakai Format barunya.
+ * - Checkout hanya memindahkan Item stok Tersedia menjadi Ditahan, dan pembatalan atau kedaluwarsa
+ *   sebaliknya, padahal keduanya sama-sama dihitung. Perubahan status yang belum selesai terlihat dengan
+ *   status lamanya, jadi Item stok yang sedang dikirim masih dihitung Tersedia atau Ditahan, dan penolakannya
+ *   berpihak pada keamanan isi Item stok.
+ */
+export async function ubahFormatItemStok({
+  produkId,
+  formatBaru,
+}: {
+  produkId: string;
+  formatBaru: KolomFormatBaru[];
+}) {
+  return db.transaction(async (tx) => {
+    const [terkunci] = await tx
+      .select({ formatItemStok: produk.formatItemStok })
+      .from(produk)
+      .where(eq(produk.id, produkId))
+      .for("update");
+    if (!terkunci) return { hasil: "tidak-ada" } as const;
+
+    const jumlahPerStatus = { Tersedia: 0, Ditahan: 0, Terkirim: 0 };
+    const semua = await tx
+      .select({ status: itemStok.status, jumlah: count() })
+      .from(itemStok)
+      .innerJoin(varian, eq(itemStok.varianId, varian.id))
+      .where(eq(varian.produkId, produkId))
+      .groupBy(itemStok.status);
+    for (const { status, jumlah } of semua) jumlahPerStatus[status] = jumlah;
+    const bahan = {
+      jumlahTersedia: jumlahPerStatus.Tersedia,
+      jumlahDitahan: jumlahPerStatus.Ditahan,
+    };
+
+    const ditolak = perubahanFormatItemStok({
+      formatLama: terkunci.formatItemStok,
+      formatBaru,
+    }).filter(
+      (perubahan) => !bolehUbahFormatItemStok({ perubahan, ...bahan }).boleh,
+    );
+    if (ditolak.length > 0) {
+      return { hasil: "tidak-boleh", ditolak, ...bahan } as const;
+    }
+
+    await tx
+      .update(produk)
+      .set({ formatItemStok: formatBaru.map((kolom) => kolom.nama) })
+      .where(eq(produk.id, produkId));
+    return { hasil: "diubah" } as const;
+  });
 }
