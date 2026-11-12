@@ -183,7 +183,13 @@ function TabelPesanan({
                 scope="row"
                 className="py-3 pr-4 font-mono text-[13px] font-bold whitespace-nowrap"
               >
-                {satu.nomorPesanan}
+                {/* Nomor Pesanan membuka detail Pesanan (PRD §9.5). */}
+                <Link
+                  href={`${ALAMAT}/${satu.nomorPesanan}`}
+                  className="inline-flex min-h-6 items-center text-aksi-teks underline-offset-2 hover:underline"
+                >
+                  {satu.nomorPesanan}
+                </Link>
               </th>
               <td className="py-3 pr-4 whitespace-nowrap">
                 {satu.waktuDibuat ? waktuWib(satu.waktuDibuat) : "—"}
