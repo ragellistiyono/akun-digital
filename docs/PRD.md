@@ -303,6 +303,10 @@ Satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabar pembayarannya 
 - Bila Qrispy menolak pembatalan karena tagihan sudah dibayar, Pembeli melihat Halaman Pesanan Selesai disertai pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan."
 - Saat waktu kedaluwarsa tercapai, toko memeriksa status QRIS ke Qrispy sekali. Bila pemeriksaan itu gagal, misalnya Qrispy tidak menjawab, Pesanan tetap menjadi Kedaluwarsa tepat waktu. Pembayaran yang ternyata sudah masuk diproses belakangan sebagai kabar terlambat (§5.9).
 
+▶ Keputusan 2026-11-12 (#99):
+- Pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan." hanya tampil di Halaman Pesanan Selesai, tepat setelah Pembeli menekan "Batalkan". Bila pembayaran itu membuat Pesanan menjadi Bermasalah, misalnya karena nominalnya kurang, Pembeli melihat Halaman Pesanan Bermasalah tanpa pesan itu (§6.2).
+- Pesan yang sama juga tampil bila Pesanan sudah Selesai saat "Batalkan" diproses, misalnya karena pembayarannya tercatat beberapa detik lebih dulu. Pesanan itu tidak dibatalkan.
+
 ### 5.9 Pembayaran bermasalah
 
 1. **Kabar bayar datang untuk Pesanan yang sudah Kedaluwarsa atau Dibatalkan.** Bila Varian itu masih punya Stok Varian, Item stok dikirim seperti biasa dan Pesanan menjadi Selesai. Bila stok habis, Pesanan menjadi Bermasalah.

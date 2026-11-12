@@ -226,7 +226,7 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Langkah 4: Pesanan menjadi Dibatalkan, dan stok kembali seperti semula.
 - PRD: §5.3, §5.8
 
-Pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan." (§5.8 ▶ Keputusan 2026-11-12) diuji lewat test otomatis, karena pembayaran yang masuk tepat saat membatalkan sulit dibuat dengan sengaja.
+Pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan." (§5.8 ▶ Keputusan 2026-11-12) diuji lewat test otomatis, karena pembayaran yang masuk tepat saat membatalkan sulit dibuat dengan sengaja. Test itu juga mencakup Pesanan yang sudah Selesai saat "Batalkan" diproses, dan Pesanan yang berakhir Bermasalah tanpa pesan itu (§5.8 ▶ Keputusan 2026-11-12, #99).
 
 **UAT-E2 — Satu Pesanan menunggu per email**
 - Langkah:
@@ -274,9 +274,9 @@ Pengarahan ke Pesanan yang menunggu saat Stok Varian 0 (§5.4 ▶ Keputusan 2026
   1. Sebagai Admin, buka Pesanan Bermasalah pertama dari seed, koreksi emailnya menjadi Email A, lalu tekan "Kirim Item stok" dan tegaskan.
   2. Buka Pesanan Bermasalah kedua, tekan "Tandai Dana Dikembalikan", lalu tegaskan.
 - Hasil:
-  - Koreksi email Pesanan pertama tersimpan tanpa mengirim email.
+  - Koreksi email Pesanan pertama tersimpan tanpa mengirim email, dan panel "Koreksi email" menyatakan bahwa belum ada email yang dikirim.
   - Pesanan pertama menjadi Selesai, mendapat satu Item stok dari Varian yang sama, dan email "Pesanan selesai" terkirim ke Email A.
-  - Kedua aksi meminta penegasan sebelum dijalankan, dan tidak ada yang berubah bila Anda memilih Batal.
+  - Kedua aksi meminta penegasan sebelum dijalankan. Kalimat penegasannya menyebut akibat aksi dan bahwa aksi itu tidak bisa dibatalkan. Penegasan "Kirim Item stok" menyebut Email A sebagai tujuan email. Tidak ada yang berubah bila Anda memilih Batal.
   - Pesanan kedua menjadi Dana Dikembalikan.
   - Kartu "Bermasalah" di dasbor admin berkurang dua.
 - PRD: §5.7, §5.9, §6.4
