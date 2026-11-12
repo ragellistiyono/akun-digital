@@ -158,7 +158,8 @@ describe("pembatalan oleh Pembeli (PRD §5.8)", () => {
   });
 
   // PRD §5.8: bila Qrispy menolak pembatalan karena tagihannya sudah dibayar, Pesanan diproses sebagai
-  // sudah dibayar lewat pemroses kabar pembayaran.
+  // sudah dibayar lewat pemroses kabar pembayaran. Pembeli kembali ke Tautan Pesanan dengan tanda
+  // pembatalan sudah dibayar, supaya Halaman Pesanan Selesai menampilkan pesan penjelasnya (issue T20-b).
   it("bila Qrispy tiruan menolak pembatalan dan status QRIS paid, Pesanan diproses sebagai sudah dibayar dan menjadi Selesai", async () => {
     const varianId = await netflixSatuBulan(10);
     const dipesan = await checkout(varianId);
@@ -166,7 +167,7 @@ describe("pembatalan oleh Pembeli (PRD §5.8)", () => {
     bayarQrisTiruan({ qrisId: dipesan.qrisId, amount: dipesan.totalBayar });
 
     expect(await tekanBatalkan(dipesan.tautan)).toEqual({
-      alamat: `/pesanan/${dipesan.tautan}`,
+      alamat: `/pesanan/${dipesan.tautan}?pembatalan=sudah-dibayar`,
     });
 
     expect(await statusPesanan(dipesan.id)).toBe("Selesai");
