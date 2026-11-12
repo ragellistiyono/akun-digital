@@ -1,5 +1,6 @@
 // Pembatalan Pesanan oleh Pembeli (PRD §5.8, ADR-0004). Pesanan yang boleh dibatalkan ditentukan
 // perpindahanStatusPesanan di src/domain/status-pesanan.ts.
+import type { StatusPesanan } from "./status-pesanan";
 
 /** Status pembayaran QRIS menurut Qrispy (docs/referensi/qrispy-api.md bagian 4). */
 type StatusPembayaranQris = "pending" | "paid" | "expired" | "cancelled";
@@ -32,5 +33,31 @@ export function hasilPembatalanPesanan(jawaban: JawabanPembatalanQris): {
       return { akibat: "dibatalkan" };
     default:
       return { akibat: "gagal" };
+  }
+}
+
+/**
+ * Hasil "Batalkan" yang mengembalikan Pembeli ke Tautan Pesanan. Untuk Pesanan yang tidak bisa dibatalkan,
+ * `status` adalah Status Pesanan saat pembatalannya diproses.
+ */
+type PembatalanDiproses =
+  | { hasil: "dibatalkan" }
+  | { hasil: "diproses-sebagai-dibayar" }
+  | { hasil: "tidak-bisa-dibatalkan"; status: StatusPesanan };
+
+/**
+ * Apakah pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan." tampil tepat setelah Pembeli
+ * menekan "Batalkan" (PRD §5.8, ▶ Keputusan 2026-11-12 #87 dan #99). Pesan itu tampil bila pembatalannya
+ * diproses sebagai sudah dibayar, atau bila Pesanan sudah Selesai saat pembatalannya diproses. Pesanan
+ * yang Dibatalkan, dan Pesanan yang sudah berstatus lain, termasuk Bermasalah, tampil tanpa pesan itu.
+ */
+export function pesanSudahDibayarTampil(pembatalan: PembatalanDiproses) {
+  switch (pembatalan.hasil) {
+    case "diproses-sebagai-dibayar":
+      return true;
+    case "tidak-bisa-dibatalkan":
+      return pembatalan.status === "Selesai";
+    case "dibatalkan":
+      return false;
   }
 }

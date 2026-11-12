@@ -2,6 +2,7 @@
 
 import { redirect, RedirectType } from "next/navigation";
 
+import { pesanSudahDibayarTampil } from "@/domain/pembatalan-pesanan";
 import { batalkanPesanan } from "@/server/pembatalan-pesanan";
 import { TautanPesanan } from "@/server/pesanan";
 
@@ -18,8 +19,8 @@ const PESAN_GAGAL =
 /**
  * Tombol "Batalkan" di Halaman bayar (PRD §5.6, §5.8): Pembeli membatalkan Pesanan di Tautan Pesanan itu.
  * Setelah Pesanan Dibatalkan, diproses sebagai sudah dibayar, atau ternyata sudah tidak Menunggu
- * Pembayaran, halaman di Tautan Pesanan itu dibuka lagi dengan status terbarunya. Pesanan yang diproses
- * sebagai sudah dibayar, atau yang sudah Selesai saat pembatalannya diproses, dibuka dengan tanda di
+ * Pembayaran, halaman di Tautan Pesanan itu dibuka lagi dengan status terbarunya. Bila
+ * pesanSudahDibayarTampil menentukan pesan sudah dibayar tampil, halaman itu dibuka dengan tanda di
  * alamatnya, supaya Halaman Pesanan Selesai menjelaskan kenapa Pesanan tidak dibatalkan (▶ Keputusan
  * 2026-11-12 #87 dan #99). Bila pembatalannya gagal, Pembeli melihat pesan gagal dan Pesanan tetap
  * Menunggu Pembayaran.
@@ -39,11 +40,7 @@ export async function aksiBatalkanPesanan(
   }
   if (pembatalan.hasil === "gagal") return { galat: PESAN_GAGAL };
   // Halaman yang sama dibuat ulang di server tanpa menambah riwayat browser.
-  const sudahDibayar =
-    pembatalan.hasil === "diproses-sebagai-dibayar" ||
-    (pembatalan.hasil === "tidak-bisa-dibatalkan" &&
-      pembatalan.status === "Selesai");
-  const tanda = sudahDibayar
+  const tanda = pesanSudahDibayarTampil(pembatalan)
     ? `?${TANDA_SUDAH_DIBAYAR.nama}=${TANDA_SUDAH_DIBAYAR.nilai}`
     : "";
   redirect(`/pesanan/${tautan.data}${tanda}`, RedirectType.replace);
