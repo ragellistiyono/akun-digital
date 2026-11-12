@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { z } from "zod";
 
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import { rupiah } from "@/lib/rupiah";
@@ -228,9 +229,9 @@ export default async function HalamanTautanPesanan({
   await connection();
   const tautan = TautanPesanan.safeParse((await params).tautan);
   if (!tautan.success) notFound();
-  const setelahPembatalanSudahDibayar =
-    (await searchParams)[TANDA_SUDAH_DIBAYAR.nama] ===
-    TANDA_SUDAH_DIBAYAR.nilai;
+  const setelahPembatalanSudahDibayar = z
+    .literal(TANDA_SUDAH_DIBAYAR.nilai)
+    .safeParse((await searchParams)[TANDA_SUDAH_DIBAYAR.nama]).success;
 
   // Jalur cek status (ADR-0004): kabar pembayaran dari Qrispy diproses sebelum Pesanan dibaca.
   await cekStatusPembayaran(tautan.data);
