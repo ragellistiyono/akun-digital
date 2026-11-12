@@ -1,12 +1,14 @@
 "use server";
 
-import { refresh } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import { CARA_PENYELESAIAN } from "@/domain/penyelesaian-bermasalah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { kirimUlangEmailPesanan } from "@/server/detail-pesanan";
+import { selesaikanPesananBermasalah } from "@/server/penyelesaian-bermasalah";
 
 /** Hasil kirim ulang email "Pesanan selesai" untuk ditampilkan di detail Pesanan. */
 export type KeadaanKirimUlangEmail = { pesan?: string; galat?: string };
@@ -20,6 +22,9 @@ export type KeadaanKoreksiEmail = {
   pesan?: string;
   galat?: string;
 };
+
+/** Hasil Kirim Item stok atau Tandai Dana Dikembalikan yang ditolak, untuk ditampilkan di detail Pesanan. */
+export type KeadaanPenyelesaianBermasalah = { galat?: string };
 
 /** Pesanan yang dipilih, dari form. Pesanan dengan id yang tidak sah pasti tidak ada. */
 function bacaPesananId(formData: FormData) {
@@ -106,5 +111,48 @@ export async function aksiKoreksiEmail(
         email: hasil.email,
         pesan: `Email Pesanan diganti menjadi ${hasil.email}, dan email "Pesanan selesai" sedang dikirim ke alamat itu. ${KETERANGAN_GAGAL}`,
       };
+  }
+}
+
+/** Cara penyelesaian dari tombol yang ditekan, yaitu "Kirim Item stok" atau "Tandai Dana Dikembalikan". */
+const CaraPenyelesaian = z.enum(CARA_PENYELESAIAN);
+
+const PESAN_CARA_TIDAK_DIKENAL =
+  'Pilihan penyelesaian tidak dikenal, jadi Pesanan ini tidak diubah. Muat ulang halaman, lalu tekan "Kirim Item stok" atau "Tandai Dana Dikembalikan".';
+
+const PESAN_STOK_HABIS =
+  'Item stok tidak dikirim, karena Stok Varian Pesanan ini 0, jadi Pesanan tetap Bermasalah. Isi Item stok Varian itu dulu di menu Produk, lalu tekan "Kirim Item stok" lagi. Item stok dari Varian lain tidak bisa dipakai.';
+
+/** Pesan bila penyelesaian tidak tersedia untuk Pesanan berstatus itu (penyelesaianBermasalahTersedia). */
+const pesanPenyelesaianTidakTersedia = (status: string) =>
+  `Pesanan ini tidak diubah, karena berstatus ${status}, padahal "Kirim Item stok" dan "Tandai Dana Dikembalikan" hanya tersedia untuk Pesanan Bermasalah. Muat ulang halaman untuk melihat status terbarunya.`;
+
+export async function aksiSelesaikanBermasalah(
+  _sebelumnya: KeadaanPenyelesaianBermasalah,
+  formData: FormData,
+): Promise<KeadaanPenyelesaianBermasalah> {
+  await wajibSesiAdmin(await headers());
+
+  const pesananId = bacaPesananId(formData);
+  const cara = CaraPenyelesaian.safeParse(formData.get("cara"));
+  if (!cara.success) return { galat: PESAN_CARA_TIDAK_DIKENAL };
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menyelesaikan.
+  const hasil = await selesaikanPesananBermasalah({
+    pesananId,
+    cara: cara.data,
+  });
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      notFound();
+    case "tidak-tersedia":
+      return { galat: pesanPenyelesaianTidakTersedia(hasil.status) };
+    case "stok-habis":
+      return { galat: PESAN_STOK_HABIS };
+    case "diselesaikan":
+      // Detail Pesanan dibuat ulang dengan status barunya, begitu pula jumlah Pesanan Bermasalah di menu,
+      // yang dihitung di layout dasbor admin.
+      revalidatePath("/admin", "layout");
+      return {};
   }
 }
