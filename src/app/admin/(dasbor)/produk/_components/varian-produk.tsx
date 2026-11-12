@@ -15,8 +15,10 @@ import {
   KELAS_TOMBOL_GARIS,
   KotakCentang,
 } from "../../_components/isian-form";
+import { PenegasanHapus } from "../../_components/penegasan-hapus";
 import { PilAktif } from "../../_components/pil";
 import {
+  aksiHapusVarian,
   aksiTambahVarian,
   aksiUbahVarian,
   type KeadaanFormVarian,
@@ -147,7 +149,10 @@ function FormVarian({
   );
 }
 
-/** Satu Varian di daftar: nama, harga, dan keadaannya, atau form ubahnya saat Admin memilih Ubah. */
+/**
+ * Satu Varian di daftar: nama, harga, dan keadaannya, atau form ubahnya saat Admin memilih Ubah. Hapus
+ * meminta penegasan lebih dulu, dan server menolak Varian yang sudah pernah dipesan (PRD §3.7).
+ */
 function BarisVarian({
   produkId,
   varian,
@@ -196,6 +201,18 @@ function BarisVarian({
         >
           Ubah<span className="sr-only"> Varian {varian.nama}</span>
         </button>
+        <PenegasanHapus
+          aksi={aksiHapusVarian}
+          isian={{ produkId, id: varian.id }}
+          nama={`Varian ${varian.nama}`}
+          akibat="Item stok Varian ini ikut terhapus dan tidak bisa dikembalikan."
+          tombol={
+            <>
+              Hapus<span className="sr-only"> Varian {varian.nama}</span>
+            </>
+          }
+          idGalat={`varian-${varian.id}-galat-hapus`}
+        />
       </div>
     </li>
   );

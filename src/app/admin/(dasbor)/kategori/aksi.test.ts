@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { koneksi } from "@/server/db";
 import { buatKategori, daftarKategori } from "@/server/kategori";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
+import { sisipkanProduk } from "@/server/uji-katalog";
 import {
   adaBerkasBerisi,
   FOLDER_UNGGAHAN_TEST,
@@ -15,7 +16,7 @@ import {
   pngUnik,
 } from "@/server/uji-unggahan";
 
-import { aksiBuatKategori, aksiUbahKategori } from "./aksi";
+import { aksiBuatKategori, aksiHapusKategori, aksiUbahKategori } from "./aksi";
 
 // Test integrasi Server Action dengan database app_test dan folder unggahan dari .env.ci. Header
 // permintaan yang dibaca aksi lewat next/headers diganti dengan cookie milik pengunjung di setiap test.
@@ -373,6 +374,66 @@ describe("mengubah Kategori (PRD §3.1)", () => {
           formulir({ id, nama: namaUnik("Film") }),
         ),
       ).rejects.toSatisfy(tidakDitemukan);
+    });
+  }
+});
+
+// Issue T29 (PRD §3.1): Kategori hanya bisa dihapus bila tidak berisi Produk, termasuk Produk nonaktif.
+describe("menghapus Kategori (PRD §3.1)", () => {
+  it("Tamu tanpa sesi Admin diarahkan ke halaman login, dan Kategori yang kosong tetap ada", async () => {
+    const kosong = await kategoriAda(namaUnik("Film"));
+    sebagaiPengunjung(new Headers());
+
+    await expect(
+      aksiHapusKategori({}, formulir({ id: kosong.id })),
+    ).rejects.toSatisfy(arahKe("/admin"));
+
+    expect(await kategoriBernama(kosong.nama)).toEqual([kosong]);
+  });
+
+  it("menghapus Kategori Game yang berisi Produk nonaktif ditolak dengan pesan untuk memindahkan Produknya, dan Kategori tetap ada (UAT-C6 langkah 1)", async () => {
+    const game = await kategoriAda(namaUnik("Game"));
+    await sisipkanProduk({
+      nama: namaUnik("Game Lama"),
+      kategoriId: game.id,
+      aktif: false,
+      varian: [{ nama: "1 Bulan", hargaJual: 15000, Tersedia: 2 }],
+    });
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    expect(await aksiHapusKategori({}, formulir({ id: game.id }))).toEqual({
+      galat:
+        "Kategori ini tidak bisa dihapus, karena masih berisi 1 Produk. Produk nonaktif juga dihitung. Pindahkan Produknya ke Kategori lain dulu di halaman Ubah Produk, lalu hapus Kategori ini lagi.",
+    });
+
+    expect(await kategoriBernama(game.nama)).toEqual([game]);
+  });
+
+  it("Admin menghapus Kategori yang kosong, berkas ikonnya ikut terhapus, lalu dibawa ke daftar Kategori", async () => {
+    const isi = pngUnik();
+    const nama = namaUnik("Film");
+    await buatKategori({
+      nama,
+      ikon: new File([isi], "ikon.png", { type: "image/png" }),
+    });
+    const [film] = await kategoriBernama(nama);
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiHapusKategori({}, formulir({ id: film.id })),
+    ).rejects.toSatisfy(arahKe("/admin/kategori"));
+
+    expect(await kategoriBernama(nama)).toEqual([]);
+    expect(await adaBerkasBerisi(isi)).toBe(false);
+  });
+
+  for (const id of ["00000000-0000-4000-8000-000000000000", "bukan-id"]) {
+    it(`Kategori "${id}" yang tidak ada menghasilkan halaman tidak ditemukan`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      await expect(aksiHapusKategori({}, formulir({ id }))).rejects.toSatisfy(
+        tidakDitemukan,
+      );
     });
   }
 });

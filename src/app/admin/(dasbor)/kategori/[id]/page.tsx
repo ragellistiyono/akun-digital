@@ -6,9 +6,11 @@ import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { BATAS_UKURAN_GAMBAR_MB } from "@/server/berkas-unggahan";
 import { bacaKategori } from "@/server/kategori";
 
+import { PanelHapus } from "../../_components/penegasan-hapus";
 import { FormKategori } from "../_components/form-kategori";
+import { aksiHapusKategori } from "../aksi";
 
-// Mengubah nama dan gambar ikon sebuah Kategori (PRD §3.1).
+// Mengubah nama dan gambar ikon sebuah Kategori, dan menghapus Kategori yang tidak berisi Produk (PRD §3.1).
 export default async function HalamanUbahKategori({
   params,
 }: PageProps<"/admin/kategori/[id]">) {
@@ -24,6 +26,14 @@ export default async function HalamanUbahKategori({
       <FormKategori
         kategori={kategori}
         batasUkuranMb={BATAS_UKURAN_GAMBAR_MB}
+      />
+      <PanelHapus
+        judul="Hapus Kategori"
+        keterangan="Kategori hanya bisa dihapus bila tidak berisi Produk, termasuk Produk nonaktif. Gambar ikonnya ikut terhapus."
+        aksi={aksiHapusKategori}
+        isian={{ id: kategori.id }}
+        nama={`Kategori ${kategori.nama}`}
+        akibat="Kategori dan gambar ikonnya tidak bisa dikembalikan."
       />
     </>
   );
