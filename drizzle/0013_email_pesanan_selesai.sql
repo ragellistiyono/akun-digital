@@ -1,0 +1,1 @@
+ALTER TABLE "pesanan" ADD COLUMN "email_gagal" boolean DEFAULT false NOT NULL;
