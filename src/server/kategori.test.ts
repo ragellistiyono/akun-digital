@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { koneksi } from "./db";
-import { buatKategori, daftarKategori, ubahKategori } from "./kategori";
+import {
+  buatKategori,
+  daftarKategori,
+  hapusKategori,
+  ubahKategori,
+} from "./kategori";
+import { sisipkanProduk } from "./uji-katalog";
 import { adaBerkasBerisi, pngUnik } from "./uji-unggahan";
 
 // Test integrasi dengan database app_test dan folder unggahan dari .env.ci. PostgreSQL menolak teks
@@ -128,5 +134,65 @@ describe("berkas ikon saat Kategori tidak bisa ditulis", () => {
     ).toEqual({ hasil: "tidak-ada" });
 
     expect(await adaBerkasBerisi(isi)).toBe(false);
+  });
+});
+
+// Issue T29 (PRD §3.1): Kategori yang masih berisi Produk, termasuk Produk nonaktif, tidak bisa dihapus.
+describe("hapusKategori", () => {
+  it("Kategori Game yang berisi Produk nonaktif ditolak, dan Kategori beserta ikonnya tetap ada (UAT-C6 langkah 1)", async () => {
+    const isi = pngUnik();
+    const nama = namaUnik("Game");
+    await buatKategori({ nama, ikon: gambar(isi) });
+    const [game] = await kategoriBernama(nama);
+    await sisipkanProduk({
+      nama: namaUnik("Game Lama"),
+      kategoriId: game.id,
+      aktif: false,
+      varian: [{ nama: "1 Bulan", hargaJual: 15000, Tersedia: 2 }],
+    });
+
+    expect(await hapusKategori(game.id)).toEqual({
+      hasil: "berisi-produk",
+      jumlahProduk: 1,
+    });
+
+    expect(await kategoriBernama(nama)).toEqual([game]);
+    expect(await adaBerkasBerisi(isi)).toBe(true);
+  });
+
+  it("Kategori Streaming yang berisi Produk aktif ditolak dengan jumlah semua Produknya, termasuk yang nonaktif", async () => {
+    const nama = namaUnik("Streaming");
+    await buatKategori({ nama, ikon: gambar(pngUnik()) });
+    const [streaming] = await kategoriBernama(nama);
+    for (const aktif of [true, true, false]) {
+      await sisipkanProduk({
+        nama: namaUnik("Netflix Premium"),
+        kategoriId: streaming.id,
+        aktif,
+        varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+      });
+    }
+
+    expect(await hapusKategori(streaming.id)).toEqual({
+      hasil: "berisi-produk",
+      jumlahProduk: 3,
+    });
+    expect(await kategoriBernama(nama)).toEqual([streaming]);
+  });
+
+  it("Kategori yang kosong dihapus beserta berkas gambar ikonnya", async () => {
+    const isi = pngUnik();
+    const nama = namaUnik("Film");
+    await buatKategori({ nama, ikon: gambar(isi) });
+    const [film] = await kategoriBernama(nama);
+
+    expect(await hapusKategori(film.id)).toEqual({ hasil: "dihapus" });
+
+    expect(await kategoriBernama(nama)).toEqual([]);
+    expect(await adaBerkasBerisi(isi)).toBe(false);
+  });
+
+  it("Kategori yang tidak ada tidak menghapus apa pun", async () => {
+    expect(await hapusKategori(randomUUID())).toEqual({ hasil: "tidak-ada" });
   });
 });

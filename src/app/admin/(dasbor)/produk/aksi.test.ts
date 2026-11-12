@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { afterAll, describe, expect, it, vi } from "vitest";
@@ -16,7 +16,12 @@ import { isiItemStokUji, sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanPesanan } from "@/server/uji-pesanan";
 import { PNG } from "@/server/uji-unggahan";
 
-import { aksiBuatProduk, aksiUbahFormatItemStok, aksiUbahProduk } from "./aksi";
+import {
+  aksiBuatProduk,
+  aksiHapusProduk,
+  aksiUbahFormatItemStok,
+  aksiUbahProduk,
+} from "./aksi";
 
 // Test integrasi Server Action dengan database app_test dari .env.ci, termasuk ITEM_STOK_KEY khusus test.
 // Header permintaan yang dibaca aksi lewat next/headers diganti dengan cookie milik pengunjung di setiap
@@ -822,4 +827,75 @@ describe("mengubah Format Item stok (PRD §4.1, UAT-D2)", () => {
     expect(keadaan.galat?.pesan).toBe(pesanTidakBoleh("ditambah", 1, 0));
     expect(await formatSekarang(produkId)).toEqual(FORMAT);
   });
+});
+
+// Issue T29 (PRD §3.7): Produk hanya bisa dihapus bila belum pernah tercatat di Pesanan berstatus apa pun.
+describe("menghapus Produk (PRD §3.7)", () => {
+  /** Netflix Premium [CONTOH] dengan Varian 1 Bulan dan 3 Bulan beserta Item stok Tersedia-nya. */
+  async function netflixPremium() {
+    const nama = namaUnik("Netflix Premium");
+    const produkId = await sisipkanProduk({
+      nama,
+      formatItemStok: FORMAT,
+      varian: [
+        { nama: "1 Bulan", hargaJual: 50000, Tersedia: 10 },
+        { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4 },
+      ],
+    });
+    const [satuBulan] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(and(eq(varian.produkId, produkId), eq(varian.nama, "1 Bulan")));
+    return { produkId, nama, satuBulan: satuBulan.id };
+  }
+
+  const pesanTidakBolehHapus = (jumlah: number) =>
+    `Produk ini tidak bisa dihapus, karena sudah tercatat di ${jumlah} Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Produk ini saja: hapus centang Aktif di form Produk, lalu simpan. Produk nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.`;
+
+  it("Tamu tanpa sesi Admin diarahkan ke halaman login, dan Produk yang belum pernah dipesan tetap ada", async () => {
+    const { produkId } = await netflixPremium();
+    sebagaiPengunjung(new Headers());
+
+    await expect(
+      aksiHapusProduk({}, formulir({ id: produkId })),
+    ).rejects.toSatisfy(arahKe("/admin"));
+
+    expect(await bacaProduk(produkId)).not.toBeNull();
+  });
+
+  for (const status of ["Kedaluwarsa", "Dibatalkan"] as const) {
+    it(`menghapus Netflix Premium yang pernah dipesan, walaupun Pesanannya ${status}, ditolak dengan pesan untuk menonaktifkannya (UAT-C6 langkah 3)`, async () => {
+      const { produkId, satuBulan } = await netflixPremium();
+      await sisipkanPesanan({ varianId: satuBulan, status });
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      expect(await aksiHapusProduk({}, formulir({ id: produkId }))).toEqual({
+        galat: pesanTidakBolehHapus(1),
+      });
+
+      expect(await bacaProduk(produkId)).not.toBeNull();
+    });
+  }
+
+  it("Admin menghapus Produk yang belum pernah dipesan, lalu dibawa ke daftar Produk", async () => {
+    const { produkId, nama } = await netflixPremium();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiHapusProduk({}, formulir({ id: produkId })),
+    ).rejects.toSatisfy(arahKe("/admin/produk"));
+
+    expect(await bacaProduk(produkId)).toBeNull();
+    expect(await produkBernama(nama)).toEqual([]);
+  });
+
+  for (const id of ["00000000-0000-4000-8000-000000000000", "bukan-id"]) {
+    it(`Produk "${id}" yang tidak ada menghasilkan halaman tidak ditemukan`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      await expect(aksiHapusProduk({}, formulir({ id }))).rejects.toSatisfy(
+        tidakDitemukan,
+      );
+    });
+  }
 });

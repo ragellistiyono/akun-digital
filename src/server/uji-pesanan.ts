@@ -2,6 +2,8 @@
 // test integrasi dan test e2e.
 import { randomBytes, randomUUID } from "node:crypto";
 
+import { and, eq } from "drizzle-orm";
+
 import type { StatusItemStok } from "@/domain/item-stok";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import type { StatusPesanan } from "@/domain/status-pesanan";
@@ -79,4 +81,59 @@ export async function sisipkanPesanan({
     });
   }
   return { id, tautan, nomorPesanan: nomor };
+}
+
+/** Apakah janji itu selesai dalam `ms` milidetik. */
+export async function selesaiDalam(janji: Promise<unknown>, ms: number) {
+  return Promise.race([
+    janji.then(() => true),
+    new Promise<false>((selesai) => setTimeout(() => selesai(false), ms)),
+  ]);
+}
+
+/**
+ * Transaksi yang meniru checkout (buatPesanan di pesanan.ts) dengan urutan kunci yang sama: mengunci satu Item
+ * stok Tersedia FOR UPDATE SKIP LOCKED, menyimpan Pesanan Menunggu Pembayaran, lalu menahan Item stok itu.
+ * Transaksinya berhenti sebelum selesai sampai `lanjutkan` dipanggil, supaya test bisa menjalankan perubahan
+ * lain di tengah checkout, misalnya menghapus Produk atau Varian-nya.
+ */
+export function checkoutTertahan(varianId: string) {
+  let menahan = () => {};
+  let lanjutkan = () => {};
+  const sudahMenahan = new Promise<void>((r) => (menahan = r));
+  const izinLanjut = new Promise<void>((r) => (lanjutkan = r));
+  const selesai = db.transaction(async (tx) => {
+    const [tersedia] = await tx
+      .select({ id: itemStok.id })
+      .from(itemStok)
+      .where(
+        and(eq(itemStok.varianId, varianId), eq(itemStok.status, "Tersedia")),
+      )
+      .limit(1)
+      .for("update", { skipLocked: true });
+    const [{ id }] = await tx
+      .insert(pesanan)
+      .values({
+        nomorPesanan: nomorPesanan(randomBytes(6)),
+        tautan: randomBytes(32).toString("base64url"),
+        email: `budi-${randomUUID()}@example.test`,
+        varianId,
+        hargaJual: 50000,
+        potonganVoucher: 0,
+        kodeUnik: 123,
+        totalBayar: 50123,
+        qrisId: randomUUID(),
+        kedaluwarsaPada: new Date(Date.now() + 15 * 60 * 1000),
+        gambarQr: "data:image/png;base64,iVBORw0KGgo=",
+        status: "Menunggu Pembayaran",
+      })
+      .returning({ id: pesanan.id });
+    await tx
+      .update(itemStok)
+      .set({ status: "Ditahan", pesananId: id })
+      .where(eq(itemStok.id, tersedia.id));
+    menahan();
+    await izinLanjut;
+  });
+  return { sudahMenahan, lanjutkan, selesai };
 }

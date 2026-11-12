@@ -1,6 +1,7 @@
-import { asc, DrizzleQueryError, eq, ne } from "drizzle-orm";
+import { asc, count, DrizzleQueryError, eq, ne } from "drizzle-orm";
 import postgres from "postgres";
 
+import { bolehHapusKategori } from "@/domain/hapus-katalog";
 import { namaKategoriDipakai } from "@/domain/nama-kategori";
 
 import {
@@ -9,7 +10,7 @@ import {
   simpanGambar,
 } from "./berkas-unggahan";
 import { db } from "./db";
-import { kategori } from "./db/schema";
+import { kategori, produk } from "./db/schema";
 
 /** Kategori untuk ditampilkan: nama dan alamat gambar ikonnya. */
 export type Kategori = { id: string; nama: string; alamatIkon: string };
@@ -149,4 +150,51 @@ export async function ubahKategori({
   }
   if (ikonPengganti) await hapusBerkasUnggahan(hasil.ikonLama);
   return { hasil: "diubah" } as const;
+}
+
+/**
+ * Menghapus Kategori beserta berkas gambar ikonnya (PRD §3.1). Kategori yang masih berisi Produk, termasuk
+ * Produk nonaktif, tidak dihapus (bolehHapusKategori), dan hasilnya membawa jumlah Produk itu.
+ *
+ * Baris Kategori dikunci FOR UPDATE lebih dulu, baru Produknya dihitung. Produk yang dibuat di Kategori ini,
+ * atau dipindahkan ke Kategori ini, mengunci baris Kategori lewat foreign key-nya (FOR KEY SHARE), jadi
+ * penyimpanan seperti itu menunggu transaksi ini selesai, atau transaksi ini menunggu penyimpanan itu lalu
+ * ikut menghitung Produknya. Berkas ikon dihapus setelah Kategori terhapus dari database.
+ */
+export async function hapusKategori(id: string) {
+  const hasil = await db.transaction(async (tx) => {
+    const [terkunci] = await tx
+      .select({ ikon: kategori.ikon })
+      .from(kategori)
+      .where(eq(kategori.id, id))
+      .for("update");
+    if (!terkunci) return { hasil: "tidak-ada" } as const;
+
+    const jumlah = { aktif: 0, nonaktif: 0 };
+    const semua = await tx
+      .select({ aktif: produk.aktif, jumlah: count() })
+      .from(produk)
+      .where(eq(produk.kategoriId, id))
+      .groupBy(produk.aktif);
+    for (const baris of semua) {
+      jumlah[baris.aktif ? "aktif" : "nonaktif"] = baris.jumlah;
+    }
+    const boleh = bolehHapusKategori({
+      jumlahProdukAktif: jumlah.aktif,
+      jumlahProdukNonaktif: jumlah.nonaktif,
+    });
+    if (!boleh.boleh) {
+      return {
+        hasil: "berisi-produk",
+        jumlahProduk: boleh.jumlahProduk,
+      } as const;
+    }
+
+    await tx.delete(kategori).where(eq(kategori.id, id));
+    return { hasil: "dihapus", ikon: terkunci.ikon } as const;
+  });
+
+  if (hasil.hasil !== "dihapus") return hasil;
+  await hapusBerkasUnggahan(hasil.ikon);
+  return { hasil: "dihapus" } as const;
 }

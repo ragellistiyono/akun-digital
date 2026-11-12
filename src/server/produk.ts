@@ -6,8 +6,10 @@ import {
   type KolomFormatBaru,
 } from "@/domain/format-item-stok";
 
+import { hapusBerkasUnggahan } from "./berkas-unggahan";
 import { db } from "./db";
 import { itemStok, kategori, produk, varian } from "./db/schema";
+import { periksaHapusVarian } from "./varian";
 
 /** Isian Produk yang diisi Admin di form, baik saat membuat maupun mengubah (PRD §3.2, §3.3). */
 type IsianProduk = {
@@ -146,4 +148,49 @@ export async function ubahFormatItemStok({
       .where(eq(produk.id, produkId));
     return { hasil: "diubah" } as const;
   });
+}
+
+/**
+ * Menghapus Produk beserta Varian, Item stok, dan berkas foto miliknya (PRD §3.7). Produk yang sudah pernah
+ * dipesan, yaitu Variannya tercatat di Pesanan berstatus apa pun, tidak dihapus, dan hasilnya membawa jumlah
+ * Pesanan itu. Varian dan Item stok ikut terhapus lewat foreign key-nya (ON DELETE CASCADE), dan berkas foto
+ * dihapus setelah Produk terhapus dari database.
+ *
+ * Urutan kuncinya:
+ * 1. Baris Varian Produk itu FOR NO KEY UPDATE, dengan urutan yang sama seperti pengisian dan pengubahan Item
+ *    stok, yang mengunci Varian sebelum Produk atau Item stok-nya.
+ * 2. Baris Produk FOR UPDATE, supaya Varian baru, pengisian Item stok, perubahan Format Item stok, dan
+ *    perubahan foto Produk ini menunggu transaksi ini selesai.
+ * 3. Item stok semua Variannya, lewat periksaHapusVarian, supaya checkout yang sedang berjalan ikut
+ *    terhitung atau ditolak karena stok habis.
+ */
+export async function hapusProduk(id: string) {
+  const hasil = await db.transaction(async (tx) => {
+    await tx
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, id))
+      .for("no key update");
+    const [terkunci] = await tx
+      .select({ foto: produk.foto })
+      .from(produk)
+      .where(eq(produk.id, id))
+      .for("update");
+    if (!terkunci) return { hasil: "tidak-ada" } as const;
+
+    const boleh = await periksaHapusVarian(tx, eq(varian.produkId, id));
+    if (!boleh.boleh) {
+      return {
+        hasil: "pernah-dipesan",
+        jumlahPesanan: boleh.jumlahPesanan,
+      } as const;
+    }
+
+    await tx.delete(produk).where(eq(produk.id, id));
+    return { hasil: "dihapus", foto: terkunci.foto } as const;
+  });
+
+  if (hasil.hasil !== "dihapus") return hasil;
+  for (const nama of hasil.foto) await hapusBerkasUnggahan(nama);
+  return { hasil: "dihapus" } as const;
 }

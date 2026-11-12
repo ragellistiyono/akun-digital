@@ -12,7 +12,12 @@ import {
   type PerubahanFormatItemStok,
 } from "@/domain/format-item-stok";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { buatProduk, ubahFormatItemStok, ubahProduk } from "@/server/produk";
+import {
+  buatProduk,
+  hapusProduk,
+  ubahFormatItemStok,
+  ubahProduk,
+} from "@/server/produk";
 
 type GalatProduk = {
   nama?: string;
@@ -290,5 +295,37 @@ export async function aksiUbahFormatItemStok(
     case "diubah":
       refresh();
       return { kolom: formatBaru, tersimpan: true };
+  }
+}
+
+/** Pesan galat bila Produk tidak dihapus. */
+export type KeadaanHapusProduk = { galat?: string };
+
+/**
+ * Menghapus Produk yang belum pernah dipesan, beserta Varian, Item stok, dan fotonya (PRD §3.7). Produk yang
+ * sudah tercatat di Pesanan berstatus apa pun ditolak dengan pesan untuk menonaktifkannya. Setelah terhapus,
+ * dasbor kembali ke daftar Produk.
+ */
+export async function aksiHapusProduk(
+  _sebelumnya: KeadaanHapusProduk,
+  formData: FormData,
+): Promise<KeadaanHapusProduk> {
+  await wajibSesiAdmin(await headers());
+
+  // Produk dengan id yang tidak sah pasti tidak ada.
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!id.success) notFound();
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusProduk(id.data);
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      notFound();
+    case "pernah-dipesan":
+      return {
+        galat: `Produk ini tidak bisa dihapus, karena sudah tercatat di ${hasil.jumlahPesanan} Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Produk ini saja: hapus centang Aktif di form Produk, lalu simpan. Produk nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.`,
+      };
+    case "dihapus":
+      redirect("/admin/produk");
   }
 }

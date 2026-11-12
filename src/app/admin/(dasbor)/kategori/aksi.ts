@@ -6,12 +6,15 @@ import { z } from "zod";
 
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { BATAS_UKURAN_GAMBAR_MB } from "@/server/berkas-unggahan";
-import { buatKategori, ubahKategori } from "@/server/kategori";
+import { buatKategori, hapusKategori, ubahKategori } from "@/server/kategori";
 
 export type KeadaanFormKategori = {
   nama: string;
   galat?: { nama?: string; ikon?: string };
 };
+
+/** Pesan galat bila Kategori tidak dihapus. */
+export type KeadaanHapusKategori = { galat?: string };
 
 const PESAN_IKON_KOSONG =
   "Gambar ikon belum dipilih. Pilih berkas gambar PNG, JPEG, atau WebP untuk ikon Kategori.";
@@ -104,4 +107,33 @@ export async function aksiUbahKategori(
     return { nama, galat: { ikon: PESAN_IKON_DITOLAK[hasil.alasan] } };
   }
   redirect("/admin/kategori");
+}
+
+/**
+ * Menghapus Kategori yang tidak berisi Produk (PRD §3.1). Kategori yang masih berisi Produk, termasuk Produk
+ * nonaktif, ditolak dengan pesan untuk memindahkan Produknya ke Kategori lain dulu. Setelah terhapus, dasbor
+ * kembali ke daftar Kategori.
+ */
+export async function aksiHapusKategori(
+  _sebelumnya: KeadaanHapusKategori,
+  formData: FormData,
+): Promise<KeadaanHapusKategori> {
+  await wajibSesiAdmin(await headers());
+
+  // Kategori dengan id yang tidak sah pasti tidak ada.
+  const id = z.uuid().safeParse(formData.get("id"));
+  if (!id.success) notFound();
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusKategori(id.data);
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      notFound();
+    case "berisi-produk":
+      return {
+        galat: `Kategori ini tidak bisa dihapus, karena masih berisi ${hasil.jumlahProduk} Produk. Produk nonaktif juga dihitung. Pindahkan Produknya ke Kategori lain dulu di halaman Ubah Produk, lalu hapus Kategori ini lagi.`,
+      };
+    case "dihapus":
+      redirect("/admin/kategori");
+  }
 }

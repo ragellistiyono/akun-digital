@@ -8,10 +8,16 @@ import { koneksi } from "@/server/db";
 import { buatKategori, daftarKategori } from "@/server/kategori";
 import { buatProduk, daftarProduk } from "@/server/produk";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
+import { sisipkanProduk } from "@/server/uji-katalog";
+import { sisipkanPesanan } from "@/server/uji-pesanan";
 import { PNG } from "@/server/uji-unggahan";
 import { daftarVarian, tambahVarian } from "@/server/varian";
 
-import { aksiTambahVarian, aksiUbahVarian } from "./aksi-varian";
+import {
+  aksiHapusVarian,
+  aksiTambahVarian,
+  aksiUbahVarian,
+} from "./aksi-varian";
 
 // Test integrasi Server Action dengan database app_test dari .env.ci. Header permintaan yang dibaca
 // aksi lewat next/headers diganti dengan cookie milik pengunjung di setiap test. refresh() dari
@@ -488,6 +494,92 @@ describe("mengubah Varian (PRD §3.2, §3.5, §3.7)", () => {
           keadaanKosong(),
           formulir({ ...isianUbah(produkId, varian), id }),
         ),
+      ).rejects.toSatisfy(tidakDitemukan);
+    });
+  }
+});
+
+// Issue T29 (PRD §3.7): Varian hanya bisa dihapus bila belum pernah tercatat di Pesanan berstatus apa pun.
+describe("menghapus Varian (PRD §3.7)", () => {
+  /** Netflix Premium [CONTOH] dengan Varian 1 Bulan dan 3 Bulan beserta Item stok Tersedia-nya. */
+  async function netflixPremium() {
+    const produkId = await sisipkanProduk({
+      nama: namaUnik("Netflix Premium"),
+      formatItemStok: ["Email", "Password", "Profil"],
+      varian: [
+        { nama: "1 Bulan", hargaJual: 50000, Tersedia: 10 },
+        { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4 },
+      ],
+    });
+    const semuaVarian = await daftarVarian(produkId);
+    const [satuBulan, tigaBulan] = semuaVarian;
+    return { produkId, semuaVarian, satuBulan, tigaBulan };
+  }
+
+  it("Tamu tanpa sesi Admin diarahkan ke halaman login, dan Varian yang belum pernah dipesan tetap ada", async () => {
+    const { produkId, semuaVarian, tigaBulan } = await netflixPremium();
+    sebagaiPengunjung(new Headers());
+
+    await expect(
+      aksiHapusVarian({}, formulir({ produkId, id: tigaBulan.id })),
+    ).rejects.toSatisfy(arahKe("/admin"));
+
+    expect(await daftarVarian(produkId)).toEqual(semuaVarian);
+  });
+
+  it("menghapus Varian 1 Bulan yang pernah dipesan ditolak dengan pesan untuk menonaktifkannya, dan Varian tetap ada", async () => {
+    const { produkId, semuaVarian, satuBulan } = await netflixPremium();
+    await sisipkanPesanan({ varianId: satuBulan.id, status: "Kedaluwarsa" });
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(refresh).mockClear();
+
+    expect(
+      await aksiHapusVarian({}, formulir({ produkId, id: satuBulan.id })),
+    ).toEqual({
+      galat:
+        "Varian ini tidak bisa dihapus, karena sudah tercatat di 1 Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Varian ini saja: pilih Ubah, hapus centang Aktif, lalu simpan. Varian nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.",
+    });
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(await daftarVarian(produkId)).toEqual(semuaVarian);
+  });
+
+  it("Admin menghapus Varian 3 Bulan yang belum pernah dipesan, sedangkan Varian 1 Bulan yang pernah dipesan tetap ada", async () => {
+    const { produkId, satuBulan, tigaBulan } = await netflixPremium();
+    await sisipkanPesanan({ varianId: satuBulan.id, status: "Selesai" });
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(refresh).mockClear();
+
+    expect(
+      await aksiHapusVarian({}, formulir({ produkId, id: tigaBulan.id })),
+    ).toEqual({});
+
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(await daftarVarian(produkId)).toEqual([satuBulan]);
+  });
+
+  it("Varian milik Produk lain menghasilkan halaman tidak ditemukan, dan tidak terhapus", async () => {
+    const { produkId, semuaVarian, tigaBulan } = await netflixPremium();
+    const lain = await netflixPremium();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiHapusVarian(
+        {},
+        formulir({ produkId: lain.produkId, id: tigaBulan.id }),
+      ),
+    ).rejects.toSatisfy(tidakDitemukan);
+
+    expect(await daftarVarian(produkId)).toEqual(semuaVarian);
+  });
+
+  for (const id of [randomUUID(), "bukan-id"]) {
+    it(`Varian "${id}" yang tidak ada menghasilkan halaman tidak ditemukan`, async () => {
+      const { produkId } = await netflixPremium();
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      await expect(
+        aksiHapusVarian({}, formulir({ produkId, id })),
       ).rejects.toSatisfy(tidakDitemukan);
     });
   }

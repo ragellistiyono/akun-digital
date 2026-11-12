@@ -13,7 +13,7 @@ import {
 } from "@/domain/validasi-harga";
 import { rupiah } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { tambahVarian, ubahVarian } from "@/server/varian";
+import { hapusVarian, tambahVarian, ubahVarian } from "@/server/varian";
 
 type GalatVarian = { nama?: string; hargaJual?: string; hargaNormal?: string };
 
@@ -230,4 +230,36 @@ export async function aksiUbahVarian(
   if (hasil.hasil === "tidak-ada") notFound();
   refresh();
   return { ...isian, tersimpan: true };
+}
+
+/** Pesan galat bila Varian tidak dihapus. */
+export type KeadaanHapusVarian = { galat?: string };
+
+/**
+ * Menghapus Varian yang belum pernah dipesan, beserta Item stok-nya (PRD §3.7). Varian yang sudah tercatat di
+ * Pesanan berstatus apa pun ditolak dengan pesan untuk menonaktifkannya. Setelah terhapus, daftar Varian yang
+ * sudah diperbarui menjadi tandanya.
+ */
+export async function aksiHapusVarian(
+  _sebelumnya: KeadaanHapusVarian,
+  formData: FormData,
+): Promise<KeadaanHapusVarian> {
+  await wajibSesiAdmin(await headers());
+
+  const produkId = bacaId(formData, "produkId");
+  const id = bacaId(formData, "id");
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusVarian({ id, produkId });
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      notFound();
+    case "pernah-dipesan":
+      return {
+        galat: `Varian ini tidak bisa dihapus, karena sudah tercatat di ${hasil.jumlahPesanan} Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Varian ini saja: pilih Ubah, hapus centang Aktif, lalu simpan. Varian nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.`,
+      };
+    case "dihapus":
+      refresh();
+      return {};
+  }
 }
