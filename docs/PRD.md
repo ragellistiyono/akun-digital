@@ -123,6 +123,10 @@ Halaman Produk menampilkan:
 - Contoh: Harga normal Rp 75.000 dan Harga jual Rp 50.000. (75.000 − 50.000) ÷ 75.000 × 100 = 33,33…, jadi tampil "Hemat 33%".
 - Harga normal hanya untuk tampilan dan tidak ikut hitungan pembayaran.
 
+▶ Keputusan 2026-11-12 (#87):
+- Label "Hemat N%" tetap tampil walaupun hasilnya 0%. Contoh: Harga normal Rp 60.000 dan Harga jual Rp 59.999 tampil "Hemat 0%" (`tests/golden/persen-hemat.json`).
+- Di Halaman Produk, Varian yang habis tetap menampilkan Harga normal yang dicoret dan "Hemat N%", lalu "Habis" menggantikan "Stok N". Kartu Produk Unggulan berbeda: Varian habis di sana hanya menampilkan label Habis (`docs/DESIGN.md`, Cards / Containers).
+
 ### 3.6 Beranda
 
 Urutan isi beranda dari atas:
@@ -145,6 +149,8 @@ Tidak ada banner promo.
 
 ▶ Keputusan 2026-11-11 (#53): Produk dan Varian baru sudah aktif saat dibuat, dan Admin bisa menonaktifkannya di form. Produk baru tidak langsung terlihat Pembeli, karena Produk tanpa Varian aktif tidak tampil di toko (§3.2).
 
+▶ Keputusan 2026-11-12 (#87): Tombol hapus Produk dan Varian di dasbor admin selalu tampil, juga untuk yang sudah pernah dipesan. Bila sudah pernah dipesan, server menolak penghapusan dan pesannya menyarankan menonaktifkan.
+
 ### 3.8 Harga di kartu Produk
 
 - Kartu Produk di katalog menampilkan foto sampul, nama, dan harga.
@@ -164,6 +170,8 @@ Tidak ada banner promo.
 - Item stok yang sudah Terkirim tetap tampil dengan kolom lamanya.
 
 ▶ Keputusan 2026-11-11 (#53): Nama kolom Format Item stok tidak boleh kosong atau kembar. Nama kolom dianggap kembar tanpa membedakan huruf besar dan kecil, dan tanpa spasi di awal atau akhir. Contoh: `Email` dan `email` kembar, begitu pula `Email` dan ` Email `. Dari kolom yang kembar, kolom pertama dipertahankan dan kolom berikutnya ditolak dengan menyebut nomornya. Contoh lengkapnya ada di `tests/golden/format-item-stok.json`.
+
+▶ Keputusan 2026-11-12 (#87): Bila tambah atau hapus kolom ditolak, pesannya berbunyi: "Kolom tidak bisa ditambah atau dihapus, karena Produk ini masih punya Item stok Tersedia atau Ditahan: N Tersedia dan M Ditahan. Kolom bisa ditambah atau dihapus setelah semua Item stok Produk ini Terkirim, atau setelah Item stok Tersedia-nya dihapus di halaman Varian. Nama kolom tetap bisa diganti kapan saja." Kata kerja di awal pesan mengikuti perubahan yang ditolak: "ditambah", "dihapus", atau "ditambah atau dihapus".
 
 ### 4.2 Mengisi Item stok
 
@@ -209,6 +217,8 @@ Saat menempel banyak baris:
 - Bila email itu masih punya Pesanan Menunggu Pembayaran, berlaku §5.4.
 - Form menampilkan kalimat kecil "Dengan membayar, Anda menyetujui Syarat & Ketentuan", dengan tautan ke halaman itu, tanpa kotak centang.
 
+▶ Keputusan 2026-11-12 (#87): Checkout yang ditolak karena Stok Varian 0 menampilkan pesan "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda." Bila email itu juga masih punya Pesanan Menunggu Pembayaran, §5.4 didahulukan.
+
 ### 5.3 Penahanan Item stok
 
 - Begitu Pesanan dibuat dan QRIS-nya terbit, satu Item stok Varian itu ditahan untuk Pesanan tersebut.
@@ -226,6 +236,10 @@ Saat menempel banyak baris:
 - Pesan itu tidak memuat tautan ke Pesanan dan tidak punya tombol batal.
 - Setelah Pesanan itu Kedaluwarsa, paling lama 15 menit kemudian, email itu boleh checkout lagi dari browser mana pun.
 - Contoh: Andi checkout pukul 10.00 di ponselnya, dan QRIS-nya kedaluwarsa pukul 10.15. Pukul 10.05 Andi checkout lagi dari tab baru di ponsel yang sama, lalu diarahkan ke Pesanannya. Pukul 10.06 seseorang checkout dengan email Andi dari laptop lain, lalu melihat pesan "… sampai pukul 10.15 WIB …" tanpa tautan.
+
+▶ Keputusan 2026-11-12 (#87):
+- Jam di pesan "… sampai pukul HH.MM WIB …" dibulatkan ke atas ke menit berikutnya, supaya jam yang tertulis tidak pernah lebih awal dari waktu kedaluwarsa. Contoh: waktu kedaluwarsa 10.15.20 tertulis "10.16", sedangkan 10.15.00 tetap "10.15".
+- Aturan bagian ini didahulukan sebelum penolakan karena Stok Varian 0 (§5.2). Contoh: Item stok terakhir Netflix Premium 1 Bulan sedang ditahan Pesanan Andi. Bila Andi checkout lagi Varian itu dari browser yang sama, ia diarahkan ke Pesanannya, bukan melihat pesan stok habis. Di browser lain, ia melihat pesan "… sampai pukul HH.MM WIB …".
 
 ### 5.5 Total bayar dan Kode unik
 
@@ -271,12 +285,23 @@ Perpindahan status yang boleh terjadi:
 
 Satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabar pembayarannya datang berulang kali.
 
+▶ Keputusan 2026-11-12 (#87): Riwayat status Pesanan mencatat pelaku setiap perubahan:
+- "Pembeli": Pesanan dibuat saat checkout, atau dibatalkan Pembeli;
+- "Qrispy": perubahan karena kabar pembayaran;
+- "Sistem": Kedaluwarsa otomatis;
+- "Admin": Pesanan Bermasalah diselesaikan Admin.
+
 ### 5.8 Pembatalan dan kedaluwarsa
 
 - Pembeli bisa membatalkan Pesanan yang masih Menunggu Pembayaran. QRIS-nya ikut dibatalkan di Qrispy, lalu Item stok dan kuota voucher dilepas.
 - Bila Qrispy menolak pembatalan karena tagihan sudah dibayar, Pesanan diproses sebagai sudah dibayar.
 - Masa berlaku QRIS ditentukan Qrispy, yaitu 15 menit, dan Qrispy memberi waktu kedaluwarsanya. Pesanan yang belum dibayar menjadi Kedaluwarsa begitu waktu itu tercapai, lalu Item stok dan kuota voucher dilepas. Pembeli boleh checkout lagi dari awal.
 - Contoh: QRIS terbit pukul 10.00.00 dengan waktu kedaluwarsa 10.15.00. Pukul 10.14.59 Pesanan masih Menunggu Pembayaran. Pukul 10.15.00 Pesanan sudah Kedaluwarsa.
+
+▶ Keputusan 2026-11-12 (#87):
+- Tombol "Batalkan" langsung membatalkan, tanpa dialog konfirmasi. Setelah itu Pembeli tetap di Tautan Pesanan dan melihat Halaman Pesanan Dibatalkan, beserta tautan "Checkout lagi".
+- Bila Qrispy menolak pembatalan karena tagihan sudah dibayar, Pembeli melihat Halaman Pesanan Selesai disertai pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan."
+- Saat waktu kedaluwarsa tercapai, toko memeriksa status QRIS ke Qrispy sekali. Bila pemeriksaan itu gagal, misalnya Qrispy tidak menjawab, Pesanan tetap menjadi Kedaluwarsa tepat waktu. Pembayaran yang ternyata sudah masuk diproses belakangan sebagai kabar terlambat (§5.9).
 
 ### 5.9 Pembayaran bermasalah
 
@@ -286,6 +311,10 @@ Satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabar pembayarannya 
 Pesanan Bermasalah tampil menonjol di dasbor admin. Admin menyelesaikannya dengan salah satu cara:
 - menekan "Kirim Item stok". Sistem mengambil satu Item stok Tersedia dari Varian yang sama, lalu Pesanan menjadi Selesai. Bila stok Varian itu habis, Admin mengisi stok dulu. Item stok dari Varian lain tidak bisa dipakai;
 - menandai Pesanan sebagai Dana Dikembalikan, setelah uangnya dikembalikan di luar sistem.
+
+▶ Keputusan 2026-11-12 (#87):
+- Bila Admin menekan "Kirim Item stok" saat Stok Varian 0, pesannya berbunyi: "Item stok tidak dikirim, karena Stok Varian Pesanan ini 0, jadi Pesanan tetap Bermasalah. Isi Item stok Varian itu dulu di menu Produk, lalu tekan "Kirim Item stok" lagi. Item stok dari Varian lain tidak bisa dipakai."
+- Kedua cara penyelesaian ditegaskan lebih dulu sebelum dijalankan, karena keduanya tidak bisa dibatalkan (`docs/DESIGN.md`, Navigation).
 
 ## 6. Pengiriman Item stok
 
@@ -303,9 +332,15 @@ Setiap kolom Item stok di web punya tombol "Salin".
 - Email "Pesanan selesai" berisi Tautan Pesanan, yaitu alamat acak dan panjang yang tidak bisa ditebak.
 - Siapa pun yang memegang Tautan Pesanan bisa membuka halaman Pesanan beserta Item stoknya tanpa login. Dengan begitu Tamu yang sudah menutup tab tetap bisa membuka Pesanannya lagi.
 
+▶ Keputusan 2026-11-12 (#87): Halaman Pesanan Bermasalah menampilkan pil status, kalimat "Pembayaran Anda sudah kami terima, tetapi Item stok belum bisa dikirim. Hubungi kami lewat WhatsApp.", tombol WhatsApp, serta Produk dan Varian beserta rincian nominal (§5.5).
+
 ### 6.3 Email "Pesanan selesai"
 
 Email berisi Item stok, rincian nominal sesuai §5.5, dan Tautan Pesanan.
+
+▶ Keputusan 2026-11-12 (#87):
+- Subjek email: "Pesanan selesai: <Nomor Pesanan>", misalnya "Pesanan selesai: MIWE-7K3P9Q".
+- Isi email dibuka dengan "Pembayaran Pesanan <Nomor Pesanan> sudah kami terima. Berikut Item stok Anda.", lalu bagian "Item stok Anda" dan "Rincian pembayaran", lalu kalimat "Buka Pesanan ini kapan saja tanpa login lewat Tautan Pesanan berikut:" beserta Tautan Pesanan.
 
 ### 6.4 Kirim ulang dan koreksi email
 
@@ -313,6 +348,10 @@ Email berisi Item stok, rincian nominal sesuai §5.5, dan Tautan Pesanan.
 - Admin bisa mengoreksi email Pesanan yang salah ketik, lalu mengirim ulang. Pembeli meminta koreksi ini lewat WhatsApp.
 - Bila pengiriman email gagal, Pesanan tetap Selesai. Sistem mencoba mengirim ulang sendiri beberapa kali, dan Admin melihat tanda "Email gagal" pada Pesanan itu.
 - Pembeli tidak punya tombol kirim ulang email.
+
+▶ Keputusan 2026-11-12 (#87):
+- Untuk Pesanan Selesai, koreksi email dan kirim ulang dijalankan bersama oleh satu tombol "Simpan dan kirim ulang", supaya email yang sudah dikoreksi selalu ikut dikirim.
+- Email Pesanan Bermasalah juga bisa dikoreksi, supaya alamatnya benar sebelum Admin menekan "Kirim Item stok". Untuk Pesanan Bermasalah, koreksi hanya menyimpan email baru. Email "Pesanan selesai" dikirim begitu Pesanan itu menjadi Selesai (§5.9).
 
 ## 7. Member
 
@@ -481,6 +520,10 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Detail Pesanan menampilkan rincian nominal (§5.5), Item stok, dan riwayat perubahan status.
 - Aksi di detail Pesanan: kirim ulang email dan koreksi email (§6.4), serta menyelesaikan Pesanan Bermasalah (§5.9).
 
+▶ Keputusan 2026-11-12 (#87):
+- Saringan rentang tanggal memakai waktu Pesanan dibuat, yaitu waktu yang tampil di daftar.
+- Pencarian boleh berisi sebagian email atau sebagian Nomor Pesanan, tanpa membedakan huruf besar dan kecil. Contoh: "budi" dan "BUDI" menemukan Pesanan `budi@mail.com`. Nomor Pesanan lengkap tetap menemukan tepat Pesanan itu.
+
 ### 9.6 Nomor Pesanan
 
 - Nomor Pesanan berbentuk `MIWE-` diikuti 6 karakter acak, misalnya `MIWE-7K3P9Q`.
@@ -532,6 +575,8 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 
 - Setiap email punya footer "Butuh bantuan? Hubungi kami di WhatsApp" dengan nomor dari pengaturan toko (§9.8).
 - Toko tidak mengirim email lain, misalnya pengingat pembayaran atau notifikasi ke Admin.
+
+▶ Keputusan 2026-11-12 (#87): Selama nomor WhatsApp belum diisi di pengaturan toko, footer WhatsApp tidak ditampilkan, sama seperti tombol WhatsApp di toko (§9.8). Bila nomor sudah diisi, footer berbunyi "Butuh bantuan? Hubungi kami di WhatsApp +62…", dengan nomor yang menaut ke WhatsApp.
 
 ## 11. Tampilan
 

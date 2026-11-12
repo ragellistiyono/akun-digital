@@ -38,6 +38,11 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 5. Skenario bertanda **(tunggu)** butuh menunggu beberapa menit.
 6. Jalankan skenario sesuai urutan di berkas ini. Setiap skenario yang membuat Pesanan Menunggu Pembayaran ditutup dengan membatalkannya, supaya tidak mengganggu skenario berikutnya (§5.4).
 
+▶ Keputusan 2026-11-12 (#87): Isi data seed M1 (`pnpm db:seed`):
+- Pesanan Selesai milik `member@miwe.example` adalah Netflix Premium 1 Bulan, tanpa voucher, karena voucher milik M2.
+- Kedua Pesanan Bermasalah memakai email contoh `bermasalah-1@miwe.example` dan `bermasalah-2@miwe.example`, yang tidak bisa menerima email. UAT-E6 mengoreksi email Pesanan pertama menjadi Email A lebih dulu (§6.4).
+- Produk "Game Lama" tidak punya Varian. Akibatnya Kategori "Game" tetap tersembunyi di toko walaupun Game Lama diaktifkan.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -221,6 +226,8 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Langkah 4: Pesanan menjadi Dibatalkan, dan stok kembali seperti semula.
 - PRD: §5.3, §5.8
 
+Pesan "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan." (§5.8 ▶ Keputusan 2026-11-12) diuji lewat test otomatis, karena pembayaran yang masuk tepat saat membatalkan sulit dibuat dengan sengaja.
+
 **UAT-E2 — Satu Pesanan menunggu per email**
 - Langkah:
   1. Checkout Uji Bayar dengan Email A sampai halaman bayar.
@@ -232,6 +239,8 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Langkah 3 ditolak dengan pesan bahwa email ini masih punya Pesanan yang menunggu pembayaran, beserta jam kedaluwarsanya. Pesan itu tidak memuat tautan ke Pesanan dan tidak punya tombol batal.
 - PRD: §5.4, §7.4
 
+Pengarahan ke Pesanan yang menunggu saat Stok Varian 0 (§5.4 ▶ Keputusan 2026-11-12) diuji lewat test otomatis.
+
 **UAT-E3 — Halaman bayar di ponsel**
 - Langkah: di ponsel, checkout Netflix Premium 1 Bulan dengan Email A dan Voucher `HEMAT5`.
 - Hasil:
@@ -239,6 +248,7 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Rinciannya: Harga jual Rp 50.000, potongan voucher − Rp 5.000, Kode unik antara Rp 1 dan Rp 499, dan Total bayar yang sama dengan nominal di aplikasi e-wallet.
   - Tombol "Simpan gambar QR" menyimpan gambar ke galeri, dan gambar itu bisa dibuka dari aplikasi e-wallet.
   - Batalkan Pesanan setelah selesai melihat.
+- Catatan (▶ Keputusan 2026-11-12, #87): di iPhone (Safari), gambar yang diunduh masuk ke aplikasi Files, bukan galeri Foto. Catat apakah ini mengganggu; bila ya, perilakunya dijadikan tiket baru.
 - PRD: §5.2, §5.5, §5.6
 
 **UAT-E4 — Kedaluwarsa (tunggu)**
@@ -261,13 +271,15 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 
 **UAT-E6 — Menyelesaikan Pesanan Bermasalah**
 - Langkah:
-  1. Sebagai Admin, buka Pesanan Bermasalah pertama dari seed, lalu tekan "Kirim Item stok".
-  2. Buka Pesanan Bermasalah kedua, lalu tandai Dana Dikembalikan.
+  1. Sebagai Admin, buka Pesanan Bermasalah pertama dari seed, koreksi emailnya menjadi Email A, lalu tekan "Kirim Item stok" dan tegaskan.
+  2. Buka Pesanan Bermasalah kedua, tekan "Tandai Dana Dikembalikan", lalu tegaskan.
 - Hasil:
-  - Pesanan pertama menjadi Selesai, mendapat satu Item stok dari Varian yang sama, dan emailnya terkirim.
+  - Koreksi email Pesanan pertama tersimpan tanpa mengirim email.
+  - Pesanan pertama menjadi Selesai, mendapat satu Item stok dari Varian yang sama, dan email "Pesanan selesai" terkirim ke Email A.
+  - Kedua aksi meminta penegasan sebelum dijalankan, dan tidak ada yang berubah bila Anda memilih Batal.
   - Pesanan kedua menjadi Dana Dikembalikan.
   - Kartu "Bermasalah" di dasbor admin berkurang dua.
-- PRD: §5.7, §5.9
+- PRD: §5.7, §5.9, §6.4
 
 **UAT-E7 — Syarat & Ketentuan di checkout**
 - Langkah: buka form checkout.
@@ -469,11 +481,12 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 **UAT-I3 — Daftar dan detail Pesanan**
 - Langkah:
   1. Saring daftar Pesanan dengan status Selesai dan tanggal hari ini.
-  2. Cari dengan Email A, lalu cari dengan sebuah Nomor Pesanan.
+  2. Cari dengan Email A, lalu dengan sebagian Email A dalam huruf besar, misalnya bagian sebelum tanda @, lalu dengan sebuah Nomor Pesanan.
   3. Buka satu detail Pesanan.
 - Hasil:
   - Kolom daftar sesuai §9.5.
   - Nomor Pesanan berbentuk `MIWE-` diikuti 6 karakter, tanpa O, 0, I, dan 1.
+  - Pencarian dengan sebagian Email A menemukan Pesanan Email A.
   - Detail menampilkan rincian nominal, Item stok, dan riwayat perubahan status.
 - PRD: §9.5, §9.6
 
