@@ -461,6 +461,10 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 - Kartu Produk Unggulan tidak menampilkan chip Kategori atau jumlah Varian seperti di prototipe. Bila semua Variannya habis, kartu ini memakai gaya Kartu Produk habis yang sama dengan kartu biasa.
 - Di layar lebar, daftar Varian di Kartu Produk Unggulan menampilkan Harga normal yang dicoret bersama label "Hemat N%" untuk setiap Varian yang punya Harga normal (PRD §3.5). Varian yang habis tetap menampilkan label Habis tanpa Hemat.
 
+▶ Keputusan 2026-11-12 (#87):
+- Baris Varian di Kartu Produk Unggulan berurutan: nama Varian, Harga normal yang dicoret, "Hemat N%", lalu Harga jual rata kanan. Contoh: "1 Bulan · ~~Rp 75.000~~ · Hemat 33% · Rp 50.000".
+- Varian yang habis di daftar itu hanya menampilkan label Habis, tanpa Harga normal dan tanpa Harga jual.
+
 #### Keputusan teknis: harga di kartu Produk "Mulai Rp X"
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
 
@@ -486,6 +490,10 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - Judul toko di Beranda hanya dibaca pembaca layar, karena Beranda langsung dibuka dengan pita langit. Di ponsel, monogram MDS di bilah atas sudah cukup sebagai tanda toko.
 - Setelah Admin membuat atau mengubah Kategori atau Produk, dasbor kembali ke daftarnya tanpa pesan "tersimpan". Daftar yang sudah diperbarui menjadi tandanya.
 
+▶ Keputusan 2026-11-12 (#87):
+- Setelah Admin mengubah Item stok, form tertutup tanpa pesan "tersimpan". Setelah Admin menyelesaikan Pesanan Bermasalah, detail Pesanan langsung menampilkan status baru, Item stok, dan baris riwayat "Admin", tanpa pesan "berhasil".
+- Aksi yang tidak bisa dibatalkan ditegaskan langsung di tempatnya, tanpa dialog: hapus Item stok ("Hapus Item stok N? Isinya tidak bisa dikembalikan."), "Kirim Item stok", dan "Tandai Dana Dikembalikan" (PRD §5.9).
+
 ### Penanda tab aktif: matahari terbit (komponen khas)
 Setengah lingkaran `matahari` (28×14 px, radius `14px 14px 0 0`) dengan pendar `0 -2px 14px 3px` emas 55%. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seolah matahari terbit dari cakrawala. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas, ukurannya 20×10 px dan duduk di tepi bawah bilah langit, di bawah tautan aktif. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
 
@@ -507,6 +515,8 @@ Pemakaiannya:
 Pemandangan ini menggantikan aturan lama "lapisan gunung berwarna datar" atas instruksi pemilik pada 2026-11-11.
 
 ▶ Keputusan 2026-11-11 (#53): Strip tepi halaman dalam tetap menggambar cahaya ufuk elips di garis cakrawala, seperti prototipe. Yang tidak digambar di strip adalah cakram matahari beserta pendar radialnya, bintang, dan awan.
+
+▶ Keputusan 2026-11-12 (#87): Teks kartu senja mengikuti prototipe. Labelnya "sisa waktu bayar", pembaca layar mendengar "Sisa waktu bayar N menit" sekali per menit, dan saat waktu habis label serta pengumumannya menjadi "QRIS kedaluwarsa".
 
 ### Status Pesanan (PRD §5.7)
 Setiap status adalah pil setinggi 28 px dengan ikon 16 px, label 13 px tebal 700 (`label-kecil`), dan padding `0 12px 0 8px`. Warna, ikon, dan label selalu tampil bersama, tidak pernah warna saja. Labelnya memakai nama status persis seperti di GLOSSARY. Semua pasangan mencapai minimal 6,1:1.
@@ -530,6 +540,10 @@ Status Item stok (Tersedia, Ditahan, Terkirim) hanya tampil di dasbor admin, dan
 Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam blok `langit` radius 24 px. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (12 px `langit-redup`), nilai mono 15 px putih, dan tombol Salin 40 px (`langit-2`, garis `langit-garis`, hover `monogram`). Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check` dan warna `st-selesai` selama 1,6 dtk. Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
 
 ▶ Keputusan 2026-11-11 (#53): Sebelum M2, tab Riwayat untuk Tamu di layar lebar menaruh judul di atas dan panel penjelasan di kolom kiri. Tata letak prototipe, yaitu judul di kiri dan panel di kanan, baru dipakai bila kolom kiri sudah berisi tombol Masuk dan Daftar.
+
+▶ Keputusan 2026-11-12 (#87):
+- Tautan di Halaman Pesanan Kedaluwarsa dan Dibatalkan berbunyi "Checkout lagi" dan membuka Halaman Produk.
+- Tombol WhatsApp di Halaman Pesanan Bermasalah berbunyi "Hubungi kami di WhatsApp".
 
 ### Toast
 Pil `langit` dengan teks putih 14 px tebal 700 dan Bayang naik. Toast muncul 96 px dari dasar layar di ponsel (di atas navigasi bawah) dan 32 px di layar lebar, lalu hilang setelah 1,8 dtk. Toast diumumkan lewat `role="status"`. Di aplikasi, toast memakai `sonner` dengan gaya ini.
