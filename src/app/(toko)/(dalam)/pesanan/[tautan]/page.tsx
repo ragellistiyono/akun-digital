@@ -149,8 +149,9 @@ function HalamanBayar({
 // menampilkan keterangan dan tombol WhatsApp (PRD §5.9). Pesanan Kedaluwarsa dan Dibatalkan punya tautan
 // ke Halaman Produk untuk checkout lagi (PRD §5.8) di bilah lekat. Rincian nominal ada di kolom kedua.
 // Tidak ada tombol kirim ulang email (PRD §6.4). Tepat setelah pembatalan yang diproses sebagai sudah
-// dibayar, Halaman Pesanan Selesai menjelaskan kenapa Pesanan tidak dibatalkan (PRD §5.8, ▶ Keputusan
-// 2026-11-12), di panel tepat di bawah Produk dan Varian.
+// dibayar, atau yang mendapati Pesanan sudah Selesai, Halaman Pesanan Selesai menjelaskan kenapa Pesanan
+// tidak dibatalkan (PRD §5.8, ▶ Keputusan 2026-11-12 #87 dan #99), di panel tepat di bawah Produk dan
+// Varian.
 function HalamanPesanan({
   pesanan,
   nomorWhatsapp,
@@ -219,8 +220,8 @@ function HalamanPesanan({
 // login, dari browser mana pun. Selama Pesanan Menunggu Pembayaran halaman ini adalah Halaman bayar, dan
 // untuk status lain halaman ini adalah Halaman Pesanan. Tautan Pesanan yang tidak dikenal, termasuk alamat
 // yang bukan berbentuk Tautan Pesanan, menampilkan halaman tidak ditemukan yang sama. Tanda pembatalan
-// sudah dibayar di alamat hanya dipasang tombol "Batalkan" (issue T20-b), dan dihapus dari alamat begitu
-// halamannya tampil.
+// sudah dibayar di alamat hanya dipasang tombol "Batalkan" (issue T20-b dan T20-c), dan dihapus dari
+// alamat begitu halamannya tampil.
 export default async function HalamanTautanPesanan({
   params,
   searchParams,

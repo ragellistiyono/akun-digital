@@ -2,6 +2,7 @@
 
 import { redirect, RedirectType } from "next/navigation";
 
+import { pesanSudahDibayarTampil } from "@/domain/pembatalan-pesanan";
 import { batalkanPesanan } from "@/server/pembatalan-pesanan";
 import { TautanPesanan } from "@/server/pesanan";
 
@@ -18,10 +19,11 @@ const PESAN_GAGAL =
 /**
  * Tombol "Batalkan" di Halaman bayar (PRD §5.6, §5.8): Pembeli membatalkan Pesanan di Tautan Pesanan itu.
  * Setelah Pesanan Dibatalkan, diproses sebagai sudah dibayar, atau ternyata sudah tidak Menunggu
- * Pembayaran, halaman di Tautan Pesanan itu dibuka lagi dengan status terbarunya. Pesanan yang diproses
- * sebagai sudah dibayar dibuka dengan tanda di alamatnya, supaya Halaman Pesanan Selesai menjelaskan
- * kenapa Pesanan tidak dibatalkan (▶ Keputusan 2026-11-12). Bila pembatalannya gagal, Pembeli melihat
- * pesan gagal dan Pesanan tetap Menunggu Pembayaran.
+ * Pembayaran, halaman di Tautan Pesanan itu dibuka lagi dengan status terbarunya. Bila
+ * pesanSudahDibayarTampil menentukan pesan sudah dibayar tampil, halaman itu dibuka dengan tanda di
+ * alamatnya, supaya Halaman Pesanan Selesai menjelaskan kenapa Pesanan tidak dibatalkan (▶ Keputusan
+ * 2026-11-12 #87 dan #99). Bila pembatalannya gagal, Pembeli melihat pesan gagal dan Pesanan tetap
+ * Menunggu Pembayaran.
  */
 export async function aksiBatalkanPesanan(
   _sebelumnya: KeadaanPembatalan,
@@ -32,13 +34,14 @@ export async function aksiBatalkanPesanan(
   const tautan = TautanPesanan.safeParse(formData.get("tautan"));
   if (!tautan.success) return { galat: PESAN_TAUTAN_TIDAK_DIKENAL };
 
-  const { hasil } = await batalkanPesanan(tautan.data);
-  if (hasil === "tidak-ditemukan") return { galat: PESAN_TAUTAN_TIDAK_DIKENAL };
-  if (hasil === "gagal") return { galat: PESAN_GAGAL };
+  const pembatalan = await batalkanPesanan(tautan.data);
+  if (pembatalan.hasil === "tidak-ditemukan") {
+    return { galat: PESAN_TAUTAN_TIDAK_DIKENAL };
+  }
+  if (pembatalan.hasil === "gagal") return { galat: PESAN_GAGAL };
   // Halaman yang sama dibuat ulang di server tanpa menambah riwayat browser.
-  const tanda =
-    hasil === "diproses-sebagai-dibayar"
-      ? `?${TANDA_SUDAH_DIBAYAR.nama}=${TANDA_SUDAH_DIBAYAR.nilai}`
-      : "";
+  const tanda = pesanSudahDibayarTampil(pembatalan)
+    ? `?${TANDA_SUDAH_DIBAYAR.nama}=${TANDA_SUDAH_DIBAYAR.nilai}`
+    : "";
   redirect(`/pesanan/${tautan.data}${tanda}`, RedirectType.replace);
 }
