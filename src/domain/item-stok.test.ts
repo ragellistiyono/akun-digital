@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import golden from "../../tests/golden/tempel-item-stok.json";
-import { periksaItemStok, tempelItemStok } from "./item-stok";
+import {
+  itemStokBolehDiubah,
+  kolomItemStok,
+  periksaItemStok,
+  tempelItemStok,
+} from "./item-stok";
 
 // PRD §4.2: satu baris satu Item stok, kolom dipisah |. Baris dengan jumlah kolom yang salah, kolom
 // kosong, sama persis dengan Item stok yang sudah ada di Varian itu, atau kembar dengan baris
@@ -189,5 +194,83 @@ describe("periksaItemStok (form satu Item stok)", () => {
       sah: false,
       masalah: { alasan: "jumlah-kolom-salah", jumlahKolom: 2 },
     });
+  });
+});
+
+// PRD §4.4: Item stok yang Tersedia boleh diubah atau dihapus. Item stok yang Ditahan atau Terkirim tidak bisa
+// diubah atau dihapus. Belum ada fixture golden untuk aturan ini, jadi ekspektasinya diambil langsung dari
+// PRD §4.4 dan kriteria penerimaan issue T27.
+describe("itemStokBolehDiubah", () => {
+  it("Item stok Tersedia boleh diubah atau dihapus", () => {
+    expect(itemStokBolehDiubah("Tersedia")).toBe(true);
+  });
+
+  it.each(["Ditahan", "Terkirim"] as const)(
+    "Item stok %s tidak bisa diubah atau dihapus",
+    (status) => {
+      expect(itemStokBolehDiubah(status)).toBe(false);
+    },
+  );
+});
+
+// PRD §4.1 dan §9.7: daftar Item stok menampilkan isi lengkap setiap Item stok. Item stok yang sudah Terkirim
+// tetap tampil dengan kolom lamanya. Contoh baris dari PRD §4.2 untuk format `Email`, `Password`, `Profil`:
+// `budi@mail.com|rahasia123|Profil 2`.
+describe("kolomItemStok", () => {
+  const nilai = ["budi@mail.com", "rahasia123", "Profil 2"];
+
+  it.each(["Tersedia", "Ditahan"] as const)(
+    "Item stok %s tampil dengan nama kolom Format Item stok yang berlaku sekarang",
+    (status) => {
+      expect(
+        kolomItemStok({
+          status,
+          formatItemStok: ["Email", "Password", "Profil"],
+          formatSaatTerkirim: null,
+          nilai,
+        }),
+      ).toEqual([
+        { nama: "Email", nilai: "budi@mail.com" },
+        { nama: "Password", nilai: "rahasia123" },
+        { nama: "Profil", nilai: "Profil 2" },
+      ]);
+    },
+  );
+
+  it("Item stok Terkirim tampil dengan nama kolom yang dicatat saat Terkirim, walau nama kolomnya sudah diganti", () => {
+    expect(
+      kolomItemStok({
+        status: "Terkirim",
+        formatItemStok: ["Email login", "Kata sandi", "Profil"],
+        formatSaatTerkirim: ["Email", "Password", "Profil"],
+        nilai,
+      }),
+    ).toEqual([
+      { nama: "Email", nilai: "budi@mail.com" },
+      { nama: "Password", nilai: "rahasia123" },
+      { nama: "Profil", nilai: "Profil 2" },
+    ]);
+  });
+
+  it("Item stok Terkirim yang tidak mencatat nama kolomnya ditolak dengan galat", () => {
+    expect(() =>
+      kolomItemStok({
+        status: "Terkirim",
+        formatItemStok: ["Email", "Password", "Profil"],
+        formatSaatTerkirim: null,
+        nilai,
+      }),
+    ).toThrow(/tidak mencatat nama kolom/);
+  });
+
+  it("Item stok Tersedia yang jumlah isi kolomnya tidak sama dengan Format Item stok ditolak dengan galat", () => {
+    expect(() =>
+      kolomItemStok({
+        status: "Tersedia",
+        formatItemStok: ["Email", "Password"],
+        formatSaatTerkirim: null,
+        nilai,
+      }),
+    ).toThrow(/3 isi kolom.*2 kolom/);
   });
 });
