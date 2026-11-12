@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import { asc, eq } from "drizzle-orm";
 
 // DATABASE_URL berasal dari .env.ci yang dimuat playwright.config.ts, jadi data ini masuk ke database
@@ -20,6 +25,10 @@ const akhiran = randomUUID().slice(0, 8);
 test.use({ viewport: { width: 390, height: 800 } });
 
 const isi = (page: Page) => page.getByRole("main");
+
+/** Pesan penjelas PRD §5.8 (▶ Keputusan 2026-11-12) setelah pembatalan yang diproses sebagai sudah dibayar. */
+const PESAN_SUDAH_DIBAYAR =
+  "Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan.";
 
 /** Stok Varian 1 Bulan yang tampil di kartu Varian-nya di Halaman Produk. */
 const stokSatuBulan = (page: Page) =>
@@ -82,6 +91,10 @@ test("setelah Pembeli menekan Batalkan di Halaman bayar, Pesanan menjadi Dibatal
   await expect(isi(page).getByRole("button", { name: "Batalkan" })).toHaveCount(
     0,
   );
+  // Issue T20-b: pesan penjelas pembatalan yang diproses sebagai sudah dibayar tidak tampil di sini.
+  await expect(
+    isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+  ).toHaveCount(0);
   await halamanLain.reload();
   await expect(stokSatuBulan(halamanLain)).toHaveText("Stok 10");
 
@@ -104,6 +117,109 @@ test("setelah Pembeli menekan Batalkan di Halaman bayar, Pesanan menjadi Dibatal
     { status: "Dibatalkan", pelaku: "Pembeli" },
   ]);
   await browserLain.close();
+});
+
+/**
+ * Checkout sampai Halaman bayar, membayar QRIS-nya lewat Qrispy tiruan, lalu menekan "Batalkan". Karena
+ * QRIS-nya sudah dibayar, Qrispy tiruan menolak pembatalannya dan status QRIS-nya `paid`. Hasilnya Tautan
+ * Pesanan itu.
+ */
+async function batalkanSetelahDibayar(
+  page: Page,
+  request: APIRequestContext,
+  namaProduk: string,
+) {
+  const produkId = await sisipkanProduk({
+    nama: `${namaProduk} ${akhiran}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 3 }],
+  });
+  // Halaman bayar tidak menanyakan status Pesanan sendiri selama test ini, supaya pembayarannya baru
+  // terbaca lewat pembatalan, bukan lewat pemantau status.
+  await page.route(/\/pesanan\/[A-Za-z0-9_-]{43}\/status$/, (rute) =>
+    rute.abort(),
+  );
+  const email = `budi-${randomUUID()}@example.test`;
+  await page.goto(`/produk/${produkId}`);
+  await page.getByRole("button", { name: /^Beli/ }).click();
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+  await expect(page).toHaveURL(/\/pesanan\/[A-Za-z0-9_-]{43}$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+  const [dipesan] = await db
+    .select({
+      tautan: pesanan.tautan,
+      qrisId: pesanan.qrisId,
+      totalBayar: pesanan.totalBayar,
+    })
+    .from(pesanan)
+    .where(eq(pesanan.email, email));
+
+  const respons = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId: dipesan.qrisId, amount: dipesan.totalBayar },
+  });
+  expect(respons.status()).toBe(200);
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+  return dipesan.tautan;
+}
+
+// Issue T20-b dan PRD §5.8 (▶ Keputusan 2026-11-12): bila Qrispy menolak pembatalan karena tagihannya
+// sudah dibayar, Pembeli melihat Halaman Pesanan Selesai beserta pesan penjelas. Pesan itu hanya tampil
+// tepat setelah pembatalan, jadi tidak tampil lagi setelah halamannya dimuat ulang.
+test("bila Qrispy tiruan menolak pembatalan karena QRIS-nya sudah dibayar, Pembeli melihat Halaman Pesanan Selesai dengan pesan penjelas, yang hilang setelah dimuat ulang", async ({
+  page,
+  request,
+}) => {
+  await batalkanSetelahDibayar(page, request, "Pembatalan Dibayar");
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pesanan" }),
+  ).toBeVisible();
+  await expect(isi(page).getByText("Selesai", { exact: true })).toBeVisible();
+  const pesan = isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true });
+  await expect(pesan).toBeVisible();
+  // Tanda di alamat dihapus tanpa membuat ulang halaman, jadi pesannya tetap tampil.
+  await expect(page).toHaveURL(/\/pesanan\/[A-Za-z0-9_-]{43}$/);
+  await expect(pesan).toBeVisible();
+
+  await page.reload();
+  await expect(isi(page).getByText("Selesai", { exact: true })).toBeVisible();
+  await expect(pesan).toHaveCount(0);
+});
+
+// Issue T20-b: Tautan Pesanan Selesai yang sama, yang disalin dari bilah alamat tepat setelah pembatalan,
+// tidak menampilkan pesan penjelas di konteks browser lain.
+test("Tautan Pesanan Selesai yang sama di konteks browser lain tidak menampilkan pesan penjelas pembatalan", async ({
+  page,
+  request,
+  browser,
+  baseURL,
+}) => {
+  const tautan = await batalkanSetelahDibayar(
+    page,
+    request,
+    "Pembatalan Dibayar Lain",
+  );
+  await expect(
+    isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+  ).toBeVisible();
+  // Bilah alamat berisi Tautan Pesanan itu saja, sama seperti Tautan Pesanan di email.
+  await expect(page).toHaveURL(`${baseURL}/pesanan/${tautan}`);
+
+  const browserLain = await browser.newContext({ baseURL });
+  try {
+    const halamanLain = await browserLain.newPage();
+    await halamanLain.goto(page.url());
+    await expect(
+      isi(halamanLain).getByText("Selesai", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      isi(halamanLain).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await browserLain.close();
+  }
 });
 
 // docs/DESIGN.md Buttons dan prototipe Halaman bayar: "Batalkan" adalah tombol garis di bilah lekat, di

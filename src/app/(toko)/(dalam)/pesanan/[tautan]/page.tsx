@@ -19,8 +19,10 @@ import { RincianNominal } from "../../../_components/rincian-nominal";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { BlokItemStok } from "./_components/blok-item-stok";
 import { FormBatalkan } from "./_components/form-batalkan";
+import { HapusTandaSudahDibayar } from "./_components/hapus-tanda-sudah-dibayar";
 import { KartuSenja } from "./_components/kartu-senja";
 import { PantauStatusPesanan } from "./_components/pantau-status";
+import { TANDA_SUDAH_DIBAYAR } from "./_components/tanda-sudah-dibayar";
 
 const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
 
@@ -145,13 +147,17 @@ function HalamanBayar({
 // pil status. Pesanan Selesai menampilkan Item stok dengan tombol Salin di setiap kolom. Pesanan Bermasalah
 // menampilkan keterangan dan tombol WhatsApp (PRD §5.9). Pesanan Kedaluwarsa dan Dibatalkan punya tautan
 // ke Halaman Produk untuk checkout lagi (PRD §5.8) di bilah lekat. Rincian nominal ada di kolom kedua.
-// Tidak ada tombol kirim ulang email (PRD §6.4).
+// Tidak ada tombol kirim ulang email (PRD §6.4). Tepat setelah pembatalan yang diproses sebagai sudah
+// dibayar, Halaman Pesanan Selesai menjelaskan kenapa Pesanan tidak dibatalkan (PRD §5.8, ▶ Keputusan
+// 2026-11-12), di panel tepat di bawah Produk dan Varian.
 function HalamanPesanan({
   pesanan,
   nomorWhatsapp,
+  setelahPembatalanSudahDibayar,
 }: {
   pesanan: PesananDibaca;
   nomorWhatsapp: string | null;
+  setelahPembatalanSudahDibayar: boolean;
 }) {
   const { status } = pesanan;
   return (
@@ -169,6 +175,13 @@ function HalamanPesanan({
             </div>
             <ProdukDanVarian pesanan={pesanan} />
           </div>
+          {status === "Selesai" && setelahPembatalanSudahDibayar && (
+            <div role="status" className={PANEL}>
+              <p className="max-w-[65ch]">
+                Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan.
+              </p>
+            </div>
+          )}
           {pesanan.itemStok && <BlokItemStok kolom={pesanan.itemStok} />}
           {status === "Bermasalah" && (
             <div className={`flex flex-col items-start gap-4 ${PANEL}`}>
@@ -204,27 +217,43 @@ function HalamanPesanan({
 // Halaman di Tautan Pesanan (PRD §6.2): siapa pun yang memegang Tautan Pesanan bisa membukanya tanpa
 // login, dari browser mana pun. Selama Pesanan Menunggu Pembayaran halaman ini adalah Halaman bayar, dan
 // untuk status lain halaman ini adalah Halaman Pesanan. Tautan Pesanan yang tidak dikenal, termasuk alamat
-// yang bukan berbentuk Tautan Pesanan, menampilkan halaman tidak ditemukan yang sama.
+// yang bukan berbentuk Tautan Pesanan, menampilkan halaman tidak ditemukan yang sama. Tanda pembatalan
+// sudah dibayar di alamat hanya dipasang tombol "Batalkan" (issue T20-b), dan dihapus dari alamat begitu
+// halamannya tampil.
 export default async function HalamanTautanPesanan({
   params,
+  searchParams,
 }: PageProps<"/pesanan/[tautan]">) {
   // Status Pesanan dibaca setiap kali halaman dibuka, bukan sekali saat build.
   await connection();
   const tautan = TautanPesanan.safeParse((await params).tautan);
   if (!tautan.success) notFound();
+  const setelahPembatalanSudahDibayar =
+    (await searchParams)[TANDA_SUDAH_DIBAYAR.nama] ===
+    TANDA_SUDAH_DIBAYAR.nilai;
 
   // Jalur cek status (ADR-0004): kabar pembayaran dari Qrispy diproses sebelum Pesanan dibaca.
   await cekStatusPembayaran(tautan.data);
   const pesanan = await bacaPesananLewatTautan(tautan.data);
   if (!pesanan) notFound();
 
-  if (pesanan.status === "Menunggu Pembayaran") {
-    return <HalamanBayar pesanan={pesanan} tautan={tautan.data} />;
-  }
   // Nomor WhatsApp hanya dibutuhkan Pesanan Bermasalah, dan dibaca setiap kali halaman dibuka.
   const nomorWhatsapp =
     pesanan.status === "Bermasalah"
       ? (await bacaPengaturanToko()).nomorWhatsapp
       : null;
-  return <HalamanPesanan pesanan={pesanan} nomorWhatsapp={nomorWhatsapp} />;
+  return (
+    <>
+      {setelahPembatalanSudahDibayar && <HapusTandaSudahDibayar />}
+      {pesanan.status === "Menunggu Pembayaran" ? (
+        <HalamanBayar pesanan={pesanan} tautan={tautan.data} />
+      ) : (
+        <HalamanPesanan
+          pesanan={pesanan}
+          nomorWhatsapp={nomorWhatsapp}
+          setelahPembatalanSudahDibayar={setelahPembatalanSudahDibayar}
+        />
+      )}
+    </>
+  );
 }
