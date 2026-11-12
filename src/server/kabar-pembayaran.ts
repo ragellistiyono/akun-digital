@@ -15,6 +15,7 @@ import {
   varian,
 } from "./db/schema";
 import { bacaStokVarian } from "./item-stok";
+import { jadwalkanEmailPesananSelesai } from "./pekerjaan-latar";
 import { qrispyAktif, type Qrispy, type StatusQris } from "./qrispy";
 
 /** Pelaku perubahan status karena kabar pembayaran di Riwayat status Pesanan. */
@@ -47,6 +48,8 @@ type HasilProsesKabar =
  *   Format Item stok yang berlaku saat itu (PRD §4.1).
  * - Item stok yang dilepas kembali Tersedia tanpa Pesanan, supaya bisa ditahan Pesanan lain.
  * - Pesanan mencatat waktu bayar, dan Riwayat status Pesanan mendapat satu baris baru.
+ * - Pesanan yang menjadi Selesai mendapat satu pekerjaan email "Pesanan selesai" (PRD §6.3), yang ikut
+ *   tersimpan bersama transaksi ini dan dikirim pekerja latar sesudahnya, di luar transaksi ini.
  *
  * Waktu "sekarang" untuk Riwayat status bisa diganti untuk test.
  */
@@ -149,6 +152,9 @@ export async function prosesKabarPembayaran(
       status: hasil.statusBaru,
       pelaku: PELAKU_KABAR_PEMBAYARAN,
     });
+    if (hasil.statusBaru === "Selesai") {
+      await jadwalkanEmailPesananSelesai(dibayar.id, tx);
+    }
     return { hasil: "diproses" };
   });
 }

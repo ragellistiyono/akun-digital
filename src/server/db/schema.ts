@@ -221,7 +221,8 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // dan gambar QR diambil dari QRIS yang diterbitkan Qrispy (ADR-0004); qris_id menautkan Pesanan ke QRIS
 // itu. Nomor Pesanan (PRD §9.6) dan Tautan Pesanan (PRD §6.2) unik. Varian yang sudah pernah dipesan
 // tidak bisa dihapus (PRD §3.7), jadi rujukannya restrict. Waktu bayar dari kabar pembayaran Qrispy
-// dicatat begitu kabar itu diproses, dan null selama belum dibayar.
+// dicatat begitu kabar itu diproses, dan null selama belum dibayar. Tanda "Email gagal" (PRD §6.4) dipasang
+// bila semua percobaan kirim email "Pesanan selesai" gagal, dan dihapus begitu email itu berhasil dikirim.
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -242,6 +243,7 @@ export const pesanan = pgTable(
     gambarQr: text("gambar_qr").notNull(),
     status: statusPesanan("status").notNull(),
     waktuBayar: instan("waktu_bayar"),
+    emailGagal: boolean("email_gagal").default(false).notNull(),
   },
   (tabel) => [
     uniqueIndex("pesanan_nomor_pesanan_unik").on(tabel.nomorPesanan),

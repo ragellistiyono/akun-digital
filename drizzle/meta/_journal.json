@@ -92,6 +92,13 @@
       "when": 1794416691728,
       "tag": "0012_kabar_pembayaran",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794442374682,
+      "tag": "0013_email_pesanan_selesai",
+      "breakpoints": true
     }
   ]
 }
