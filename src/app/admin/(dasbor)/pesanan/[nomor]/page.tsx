@@ -220,7 +220,10 @@ export default async function HalamanDetailPesanan({
               />
             )}
           {penyelesaianBermasalahTersedia(pesanan.status) && (
-            <PenyelesaianBermasalah pesananId={pesanan.id} />
+            <PenyelesaianBermasalah
+              pesananId={pesanan.id}
+              email={pesanan.email}
+            />
           )}
           {kirimUlangEmailTersedia(pesanan.status) && (
             <AksiEmailPesanan pesananId={pesanan.id} email={pesanan.email} />
