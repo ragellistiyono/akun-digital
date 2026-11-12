@@ -1,5 +1,8 @@
-// Satu adaptor untuk semua panggilan ke Qrispy (ADR-0004). QRISPY_MODE memilih implementasinya. Saat ini
-// hanya Qrispy tiruan yang tersedia; Qrispy sungguhan menyusul di tiket tersendiri.
+// Satu adaptor untuk semua panggilan ke Qrispy (ADR-0004). QRISPY_MODE memilih implementasinya:
+// - `sungguhan` memanggil API Qrispy di QRISPY_BASE_URL dengan QRISPY_API_TOKEN (qrispy-sungguhan.ts);
+// - `tiruan` menerbitkan QRIS contoh tanpa uang sungguhan, untuk pengembangan, test, dan e2e
+//   (qrispy-tiruan.ts).
+import { qrispySungguhan } from "./qrispy-sungguhan";
 import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
 
 /**
@@ -40,8 +43,40 @@ export type Qrispy = {
   cekStatusQris(qrisId: string): Promise<StatusQris>;
 };
 
+/** Isi variabel lingkungan itu tanpa spasi di tepinya, dibaca saat dipakai. */
+const isiVariabel = (nama: string) => process.env[nama]?.trim() ?? "";
+
 /** Nilai QRISPY_MODE, dibaca saat dipakai. */
-const modeQrispy = () => process.env.QRISPY_MODE?.trim() ?? "";
+const modeQrispy = () => isiVariabel("QRISPY_MODE");
+
+/** Nama-nama variabel itu yang masih kosong, sebagai teks seperti "A, B, dan C", atau null bila terisi semua. */
+function variabelKosong(nama: readonly string[]) {
+  const kosong = nama.filter((n) => isiVariabel(n) === "");
+  if (kosong.length === 0) return null;
+  if (kosong.length === 1) return kosong[0];
+  return `${kosong.slice(0, -1).join(", ")}${kosong.length > 2 ? "," : ""} dan ${kosong.at(-1)}`;
+}
+
+/**
+ * Memastikan konfigurasi Qrispy lengkap saat aplikasi mulai (src/instrumentation.ts). Bila
+ * QRISPY_MODE=sungguhan tetapi QRISPY_BASE_URL, QRISPY_API_TOKEN, atau QRISPY_WEBHOOK_SECRET belum diisi,
+ * aplikasi ditolak berjalan dengan pesan yang menyebut variabelnya: tanpa itu QRIS tidak bisa dibuat dan
+ * kabar pembayaran tidak bisa diperiksa. Qrispy tiruan tidak membutuhkannya. Isi variabelnya tidak pernah
+ * ikut di pesan.
+ */
+export function periksaKonfigurasiQrispy() {
+  if (modeQrispy() !== "sungguhan") return;
+  const kosong = variabelKosong([
+    "QRISPY_BASE_URL",
+    "QRISPY_API_TOKEN",
+    "QRISPY_WEBHOOK_SECRET",
+  ]);
+  if (kosong) {
+    throw new Error(
+      `QRISPY_MODE=sungguhan, tetapi ${kosong} belum diisi, jadi toko tidak dijalankan: tanpa itu QRIS tidak bisa dibuat dan kabar pembayaran Qrispy tidak bisa diperiksa. Isi ${kosong} di berkas .env server menurut .env.example, atau pakai QRISPY_MODE=tiruan untuk pengembangan, lalu jalankan ulang aplikasinya.`,
+    );
+  }
+}
 
 /**
  * Adaptor Qrispy menurut QRISPY_MODE. Dibaca saat dipakai, bukan saat modul dimuat, supaya `next build`
@@ -50,8 +85,20 @@ const modeQrispy = () => process.env.QRISPY_MODE?.trim() ?? "";
 export function qrispyAktif(): Qrispy {
   const mode = modeQrispy();
   if (mode === "tiruan") return qrispyTiruan;
+  if (mode === "sungguhan") {
+    const kosong = variabelKosong(["QRISPY_BASE_URL", "QRISPY_API_TOKEN"]);
+    if (kosong) {
+      throw new Error(
+        `QRISPY_MODE=sungguhan, tetapi ${kosong} belum diisi, jadi Qrispy tidak bisa dipanggil. Isi ${kosong} di berkas .env server menurut .env.example, lalu jalankan ulang aplikasinya.`,
+      );
+    }
+    return qrispySungguhan({
+      alamatDasar: isiVariabel("QRISPY_BASE_URL"),
+      token: isiVariabel("QRISPY_API_TOKEN"),
+    });
+  }
   throw new Error(
-    `QRISPY_MODE bernilai "${mode}", padahal saat ini hanya "tiruan" yang tersedia, jadi QRIS tidak bisa dibuat. Isi QRISPY_MODE=tiruan di berkas .env, lalu jalankan ulang aplikasinya.`,
+    `QRISPY_MODE bernilai "${mode}", padahal hanya "sungguhan" dan "tiruan" yang dikenal, jadi Qrispy tidak bisa dipanggil. Isi QRISPY_MODE=sungguhan di server, atau QRISPY_MODE=tiruan untuk pengembangan, di berkas .env, lalu jalankan ulang aplikasinya.`,
   );
 }
 

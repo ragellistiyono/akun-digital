@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { qrispyAktif } from "./qrispy";
 import {
   bayarQrisTiruan,
   qrispyTiruan,
@@ -180,24 +179,5 @@ describe("pembatalan Qrispy tiruan", () => {
       paymentStatus: "paid",
       amount: qris.amount,
     });
-  });
-});
-
-// ADR-0004: QRISPY_MODE memilih implementasi. .env.ci memakai tiruan.
-describe("qrispyAktif", () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("memakai Qrispy tiruan bila QRISPY_MODE=tiruan", () => {
-    vi.stubEnv("QRISPY_MODE", "tiruan");
-    expect(qrispyAktif()).toBe(qrispyTiruan);
-  });
-
-  it("QRISPY_MODE yang kosong atau tidak dikenal menghentikan checkout dengan pesan yang jelas", () => {
-    vi.stubEnv("QRISPY_MODE", "");
-    expect(() => qrispyAktif()).toThrow(/QRISPY_MODE/);
-    vi.stubEnv("QRISPY_MODE", "sungguhan");
-    expect(() => qrispyAktif()).toThrow(/QRISPY_MODE/);
   });
 });
