@@ -494,6 +494,12 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - Setelah Admin mengubah Item stok, form tertutup tanpa pesan "tersimpan". Setelah Admin menyelesaikan Pesanan Bermasalah, detail Pesanan langsung menampilkan status baru, Item stok, dan baris riwayat "Admin", tanpa pesan "berhasil".
 - Aksi yang tidak bisa dibatalkan ditegaskan langsung di tempatnya, tanpa dialog: hapus Item stok ("Hapus Item stok N? Isinya tidak bisa dikembalikan."), "Kirim Item stok", dan "Tandai Dana Dikembalikan" (PRD §5.9).
 
+▶ Keputusan 2026-11-12 (#99):
+- Detail Pesanan Bermasalah menampilkan panel "Koreksi email" di atas panel "Selesaikan Pesanan Bermasalah", mengikuti urutan kerjanya: koreksi email dulu, lalu "Kirim Item stok". Tombol panel itu adalah tombol garis "Simpan email", karena koreksi ini belum mengirim email (PRD §6.4).
+- Setelah email Pesanan Bermasalah dikoreksi, panel itu menampilkan "Email Pesanan diganti menjadi <email>. Belum ada email yang dikirim: email "Pesanan selesai" dikirim ke alamat itu setelah Anda menekan "Kirim Item stok"." Pesan ini tetap ada, karena hanya pesan ini yang memberi tahu Admin bahwa belum ada email terkirim.
+- Penegasan "Kirim Item stok" berbunyi "Kirim satu Item stok Tersedia dari Varian yang sama ke Pesanan ini? Pesanan menjadi Selesai, dan email "Pesanan selesai" dikirim ke <email Pesanan>. Aksi ini tidak bisa dibatalkan."
+- Penegasan "Tandai Dana Dikembalikan" berbunyi "Tandai Pesanan ini Dana Dikembalikan? Pesanan ini tidak akan mendapat Item stok, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan."
+
 ### Penanda tab aktif: matahari terbit (komponen khas)
 Setengah lingkaran `matahari` (28×14 px, radius `14px 14px 0 0`) dengan pendar `0 -2px 14px 3px` emas 55%. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seolah matahari terbit dari cakrawala. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas, ukurannya 20×10 px dan duduk di tepi bawah bilah langit, di bawah tautan aktif. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
 
