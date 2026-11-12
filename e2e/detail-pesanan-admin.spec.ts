@@ -214,13 +214,15 @@ test("Admin mengirim ulang email, lalu mengoreksi email Pesanan dan mengirim ula
 });
 
 // Issue T25: kirim ulang tidak tersedia untuk Pesanan selain Selesai, dan Item stok hanya tampil bila sudah
-// Terkirim.
-test("detail Pesanan Bermasalah tidak menampilkan kirim ulang email, koreksi email, maupun Item stok", async ({
+// Terkirim. Issue T25-b: email Pesanan Bermasalah bisa dikoreksi, dan koreksinya hanya menyimpan email baru.
+test("detail Pesanan Bermasalah menampilkan koreksi email yang hanya menyimpan, tanpa kirim ulang email maupun Item stok", async ({
   page,
 }) => {
+  const email = emailUnik();
   const bermasalah = await sisipkanPesanan({
     varianId,
     status: "Bermasalah",
+    email,
     dibuatPada: new Date("2026-11-11T09:05:00+07:00"),
   });
   await masukSebagaiAdmin(page);
@@ -239,8 +241,13 @@ test("detail Pesanan Bermasalah tidak menampilkan kirim ulang email, koreksi ema
   await expect(
     isi(page).getByRole("button", { name: "Kirim ulang email" }),
   ).toHaveCount(0);
+  const koreksi = isi(page).getByRole("form", { name: "Koreksi email" });
+  await expect(koreksi.getByLabel("Email baru")).toHaveValue(email);
   await expect(
-    isi(page).getByRole("form", { name: "Koreksi email" }),
+    koreksi.getByRole("button", { name: "Simpan email" }),
+  ).toBeVisible();
+  await expect(
+    isi(page).getByRole("button", { name: "Simpan dan kirim ulang" }),
   ).toHaveCount(0);
   await expect(
     isi(page).getByRole("region", { name: "Item stok" }),
