@@ -1,5 +1,5 @@
 // Daftar Pesanan di dasbor admin (PRD §9.5): saringan status dan rentang tanggal WIB (PRD §9.1), serta
-// pencarian menurut email (PRD §7.4) atau Nomor Pesanan (PRD §9.6).
+// pencarian menurut sebagian email atau sebagian Nomor Pesanan (PRD §9.5, ▶ Keputusan 2026-11-12).
 import {
   and,
   count,
@@ -13,7 +13,6 @@ import {
   type SQL,
 } from "drizzle-orm";
 
-import { emailBaku } from "@/domain/kesamaan-email";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import { db } from "./db";
@@ -56,15 +55,16 @@ const waktuDibuat = db.$with("waktu_dibuat").as(
 const instan = (waktu: Date) => sql`${waktu.toISOString()}::timestamptz`;
 
 /**
- * Syarat pencarian: email Pesanan sama dengan teks itu menurut emailBaku (PRD §7.4), atau Nomor Pesanan-nya
- * sama dengan teks itu. Bentuk baku email Pesanan dihitung di database dengan lower(btrim()), yang sama
- * dengan emailBaku untuk email; daftar-pesanan.test.ts memeriksanya dengan tests/golden/kesamaan-email.json.
- * Nomor Pesanan selalu huruf besar (PRD §9.6), jadi teks yang dicari ikut dibuat huruf besar.
+ * Syarat pencarian (PRD §9.5, ▶ Keputusan 2026-11-12): email Pesanan atau Nomor Pesanan-nya memuat kata cari
+ * itu, tanpa membedakan huruf besar dan kecil. Spasi di ujung kata cari diabaikan. Kata cari dicari dengan
+ * strpos, bukan LIKE, supaya `%` dan `_` dicocokkan sebagai huruf biasa, bukan pola. Email atau Nomor Pesanan
+ * lengkap tetap menemukan Pesanan itu, karena setiap teks memuat dirinya sendiri.
  */
 function cocokPencarian(cari: string) {
+  const kata = cari.trim();
   return or(
-    eq(sql`lower(btrim(${pesanan.email}))`, emailBaku(cari)),
-    eq(pesanan.nomorPesanan, cari.trim().toUpperCase()),
+    sql`strpos(lower(${pesanan.email}), lower(${kata})) > 0`,
+    sql`strpos(lower(${pesanan.nomorPesanan}), lower(${kata})) > 0`,
   );
 }
 
@@ -76,8 +76,8 @@ function cocokPencarian(cari: string) {
  * - `status` hanya memuat Pesanan berstatus itu.
  * - `dari` dan `sampai` memuat Pesanan yang dibuat dari pukul 00.00.00 WIB tanggal `dari` sampai 23.59.59
  *   WIB tanggal `sampai` (PRD §9.1).
- * - `cari` memuat Pesanan yang emailnya sama dengan teks itu menurut emailBaku (PRD §7.4), atau yang Nomor
- *   Pesanan-nya sama persis dengan teks itu tanpa spasi di ujung dan tanpa membedakan huruf besar dan kecil.
+ * - `cari` memuat Pesanan yang email atau Nomor Pesanan-nya memuat teks itu, tanpa spasi di ujung dan tanpa
+ *   membedakan huruf besar dan kecil.
  */
 export async function daftarPesanan(saringan: SaringanPesanan) {
   const halaman = saringan.halaman ?? 1;

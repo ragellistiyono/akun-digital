@@ -173,6 +173,45 @@ test('mencari "BUDI@mail.com" menemukan Pesanan budi@mail.com, dan mencari Nomor
   await expect(barisPesanan(page, lain.nomorPesanan)).toBeVisible();
 });
 
+// UAT-I3 langkah 2, PRD §9.5 (▶ Keputusan 2026-11-12): pencarian boleh berisi sebagian email, tanpa
+// membedakan huruf besar dan kecil. Bagian sebelum "@" memuat UUID, jadi hanya Pesanan Email A yang cocok.
+test("UAT-I3 langkah 2: mencari Email A, lalu bagian Email A sebelum @ dalam huruf besar, lalu sebuah Nomor Pesanan", async ({
+  page,
+}) => {
+  const emailA = emailUnik();
+  const pesananA = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    email: emailA,
+  });
+  const lain = await sisipkanPesanan({ varianId, status: "Selesai" });
+  await masukSebagaiAdmin(page);
+  await page.goto("/admin/pesanan");
+
+  /** Mencari kata itu, lalu menunggu daftar hasil pencarian itu termuat. */
+  async function cari(kata: string) {
+    await isi(page).getByLabel("Cari").clear();
+    await saring(page, { cari: kata });
+    await expect(page).toHaveURL(
+      (alamat) => alamat.searchParams.get("cari") === kata,
+    );
+  }
+
+  await cari(emailA);
+  await expect(tabel(page).getByRole("row")).toHaveCount(2);
+  await expect(barisPesanan(page, pesananA.nomorPesanan)).toBeVisible();
+
+  const sebelumAt = emailA.split("@")[0].toUpperCase();
+  await cari(sebelumAt);
+  await expect(tabel(page).getByRole("row")).toHaveCount(2);
+  await expect(barisPesanan(page, pesananA.nomorPesanan)).toBeVisible();
+  await expect(isi(page).getByLabel("Cari")).toHaveValue(sebelumAt);
+
+  await cari(lain.nomorPesanan);
+  await expect(tabel(page).getByRole("row")).toHaveCount(2);
+  await expect(barisPesanan(page, lain.nomorPesanan)).toBeVisible();
+});
+
 // PRD §9.1, §9.5: status Selesai dengan tanggal 11 Nov 2026 memuat Pesanan pukul 23.30 WIB (16.30 UTC),
 // tetapi tidak memuat Pesanan pukul 00.30 WIB keesokan harinya maupun Pesanan Bermasalah hari itu.
 test("saringan status Selesai dan tanggal hanya menampilkan Pesanan Selesai yang dibuat pada tanggal itu menurut WIB", async ({

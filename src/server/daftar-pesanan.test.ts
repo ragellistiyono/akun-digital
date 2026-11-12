@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -134,6 +134,89 @@ describe("daftarPesanan: pencarian menurut Nomor Pesanan (PRD §9.6)", () => {
     });
 
     expect(nomor(hasil)).toEqual([dicari.nomorPesanan]);
+  });
+});
+
+/**
+ * Tanggal WIB "YYYY-MM-DD" acak pada abad ke-20, yang tidak dipakai test lain. Kata cari pendek seperti
+ * "budi" cocok dengan ribuan Pesanan sisa test lain, sedangkan satu halaman hanya memuat 50 Pesanan, jadi
+ * test pencarian sebagian hanya membaca Pesanan yang dibuat pada tanggal ini lewat saringan tanggal.
+ */
+function tanggalSendiri() {
+  const hari = randomInt(36_500);
+  return new Date(Date.UTC(1900, 0, 1) + hari * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** Pesanan Selesai beremail itu yang dibuat pukul 12.00 WIB pada tanggal itu. */
+const pesananPadaTanggal = (tanggal: string, email: string) =>
+  sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    email,
+    dibuatPada: new Date(`${tanggal}T12:00:00+07:00`),
+  });
+
+describe("daftarPesanan: pencarian sebagian (PRD §9.5, ▶ Keputusan 2026-11-12)", () => {
+  it('mencari "budi" dan "BUDI" menemukan Pesanan budi@mail.com', async () => {
+    const tanggal = tanggalSendiri();
+    const budi = await pesananPadaTanggal(tanggal, "budi@mail.com");
+    const siti = await pesananPadaTanggal(tanggal, "siti@mail.com");
+
+    for (const cari of ["budi", "BUDI"]) {
+      const hasil = nomor(
+        await daftarPesanan({ cari, dari: tanggal, sampai: tanggal }),
+      );
+
+      expect(hasil).toContain(budi.nomorPesanan);
+      expect(hasil).not.toContain(siti.nomorPesanan);
+    }
+  });
+
+  it('mencari "7K3P" atau "7k3p" menemukan Pesanan MIWE-7K3P9Q', async () => {
+    // Nomor Pesanan unik, jadi Pesanan contoh ini sisa run sebelumnya dihapus dulu. Pesanan itu tidak
+    // punya Item stok, dan Riwayat status-nya ikut terhapus.
+    await db.delete(pesanan).where(eq(pesanan.nomorPesanan, "MIWE-7K3P9Q"));
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      nomorPesanan: "MIWE-7K3P9Q",
+    });
+    const lain = await sisipkanPesanan({ varianId, status: "Selesai" });
+
+    for (const cari of ["7K3P", "7k3p"]) {
+      const hasil = nomor(await daftarPesanan({ cari }));
+
+      expect(hasil).toContain("MIWE-7K3P9Q");
+      expect(hasil).not.toContain(lain.nomorPesanan);
+    }
+  });
+
+  it("% dan _ di kata cari tidak dianggap pola, jadi tidak menemukan semua Pesanan", async () => {
+    const tanggal = tanggalSendiri();
+    const budi = await pesananPadaTanggal(tanggal, "budi@mail.com");
+
+    for (const cari of ["%", "_", "b%@mail.com", "bud_@mail.com"]) {
+      const hasil = nomor(
+        await daftarPesanan({ cari, dari: tanggal, sampai: tanggal }),
+      );
+
+      expect(hasil, `kata cari "${cari}"`).not.toContain(budi.nomorPesanan);
+    }
+  });
+
+  it("% dan _ di kata cari dicocokkan sebagai huruf biasa", async () => {
+    const tanggal = tanggalSendiri();
+    const diskon = await pesananPadaTanggal(tanggal, "diskon_50%@mail.com");
+
+    for (const cari of ["%", "_", "_50%@"]) {
+      const hasil = nomor(
+        await daftarPesanan({ cari, dari: tanggal, sampai: tanggal }),
+      );
+
+      expect(hasil, `kata cari "${cari}"`).toContain(diskon.nomorPesanan);
+    }
   });
 });
 
