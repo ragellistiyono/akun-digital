@@ -1,20 +1,11 @@
-import {
-  Check,
-  CircleX,
-  Clock,
-  Download,
-  Hourglass,
-  type LucideIcon,
-  RotateCcw,
-  TriangleAlert,
-} from "lucide-react";
+import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
-import type { StatusPesanan } from "@/domain/status-pesanan";
+import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import { rupiah } from "@/lib/rupiah";
 import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
@@ -39,41 +30,6 @@ export const metadata: Metadata = {
   referrer: "no-referrer",
   robots: { index: false, follow: false },
 };
-
-/** Ikon dan warna pil setiap status Pesanan (DESIGN.md Status Pesanan). */
-const PIL_STATUS: Record<StatusPesanan, { Ikon: LucideIcon; warna: string }> = {
-  "Menunggu Pembayaran": {
-    Ikon: Clock,
-    warna: "bg-st-tunggu-bg text-st-tunggu",
-  },
-  Selesai: { Ikon: Check, warna: "bg-st-selesai-bg text-st-selesai" },
-  Kedaluwarsa: {
-    Ikon: Hourglass,
-    warna: "bg-st-kedaluwarsa-bg text-st-kedaluwarsa",
-  },
-  Dibatalkan: { Ikon: CircleX, warna: "bg-st-batal-bg text-st-batal" },
-  Bermasalah: {
-    Ikon: TriangleAlert,
-    warna: "bg-st-masalah-bg text-st-masalah",
-  },
-  "Dana Dikembalikan": {
-    Ikon: RotateCcw,
-    warna: "bg-st-kembali-bg text-st-kembali",
-  },
-};
-
-/** Pil status Pesanan (DESIGN.md Status Pesanan): warna, ikon, dan label sekaligus. */
-function PilStatusPesanan({ status }: { status: StatusPesanan }) {
-  const { Ikon, warna } = PIL_STATUS[status];
-  return (
-    <span
-      className={`inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-bold whitespace-nowrap ${warna}`}
-    >
-      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.4} />
-      {status}
-    </span>
-  );
-}
 
 type PesananDibaca = NonNullable<
   Awaited<ReturnType<typeof bacaPesananLewatTautan>>
