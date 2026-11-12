@@ -308,10 +308,10 @@ export async function buatPesanan(
 
 /**
  * Kolom-kolom Item stok yang Terkirim ke Pesanan itu, dengan nama kolom yang dicatat saat Item stok itu
- * Terkirim (PRD §4.1). Isinya dibuka dengan ITEM_STOK_KEY. Melempar galat bila Pesanan itu tidak punya
- * Item stok Terkirim, karena Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7).
+ * Terkirim (PRD §4.1), atau null bila Pesanan itu belum dikirimi Item stok. Isinya dibuka dengan
+ * ITEM_STOK_KEY.
  */
-async function bacaItemStokTerkirim(pesananId: string, nomor: string) {
+export async function bacaItemStokTerkirim(pesananId: string) {
   const [terkirim] = await db
     .select({
       isiTerenkripsi: itemStok.isiTerenkripsi,
@@ -321,15 +321,30 @@ async function bacaItemStokTerkirim(pesananId: string, nomor: string) {
     .where(
       and(eq(itemStok.pesananId, pesananId), eq(itemStok.status, "Terkirim")),
     );
-  if (!terkirim?.formatSaatTerkirim) {
+  if (!terkirim) return null;
+  if (!terkirim.formatSaatTerkirim) {
     throw new Error(
-      `Pesanan ${nomor} Selesai tetapi tidak punya Item stok Terkirim beserta nama kolomnya, padahal Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7). Periksa item_stok dengan pesanan_id Pesanan itu di database.`,
+      `Item stok yang Terkirim ke Pesanan ${pesananId} tidak mencatat nama kolomnya, padahal nama kolom Format Item stok selalu dicatat saat Item stok Terkirim (PRD §4.1). Periksa item_stok.format_saat_terkirim untuk Pesanan itu di database.`,
     );
   }
   return kolomItemStokTerkirim({
     formatSaatTerkirim: terkirim.formatSaatTerkirim,
     nilai: bukaItemStok(terkirim.isiTerenkripsi),
   });
+}
+
+/**
+ * Kolom-kolom Item stok Pesanan Selesai itu menurut bacaItemStokTerkirim. Melempar galat bila Pesanan itu
+ * tidak punya Item stok Terkirim, karena Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7).
+ */
+async function bacaItemStokPesananSelesai(pesananId: string, nomor: string) {
+  const kolom = await bacaItemStokTerkirim(pesananId);
+  if (!kolom) {
+    throw new Error(
+      `Pesanan ${nomor} Selesai tetapi tidak punya Item stok Terkirim, padahal Pesanan Selesai selalu sudah dikirimi Item stok (PRD §5.7). Periksa item_stok dengan pesanan_id Pesanan itu di database.`,
+    );
+  }
+  return kolom;
 }
 
 /**
@@ -368,7 +383,7 @@ export async function bacaPesananLewatTautan(tautan: string) {
     ...lainnya,
     rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
     itemStok: itemStokTampil(baris.status)
-      ? await bacaItemStokTerkirim(id, baris.nomorPesanan)
+      ? await bacaItemStokPesananSelesai(id, baris.nomorPesanan)
       : null,
     dibacaPada: new Date(),
   };

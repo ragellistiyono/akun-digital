@@ -34,7 +34,7 @@ export function IsianTeks({
   galat?: string;
   bantuan?: string;
   banyakBaris?: boolean;
-  inputMode?: "numeric";
+  inputMode?: "numeric" | "email";
   autoFocus?: boolean;
   mono?: boolean;
 }) {
