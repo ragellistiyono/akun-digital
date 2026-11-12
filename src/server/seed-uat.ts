@@ -16,6 +16,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { and, eq } from "drizzle-orm";
 
 import { periksaFormatItemStok } from "@/domain/format-item-stok";
+import { tempelItemStok } from "@/domain/item-stok";
 import { namaKategoriDipakai } from "@/domain/nama-kategori";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { rapikanNomorWhatsapp } from "@/domain/nomor-whatsapp";
@@ -24,6 +25,7 @@ import { totalBayar } from "@/domain/total-bayar";
 import { periksaHarga } from "@/domain/validasi-harga";
 
 import { buatAdmin } from "./auth/buat-admin";
+import { BATAS_UKURAN_GAMBAR_MB } from "./berkas-unggahan";
 import { db } from "./db";
 import { itemStok, pesanan, riwayatStatusPesanan } from "./db/schema";
 import { bacaKunciItemStok, sidikJariItemStok } from "./enkripsi-item-stok";
@@ -99,12 +101,13 @@ const PRODUK: ProdukSeed[] = [
         nama: "1 Bulan",
         hargaJual: 50000,
         hargaNormal: 75000,
-        // Dua akun berbagi, masing-masing lima profil (PRD §4.3).
-        itemStok: ["a", "b"].flatMap((akun) =>
+        // Dua login Netflix yang dipakai bersama, masing-masing lima profil: satu Item stok untuk satu
+        // profil (PRD §4.3).
+        itemStok: ["a", "b"].flatMap((login) =>
           berurut(
             5,
             (nomor) =>
-              `netflix-${akun}@miwe.example|sandi-contoh-${akun}|Profil ${nomor}`,
+              `netflix-${login}@miwe.example|sandi-contoh-${login}|Profil ${nomor}`,
           ),
         ),
       },
@@ -317,12 +320,32 @@ type RingkasanSeed = {
   pengaturanToko: number;
 };
 
-function gagal(pesan: string): never {
-  throw new Error(`Seed UAT berhenti: ${pesan}`);
+/** Menghentikan seed dengan pesan yang menyebut sebabnya dan langkah berikutnya. */
+function gagal(sebab: string, langkah: string): never {
+  throw new Error(`Seed UAT berhenti: ${sebab} ${langkah}`);
 }
 
-const PESAN_KUNCI_BERMASALAH =
-  "ITEM_STOK_KEY belum diisi atau tidak sah, jadi Item stok tidak bisa disimpan terenkripsi. Isi ITEM_STOK_KEY di .env dengan 32 byte acak dalam base64, lalu jalankan ulang `pnpm db:seed`.";
+/** Langkah berikutnya bila data seed di berkas ini ditolak aturan toko. */
+const PERBAIKI_DATA_SEED =
+  "Perbaiki data seed itu di src/server/seed-uat.ts, lalu jalankan ulang `pnpm db:seed`.";
+
+/**
+ * Langkah berikutnya bila data seed hilang di tengah jalan, misalnya diubah atau dihapus di dasbor admin
+ * selama seed berjalan. Seed berikutnya membuat lagi data seed yang belum ada.
+ */
+const JALANKAN_ULANG =
+  "Data itu mungkin diubah atau dihapus selama seed berjalan. Jalankan ulang `pnpm db:seed`; data seed yang belum ada akan dibuat lagi.";
+
+const SEBAB_KUNCI_BERMASALAH =
+  "ITEM_STOK_KEY belum diisi atau tidak sah, jadi Item stok tidak bisa disimpan terenkripsi.";
+const LANGKAH_KUNCI_BERMASALAH =
+  "Isi ITEM_STOK_KEY di .env dengan 32 byte acak dalam base64, lalu jalankan ulang `pnpm db:seed`.";
+
+/** Sebab gambar contoh ditolak simpanGambar, untuk pesan galat. */
+const ALASAN_GAMBAR_DITOLAK = {
+  "bukan-gambar": "bukan gambar PNG, JPEG, atau WebP",
+  "terlalu-besar": `lebih besar dari ${BATAS_UKURAN_GAMBAR_MB} MB`,
+} as const;
 
 type KunciItemStok = Extract<
   ReturnType<typeof bacaKunciItemStok>,
@@ -339,14 +362,22 @@ async function isiKategori(ringkasan: RingkasanSeed) {
     const hasil = await buatKategori({ nama, ikon });
     if (hasil.hasil === "dibuat") ringkasan.kategori++;
     if (hasil.hasil === "ditolak") {
-      gagal(`ikon Kategori "${nama}" ditolak (${hasil.alasan}).`);
+      gagal(
+        `Ikon contoh Kategori "${nama}" ditolak karena ${ALASAN_GAMBAR_DITOLAK[hasil.alasan]}.`,
+        PERBAIKI_DATA_SEED,
+      );
     }
   }
   const semua = await daftarKategori();
   return new Map(
     KATEGORI.map(({ nama }) => {
       const ada = semua.find((k) => namaKategoriDipakai(nama, [k.nama]));
-      if (!ada) gagal(`Kategori "${nama}" tidak ditemukan setelah dibuat.`);
+      if (!ada) {
+        gagal(
+          `Kategori "${nama}" tidak ditemukan setelah dibuat.`,
+          JALANKAN_ULANG,
+        );
+      }
       return [nama, ada.id];
     }),
   );
@@ -369,11 +400,17 @@ async function isiProduk(
   let id = await idProduk(p.nama);
   if (id === undefined) {
     const format = periksaFormatItemStok(p.formatItemStok);
-    if (!format.sah) gagal(`Format Item stok "${p.nama}" ditolak.`);
+    if (!format.sah) {
+      gagal(
+        `Format Item stok Produk "${p.nama}" ditolak: Format harus punya minimal satu kolom, dan nama kolomnya tidak boleh kosong atau kembar (PRD §4.1).`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
     const kategoriId = idKategori.get(p.kategori);
     if (kategoriId === undefined) {
       gagal(
-        `Kategori "${p.kategori}" untuk Produk "${p.nama}" bukan Kategori seed.`,
+        `Produk "${p.nama}" memakai Kategori "${p.kategori}", yang tidak ada di daftar Kategori seed.`,
+        PERBAIKI_DATA_SEED,
       );
     }
     const hasil = await buatProduk({
@@ -386,11 +423,19 @@ async function isiProduk(
       formatItemStok: format.kolom,
     });
     if (hasil.hasil !== "dibuat") {
-      gagal(`Kategori "${p.kategori}" untuk Produk "${p.nama}" tidak ada.`);
+      gagal(
+        `Kategori "${p.kategori}" hilang sebelum Produk "${p.nama}" tersimpan.`,
+        JALANKAN_ULANG,
+      );
     }
     ringkasan.produk++;
     id = await idProduk(p.nama);
-    if (id === undefined) gagal(`Produk "${p.nama}" tidak ditemukan.`);
+    if (id === undefined) {
+      gagal(
+        `Produk "${p.nama}" tidak ditemukan setelah dibuat.`,
+        JALANKAN_ULANG,
+      );
+    }
   }
 
   if ((await bacaProduk(id))?.foto.length === 0) {
@@ -399,8 +444,23 @@ async function isiProduk(
       "foto.png",
     );
     const hasil = await unggahFotoProduk({ produkId: id, foto });
-    if (hasil.hasil !== "diunggah") {
-      gagal(`foto contoh Produk "${p.nama}" ditolak (${hasil.hasil}).`);
+    if (hasil.hasil === "ditolak") {
+      gagal(
+        `Foto contoh Produk "${p.nama}" ditolak karena ${ALASAN_GAMBAR_DITOLAK[hasil.alasan]}.`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
+    if (hasil.hasil === "tidak-ada") {
+      gagal(
+        `Produk "${p.nama}" hilang sebelum foto contohnya tersimpan.`,
+        JALANKAN_ULANG,
+      );
+    }
+    if (hasil.hasil === "melebihi-batas") {
+      gagal(
+        `Produk "${p.nama}" sudah punya ${hasil.batas} foto sebelum foto contohnya tersimpan.`,
+        JALANKAN_ULANG,
+      );
     }
     ringkasan.foto++;
   }
@@ -419,8 +479,12 @@ async function isiVarian(
   const ada = await daftarVarian(produkId);
   for (const v of p.varian) {
     if (ada.some((lama) => lama.nama === v.nama)) continue;
-    if (!periksaHarga(v).valid) {
-      gagal(`harga Varian "${p.nama} ${v.nama}" ditolak.`);
+    const harga = periksaHarga(v);
+    if (!harga.valid) {
+      gagal(
+        `Harga Varian "${p.nama} ${v.nama}" ditolak aturan harga PRD §3.2 dan §3.5 dengan alasan ${harga.alasan}.`,
+        PERBAIKI_DATA_SEED,
+      );
     }
     await tambahVarian({
       produkId,
@@ -437,7 +501,10 @@ async function isiVarian(
     if (v.itemStok.length === 0) continue;
     const varianId = semua.find((lama) => lama.nama === v.nama)?.id;
     if (varianId === undefined) {
-      gagal(`Varian "${p.nama} ${v.nama}" tidak ditemukan setelah dibuat.`);
+      gagal(
+        `Varian "${p.nama} ${v.nama}" tidak ditemukan setelah dibuat.`,
+        JALANKAN_ULANG,
+      );
     }
     await tempelSeed({ produkId, varianId, baris: v.itemStok }, ringkasan);
   }
@@ -460,9 +527,14 @@ async function tempelSeed(
     varianId,
     teks: baris.join("\n"),
   });
-  if (hasil.hasil === "kunci-bermasalah") gagal(PESAN_KUNCI_BERMASALAH);
+  if (hasil.hasil === "kunci-bermasalah") {
+    gagal(SEBAB_KUNCI_BERMASALAH, LANGKAH_KUNCI_BERMASALAH);
+  }
   if (hasil.hasil === "varian-tidak-ada") {
-    gagal(`Varian untuk Item stok "${baris[0]}" tidak ditemukan.`);
+    gagal(
+      `Varian untuk Item stok "${baris[0]}" hilang sebelum Item stok itu tersimpan.`,
+      JALANKAN_ULANG,
+    );
   }
   ringkasan.itemStok += hasil.tempel.tersimpan.length;
 }
@@ -491,17 +563,31 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
     if (ada) continue;
 
     const produkId = await idProduk(p.produk);
-    if (produkId === undefined) {
-      gagal(`Produk "${p.produk}" untuk Pesanan seed tidak ada.`);
+    const produkDipesan = produkId && (await bacaProduk(produkId));
+    const dipesan =
+      produkId &&
+      (await daftarVarian(produkId)).find((v) => v.nama === p.varian);
+    if (!produkId || !produkDipesan || !dipesan) {
+      gagal(
+        `Varian "${p.produk} ${p.varian}" untuk Pesanan seed ${p.email} tidak ditemukan.`,
+        "Pastikan Produk dan Varian itu ada di daftar Produk seed di src/server/seed-uat.ts, lalu jalankan ulang `pnpm db:seed`; data seed yang belum ada akan dibuat lagi.",
+      );
     }
-    const produkDipesan = await bacaProduk(produkId);
-    const dipesan = (await daftarVarian(produkId)).find(
-      (v) => v.nama === p.varian,
-    );
-    if (!dipesan || !produkDipesan) {
-      gagal(`Varian "${p.produk} ${p.varian}" untuk Pesanan seed tidak ada.`);
-    }
+
+    // Isi kolom Item stok Terkirim, dipisah dan dirapikan seperti tempelan Admin (PRD §4.2).
+    let nilaiTerkirim: string[] | undefined;
     if (p.itemStok) {
+      [nilaiTerkirim] = tempelItemStok({
+        kolom: produkDipesan.formatItemStok,
+        teks: p.itemStok,
+        sudahAda: () => false,
+      }).tersimpan;
+      if (!nilaiTerkirim) {
+        gagal(
+          `Item stok "${p.itemStok}" untuk Pesanan seed ${p.email} tidak cocok dengan Format Item stok ${p.produk}.`,
+          PERBAIKI_DATA_SEED,
+        );
+      }
       await tempelSeed(
         { produkId, varianId: dipesan.id, baris: [p.itemStok] },
         ringkasan,
@@ -550,8 +636,7 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
         },
       ]);
 
-      if (!p.itemStok) return;
-      const nilai = p.itemStok.split("|").map((kolom) => kolom.trim());
+      if (!nilaiTerkirim) return;
       const terkirim = await tx
         .update(itemStok)
         .set({
@@ -562,14 +647,15 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
         .where(
           and(
             eq(itemStok.varianId, dipesan.id),
-            eq(itemStok.sidikJari, sidikJariItemStok(kunci, nilai)),
+            eq(itemStok.sidikJari, sidikJariItemStok(kunci, nilaiTerkirim)),
             eq(itemStok.status, "Tersedia"),
           ),
         )
         .returning({ id: itemStok.id });
       if (terkirim.length === 0) {
         gagal(
-          `Item stok "${p.itemStok}" untuk Pesanan seed ${p.email} tidak Tersedia lagi. Hapus Pesanan yang memakainya, atau ganti isi Item stok itu di src/server/seed-uat.ts, lalu jalankan ulang \`pnpm db:seed\`.`,
+          `Item stok "${p.itemStok}" untuk Pesanan seed ${p.email} tidak Tersedia lagi.`,
+          "Hapus Pesanan yang memakainya, atau ganti isi Item stok itu di src/server/seed-uat.ts, lalu jalankan ulang `pnpm db:seed`.",
         );
       }
     });
@@ -584,7 +670,9 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
 export async function isiSeedUat(): Promise<RingkasanSeed> {
   // Diperiksa sebelum ada data yang ditulis, karena tanpa kunci ini Item stok tidak bisa disimpan.
   const kunci = bacaKunciItemStok();
-  if (kunci.hasil !== "ada") gagal(PESAN_KUNCI_BERMASALAH);
+  if (kunci.hasil !== "ada") {
+    gagal(SEBAB_KUNCI_BERMASALAH, LANGKAH_KUNCI_BERMASALAH);
+  }
 
   const ringkasan = {
     admin: 0,
@@ -615,7 +703,12 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
     const nomor = rapikanNomorWhatsapp({
       isian: PENGATURAN_TOKO.nomorWhatsapp,
     });
-    if (!nomor.sah) gagal(`nomor WhatsApp contoh ditolak (${nomor.alasan}).`);
+    if (!nomor.sah) {
+      gagal(
+        `Nomor WhatsApp contoh "${PENGATURAN_TOKO.nomorWhatsapp}" ditolak aturan nomor WhatsApp PRD §9.8 dengan alasan ${nomor.alasan}.`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
     await simpanPengaturanToko({
       ...PENGATURAN_TOKO,
       nomorWhatsapp: nomor.nomor,
