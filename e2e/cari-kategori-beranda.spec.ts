@@ -143,22 +143,24 @@ test('UAT-C1: mencari "netflix" menampilkan Netflix Premium', async ({
   await expect(chip(page, "Semua")).toHaveAttribute("aria-pressed", "true");
 });
 
+// Spec lain yang berjalan bersamaan bisa membuat Produk "Netflix Premium …" miliknya sendiri di sela dua
+// pencarian, sehingga hasil pencarian seluruh toko bisa berbeda walaupun pencariannya benar. Jadi yang
+// dibandingkan hanya Produk run ini: Netflix Premium harus ditemukan oleh kedua pencarian, sedangkan YouTube
+// Premium, Spotify Premium, dan Uji Bayar run ini tidak.
 test('mencari "NETFLIX" memberi hasil yang sama dengan "netflix"', async ({
   page,
 }) => {
   const hasil = async (kataCari: string) => {
     await page.goto("/");
     await cari(page, kataCari);
-    return bagian(page, "Hasil pencarian")
-      .getByRole("link")
-      .evaluateAll((tautan) => tautan.map((a) => a.getAttribute("href")));
+    return produkRunIni(page, "Hasil pencarian");
   };
 
   const kecil = await hasil("netflix");
   const besar = await hasil("NETFLIX");
 
   expect(besar).toEqual(kecil);
-  expect(kecil.length).toBeGreaterThan(0);
+  expect(kecil).toEqual([PRODUK.netflix]);
   await expect(kotakCari(page)).toHaveValue("NETFLIX");
 });
 
