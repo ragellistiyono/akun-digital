@@ -7,7 +7,10 @@ import { z } from "zod";
 
 import { CARA_PENYELESAIAN } from "@/domain/penyelesaian-bermasalah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { kirimUlangEmailPesanan } from "@/server/detail-pesanan";
+import {
+  kirimUlangEmailPesanan,
+  koreksiEmailPesanan,
+} from "@/server/detail-pesanan";
 import { selesaikanPesananBermasalah } from "@/server/penyelesaian-bermasalah";
 
 /** Hasil kirim ulang email "Pesanan selesai" untuk ditampilkan di detail Pesanan. */
@@ -33,19 +36,22 @@ function bacaPesananId(formData: FormData) {
   return id.data;
 }
 
-const PESAN_EMAIL_KOSONG =
-  "Email baru belum diisi. Tulis email Pembeli yang benar, misalnya nama@email.com, lalu tekan Simpan dan kirim ulang.";
-
-// Isian email yang tidak terkirim sama sekali diperlakukan sama dengan email kosong.
-const EmailBaru = z
-  .string({ error: PESAN_EMAIL_KOSONG })
-  .trim()
-  .min(1, PESAN_EMAIL_KOSONG)
-  .pipe(
-    z.email(
-      "Email baru belum lengkap atau salah tulis. Tulis email yang lengkap, misalnya nama@email.com, lalu tekan Simpan dan kirim ulang.",
-    ),
-  );
+/**
+ * Email baru dari form koreksi email. Pesan galatnya menyebut tombol form itu sebagai langkah berikutnya.
+ * Isian email yang tidak terkirim sama sekali diperlakukan sama dengan email kosong.
+ */
+function skemaEmailBaru(tombol: string) {
+  const pesanKosong = `Email baru belum diisi. Tulis email Pembeli yang benar, misalnya nama@email.com, lalu tekan ${tombol}.`;
+  return z
+    .string({ error: pesanKosong })
+    .trim()
+    .min(1, pesanKosong)
+    .pipe(
+      z.email(
+        `Email baru belum lengkap atau salah tulis. Tulis email yang lengkap, misalnya nama@email.com, lalu tekan ${tombol}.`,
+      ),
+    );
+}
 
 /** Pesan bila kirim ulang tidak tersedia untuk Pesanan berstatus itu (kirimUlangEmailTersedia). */
 const pesanTidakTersedia = (status: string) =>
@@ -76,9 +82,17 @@ export async function aksiKirimUlangEmail(
   }
 }
 
-export async function aksiKoreksiEmail(
-  _sebelumnya: KeadaanKoreksiEmail,
+/** Pesan bila koreksi email tidak tersedia untuk Pesanan berstatus itu (koreksiEmailTersedia). */
+const pesanKoreksiTidakTersedia = (status: string) =>
+  `Email Pesanan tidak diganti, karena Pesanan ini berstatus ${status}, padahal koreksi email hanya tersedia untuk Pesanan Selesai dan Bermasalah. Muat ulang halaman untuk melihat status terbarunya.`;
+
+/**
+ * Koreksi email Pesanan (PRD §6.4) dari form yang tombolnya bernama `tombol`. Apakah email "Pesanan selesai"
+ * ikut dikirim ulang ditentukan status Pesanan di server, bukan oleh form yang dipakai.
+ */
+async function koreksiEmail(
   formData: FormData,
+  tombol: string,
 ): Promise<KeadaanKoreksiEmail> {
   await wajibSesiAdmin(await headers());
 
@@ -86,13 +100,13 @@ export async function aksiKoreksiEmail(
   const isian = formData.get("email");
   // Email yang diketik Admin dikembalikan apa adanya untuk mengisi ulang form.
   const email = typeof isian === "string" ? isian : "";
-  const emailBaru = EmailBaru.safeParse(isian);
+  const emailBaru = skemaEmailBaru(tombol).safeParse(isian);
   if (!emailBaru.success) {
     return { email, galat: emailBaru.error.issues[0].message };
   }
 
   // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk mengoreksi.
-  const hasil = await kirimUlangEmailPesanan({
+  const hasil = await koreksiEmailPesanan({
     pesananId,
     emailBaru: emailBaru.data,
   });
@@ -100,18 +114,36 @@ export async function aksiKoreksiEmail(
     case "tidak-ada":
       notFound();
     case "tidak-tersedia":
-      return {
-        email,
-        galat: `Email Pesanan tidak diganti. ${pesanTidakTersedia(hasil.status)}`,
-      };
-    case "dijadwalkan":
+      return { email, galat: pesanKoreksiTidakTersedia(hasil.status) };
+    case "disimpan":
       // Detail Pesanan dibuat ulang, supaya email baru tampil di sana.
       refresh();
       return {
         email: hasil.email,
-        pesan: `Email Pesanan diganti menjadi ${hasil.email}, dan email "Pesanan selesai" sedang dikirim ke alamat itu. ${KETERANGAN_GAGAL}`,
+        pesan: hasil.kirimUlang
+          ? `Email Pesanan diganti menjadi ${hasil.email}, dan email "Pesanan selesai" sedang dikirim ke alamat itu. ${KETERANGAN_GAGAL}`
+          : `Email Pesanan diganti menjadi ${hasil.email}. Belum ada email yang dikirim: email "Pesanan selesai" dikirim ke alamat itu setelah Anda menekan "Kirim Item stok".`,
       };
   }
+}
+
+/** Koreksi email di detail Pesanan Selesai, dengan tombol "Simpan dan kirim ulang" (PRD §6.4). */
+export async function aksiKoreksiEmail(
+  _sebelumnya: KeadaanKoreksiEmail,
+  formData: FormData,
+): Promise<KeadaanKoreksiEmail> {
+  return koreksiEmail(formData, "Simpan dan kirim ulang");
+}
+
+/**
+ * Koreksi email di detail Pesanan Bermasalah, dengan tombol "Simpan email", yang hanya menyimpan email baru
+ * (PRD §6.4, ▶ Keputusan 2026-11-12).
+ */
+export async function aksiKoreksiEmailBermasalah(
+  _sebelumnya: KeadaanKoreksiEmail,
+  formData: FormData,
+): Promise<KeadaanKoreksiEmail> {
+  return koreksiEmail(formData, "Simpan email");
 }
 
 /** Cara penyelesaian dari tombol yang ditekan, yaitu "Kirim Item stok" atau "Tandai Dana Dikembalikan". */

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +23,7 @@ import { sisipkanPesanan } from "@/server/uji-pesanan";
 import {
   aksiKirimUlangEmail,
   aksiKoreksiEmail,
+  aksiKoreksiEmailBermasalah,
   aksiSelesaikanBermasalah,
 } from "./aksi";
 
@@ -265,29 +266,38 @@ describe("koreksi email Pesanan (PRD §6.4, ADR-0003)", () => {
     });
   }
 
-  it("koreksi email Pesanan Bermasalah ditolak, email Pesanan tidak berubah, dan tidak ada email yang dijadwalkan", async () => {
-    const emailLama = emailUnik();
-    const emailBaru = emailUnik();
-    const dipesan = await sisipkanPesanan({
-      varianId,
-      status: "Bermasalah",
-      email: emailLama,
-    });
-    sebagaiPengunjung(await cookieAdminBaru());
+  // Issue T25-b: koreksi email ditolak di server untuk status selain Selesai dan Bermasalah, dari form mana pun.
+  for (const status of [
+    "Menunggu Pembayaran",
+    "Kedaluwarsa",
+    "Dibatalkan",
+    "Dana Dikembalikan",
+  ] as const) {
+    it(`koreksi email Pesanan ${status} ditolak dengan pesan yang menyebut sebabnya, email Pesanan tidak berubah, dan tidak ada email yang dijadwalkan`, async () => {
+      const emailLama = emailUnik();
+      const emailBaru = emailUnik();
+      const dipesan = await sisipkanPesanan({
+        varianId,
+        status,
+        email: emailLama,
+      });
+      sebagaiPengunjung(await cookieAdminBaru());
 
-    const keadaan = await aksiKoreksiEmail(
-      { email: "" },
-      formulir({ pesananId: dipesan.id, email: emailBaru }),
-    );
+      for (const aksi of [aksiKoreksiEmail, aksiKoreksiEmailBermasalah]) {
+        const keadaan = await aksi(
+          { email: "" },
+          formulir({ pesananId: dipesan.id, email: emailBaru }),
+        );
 
-    expect(keadaan).toEqual({
-      email: emailBaru,
-      galat:
-        'Email Pesanan tidak diganti. Email "Pesanan selesai" tidak dikirim ulang, karena Pesanan ini berstatus Bermasalah, padahal kirim ulang hanya tersedia untuk Pesanan Selesai. Muat ulang halaman untuk melihat status terbarunya.',
+        expect(keadaan).toEqual({
+          email: emailBaru,
+          galat: `Email Pesanan tidak diganti, karena Pesanan ini berstatus ${status}, padahal koreksi email hanya tersedia untuk Pesanan Selesai dan Bermasalah. Muat ulang halaman untuk melihat status terbarunya.`,
+        });
+      }
+      expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailLama]);
+      expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
     });
-    expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailLama]);
-    expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
-  });
+  }
 });
 
 /** Varian "1 Bulan" sebuah Produk [CONTOH] baru dengan Stok Varian itu. */
@@ -442,5 +452,142 @@ describe("menyelesaikan Pesanan Bermasalah (PRD §5.9)", () => {
         formulir({ pesananId: randomUUID(), cara: "kirim-item-stok" }),
       ),
     ).rejects.toSatisfy(tidakDitemukan);
+  });
+});
+
+describe("koreksi email Pesanan Bermasalah (PRD §6.4, ▶ Keputusan 2026-11-12)", () => {
+  // UAT-E6 langkah 1: koreksi email Pesanan pertama tersimpan tanpa mengirim email.
+  it("Admin mengoreksi email Pesanan Bermasalah: email baru tersimpan tanpa mengirim email, Pesanan tetap Bermasalah, dan daftar Pesanan menampilkan alamat baru", async () => {
+    const emailLama = emailUnik();
+    const emailBaru = emailUnik();
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Bermasalah",
+      email: emailLama,
+    });
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(refresh).mockClear();
+
+    const keadaan = await aksiKoreksiEmailBermasalah(
+      { email: "" },
+      formulir({ pesananId: dipesan.id, email: emailBaru }),
+    );
+
+    expect(keadaan).toEqual({
+      email: emailBaru,
+      pesan: `Email Pesanan diganti menjadi ${emailBaru}. Belum ada email yang dikirim: email "Pesanan selesai" dikirim ke alamat itu setelah Anda menekan "Kirim Item stok".`,
+    });
+    expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
+    expect(emailTiruanKe(emailBaru)).toEqual([]);
+    expect(emailTiruanKe(emailLama)).toEqual([]);
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Bermasalah");
+    expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailBaru]);
+    expect(await nomorDitemukan(emailBaru)).toEqual([dipesan.nomorPesanan]);
+    // Detail Pesanan dibuat ulang, supaya email baru tampil di sana.
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  // Issue T25-b: Tamu tidak bisa menjalankan koreksi.
+  it("Tamu tanpa sesi Admin diarahkan ke halaman login, dan email Pesanan Bermasalah tidak berubah", async () => {
+    const emailLama = emailUnik();
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Bermasalah",
+      email: emailLama,
+    });
+    sebagaiPengunjung(new Headers());
+
+    await expect(
+      aksiKoreksiEmailBermasalah(
+        { email: "" },
+        formulir({ pesananId: dipesan.id, email: emailUnik() }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin"));
+
+    expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailLama]);
+  });
+
+  // Issue T25-b: email baru divalidasi dengan Zod.
+  for (const { isian, pesan } of [
+    {
+      isian: "   ",
+      pesan:
+        "Email baru belum diisi. Tulis email Pembeli yang benar, misalnya nama@email.com, lalu tekan Simpan email.",
+    },
+    {
+      isian: "budi@",
+      pesan:
+        "Email baru belum lengkap atau salah tulis. Tulis email yang lengkap, misalnya nama@email.com, lalu tekan Simpan email.",
+    },
+  ]) {
+    it(`email baru "${isian}" ditolak dengan pesan yang menyebut sebabnya, dan email Pesanan Bermasalah tidak berubah`, async () => {
+      const emailLama = emailUnik();
+      const dipesan = await sisipkanPesanan({
+        varianId,
+        status: "Bermasalah",
+        email: emailLama,
+      });
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      const keadaan = await aksiKoreksiEmailBermasalah(
+        { email: "" },
+        formulir({ pesananId: dipesan.id, email: isian }),
+      );
+
+      expect(keadaan).toEqual({ email: isian, galat: pesan });
+      expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailLama]);
+    });
+  }
+
+  // UAT-E6 langkah 1: setelah "Kirim Item stok", email "Pesanan selesai" terkirim ke email yang sudah dikoreksi.
+  it('setelah email dikoreksi dan Admin menekan "Kirim Item stok", email "Pesanan selesai" terkirim ke alamat baru saja', async () => {
+    const varianId = await varianBerstok(1);
+    const emailLama = emailUnik();
+    const emailBaru = emailUnik();
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Bermasalah",
+      email: emailLama,
+    });
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await aksiKoreksiEmailBermasalah(
+      { email: "" },
+      formulir({ pesananId: dipesan.id, email: emailBaru }),
+    );
+    expect(
+      await aksiSelesaikanBermasalah(
+        {},
+        formulir({ pesananId: dipesan.id, cara: "kirim-item-stok" }),
+      ),
+    ).toEqual({});
+    await jalankanPekerjaanEmail(dipesan.id);
+
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Selesai");
+    const terkirim = emailTiruanKe(emailBaru);
+    expect(terkirim).toHaveLength(1);
+    expect(terkirim[0].subjek).toBe(`Pesanan selesai: ${dipesan.nomorPesanan}`);
+    expect(emailTiruanKe(emailLama)).toEqual([]);
+  });
+
+  // PRD §6.4: koreksi Pesanan yang sudah menjadi Selesai selalu ikut mengirim ulang, juga dari form Pesanan
+  // Bermasalah yang dibuka sebelum Pesanan itu diselesaikan.
+  it("koreksi dari form Pesanan Bermasalah untuk Pesanan yang sudah Selesai menyimpan email baru dan mengirim ulang ke sana", async () => {
+    const emailBaru = emailUnik();
+    const dipesan = await pesananSelesai();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiKoreksiEmailBermasalah(
+      { email: "" },
+      formulir({ pesananId: dipesan.id, email: emailBaru }),
+    );
+    await jalankanPekerjaanEmail(dipesan.id);
+
+    expect(keadaan.galat).toBeUndefined();
+    expect(keadaan.pesan).toContain(
+      `Email Pesanan diganti menjadi ${emailBaru}, dan email "Pesanan selesai" sedang dikirim ke alamat itu.`,
+    );
+    expect(emailTiruanKe(emailBaru)).toHaveLength(1);
+    expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailBaru]);
   });
 });

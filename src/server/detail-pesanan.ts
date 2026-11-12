@@ -1,9 +1,12 @@
 // Detail Pesanan di dasbor admin (PRD §9.5) beserta aksinya: kirim ulang email "Pesanan selesai" dan koreksi
-// email Pesanan (PRD §6.4). Kapan kirim ulang tersedia ditentukan kirimUlangEmailTersedia di
-// src/domain/kirim-ulang-email.ts.
+// email Pesanan (PRD §6.4). Kapan kirim ulang dan koreksi tersedia ditentukan kirimUlangEmailTersedia dan
+// koreksiEmailTersedia di src/domain/kirim-ulang-email.ts.
 import { asc, eq } from "drizzle-orm";
 
-import { kirimUlangEmailTersedia } from "@/domain/kirim-ulang-email";
+import {
+  kirimUlangEmailTersedia,
+  koreksiEmailTersedia,
+} from "@/domain/kirim-ulang-email";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import { db } from "./db";
@@ -68,19 +71,13 @@ type HasilKirimUlangEmail =
  * Mengirim ulang email "Pesanan selesai" sebuah Pesanan ke email Pesanan-nya (PRD §6.4), lewat pekerjaan
  * latar yang sama dengan email pertamanya (T23): pekerja mengirimnya lewat adaptor email, mencobanya lagi
  * bila gagal, dan memasang tanda "Email gagal" bila semua percobaan gagal. Hasilnya email tujuannya.
- *
- * - Bila `emailBaru` diberikan, email Pesanan diganti lebih dulu menjadi email itu, yaitu koreksi email
- *   (PRD §6.4). Pesanan itu ikut pindah ke email baru, karena Pesanan ditautkan ke Member lewat emailnya
- *   (ADR-0003). Penggantian email dan penjadwalan email ditulis dalam satu transaksi.
- * - Pesanan yang kirim ulangnya tidak tersedia menurut kirimUlangEmailTersedia, yaitu selain Selesai,
- *   tidak diubah dan tidak dikirimi email.
+ * Pesanan yang kirim ulangnya tidak tersedia menurut kirimUlangEmailTersedia, yaitu selain Selesai, tidak
+ * dikirimi email.
  */
 export async function kirimUlangEmailPesanan({
   pesananId,
-  emailBaru,
 }: {
   pesananId: string;
-  emailBaru?: string;
 }): Promise<HasilKirimUlangEmail> {
   return db.transaction(async (tx) => {
     const [baris] = await tx
@@ -91,13 +88,54 @@ export async function kirimUlangEmailPesanan({
     if (!kirimUlangEmailTersedia(baris.status)) {
       return { hasil: "tidak-tersedia", status: baris.status };
     }
-    if (emailBaru !== undefined) {
-      await tx
-        .update(pesanan)
-        .set({ email: emailBaru })
-        .where(eq(pesanan.id, pesananId));
-    }
     await jadwalkanEmailPesananSelesai(pesananId, tx);
-    return { hasil: "dijadwalkan", email: emailBaru ?? baris.email };
+    return { hasil: "dijadwalkan", email: baris.email };
+  });
+}
+
+type HasilKoreksiEmail =
+  | { hasil: "disimpan"; email: string; kirimUlang: boolean }
+  | { hasil: "tidak-ada" }
+  | { hasil: "tidak-tersedia"; status: StatusPesanan };
+
+/**
+ * Mengganti email sebuah Pesanan menjadi `emailBaru`, yaitu koreksi email (PRD §6.4, ▶ Keputusan
+ * 2026-11-12). Pesanan itu ikut pindah ke email baru, karena Pesanan ditautkan ke Member lewat emailnya
+ * (ADR-0003). Hasilnya email baru itu, dan apakah email "Pesanan selesai" ikut dikirim ulang.
+ *
+ * - Pesanan Selesai: email "Pesanan selesai" dijadwalkan ke email baru seperti kirimUlangEmailPesanan, dalam
+ *   transaksi yang sama dengan penggantian emailnya.
+ * - Pesanan Bermasalah: hanya email baru yang disimpan. Email "Pesanan selesai" dikirim ke email Pesanan saat
+ *   itu begitu Pesanan menjadi Selesai lewat "Kirim Item stok" (PRD §5.9).
+ * - Pesanan yang koreksinya tidak tersedia menurut koreksiEmailTersedia tidak diubah dan tidak dikirimi email.
+ *
+ * Baris Pesanan dikunci lebih dulu, seperti di selesaikanPesananBermasalah, sehingga koreksi dan "Kirim Item
+ * stok" yang ditekan bersamaan diproses satu per satu. Koreksi yang datang sesudahnya melihat Pesanan yang
+ * sudah Selesai dan ikut mengirim ulang, jadi email baru tidak pernah tertinggal tanpa email "Pesanan selesai".
+ */
+export async function koreksiEmailPesanan({
+  pesananId,
+  emailBaru,
+}: {
+  pesananId: string;
+  emailBaru: string;
+}): Promise<HasilKoreksiEmail> {
+  return db.transaction(async (tx) => {
+    const [terkunci] = await tx
+      .select({ status: pesanan.status })
+      .from(pesanan)
+      .where(eq(pesanan.id, pesananId))
+      .for("update");
+    if (!terkunci) return { hasil: "tidak-ada" };
+    if (!koreksiEmailTersedia(terkunci.status)) {
+      return { hasil: "tidak-tersedia", status: terkunci.status };
+    }
+    await tx
+      .update(pesanan)
+      .set({ email: emailBaru })
+      .where(eq(pesanan.id, pesananId));
+    const kirimUlang = kirimUlangEmailTersedia(terkunci.status);
+    if (kirimUlang) await jadwalkanEmailPesananSelesai(pesananId, tx);
+    return { hasil: "disimpan", email: emailBaru, kirimUlang };
   });
 }

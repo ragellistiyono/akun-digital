@@ -64,6 +64,9 @@ const isi = (page: Page) => page.getByRole("main");
 const kepala = (page: Page) => isi(page).locator("h1 + div");
 const panelPenyelesaian = (page: Page) =>
   isi(page).getByRole("region", { name: "Selesaikan Pesanan Bermasalah" });
+/** Panel email dan Produk beserta Varian di detail Pesanan. */
+const panelPesanan = (page: Page) =>
+  isi(page).getByRole("region", { name: "Pesanan", exact: true });
 
 /** Teks setiap sel sebuah baris tabel. */
 const teksSel = (baris: Locator) =>
@@ -85,19 +88,32 @@ async function jumlahBermasalahDiMenu(page: Page) {
   return cocok ? Number(cocok[1]) : 0;
 }
 
-// UAT-E6, PRD §5.7 dan §5.9: Pesanan Bermasalah pertama diselesaikan dengan "Kirim Item stok", yang kedua
-// ditandai Dana Dikembalikan. Pengecekan kartu "Bermasalah" diganti daftar Pesanan dasbor admin (UAT M1).
-test('Admin menyelesaikan Pesanan Bermasalah pertama dengan "Kirim Item stok" dan menandai yang kedua Dana Dikembalikan', async ({
+// UAT-E6, PRD §5.7, §5.9, dan §6.4: email Pesanan Bermasalah pertama dikoreksi menjadi Email A tanpa mengirim
+// email, lalu Pesanan itu diselesaikan dengan "Kirim Item stok"; yang kedua ditandai Dana Dikembalikan.
+// Pengecekan kartu "Bermasalah" diganti daftar Pesanan dasbor admin (UAT M1). Email tiruan disimpan di memori
+// server, jadi alamat tujuan email "Pesanan selesai" diuji di aksi.test.ts.
+test('Admin mengoreksi email Pesanan Bermasalah pertama lalu menyelesaikannya dengan "Kirim Item stok", dan menandai yang kedua Dana Dikembalikan', async ({
   page,
 }) => {
   test.setTimeout(90_000);
   const varianId = await varianBerstok(2);
   const pertama = await sisipkanPesanan({ varianId, status: "Bermasalah" });
   const kedua = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+  const emailA = `budi-${randomUUID()}@mail.com`;
   await masukSebagaiAdmin(page);
 
   await page.goto(`/admin/pesanan/${pertama.nomorPesanan}`);
   await expect(kepala(page)).toHaveText("Bermasalah");
+  const koreksi = isi(page).getByRole("form", { name: "Koreksi email" });
+  await koreksi.getByLabel("Email baru").fill(emailA);
+  await koreksi.getByRole("button", { name: "Simpan email" }).click();
+  await expect(koreksi.getByRole("status")).toHaveText(
+    `Email Pesanan diganti menjadi ${emailA}. Belum ada email yang dikirim: email "Pesanan selesai" dikirim ke alamat itu setelah Anda menekan "Kirim Item stok".`,
+  );
+  await expect(panelPesanan(page)).toContainText(emailA);
+  await expect(kepala(page)).toHaveText("Bermasalah");
+  expect(await pekerjaanEmailPesananSelesai(pertama.id)).toEqual([]);
+
   await panelPenyelesaian(page)
     .getByRole("button", { name: "Kirim Item stok" })
     .click();
@@ -121,11 +137,18 @@ test('Admin menyelesaikan Pesanan Bermasalah pertama dengan "Kirim Item stok" da
     Ditahan: 0,
     Terkirim: 1,
   });
-  // Email "Pesanan selesai" dikirim pekerja server lewat T23.
+  // Email "Pesanan selesai" dikirim pekerja server lewat T23, ke email Pesanan yang sudah dikoreksi.
   await expect(async () => {
     const pekerjaan = await pekerjaanEmailPesananSelesai(pertama.id);
     expect(pekerjaan.map(({ state }) => state)).toEqual(["completed"]);
   }).toPass({ timeout: 30_000, intervals: [1_000] });
+  await expect(panelPesanan(page)).toContainText(emailA);
+  await page.goto(`/admin/pesanan?cari=${pertama.nomorPesanan}`);
+  await expect(
+    isi(page)
+      .getByRole("table")
+      .getByRole("row", { name: new RegExp(pertama.nomorPesanan) }),
+  ).toContainText(emailA);
 
   await page.goto(`/admin/pesanan/${kedua.nomorPesanan}`);
   await panelPenyelesaian(page)
