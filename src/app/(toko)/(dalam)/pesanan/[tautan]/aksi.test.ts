@@ -12,6 +12,10 @@ import {
   varian,
 } from "@/server/db/schema";
 import { bacaStokVarian } from "@/server/item-stok";
+import {
+  cekStatusPembayaran,
+  prosesKabarPembayaran,
+} from "@/server/kabar-pembayaran";
 import { buatPesanan } from "@/server/pesanan";
 import {
   bayarQrisTiruan,
@@ -241,9 +245,79 @@ describe("pembatalan oleh Pembeli (PRD §5.8)", () => {
     expect(STATUS_TIDAK_BISA_DIBATALKAN).toContain("Selesai");
   });
 
+  // PRD §5.8 (▶ Keputusan 2026-11-12 #99, issue T20-c): pembayarannya tercatat beberapa detik sebelum
+  // "Batalkan" diproses, jadi Pesanan sudah Selesai. Pesanan itu tidak dibatalkan, dan Pembeli kembali ke
+  // Tautan Pesanan dengan tanda pembatalan sudah dibayar, sama seperti pembatalan yang ditolak Qrispy.
+  it("Pesanan yang sudah Selesai saat Batalkan diproses tidak dibatalkan, Qrispy tidak dimintai pembatalan, dan Pembeli kembali ke Tautan Pesanan dengan tanda pembatalan sudah dibayar", async () => {
+    const varianId = await netflixSatuBulan(10);
+    const dipesan = await checkout(varianId);
+    bayarQrisTiruan({ qrisId: dipesan.qrisId, amount: dipesan.totalBayar });
+    await cekStatusPembayaran(dipesan.tautan);
+    expect(await statusPesanan(dipesan.id)).toBe("Selesai");
+    const batalkanQris = vi.spyOn(qrispyTiruan, "batalkanQris");
+
+    expect(await tekanBatalkan(dipesan.tautan)).toEqual({
+      alamat: `/pesanan/${dipesan.tautan}?pembatalan=sudah-dibayar`,
+    });
+
+    expect(batalkanQris).not.toHaveBeenCalled();
+    expect(await statusPesanan(dipesan.id)).toBe("Selesai");
+    expect(await itemStokPesanan(dipesan.id)).toEqual([{ status: "Terkirim" }]);
+    expect(await riwayat(dipesan.id)).toEqual([
+      { status: "Menunggu Pembayaran", pelaku: "Pembeli" },
+      { status: "Selesai", pelaku: "Qrispy" },
+    ]);
+  });
+
+  // Issue T20-c: kabar pembayarannya diproses selama Qrispy dimintai pembatalan, jadi Pesanan sudah
+  // Selesai saat toko hendak menjadikannya Dibatalkan.
+  it("Pesanan yang menjadi Selesai selama pembatalannya diproses tidak dibatalkan, dan Pembeli kembali ke Tautan Pesanan dengan tanda pembatalan sudah dibayar", async () => {
+    const varianId = await netflixSatuBulan(10);
+    const dipesan = await checkout(varianId);
+    vi.spyOn(qrispyTiruan, "batalkanQris").mockImplementationOnce(async () => {
+      await prosesKabarPembayaran({
+        qrisId: dipesan.qrisId,
+        nominalDiterima: dipesan.totalBayar,
+        waktuBayar: new Date(),
+      });
+    });
+
+    expect(await tekanBatalkan(dipesan.tautan)).toEqual({
+      alamat: `/pesanan/${dipesan.tautan}?pembatalan=sudah-dibayar`,
+    });
+
+    expect(await statusPesanan(dipesan.id)).toBe("Selesai");
+    expect(await riwayat(dipesan.id)).toEqual([
+      { status: "Menunggu Pembayaran", pelaku: "Pembeli" },
+      { status: "Selesai", pelaku: "Qrispy" },
+    ]);
+  });
+
+  // PRD §5.8 (▶ Keputusan 2026-11-12 #99): Pesanan yang menjadi Bermasalah karena nominalnya kurang (§5.9)
+  // tidak mendapat tanda itu, jadi Halaman Pesanan Bermasalah tampil tanpa pesan penjelas pembatalan.
+  it("Pesanan yang sudah Bermasalah saat Batalkan diproses tidak dibatalkan, dan Pembeli kembali ke Tautan Pesanan tanpa tanda pembatalan sudah dibayar", async () => {
+    const varianId = await netflixSatuBulan(10);
+    const dipesan = await checkout(varianId);
+    bayarQrisTiruan({
+      qrisId: dipesan.qrisId,
+      amount: dipesan.totalBayar - 1,
+    });
+    await cekStatusPembayaran(dipesan.tautan);
+    expect(await statusPesanan(dipesan.id)).toBe("Bermasalah");
+    const batalkanQris = vi.spyOn(qrispyTiruan, "batalkanQris");
+
+    expect(await tekanBatalkan(dipesan.tautan)).toEqual({
+      alamat: `/pesanan/${dipesan.tautan}`,
+    });
+
+    expect(batalkanQris).not.toHaveBeenCalled();
+    expect(await statusPesanan(dipesan.id)).toBe("Bermasalah");
+  });
+
   // PRD §5.7 dan tests/golden/transisi-status-pesanan.json: hanya Pesanan Menunggu Pembayaran yang bisa
-  // dibatalkan. Pembeli dikembalikan ke Tautan Pesanan, yang menampilkan statusnya saat ini.
-  it.each(STATUS_TIDAK_BISA_DIBATALKAN)(
+  // dibatalkan. Pembeli dikembalikan ke Tautan Pesanan, yang menampilkan statusnya saat ini. Pesanan
+  // Selesai mendapat tanda pembatalan sudah dibayar dan diuji di test sebelumnya.
+  it.each(STATUS_TIDAK_BISA_DIBATALKAN.filter((s) => s !== "Selesai"))(
     "Pesanan %s tidak bisa dibatalkan: statusnya tidak berubah dan Qrispy tidak dimintai pembatalan",
     async (statusAwal) => {
       const varianId = await netflixSatuBulan(10);

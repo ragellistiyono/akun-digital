@@ -4,7 +4,10 @@
 import { and, eq } from "drizzle-orm";
 
 import { hasilPembatalanPesanan } from "@/domain/pembatalan-pesanan";
-import { perpindahanStatusPesanan } from "@/domain/status-pesanan";
+import {
+  perpindahanStatusPesanan,
+  type StatusPesanan,
+} from "@/domain/status-pesanan";
 
 import { db } from "./db";
 import { itemStok, pesanan, riwayatStatusPesanan } from "./db/schema";
@@ -16,7 +19,7 @@ const PELAKU_PEMBATALAN = "Pembeli";
 
 type HasilBatalkanPesanan =
   | { hasil: "tidak-ditemukan" }
-  | { hasil: "tidak-bisa-dibatalkan" }
+  | { hasil: "tidak-bisa-dibatalkan"; status: StatusPesanan }
   | { hasil: "dibatalkan" }
   | { hasil: "diproses-sebagai-dibayar" }
   | { hasil: "gagal" };
@@ -59,10 +62,15 @@ async function mintaPembatalanQris(
  * Menjadikan Pesanan itu Dibatalkan dalam satu transaksi, selama perpindahannya masih boleh. Baris
  * Pesanan dikunci lebih dulu, seperti di prosesKabarPembayaran, sehingga pembatalan dan kabar pembayaran
  * yang datang bersamaan diproses satu per satu. Item stok yang ditahannya kembali Tersedia tanpa Pesanan,
- * supaya bisa ditahan Pesanan lain, dan Riwayat status Pesanan mendapat satu baris baru. Hasilnya false
- * bila status Pesanan sudah berubah sehingga tidak bisa dibatalkan lagi.
+ * supaya bisa ditahan Pesanan lain, dan Riwayat status Pesanan mendapat satu baris baru. Bila status
+ * Pesanan sudah berubah sehingga tidak bisa dibatalkan lagi, hasilnya membawa status itu.
  */
-async function jadikanDibatalkan(pesananId: string, sekarang: Date) {
+async function jadikanDibatalkan(
+  pesananId: string,
+  sekarang: Date,
+): Promise<
+  { dibatalkan: true } | { dibatalkan: false; status: StatusPesanan }
+> {
   return db.transaction(async (tx) => {
     const [terkunci] = await tx
       .select({ status: pesanan.status })
@@ -73,7 +81,7 @@ async function jadikanDibatalkan(pesananId: string, sekarang: Date) {
       !perpindahanStatusPesanan({ dari: terkunci.status, ke: "Dibatalkan" })
         .boleh
     ) {
-      return false;
+      return { dibatalkan: false, status: terkunci.status };
     }
 
     await tx
@@ -92,15 +100,15 @@ async function jadikanDibatalkan(pesananId: string, sekarang: Date) {
       status: "Dibatalkan",
       pelaku: PELAKU_PEMBATALAN,
     });
-    return true;
+    return { dibatalkan: true };
   });
 }
 
 /**
  * Pembeli membatalkan Pesanan di Tautan Pesanan itu (PRD §5.8, ADR-0004).
  *
- * - Hanya Pesanan Menunggu Pembayaran yang bisa dibatalkan (PRD §5.7). Pesanan lain tidak berubah, dan
- *   Qrispy tidak dimintai pembatalan.
+ * - Hanya Pesanan Menunggu Pembayaran yang bisa dibatalkan (PRD §5.7). Pesanan lain tidak berubah, Qrispy
+ *   tidak dimintai pembatalan, dan hasilnya membawa status Pesanan itu saat pembatalannya diproses.
  * - Toko meminta pembatalan QRIS-nya ke Qrispy lewat adaptor. Bila permintaan itu gagal, status QRIS-nya
  *   ditanyakan, lalu hasilPembatalanPesanan menentukan akibatnya.
  * - Pesanan yang diproses sebagai sudah dibayar melewati prosesKabarPembayaran, dengan `amount` dari
@@ -122,7 +130,7 @@ export async function batalkanPesanan(
   if (
     !perpindahanStatusPesanan({ dari: dipesan.status, ke: "Dibatalkan" }).boleh
   ) {
-    return { hasil: "tidak-bisa-dibatalkan" };
+    return { hasil: "tidak-bisa-dibatalkan", status: dipesan.status };
   }
 
   const jawaban = await mintaPembatalanQris(
@@ -141,10 +149,12 @@ export async function batalkanPesanan(
   );
 
   switch (akibat) {
-    case "dibatalkan":
-      return (await jadikanDibatalkan(dipesan.id, sekarang))
+    case "dibatalkan": {
+      const pembatalan = await jadikanDibatalkan(dipesan.id, sekarang);
+      return pembatalan.dibatalkan
         ? { hasil: "dibatalkan" }
-        : { hasil: "tidak-bisa-dibatalkan" };
+        : { hasil: "tidak-bisa-dibatalkan", status: pembatalan.status };
+    }
     case "diproses-sebagai-dibayar":
       // Akibat ini hanya datang dari status `paid`, yang membawa nominal diterima dan waktu bayarnya.
       if (statusQris?.paymentStatus === "paid") {

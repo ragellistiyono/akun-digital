@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 
 import {
   expect,
@@ -120,21 +120,15 @@ test("setelah Pembeli menekan Batalkan di Halaman bayar, Pesanan menjadi Dibatal
 });
 
 /**
- * Checkout sampai Halaman bayar, membayar QRIS-nya lewat Qrispy tiruan, lalu menekan "Batalkan". Karena
- * QRIS-nya sudah dibayar, Qrispy tiruan menolak pembatalannya dan status QRIS-nya `paid`. Hasilnya Tautan
- * Pesanan itu.
+ * Checkout sampai Halaman bayar. Halaman bayar itu tidak menanyakan status Pesanan sendiri, supaya
+ * pembayarannya tidak terbaca lewat pemantau status, dan Halaman bayar tetap terbuka sampai "Batalkan"
+ * ditekan. Hasilnya Pesanan yang baru dibuat.
  */
-async function batalkanSetelahDibayar(
-  page: Page,
-  request: APIRequestContext,
-  namaProduk: string,
-) {
+async function bukaHalamanBayar(page: Page, namaProduk: string) {
   const produkId = await sisipkanProduk({
     nama: `${namaProduk} ${akhiran}`,
     varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 3 }],
   });
-  // Halaman bayar tidak menanyakan status Pesanan sendiri selama test ini, supaya pembayarannya baru
-  // terbaca lewat pembatalan, bukan lewat pemantau status.
   await page.route(/\/pesanan\/[A-Za-z0-9_-]{43}\/status$/, (rute) =>
     rute.abort(),
   );
@@ -149,19 +143,112 @@ async function batalkanSetelahDibayar(
   ).toBeVisible();
   const [dipesan] = await db
     .select({
+      id: pesanan.id,
       tautan: pesanan.tautan,
       qrisId: pesanan.qrisId,
       totalBayar: pesanan.totalBayar,
     })
     .from(pesanan)
     .where(eq(pesanan.email, email));
+  return dipesan;
+}
 
+type PesananDibuka = Awaited<ReturnType<typeof bukaHalamanBayar>>;
+
+/** Membayar QRIS Pesanan itu lewat Qrispy tiruan dengan nominal itu. */
+async function bayarQris(
+  request: APIRequestContext,
+  dipesan: PesananDibuka,
+  amount: number,
+) {
   const respons = await request.post("/api/qrispy-tiruan/bayar", {
-    data: { qrisId: dipesan.qrisId, amount: dipesan.totalBayar },
+    data: { qrisId: dipesan.qrisId, amount },
   });
   expect(respons.status()).toBe(200);
+}
+
+/**
+ * Checkout sampai Halaman bayar, membayar QRIS-nya lewat Qrispy tiruan, lalu menekan "Batalkan". Karena
+ * QRIS-nya sudah dibayar, Qrispy tiruan menolak pembatalannya dan status QRIS-nya `paid`. Hasilnya Tautan
+ * Pesanan itu.
+ */
+async function batalkanSetelahDibayar(
+  page: Page,
+  request: APIRequestContext,
+  namaProduk: string,
+) {
+  const dipesan = await bukaHalamanBayar(page, namaProduk);
+  await bayarQris(request, dipesan, dipesan.totalBayar);
   await isi(page).getByRole("button", { name: "Batalkan" }).click();
   return dipesan.tautan;
+}
+
+/**
+ * Pembayaran Pesanan itu tercatat sebelum "Batalkan" ditekan: QRIS-nya dibayar lewat Qrispy tiruan, lalu
+ * Qrispy mengirim webhook payment.success bersignature benar dengan nominal itu (ADR-0004).
+ */
+async function catatPembayaran(
+  request: APIRequestContext,
+  dipesan: PesananDibuka,
+  amount: number,
+) {
+  await bayarQris(request, dipesan, amount);
+  const body = JSON.stringify({
+    event: "payment.success",
+    qris_id: dipesan.qrisId,
+    amount,
+    paid_at: new Date().toISOString(),
+  });
+  const secret = process.env.QRISPY_WEBHOOK_SECRET;
+  if (!secret) {
+    throw new Error(
+      "QRISPY_WEBHOOK_SECRET kosong, jadi webhook uji tidak bisa ditandatangani. Isi QRISPY_WEBHOOK_SECRET di .env.ci, lalu jalankan ulang `pnpm test:e2e`.",
+    );
+  }
+  const respons = await request.post("/api/qrispy/webhook", {
+    headers: {
+      "Content-Type": "application/json",
+      "X-Qrispy-Signature": createHmac("sha256", secret)
+        .update(body)
+        .digest("hex"),
+    },
+    data: body,
+  });
+  expect(respons.status()).toBe(200);
+}
+
+/** Riwayat status Pesanan itu, dari yang paling lama. */
+function riwayatStatus(pesananId: string) {
+  return db
+    .select({
+      status: riwayatStatusPesanan.status,
+      pelaku: riwayatStatusPesanan.pelaku,
+    })
+    .from(riwayatStatusPesanan)
+    .where(eq(riwayatStatusPesanan.pesananId, pesananId))
+    .orderBy(asc(riwayatStatusPesanan.waktu));
+}
+
+/**
+ * Checkout sampai Halaman bayar, mencatat pembayarannya lewat webhook sehingga Pesanan sudah Selesai,
+ * lalu menekan "Batalkan" dari Halaman bayar yang masih terbuka. Hasilnya Pesanan itu.
+ */
+async function batalkanSetelahSelesai(
+  page: Page,
+  request: APIRequestContext,
+  namaProduk: string,
+) {
+  const dipesan = await bukaHalamanBayar(page, namaProduk);
+  await catatPembayaran(request, dipesan, dipesan.totalBayar);
+  expect(await riwayatStatus(dipesan.id)).toEqual([
+    { status: "Menunggu Pembayaran", pelaku: "Pembeli" },
+    { status: "Selesai", pelaku: "Qrispy" },
+  ]);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+  return dipesan;
 }
 
 // Issue T20-b dan PRD §5.8 (▶ Keputusan 2026-11-12): bila Qrispy menolak pembatalan karena tagihannya
@@ -220,6 +307,108 @@ test("Tautan Pesanan Selesai yang sama di konteks browser lain tidak menampilkan
   } finally {
     await browserLain.close();
   }
+});
+
+// Issue T20-c dan PRD §5.8 (▶ Keputusan 2026-11-12 #99): pembayarannya tercatat beberapa detik sebelum
+// "Batalkan" diproses, jadi Pesanan sudah Selesai. Pembeli melihat Halaman Pesanan Selesai beserta pesan
+// penjelas, yang hanya tampil tepat setelah pembatalan, sama seperti T20-b.
+test("Pesanan yang sudah Selesai sebelum Batalkan diproses: Pembeli yang menekan Batalkan dari Halaman bayar yang masih terbuka melihat Halaman Pesanan Selesai dengan pesan penjelas, yang hilang setelah dimuat ulang", async ({
+  page,
+  request,
+}) => {
+  const dipesan = await batalkanSetelahSelesai(
+    page,
+    request,
+    "Pembatalan Sudah Selesai",
+  );
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pesanan" }),
+  ).toBeVisible();
+  await expect(isi(page).getByText("Selesai", { exact: true })).toBeVisible();
+  const pesan = isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true });
+  await expect(pesan).toBeVisible();
+  await expect(page).toHaveURL(/\/pesanan\/[A-Za-z0-9_-]{43}$/);
+  await expect(pesan).toBeVisible();
+  // Pesanan itu tidak dibatalkan.
+  expect(await riwayatStatus(dipesan.id)).toEqual([
+    { status: "Menunggu Pembayaran", pelaku: "Pembeli" },
+    { status: "Selesai", pelaku: "Qrispy" },
+  ]);
+
+  await page.reload();
+  await expect(isi(page).getByText("Selesai", { exact: true })).toBeVisible();
+  await expect(pesan).toHaveCount(0);
+});
+
+// Issue T20-c: dalam keadaan yang sama, Tautan Pesanan itu di konteks browser lain tidak menampilkan pesan
+// penjelas.
+test("Tautan Pesanan yang sudah Selesai sebelum Batalkan diproses tidak menampilkan pesan penjelas di konteks browser lain", async ({
+  page,
+  request,
+  browser,
+  baseURL,
+}) => {
+  const { tautan } = await batalkanSetelahSelesai(
+    page,
+    request,
+    "Pembatalan Sudah Selesai Lain",
+  );
+  await expect(
+    isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(`${baseURL}/pesanan/${tautan}`);
+
+  const browserLain = await browser.newContext({ baseURL });
+  try {
+    const halamanLain = await browserLain.newPage();
+    await halamanLain.goto(page.url());
+    await expect(
+      isi(halamanLain).getByText("Selesai", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      isi(halamanLain).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await browserLain.close();
+  }
+});
+
+// Issue T20-c dan PRD §5.8 (▶ Keputusan 2026-11-12 #99): pembayaran dengan nominal kurang (§5.9) tercatat
+// sebelum "Batalkan" diproses, jadi Pesanan sudah Bermasalah. Halaman Pesanan Bermasalah tampil tanpa
+// pesan penjelas pembatalan.
+test("Pesanan yang sudah Bermasalah saat Batalkan diproses menampilkan Halaman Pesanan Bermasalah tanpa pesan penjelas", async ({
+  page,
+  request,
+}) => {
+  const dipesan = await bukaHalamanBayar(page, "Pembatalan Bermasalah");
+  await catatPembayaran(request, dipesan, dipesan.totalBayar - 1);
+  expect(await riwayatStatus(dipesan.id)).toEqual([
+    { status: "Menunggu Pembayaran", pelaku: "Pembeli" },
+    { status: "Bermasalah", pelaku: "Qrispy" },
+  ]);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pesanan" }),
+  ).toBeVisible();
+  await expect(
+    isi(page).getByText("Bermasalah", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    isi(page).getByText(
+      "Pembayaran Anda sudah kami terima, tetapi Item stok belum bisa dikirim. Hubungi kami lewat WhatsApp.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    isi(page).getByText(PESAN_SUDAH_DIBAYAR, { exact: true }),
+  ).toHaveCount(0);
+  await expect(page).toHaveURL(`/pesanan/${dipesan.tautan}`);
 });
 
 // docs/DESIGN.md Buttons dan prototipe Halaman bayar: "Batalkan" adalah tombol garis di bilah lekat, di
