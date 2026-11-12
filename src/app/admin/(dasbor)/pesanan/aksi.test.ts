@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
 
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { daftarPesanan } from "@/server/daftar-pesanan";
 import { db, koneksi } from "@/server/db";
 import { varian } from "@/server/db/schema";
+import { bacaDetailPesanan } from "@/server/detail-pesanan";
 import { kirimEmailPesananSelesai } from "@/server/email-pesanan-selesai";
 import { emailTiruanKe } from "@/server/email-tiruan";
+import { bacaStokVarian } from "@/server/item-stok";
 import {
   kerjakanEmailPesananSelesai,
   pekerjaanEmailPesananSelesai,
@@ -17,15 +20,19 @@ import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanPesanan } from "@/server/uji-pesanan";
 
-import { aksiKirimUlangEmail, aksiKoreksiEmail } from "./aksi";
+import {
+  aksiKirimUlangEmail,
+  aksiKoreksiEmail,
+  aksiSelesaikanBermasalah,
+} from "./aksi";
 
 // Test integrasi Server Action dengan database app_test, dan email tiruan dari .env.ci (EMAIL_MODE=tiruan).
 // Header permintaan yang dibaca aksi lewat next/headers diganti dengan cookie milik pengunjung di setiap
-// test. refresh() dari next/cache hanya bisa berjalan di dalam Server Action yang dijalankan Next.js, jadi
-// diganti tiruan. Pekerja pg-boss tidak berjalan di proses test, jadi test menjalankan sendiri pekerjaan
+// test. refresh() dan revalidatePath() dari next/cache hanya bisa berjalan di dalam Server Action yang
+// dijalankan Next.js, jadi diganti tiruan. Pekerja pg-boss tidak berjalan di proses test, jadi test menjalankan sendiri pekerjaan
 // email yang dijadwalkan aksi.
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
-vi.mock("next/cache", () => ({ refresh: vi.fn() }));
+vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
 
 function sebagaiPengunjung(kepala: Headers) {
   vi.mocked(headers).mockResolvedValue(kepala);
@@ -280,5 +287,160 @@ describe("koreksi email Pesanan (PRD §6.4, ADR-0003)", () => {
     });
     expect(await emailDiDaftar(dipesan.nomorPesanan)).toEqual([emailLama]);
     expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
+  });
+});
+
+/** Varian "1 Bulan" sebuah Produk [CONTOH] baru dengan Stok Varian itu. */
+async function varianBerstok(stok: number) {
+  const produkId = await sisipkanProduk({
+    nama: `Selesaikan ${randomUUID().slice(0, 8)}`,
+    formatItemStok: FORMAT,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: stok }],
+  });
+  const [{ id }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  return id;
+}
+
+/** Status Pesanan itu menurut detail Pesanan di dasbor admin. */
+async function statusPesanan(nomorPesanan: string) {
+  return (await bacaDetailPesanan(nomorPesanan))?.status;
+}
+
+describe("menyelesaikan Pesanan Bermasalah (PRD §5.9)", () => {
+  // Issue T26: Tamu tidak bisa menjalankan aksi ini.
+  for (const cara of ["kirim-item-stok", "dana-dikembalikan"]) {
+    it(`Tamu tanpa sesi Admin yang mengirim ${cara} diarahkan ke halaman login, dan Pesanan tetap Bermasalah tanpa Item stok`, async () => {
+      const varianId = await varianBerstok(1);
+      const dipesan = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+      sebagaiPengunjung(new Headers());
+
+      await expect(
+        aksiSelesaikanBermasalah({}, formulir({ pesananId: dipesan.id, cara })),
+      ).rejects.toSatisfy(arahKe("/admin"));
+
+      expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Bermasalah");
+      expect((await bacaStokVarian(varianId)).stokVarian).toBe(1);
+      expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
+    });
+  }
+
+  // UAT-E6 langkah 1: Pesanan pertama menjadi Selesai, mendapat satu Item stok dari Varian yang sama, dan
+  // emailnya terkirim.
+  it('Admin menekan "Kirim Item stok": Pesanan Selesai, satu Item stok Terkirim, email "Pesanan selesai" terkirim, dan dasbor admin dimuat ulang', async () => {
+    const varianId = await varianBerstok(2);
+    const email = emailUnik();
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Bermasalah",
+      email,
+    });
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(revalidatePath).mockClear();
+
+    const keadaan = await aksiSelesaikanBermasalah(
+      {},
+      formulir({ pesananId: dipesan.id, cara: "kirim-item-stok" }),
+    );
+    await jalankanPekerjaanEmail(dipesan.id);
+
+    expect(keadaan).toEqual({});
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Selesai");
+    expect((await bacaStokVarian(varianId)).jumlahPerStatus).toEqual({
+      Tersedia: 1,
+      Ditahan: 0,
+      Terkirim: 1,
+    });
+    const terkirim = emailTiruanKe(email);
+    expect(terkirim).toHaveLength(1);
+    expect(terkirim[0].subjek).toBe(`Pesanan selesai: ${dipesan.nomorPesanan}`);
+    // Jumlah Pesanan Bermasalah di menu dihitung di layout dasbor admin, jadi layout itu ikut dimuat ulang.
+    expect(revalidatePath).toHaveBeenCalledWith("/admin", "layout");
+  });
+
+  // UAT-E6 langkah 2: Pesanan kedua menjadi Dana Dikembalikan.
+  it('Admin menekan "Tandai Dana Dikembalikan": Pesanan Dana Dikembalikan tanpa Item stok', async () => {
+    const varianId = await varianBerstok(1);
+    const dipesan = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(revalidatePath).mockClear();
+
+    const keadaan = await aksiSelesaikanBermasalah(
+      {},
+      formulir({ pesananId: dipesan.id, cara: "dana-dikembalikan" }),
+    );
+
+    expect(keadaan).toEqual({});
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Dana Dikembalikan");
+    expect((await bacaStokVarian(varianId)).stokVarian).toBe(1);
+    expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
+    expect(revalidatePath).toHaveBeenCalledWith("/admin", "layout");
+  });
+
+  // Issue T26: bila Stok Varian 0, aksi ditolak dengan pesan untuk mengisi stok dulu.
+  it("Kirim Item stok saat Stok Varian 0 ditolak dengan pesan untuk mengisi stok dulu, dan Pesanan tetap Bermasalah", async () => {
+    const varianId = await varianBerstok(0);
+    const dipesan = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiSelesaikanBermasalah(
+      {},
+      formulir({ pesananId: dipesan.id, cara: "kirim-item-stok" }),
+    );
+
+    expect(keadaan).toEqual({
+      galat:
+        'Item stok tidak dikirim, karena Stok Varian Pesanan ini 0, jadi Pesanan tetap Bermasalah. Isi Item stok Varian itu dulu di menu Produk, lalu tekan "Kirim Item stok" lagi. Item stok dari Varian lain tidak bisa dipakai.',
+    });
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Bermasalah");
+  });
+
+  // Issue T26: kedua aksi tidak tersedia untuk Pesanan selain Bermasalah.
+  it("aksi untuk Pesanan yang sudah Selesai ditolak dengan pesan yang menyebut statusnya, dan Pesanan tidak berubah", async () => {
+    const varianId = await varianBerstok(1);
+    const dipesan = await sisipkanPesanan({ varianId, status: "Selesai" });
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiSelesaikanBermasalah(
+      {},
+      formulir({ pesananId: dipesan.id, cara: "dana-dikembalikan" }),
+    );
+
+    expect(keadaan).toEqual({
+      galat:
+        'Pesanan ini tidak diubah, karena berstatus Selesai, padahal "Kirim Item stok" dan "Tandai Dana Dikembalikan" hanya tersedia untuk Pesanan Bermasalah. Muat ulang halaman untuk melihat status terbarunya.',
+    });
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Selesai");
+    expect((await bacaStokVarian(varianId)).stokVarian).toBe(1);
+  });
+
+  it("pilihan penyelesaian yang tidak dikenal ditolak, dan Pesanan tidak berubah", async () => {
+    const varianId = await varianBerstok(1);
+    const dipesan = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiSelesaikanBermasalah(
+      {},
+      formulir({ pesananId: dipesan.id, cara: "hapus" }),
+    );
+
+    expect(keadaan).toEqual({
+      galat:
+        'Pilihan penyelesaian tidak dikenal, jadi Pesanan ini tidak diubah. Muat ulang halaman, lalu tekan "Kirim Item stok" atau "Tandai Dana Dikembalikan".',
+    });
+    expect(await statusPesanan(dipesan.nomorPesanan)).toBe("Bermasalah");
+  });
+
+  it("Pesanan yang tidak ada menampilkan halaman tidak ditemukan", async () => {
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiSelesaikanBermasalah(
+        {},
+        formulir({ pesananId: randomUUID(), cara: "kirim-item-stok" }),
+      ),
+    ).rejects.toSatisfy(tidakDitemukan);
   });
 });

@@ -8,6 +8,7 @@ import { RincianNominal } from "@/app/(toko)/_components/rincian-nominal";
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import { kirimUlangEmailTersedia } from "@/domain/kirim-ulang-email";
 import { nomorPesananSah } from "@/domain/nomor-pesanan";
+import { penyelesaianBermasalahTersedia } from "@/domain/penyelesaian-bermasalah";
 import { rupiah } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { bacaDetailPesanan } from "@/server/detail-pesanan";
@@ -15,6 +16,7 @@ import { waktuWib } from "@/server/zona-waktu-toko";
 
 import { Pil } from "../../_components/pil";
 import { AksiEmailPesanan } from "../_components/aksi-email-pesanan";
+import { PenyelesaianBermasalah } from "../_components/penyelesaian-bermasalah";
 
 const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
 
@@ -160,7 +162,8 @@ function PanelRiwayat({ riwayat }: { riwayat: DetailPesanan["riwayat"] }) {
 // Detail Pesanan di dasbor admin (PRD §9.5): Nomor Pesanan dalam huruf mono dengan pil status dan tanda
 // "Email gagal" (PRD §6.4), email dan Produk beserta Varian, rincian nominal (PRD §5.5), Item stok bila sudah
 // Terkirim, dan riwayat perubahan status. Pesanan yang kirim ulangnya tersedia (Selesai) juga punya aksi
-// kirim ulang email "Pesanan selesai" dan koreksi email (PRD §6.4). Di layar lebar isinya menjadi dua kolom.
+// kirim ulang email "Pesanan selesai" dan koreksi email (PRD §6.4), dan Pesanan Bermasalah punya aksi
+// "Kirim Item stok" dan "Tandai Dana Dikembalikan" (PRD §5.9). Di layar lebar isinya menjadi dua kolom.
 export default async function HalamanDetailPesanan({
   params,
 }: PageProps<"/admin/pesanan/[nomor]">) {
@@ -201,6 +204,9 @@ export default async function HalamanDetailPesanan({
           {pesanan.itemStok && <PanelItemStok kolom={pesanan.itemStok} />}
         </div>
         <div className="flex min-w-0 flex-col gap-4">
+          {penyelesaianBermasalahTersedia(pesanan.status) && (
+            <PenyelesaianBermasalah pesananId={pesanan.id} />
+          )}
           {kirimUlangEmailTersedia(pesanan.status) && (
             <AksiEmailPesanan pesananId={pesanan.id} email={pesanan.email} />
           )}
