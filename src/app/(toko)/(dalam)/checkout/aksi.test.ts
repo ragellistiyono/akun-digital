@@ -1,7 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
-import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
+import { eq, inArray } from "drizzle-orm";
+import { cookies } from "next/headers";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { db, koneksi } from "@/server/db";
 import { pesanan, varian } from "@/server/db/schema";
@@ -12,8 +21,37 @@ import { aksiCheckout } from "./aksi";
 
 // Test integrasi Server Action checkout dengan database app_test dan Qrispy tiruan dari .env.ci
 // (QRISPY_MODE=tiruan). Data Produknya mengikuti persiapan bersama di docs/UAT.md, yang bertanda [CONTOH].
+// Cookie yang dibaca dan ditulis aksi lewat next/headers diganti dengan cookie satu browser tiruan.
+vi.mock("next/headers", () => ({ cookies: vi.fn() }));
+
+type TokoCookie = Awaited<ReturnType<typeof cookies>>;
+type OpsiCookie = NonNullable<Parameters<TokoCookie["set"]>[2]>;
+
+/** Browser tiruan dengan cookie-nya sendiri. Setelah `pakai()`, aksi membaca dan menulis cookie browser ini. */
+function browserBaru() {
+  const isi = new Map<string, { value: string; opsi?: OpsiCookie }>();
+  const toko = {
+    get: (nama: string) => {
+      const cookie = isi.get(nama);
+      return cookie && { name: nama, value: cookie.value };
+    },
+    set: (nama: string, value: string, opsi?: OpsiCookie) => {
+      isi.set(nama, { value, opsi });
+    },
+  };
+  return {
+    isi,
+    pakai: () =>
+      vi.mocked(cookies).mockResolvedValue(toko as unknown as TokoCookie),
+  };
+}
+
 afterAll(async () => {
   await koneksi.end();
+});
+
+beforeEach(() => {
+  browserBaru().pakai();
 });
 
 afterEach(() => {
@@ -220,5 +258,117 @@ describe("checkout (PRD §5.2)", () => {
       },
     });
     expect(await pesananDenganEmail(email)).toEqual([]);
+  });
+});
+
+// PRD §5.4 ▶ Keputusan 2026-11-11 dan UAT-E2: satu email hanya boleh punya 1 Pesanan Menunggu Pembayaran,
+// dan Pembeli hanya diarahkan ke Pesanan itu dari browser tempat Pesanan itu dibuat.
+describe("checkout dengan email yang masih punya Pesanan Menunggu Pembayaran (PRD §5.4)", () => {
+  /** Checkout Varian itu sampai Pembeli diarahkan ke Tautan Pesanan. Hasilnya Tautan Pesanan itu. */
+  async function checkoutSampaiDiarahkan(varianId: string, email: string) {
+    const alamat = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email }),
+    ).then(
+      (keadaan) => {
+        throw new Error(`Checkout tidak diarahkan: ${JSON.stringify(keadaan)}`);
+      },
+      (galat: unknown) => alamatPengalihan(galat),
+    );
+    return alamat.replace("/pesanan/", "");
+  }
+
+  const statusPesananDenganEmail = (...tulisan: string[]) =>
+    db
+      .select({ status: pesanan.status })
+      .from(pesanan)
+      .where(inArray(pesanan.email, tulisan));
+
+  it("checkout menyimpan Tautan Pesanan-nya di cookie httpOnly browser itu", async () => {
+    const browser = browserBaru();
+    browser.pakai();
+
+    const tautan = await checkoutSampaiDiarahkan(
+      await netflixSatuBulan(),
+      emailUnik(),
+    );
+
+    const cookie = [...browser.isi.values()];
+    expect(cookie).toHaveLength(1);
+    expect(cookie[0].value).toContain(tautan);
+    expect(cookie[0].opsi).toMatchObject({ httpOnly: true });
+  });
+
+  it("checkout lagi dari tab baru di browser yang sama, dengan email yang ditulis huruf besar, diarahkan ke Pesanan yang masih menunggu", async () => {
+    const browser = browserBaru();
+    browser.pakai();
+    const email = emailUnik();
+    const tautan = await checkoutSampaiDiarahkan(
+      await netflixSatuBulan(),
+      email,
+    );
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+    const tautanKedua = await checkoutSampaiDiarahkan(
+      await netflixSatuBulan(),
+      email.toUpperCase(),
+    );
+
+    expect(tautanKedua).toBe(tautan);
+    expect(buatQris).not.toHaveBeenCalled();
+    expect(await statusPesananDenganEmail(email, email.toUpperCase())).toEqual([
+      { status: "Menunggu Pembayaran" },
+    ]);
+  });
+
+  it("browser yang membuat Pesanan untuk dua email diarahkan ke Pesanan milik email yang diketik", async () => {
+    const browser = browserBaru();
+    browser.pakai();
+    const [emailA, emailB] = [emailUnik(), emailUnik()];
+    const tautanA = await checkoutSampaiDiarahkan(
+      await netflixSatuBulan(),
+      emailA,
+    );
+    const tautanB = await checkoutSampaiDiarahkan(
+      await netflixSatuBulan(),
+      emailB,
+    );
+
+    expect(
+      await checkoutSampaiDiarahkan(await netflixSatuBulan(), emailA),
+    ).toBe(tautanA);
+    expect(
+      await checkoutSampaiDiarahkan(await netflixSatuBulan(), emailB),
+    ).toBe(tautanB);
+  });
+
+  it("checkout dengan email yang sama dari browser lain ditolak dengan pesan PRD §5.4 yang memuat jam kedaluwarsa dalam WIB", async () => {
+    // Contoh PRD §5.4: QRIS-nya kedaluwarsa pukul 10.15 WIB.
+    const terbitkan = qrispyTiruan.buatQris;
+    vi.spyOn(qrispyTiruan, "buatQris").mockImplementationOnce(
+      async (permintaan) => ({
+        ...(await terbitkan(permintaan)),
+        expiredAt: new Date("2026-11-11T10:15:00+07:00"),
+      }),
+    );
+    const email = emailUnik();
+    await checkoutSampaiDiarahkan(await netflixSatuBulan(), email);
+    browserBaru().pakai();
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId: await netflixSatuBulan(), email }),
+    );
+
+    expect(keadaan).toEqual({
+      email,
+      galat: {
+        checkout:
+          "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul 10.15 WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.",
+      },
+    });
+    expect(await statusPesananDenganEmail(email)).toEqual([
+      { status: "Menunggu Pembayaran" },
+    ]);
   });
 });

@@ -2,17 +2,20 @@
 // ditahannya (PRD §5.3) atau dikirim kepadanya (PRD §6.1). Aturan Total bayar dan pemeriksaan nominal QRIS
 // ada di src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di src/domain/nomor-pesanan.ts; Stok Varian
 // ada di src/domain/stok-varian.ts; kapan dan bagaimana Item stok Terkirim tampil ada di
-// src/domain/item-stok-terkirim.ts.
+// src/domain/item-stok-terkirim.ts; batas Pesanan Menunggu Pembayaran per email ada di
+// src/domain/batas-pesanan-menunggu.ts.
 import { randomBytes } from "node:crypto";
 
-import { and, DrizzleQueryError, eq } from "drizzle-orm";
+import { and, DrizzleQueryError, eq, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { z } from "zod";
 
+import { batasPesananMenunggu } from "@/domain/batas-pesanan-menunggu";
 import {
   itemStokTampil,
   kolomItemStokTerkirim,
 } from "@/domain/item-stok-terkirim";
+import { emailBaku } from "@/domain/kesamaan-email";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { varianHabis } from "@/domain/stok-varian";
 import { nominalTagihanQris, periksaTagihanQris } from "@/domain/total-bayar";
@@ -32,6 +35,12 @@ import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
 
 /** Voucher baru ada di M2 (PRD §13), jadi potongan voucher setiap Pesanan saat ini Rp 0. */
 const POTONGAN_VOUCHER_TANPA_VOUCHER = 0;
+
+/**
+ * Ruang nama advisory lock PostgreSQL untuk batas Pesanan menunggu (PRD §5.4), supaya kunci per email ini
+ * tidak bertabrakan dengan advisory lock lain, misalnya milik pg-boss.
+ */
+const KUNCI_BATAS_PESANAN_MENUNGGU = "batas-pesanan-menunggu";
 
 /** Berapa kali Nomor Pesanan dibuat ulang bila nomornya sudah dipakai Pesanan lain. */
 const BATAS_PERCOBAAN_NOMOR = 5;
@@ -101,11 +110,47 @@ export async function bacaCheckout(varianId: string) {
   return { varianId, ...dijual, perkiraanBayar: nominal };
 }
 
+type Penghubung = Pick<typeof db, "select">;
+
+type HasilPesananMenunggu =
+  | { hasil: "pesanan-menunggu-di-browser-ini"; tautan: string }
+  | { hasil: "pesanan-menunggu-di-browser-lain"; kedaluwarsaPada: Date };
+
+/**
+ * Pesanan Menunggu Pembayaran yang menghalangi email itu membuat Pesanan baru menurut batasPesananMenunggu
+ * (PRD §5.4), atau null bila tidak ada. Bila browser ini memegang Tautan Pesanan-nya, karena Pesanan itu
+ * dibuat di browser ini, hasilnya Tautan Pesanan itu. Bila tidak, hasilnya hanya waktu kedaluwarsanya,
+ * supaya Tautan Pesanan itu tidak pernah sampai ke browser lain (▶ Keputusan 2026-11-11).
+ */
+async function pesananMenungguEmail(
+  penghubung: Penghubung,
+  email: string,
+  tautanDiBrowser: readonly string[],
+): Promise<HasilPesananMenunggu | null> {
+  // Saringan status hanya mempersempit bacaan; batasPesananMenunggu yang memutuskan.
+  const pesananLain = await penghubung
+    .select({
+      email: pesanan.email,
+      status: pesanan.status,
+      tautan: pesanan.tautan,
+      kedaluwarsaPada: pesanan.kedaluwarsaPada,
+    })
+    .from(pesanan)
+    .where(eq(pesanan.status, "Menunggu Pembayaran"));
+  const batas = batasPesananMenunggu({ email, pesananLain });
+  if (batas.boleh) return null;
+  const { tautan, kedaluwarsaPada } = batas.pesananMenunggu;
+  return tautanDiBrowser.includes(tautan)
+    ? { hasil: "pesanan-menunggu-di-browser-ini", tautan }
+    : { hasil: "pesanan-menunggu-di-browser-lain", kedaluwarsaPada };
+}
+
 type HasilBuatPesanan =
   | { hasil: "dibuat"; tautan: string }
   | { hasil: "tidak-dijual" }
   | { hasil: "stok-habis" }
-  | { hasil: "qris-gagal" };
+  | { hasil: "qris-gagal" }
+  | HasilPesananMenunggu;
 
 const QRIS_GAGAL = { hasil: "qris-gagal" } as const;
 const STOK_HABIS = { hasil: "stok-habis" } as const;
@@ -115,6 +160,9 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
  *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
  * - Checkout ditolak karena stok habis bila Stok Varian-nya 0 (PRD §5.2), juga tanpa QRIS maupun Pesanan.
+ * - Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), tidak ada QRIS maupun Pesanan baru.
+ *   Hasilnya Tautan Pesanan itu bila `tautanDiBrowser`, yaitu Tautan Pesanan yang dibuat di browser
+ *   Pembeli, memuatnya; bila tidak, hasilnya hanya waktu kedaluwarsa Pesanan itu.
  * - Harga jual dan potongan voucher dicatat saat checkout. Kode unik, Total bayar, waktu kedaluwarsa, dan
  *   gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
@@ -124,13 +172,19 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
  *   transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
  * - Bila Item stok terakhirnya sudah ditahan checkout lain setelah QRIS terbit, QRIS itu dibatalkan dan
  *   checkout ditolak karena stok habis, tanpa Pesanan.
+ * - Checkout bersamaan dengan email yang sama menulis transaksinya satu per satu, lalu batas Pesanan
+ *   menunggu diperiksa lagi di dalam transaksi. Yang kalah membatalkan QRIS-nya, tanpa Pesanan.
  * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, QRIS-nya dibatalkan, lalu nomor dan QRIS
  *   dibuat ulang.
  *
  * Adaptor Qrispy dan pembuat Nomor Pesanan bisa diganti untuk test.
  */
 export async function buatPesanan(
-  { varianId, email }: { varianId: string; email: string },
+  {
+    varianId,
+    email,
+    tautanDiBrowser = [],
+  }: { varianId: string; email: string; tautanDiBrowser?: readonly string[] },
   {
     qrispy = qrispyAktif(),
     buatNomorPesanan = nomorPesananAcak,
@@ -141,6 +195,8 @@ export async function buatPesanan(
   if (varianHabis((await bacaStokVarian(varianId)).stokVarian)) {
     return STOK_HABIS;
   }
+  const menunggu = await pesananMenungguEmail(db, email, tautanDiBrowser);
+  if (menunggu) return menunggu;
 
   const { hargaJual } = dijual;
   const potonganVoucher = POTONGAN_VOUCHER_TANPA_VOUCHER;
@@ -177,7 +233,14 @@ export async function buatPesanan(
 
     const tautan = tautanPesananAcak();
     try {
-      const ditahan = await db.transaction(async (tx) => {
+      const hasil = await db.transaction(async (tx) => {
+        // Checkout dengan email yang sama menurut §7.4 menunggu giliran di sini sampai transaksi checkout
+        // sebelumnya selesai, sehingga pemeriksaan Pesanan menunggu di bawah melihat Pesanan yang baru saja
+        // disimpannya (PRD §5.4). Kunci ini lepas sendiri di akhir transaksi.
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${KUNCI_BATAS_PESANAN_MENUNGGU}), hashtext(${emailBaku(email)}))`,
+        );
+
         // Penahanan Item stok (PRD §5.3). Item stok yang sedang dikunci checkout lain dilewati, supaya
         // dua checkout bersamaan tidak pernah menahan Item stok yang sama.
         const [tersedia] = await tx
@@ -191,7 +254,10 @@ export async function buatPesanan(
           )
           .limit(1)
           .for("update", { skipLocked: true });
-        if (!tersedia) return false;
+        if (!tersedia) return STOK_HABIS;
+
+        const menunggu = await pesananMenungguEmail(tx, email, tautanDiBrowser);
+        if (menunggu) return menunggu;
 
         const [{ id }] = await tx
           .insert(pesanan)
@@ -224,13 +290,12 @@ export async function buatPesanan(
           { pesananId: id, kedaluwarsaPada: qris.expiredAt },
           tx,
         );
-        return true;
+        return { hasil: "dibuat", tautan } as const;
       });
-      if (!ditahan) {
+      if (hasil.hasil !== "dibuat") {
         await batalkanQrisTakTerpakai(qrispy, qris);
-        return STOK_HABIS;
       }
-      return { hasil: "dibuat", tautan };
+      return hasil;
     } catch (galat) {
       await batalkanQrisTakTerpakai(qrispy, qris);
       if (nomorSudahDipakai(galat) && percobaan < BATAS_PERCOBAAN_NOMOR) {
