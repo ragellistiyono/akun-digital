@@ -150,7 +150,8 @@ test('Admin membuat "Netflix Premium" di Kategori Streaming dengan Format Item s
     "Garansi 30 hari sejak Item stok diterima.",
   );
   await expect(page.getByLabel("Produk Unggulan")).toBeChecked();
-  // Format Item stok hanya ditampilkan, berurutan seperti saat dibuat.
+  // Format Item stok tampil berurutan seperti saat dibuat. Isiannya baru muncul setelah Admin memilih Ubah
+  // Format Item stok (ubah-format-item-stok.spec.ts).
   await expect(
     page.getByRole("list", { name: "Format Item stok" }).getByRole("listitem"),
   ).toHaveText(["Email", "Password", "Profil"]);

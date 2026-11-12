@@ -27,26 +27,37 @@ type ProdukAda = {
   ketentuanGaransi: string;
   unggulan: boolean;
   aktif: boolean;
-  formatItemStok: string[];
 };
 
 /**
- * Daftar nama kolom Format Item stok saat membuat Produk (PRD §4.1). Admin bisa menambah dan
- * menghapus kolom. Kolom yang ditolak server ditandai menurut urutannya saat dikirim.
+ * Satu kolom di editor Format Item stok: nama awalnya, dan nomor kolom lamanya (dari 1) bila kolom itu
+ * kolom Format Item stok Produk yang sudah ada, atau null bila kolom itu baru.
  */
-function EditorFormatItemStok({
+type KolomEditor = { nama: string; nomorLama: number | null };
+
+/**
+ * Daftar nama kolom Format Item stok (PRD §4.1), saat membuat Produk maupun mengubah Format Item stok
+ * Produk yang sudah ada. Admin bisa mengganti nama, menambah, dan menghapus kolom. Kolom baru selalu
+ * ditambah di akhir, dan kolom lama tidak bisa dipindah urutannya. Kolom baru dikirim sebagai `kolom`,
+ * sedangkan kolom lama sebagai `kolom-lama-<nomor kolom lamanya>`, supaya server bisa membedakan ganti nama
+ * dari tambah dan hapus kolom. Kolom yang ditolak server ditandai menurut urutannya saat dikirim.
+ */
+export function EditorFormatItemStok({
   kolomAwal,
   kolomDitolak = [],
   galat,
+  bantuan,
 }: {
-  kolomAwal: string[];
+  kolomAwal: KolomEditor[];
   kolomDitolak?: number[];
   galat?: string;
+  bantuan: string;
 }) {
   const [baris, setBaris] = useState(() =>
-    kolomAwal.map((nilaiAwal, indeks) => ({
+    kolomAwal.map(({ nama, nomorLama }, indeks) => ({
       kunci: indeks,
-      nilaiAwal,
+      nilaiAwal: nama,
+      nomorLama,
       ditolak: kolomDitolak.includes(indeks + 1),
     })),
   );
@@ -56,7 +67,7 @@ function EditorFormatItemStok({
   function tambahKolom() {
     setBaris((sebelumnya) => [
       ...sebelumnya,
-      { kunci: kunciBerikut, nilaiAwal: "", ditolak: false },
+      { kunci: kunciBerikut, nilaiAwal: "", nomorLama: null, ditolak: false },
     ]);
     setKunciDifokus(kunciBerikut);
     setKunciBerikut(kunciBerikut + 1);
@@ -86,7 +97,11 @@ function EditorFormatItemStok({
                 <div className="flex gap-2">
                   <input
                     id={id}
-                    name="kolom"
+                    name={
+                      b.nomorLama === null
+                        ? "kolom"
+                        : `kolom-lama-${b.nomorLama}`
+                    }
                     autoComplete="off"
                     defaultValue={b.nilaiAwal}
                     // Hanya kolom yang baru ditambah Admin yang langsung difokuskan.
@@ -121,43 +136,15 @@ function EditorFormatItemStok({
           Tambah kolom
         </button>
       </div>
-      <Keterangan
-        id="format-keterangan"
-        galat={galat}
-        bantuan="Nama kolom untuk mengisi Item stok, misalnya Email, Password, Profil. Semua Varian Produk ini memakai format yang sama. Format Item stok belum bisa diubah setelah Produk dibuat."
-      />
+      <Keterangan id="format-keterangan" galat={galat} bantuan={bantuan} />
     </fieldset>
-  );
-}
-
-/** Format Item stok Produk yang sudah ada, hanya untuk dilihat. Aturan mengubahnya dibuat di T28. */
-function FormatItemStokTetap({ kolom }: { kolom: string[] }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p id="format-judul" className="text-sm font-bold">
-        Format Item stok
-      </p>
-      <ol aria-labelledby="format-judul" className="flex flex-wrap gap-2">
-        {kolom.map((nama) => (
-          <li
-            key={nama}
-            className="inline-flex h-9 items-center rounded-[10px] bg-permukaan-2 px-3 text-sm font-bold break-all"
-          >
-            {nama}
-          </li>
-        ))}
-      </ol>
-      <Keterangan
-        id="format-keterangan"
-        bantuan="Format Item stok belum bisa diubah."
-      />
-    </div>
   );
 }
 
 /**
  * Form Produk untuk membuat (tanpa `produk`) atau mengubah Produk yang sudah ada. Format Item stok
- * hanya diisi saat membuat Produk.
+ * hanya diisi di form ini saat membuat Produk; Format Item stok Produk yang sudah ada diubah lewat
+ * FormatItemStokProduk.
  */
 export function FormProduk({
   semuaKategori,
@@ -282,14 +269,16 @@ export function FormProduk({
         dicentang={keadaan.aktif}
       />
 
-      {produk ? (
-        <FormatItemStokTetap kolom={produk.formatItemStok} />
-      ) : (
+      {!produk && (
         <EditorFormatItemStok
           key={versi}
-          kolomAwal={keadaan.formatItemStok ?? []}
+          kolomAwal={(keadaan.formatItemStok ?? []).map((nama) => ({
+            nama,
+            nomorLama: null,
+          }))}
           kolomDitolak={galat?.kolomDitolak}
           galat={galat?.formatItemStok}
+          bantuan="Nama kolom untuk mengisi Item stok, misalnya Email, Password, Profil. Semua Varian Produk ini memakai format yang sama. Setelah Produk dibuat, nama kolom bisa diganti kapan saja, tetapi kolom hanya bisa ditambah atau dihapus bila Produk tidak punya Item stok Tersedia atau Ditahan."
         />
       )}
 

@@ -10,13 +10,13 @@ import { daftarKategori } from "@/server/kategori";
 import { bacaProduk } from "@/server/produk";
 import { daftarVarian } from "@/server/varian";
 
+import { FormatItemStokProduk } from "../_components/format-item-stok-produk";
 import { FormProduk } from "../_components/form-produk";
 import { FotoProduk } from "../_components/foto-produk";
 import { VarianProduk } from "../_components/varian-produk";
 
-// Mengubah Produk, termasuk menonaktifkan dan mengaktifkannya kembali (PRD §3.2, §3.7), serta mengelola
-// Varian (PRD §3.2, §3.5, §3.7) dan foto Produk (PRD §3.3). Format Item stok hanya ditampilkan; aturan
-// mengubahnya dibuat di T28.
+// Mengubah Produk, termasuk menonaktifkan dan mengaktifkannya kembali (PRD §3.2, §3.7), serta mengubah
+// Format Item stok (PRD §4.1) dan mengelola Varian (PRD §3.2, §3.5, §3.7) dan foto Produk (PRD §3.3).
 export default async function HalamanUbahProduk({
   params,
 }: PageProps<"/admin/produk/[id]">) {
@@ -36,6 +36,10 @@ export default async function HalamanUbahProduk({
       <FormProduk
         produk={produk}
         semuaKategori={semuaKategori.map(({ id, nama }) => ({ id, nama }))}
+      />
+      <FormatItemStokProduk
+        produkId={produk.id}
+        kolom={produk.formatItemStok}
       />
       <VarianProduk produkId={produk.id} varian={varian} />
       <FotoProduk
