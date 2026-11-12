@@ -76,6 +76,31 @@ const teksSel = (baris: Locator) =>
       sel.map((s) => (s.textContent ?? "").replace(/\s+/g, " ").trim()),
     );
 
+/** Tombol penegasan setiap aksi penyelesaian (PRD §5.9, ▶ Keputusan 2026-11-12). */
+const TOMBOL_PENEGASAN = {
+  "Kirim Item stok": "Ya, kirim Item stok",
+  "Tandai Dana Dikembalikan": "Ya, tandai Dana Dikembalikan",
+};
+
+/** Kalimat penegasan "Kirim Item stok" untuk Pesanan ber-email itu. */
+const penegasanKirim = (email: string) =>
+  `Kirim satu Item stok Tersedia dari Varian yang sama ke Pesanan ini? Pesanan menjadi Selesai, dan email "Pesanan selesai" dikirim ke ${email}. Aksi ini tidak bisa dibatalkan.`;
+
+const PENEGASAN_DANA =
+  "Tandai Pesanan ini Dana Dikembalikan? Pesanan ini tidak akan mendapat Item stok, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan.";
+
+/** Menekan salah satu aksi penyelesaian, lalu menerima penegasannya. */
+async function selesaikanDenganPenegasan(
+  page: Page,
+  aksi: keyof typeof TOMBOL_PENEGASAN,
+) {
+  const panel = panelPenyelesaian(page);
+  await panel.getByRole("button", { name: aksi, exact: true }).click();
+  await panel
+    .getByRole("button", { name: TOMBOL_PENEGASAN[aksi], exact: true })
+    .click();
+}
+
 /** Jumlah Pesanan Bermasalah di menu Pesanan. Menu tanpa angka berarti tidak ada Pesanan Bermasalah. */
 async function jumlahBermasalahDiMenu(page: Page) {
   const tautan = page
@@ -114,9 +139,7 @@ test('Admin mengoreksi email Pesanan Bermasalah pertama lalu menyelesaikannya de
   await expect(kepala(page)).toHaveText("Bermasalah");
   expect(await pekerjaanEmailPesananSelesai(pertama.id)).toEqual([]);
 
-  await panelPenyelesaian(page)
-    .getByRole("button", { name: "Kirim Item stok" })
-    .click();
+  await selesaikanDenganPenegasan(page, "Kirim Item stok");
 
   await expect(kepala(page)).toHaveText("Selesai");
   await expect(panelPenyelesaian(page)).toHaveCount(0);
@@ -151,9 +174,7 @@ test('Admin mengoreksi email Pesanan Bermasalah pertama lalu menyelesaikannya de
   ).toContainText(emailA);
 
   await page.goto(`/admin/pesanan/${kedua.nomorPesanan}`);
-  await panelPenyelesaian(page)
-    .getByRole("button", { name: "Tandai Dana Dikembalikan" })
-    .click();
+  await selesaikanDenganPenegasan(page, "Tandai Dana Dikembalikan");
 
   await expect(kepala(page)).toHaveText("Dana Dikembalikan");
   await expect(panelPenyelesaian(page)).toHaveCount(0);
@@ -187,13 +208,126 @@ test("setelah Pesanan Bermasalah diselesaikan, jumlah Pesanan Bermasalah di menu
     const sebelum = await jumlahBermasalahDiMenu(page);
     expect(sebelum).toBeGreaterThanOrEqual(1);
 
-    await panelPenyelesaian(page)
-      .getByRole("button", { name: "Tandai Dana Dikembalikan" })
-      .click();
+    await selesaikanDenganPenegasan(page, "Tandai Dana Dikembalikan");
     await expect(kepala(page)).toHaveText("Dana Dikembalikan");
 
     expect(await jumlahBermasalahDiMenu(page)).toBe(sebelum - 1);
   }).toPass({ timeout: 60_000 });
+});
+
+// Issue T26-b, PRD §5.9 dan DESIGN.md Navigation (▶ Keputusan 2026-11-12), UAT-E6: "Kirim Item stok" tidak
+// bisa dibatalkan, jadi ditegaskan di tempat lebih dulu, tanpa dialog. Klik ganda pada tombolnya hanya membuka
+// penegasan, Batal tidak mengubah apa pun, dan Pesanan baru Selesai setelah penegasan diterima. Klik ganda
+// pada tombol penegasan tetap hanya memberi satu Item stok.
+test('"Kirim Item stok" meminta penegasan di tempat: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Selesai setelah penegasan diterima', async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const varianId = await varianBerstok(2);
+  const email = `budi-${randomUUID()}@mail.com`;
+  const dipesan = await sisipkanPesanan({
+    varianId,
+    status: "Bermasalah",
+    email,
+  });
+  await masukSebagaiAdmin(page);
+  await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
+  const panel = panelPenyelesaian(page);
+
+  await panel
+    .getByRole("button", { name: "Kirim Item stok", exact: true })
+    .dblclick();
+
+  await expect(
+    panel.getByText(penegasanKirim(email), { exact: true }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Ya, kirim Item stok", exact: true }),
+  ).toBeEnabled();
+  await expect(panel.getByRole("button", { name: "Batal" })).toBeEnabled();
+  await expect(
+    panel.getByRole("button", {
+      name: "Tandai Dana Dikembalikan",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(kepala(page)).toHaveText("Bermasalah");
+
+  await panel.getByRole("button", { name: "Batal" }).click();
+
+  await expect(panel.getByText(penegasanKirim(email))).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Kirim Item stok", exact: true }),
+  ).toBeEnabled();
+  await page.reload();
+  await expect(kepala(page)).toHaveText("Bermasalah");
+  expect((await bacaStokVarian(varianId)).jumlahPerStatus).toEqual({
+    Tersedia: 2,
+    Ditahan: 0,
+    Terkirim: 0,
+  });
+  expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toEqual([]);
+
+  await panel
+    .getByRole("button", { name: "Kirim Item stok", exact: true })
+    .click();
+  await panel
+    .getByRole("button", { name: "Ya, kirim Item stok", exact: true })
+    .dblclick();
+
+  await expect(kepala(page)).toHaveText("Selesai");
+  await expect(panel).toHaveCount(0);
+  expect((await bacaStokVarian(varianId)).jumlahPerStatus).toEqual({
+    Tersedia: 1,
+    Ditahan: 0,
+    Terkirim: 1,
+  });
+});
+
+// Issue T26-b, PRD §5.9 dan DESIGN.md Navigation (▶ Keputusan 2026-11-12), UAT-E6: "Tandai Dana Dikembalikan"
+// juga ditegaskan di tempat lebih dulu.
+test('"Tandai Dana Dikembalikan" meminta penegasan di tempat: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Dana Dikembalikan setelah penegasan diterima', async ({
+  page,
+}) => {
+  const varianId = await varianBerstok(1);
+  const dipesan = await sisipkanPesanan({ varianId, status: "Bermasalah" });
+  await masukSebagaiAdmin(page);
+  await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
+  const panel = panelPenyelesaian(page);
+
+  await panel
+    .getByRole("button", { name: "Tandai Dana Dikembalikan", exact: true })
+    .dblclick();
+
+  await expect(panel.getByText(PENEGASAN_DANA, { exact: true })).toBeVisible();
+  await expect(
+    panel.getByRole("button", {
+      name: "Ya, tandai Dana Dikembalikan",
+      exact: true,
+    }),
+  ).toBeEnabled();
+  await expect(
+    panel.getByRole("button", { name: "Kirim Item stok", exact: true }),
+  ).toHaveCount(0);
+  await expect(kepala(page)).toHaveText("Bermasalah");
+
+  await panel.getByRole("button", { name: "Batal" }).click();
+
+  await expect(panel.getByText(PENEGASAN_DANA)).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", {
+      name: "Tandai Dana Dikembalikan",
+      exact: true,
+    }),
+  ).toBeEnabled();
+  await page.reload();
+  await expect(kepala(page)).toHaveText("Bermasalah");
+
+  await selesaikanDenganPenegasan(page, "Tandai Dana Dikembalikan");
+
+  await expect(kepala(page)).toHaveText("Dana Dikembalikan");
+  await expect(panel).toHaveCount(0);
+  expect((await bacaStokVarian(varianId)).stokVarian).toBe(1);
 });
 
 // Issue T26: bila Stok Varian 0, aksi ditolak dengan pesan untuk mengisi stok dulu, dan status tetap
@@ -206,14 +340,19 @@ test('"Kirim Item stok" saat Stok Varian 0 menampilkan pesan untuk mengisi stok 
   await masukSebagaiAdmin(page);
   await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
 
-  await panelPenyelesaian(page)
-    .getByRole("button", { name: "Kirim Item stok" })
-    .click();
+  await selesaikanDenganPenegasan(page, "Kirim Item stok");
 
   await expect(panelPenyelesaian(page).getByRole("status")).toHaveText(
     'Item stok tidak dikirim, karena Stok Varian Pesanan ini 0, jadi Pesanan tetap Bermasalah. Isi Item stok Varian itu dulu di menu Produk, lalu tekan "Kirim Item stok" lagi. Item stok dari Varian lain tidak bisa dipakai.',
   );
   await expect(kepala(page)).toHaveText("Bermasalah");
+  // Pesannya meminta Admin menekan "Kirim Item stok" lagi, jadi tombol itu langsung tersedia kembali.
+  await expect(
+    panelPenyelesaian(page).getByRole("button", {
+      name: "Kirim Item stok",
+      exact: true,
+    }),
+  ).toBeEnabled();
   await page.reload();
   await expect(kepala(page)).toHaveText("Bermasalah");
   await expect(
