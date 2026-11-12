@@ -1,10 +1,63 @@
 // Mengisi Item stok sebuah Varian (PRD §4.2): lewat form satu Item stok, atau dengan menempel banyak
 // baris sekaligus. Item stok berupa isi kolom-kolom Format Item stok (PRD §4.1), menurut urutannya.
+// Mengubah dan menghapus Item stok (PRD §4.4), serta kolom yang tampil di daftar Item stok (PRD §9.7).
+import { kolomItemStokTerkirim } from "./item-stok-terkirim";
 
 /** Status sebuah Item stok (GLOSSARY). Item stok baru berstatus Tersedia. */
 export const STATUS_ITEM_STOK = ["Tersedia", "Ditahan", "Terkirim"] as const;
 
 export type StatusItemStok = (typeof STATUS_ITEM_STOK)[number];
+
+/**
+ * Apakah sebuah Item stok boleh diubah atau dihapus Admin (PRD §4.4). Hanya Item stok Tersedia yang boleh.
+ * Item stok Ditahan sudah disisihkan untuk Pesanan yang menunggu pembayaran (PRD §5.3), dan Item stok
+ * Terkirim sudah dikirim ke sebuah Pesanan, jadi keduanya tidak bisa diubah atau dihapus.
+ */
+export function itemStokBolehDiubah(
+  status: StatusItemStok,
+): status is "Tersedia" {
+  return status === "Tersedia";
+}
+
+/**
+ * Kolom-kolom sebuah Item stok untuk daftar Item stok di dasbor admin (PRD §9.7), menurut urutan Format Item
+ * stok: nama kolom dan isinya.
+ *
+ * - Item stok Terkirim tampil dengan nama kolom yang dicatat saat Terkirim (kolomItemStokTerkirim), karena
+ *   Item stok yang sudah Terkirim tetap tampil dengan kolom lamanya (PRD §4.1).
+ * - Item stok Tersedia dan Ditahan tampil dengan nama kolom Format Item stok yang berlaku sekarang.
+ *
+ * Melempar galat bila Item stok Terkirim tidak mencatat nama kolomnya, atau bila jumlah isi kolom Item stok
+ * Tersedia atau Ditahan tidak sama dengan jumlah kolom Format Item stok. Keduanya tidak pernah terjadi,
+ * karena nama kolom selalu dicatat saat Item stok Terkirim, dan kolom tidak bisa ditambah atau dihapus selama
+ * Produk punya Item stok Tersedia atau Ditahan (PRD §4.1).
+ */
+export function kolomItemStok({
+  status,
+  formatItemStok,
+  formatSaatTerkirim,
+  nilai,
+}: {
+  status: StatusItemStok;
+  formatItemStok: readonly string[];
+  formatSaatTerkirim: readonly string[] | null;
+  nilai: readonly string[];
+}) {
+  if (status === "Terkirim") {
+    if (!formatSaatTerkirim) {
+      throw new Error(
+        "Item stok Terkirim ini tidak mencatat nama kolomnya, padahal nama kolom Format Item stok selalu dicatat saat Item stok Terkirim (PRD §4.1). Periksa item_stok.format_saat_terkirim untuk Item stok itu di database.",
+      );
+    }
+    return kolomItemStokTerkirim({ formatSaatTerkirim, nilai });
+  }
+  if (formatItemStok.length !== nilai.length) {
+    throw new Error(
+      `Item stok ${status} ini punya ${nilai.length} isi kolom, padahal Format Item stok Produknya punya ${formatItemStok.length} kolom, dan kolom tidak bisa ditambah atau dihapus selama ada Item stok Tersedia atau Ditahan (PRD §4.1). Periksa Format Item stok Produk itu (produk.format_item_stok) terhadap isi Item stok-nya.`,
+    );
+  }
+  return formatItemStok.map((nama, i) => ({ nama, nilai: nilai[i] }));
+}
 
 /** Pemisah kolom di setiap baris tempelan (PRD §4.2). */
 export const PEMISAH_KOLOM = "|";

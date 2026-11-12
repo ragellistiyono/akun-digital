@@ -5,9 +5,14 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import type { MasalahItemStok } from "@/domain/item-stok";
+import type { MasalahItemStok, StatusItemStok } from "@/domain/item-stok";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { tambahItemStok, tempelItemStokVarian } from "@/server/item-stok";
+import {
+  hapusItemStok,
+  tambahItemStok,
+  tempelItemStokVarian,
+  ubahItemStok,
+} from "@/server/item-stok";
 
 /**
  * Isian form satu Item stok yang dikembalikan ke form, apa adanya, beserta pesan galatnya. `galat.kolom`
@@ -19,6 +24,9 @@ export type KeadaanFormItemStok = {
   galat?: { kolom?: (string | null)[]; umum?: string };
   tersimpan?: true;
 };
+
+/** Pesan galat bila Item stok tidak dihapus. */
+export type KeadaanHapusItemStok = { galat?: string };
 
 /**
  * Teks tempelan yang dikembalikan ke form beserta pesan galatnya, atau hasil tempelan: ringkasan dan
@@ -178,5 +186,85 @@ function keteranganDitolak(kolom: string[], masalah: MasalahItemStok) {
       return `Kolom ${namaKolom(kolom, masalah.nomorKolom)} kosong.`;
     case "sudah-ada":
       return "Sama persis dengan Item stok yang sudah ada di Varian ini.";
+  }
+}
+
+/** Item stok yang dipilih beserta Varian dan Produknya, dari form. Id yang tidak sah pasti tidak ada. */
+function bacaItemStokDipilih(formData: FormData) {
+  const id = z.uuid().safeParse(formData.get("itemStokId"));
+  if (!id.success) notFound();
+  return { ...bacaVarianDipilih(formData), id: id.data };
+}
+
+const PESAN_ITEM_STOK_TIDAK_ADA =
+  "Item stok ini tidak ada lagi di Varian ini, mungkin baru saja dihapus Admin lain. Muat ulang halaman untuk melihat daftar Item stok terbaru.";
+
+/** Mengapa Item stok berstatus itu tidak bisa diubah atau dihapus (PRD §4.4). */
+const SEBAB_TIDAK_BOLEH: Record<Exclude<StatusItemStok, "Tersedia">, string> = {
+  Ditahan:
+    "Item stok ini sedang disisihkan untuk Pesanan yang menunggu pembayaran",
+  Terkirim: "Item stok ini sudah dikirim ke sebuah Pesanan",
+};
+
+/** Pesan bila Item stok tidak bisa diubah atau dihapus karena statusnya (itemStokBolehDiubah). */
+function pesanTidakBoleh(
+  perbuatan: "diubah" | "dihapus",
+  status: Exclude<StatusItemStok, "Tersedia">,
+) {
+  return `Item stok ini tidak ${perbuatan}, karena berstatus ${status}: ${SEBAB_TIDAK_BOLEH[status]}. Hanya Item stok Tersedia yang bisa diubah atau dihapus. Muat ulang halaman untuk melihat status terbarunya.`;
+}
+
+export async function aksiUbahItemStok(
+  _sebelumnya: KeadaanFormItemStok,
+  formData: FormData,
+): Promise<KeadaanFormItemStok> {
+  await wajibSesiAdmin(await headers());
+
+  const dipilih = bacaItemStokDipilih(formData);
+  // Isian kolom dikirim berurutan dengan nama yang sama, menurut urutan Format Item stok.
+  const nilai = NilaiItemStok.safeParse(formData.getAll("nilai"));
+  if (!nilai.success) notFound();
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk mengubah.
+  const hasil = await ubahItemStok({ ...dipilih, nilai: nilai.data });
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      return { nilai: nilai.data, galat: { umum: PESAN_ITEM_STOK_TIDAK_ADA } };
+    case "tidak-boleh":
+      return {
+        nilai: nilai.data,
+        galat: { umum: pesanTidakBoleh("diubah", hasil.status) },
+      };
+    case "kunci-bermasalah":
+      return { nilai: nilai.data, galat: { umum: pesanKunci(hasil.masalah) } };
+    case "ditolak":
+      return {
+        nilai: nilai.data,
+        galat: galatItemStok(hasil.kolom, hasil.masalah),
+      };
+    case "diubah":
+      refresh();
+      return { nilai: hasil.nilai, tersimpan: true };
+  }
+}
+
+export async function aksiHapusItemStok(
+  _sebelumnya: KeadaanHapusItemStok,
+  formData: FormData,
+): Promise<KeadaanHapusItemStok> {
+  await wajibSesiAdmin(await headers());
+
+  const dipilih = bacaItemStokDipilih(formData);
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusItemStok(dipilih);
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      return { galat: PESAN_ITEM_STOK_TIDAK_ADA };
+    case "tidak-boleh":
+      return { galat: pesanTidakBoleh("dihapus", hasil.status) };
+    case "dihapus":
+      refresh();
+      return {};
   }
 }

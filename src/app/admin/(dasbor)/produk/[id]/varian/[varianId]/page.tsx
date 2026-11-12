@@ -4,19 +4,28 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import { STATUS_ITEM_STOK } from "@/domain/item-stok";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { bacaStokVarian } from "@/server/item-stok";
+import { bacaStokVarian, daftarItemStokVarian } from "@/server/item-stok";
 import { bacaVarian } from "@/server/varian";
 
+import { DaftarItemStok } from "../../../_components/daftar-item-stok";
 import {
   FormItemStok,
   TempelItemStok,
 } from "../../../_components/item-stok-varian";
 
-// Halaman Varian di dasbor admin: Stok Varian (PRD §5.3) dan mengisi Item stok lewat form satu Item
-// stok atau dengan menempel banyak baris (PRD §4.2). Daftar Item stok per status dibuat di T27.
+// Saringan status dari alamat. Nilai yang tidak sah diabaikan, jadi semua Item stok tampil.
+const SaringanAlamat = z.object({
+  status: z.enum(STATUS_ITEM_STOK).optional().catch(undefined),
+});
+
+// Halaman Varian di dasbor admin: Stok Varian (PRD §5.3), mengisi Item stok lewat form satu Item stok atau
+// dengan menempel banyak baris (PRD §4.2), dan daftar Item stok yang bisa disaring menurut status, dengan
+// ubah dan hapus untuk Item stok Tersedia (PRD §4.4, §9.7).
 export default async function HalamanVarian({
   params,
+  searchParams,
 }: PageProps<"/admin/produk/[id]/varian/[varianId]">) {
   await wajibSesiAdmin(await headers());
 
@@ -30,6 +39,11 @@ export default async function HalamanVarian({
   if (!varian) notFound();
   const stok = await bacaStokVarian(varian.id);
   const varianDipilih = { produkId: varian.produkId, varianId: varian.id };
+  const { status: saringan } = SaringanAlamat.parse(await searchParams);
+  const itemStok = await daftarItemStokVarian({
+    varianId: varian.id,
+    status: saringan,
+  });
 
   return (
     <>
@@ -64,6 +78,12 @@ export default async function HalamanVarian({
 
       <TempelItemStok {...varianDipilih} kolom={varian.formatItemStok} />
       <FormItemStok {...varianDipilih} kolom={varian.formatItemStok} />
+      <DaftarItemStok
+        {...varianDipilih}
+        saringan={saringan}
+        jumlahPerStatus={stok.jumlahPerStatus}
+        itemStok={itemStok}
+      />
     </>
   );
 }

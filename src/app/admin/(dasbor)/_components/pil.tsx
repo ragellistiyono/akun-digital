@@ -1,5 +1,13 @@
-import { Eye, EyeOff, type LucideIcon } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Package,
+  Send,
+  type LucideIcon,
+} from "lucide-react";
 
+import type { StatusItemStok } from "@/domain/item-stok";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,4 +51,28 @@ export function PilAktif({ aktif }: { aktif: boolean }) {
       className="bg-st-batal-bg text-st-batal"
     />
   );
+}
+
+/**
+ * Ikon dan warna pil setiap status Item stok. Pil ini memakai anatomi pil status Pesanan (DESIGN.md Status
+ * Pesanan), tetapi tidak pernah memakai token `st-*` maupun ikon milik status Pesanan, supaya keduanya jelas
+ * berbeda di layar yang sama: ikon dari keluarga kotak kiriman, dan warna dari palet merek dan senja.
+ */
+const PIL_STATUS_ITEM_STOK: Record<
+  StatusItemStok,
+  { ikon: LucideIcon; warna: string }
+> = {
+  Tersedia: {
+    ikon: Package,
+    warna:
+      "bg-[color-mix(in_srgb,var(--monogram)_14%,var(--permukaan))] text-aksi-teks",
+  },
+  Ditahan: { ikon: Lock, warna: "bg-persik text-persik-teks" },
+  Terkirim: { ikon: Send, warna: "bg-langit-2 text-langit-teks" },
+};
+
+/** Pil status Item stok (GLOSSARY): Tersedia, Ditahan, atau Terkirim, dengan warna, ikon, dan label sekaligus. */
+export function PilStatusItemStok({ status }: { status: StatusItemStok }) {
+  const { ikon, warna } = PIL_STATUS_ITEM_STOK[status];
+  return <Pil ikon={ikon} label={status} className={warna} />;
 }
