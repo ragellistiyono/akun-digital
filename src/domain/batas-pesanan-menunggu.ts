@@ -4,7 +4,7 @@ import type { StatusPesanan } from "./status-pesanan";
 
 type PesananLain = { email: string; status: StatusPesanan };
 
-type HasilBatasPesananMenunggu<P extends PesananLain> =
+export type HasilBatasPesananMenunggu<P> =
   { boleh: true } | { boleh: false; pesananMenunggu: P };
 
 /**
