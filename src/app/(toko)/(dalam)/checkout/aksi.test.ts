@@ -371,4 +371,77 @@ describe("checkout dengan email yang masih punya Pesanan Menunggu Pembayaran (PR
       { status: "Menunggu Pembayaran" },
     ]);
   });
+
+  // ▶ Keputusan 2026-11-12 (#87): aturan §5.4 didahulukan sebelum penolakan karena Stok Varian 0 (§5.2).
+  // Contoh PRD: Item stok terakhir Netflix Premium 1 Bulan sedang ditahan Pesanan Andi.
+  describe("saat Item stok terakhir Varian itu ditahan Pesanan email itu", () => {
+    it("checkout lagi Varian itu dari browser yang sama diarahkan ke Halaman bayar Pesanan itu, tanpa QRIS baru", async () => {
+      browserBaru().pakai();
+      const varianId = await netflixSatuBulan({ Tersedia: 1 });
+      const email = emailUnik();
+      const tautan = await checkoutSampaiDiarahkan(varianId, email);
+      const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+      expect(await checkoutSampaiDiarahkan(varianId, email)).toBe(tautan);
+      expect(buatQris).not.toHaveBeenCalled();
+      expect(await statusPesananDenganEmail(email)).toEqual([
+        { status: "Menunggu Pembayaran" },
+      ]);
+    });
+
+    it('checkout lagi Varian itu dari browser lain ditolak dengan pesan "… sampai pukul HH.MM WIB …", bukan pesan stok habis, tanpa QRIS baru', async () => {
+      // Contoh PRD §5.4: QRIS-nya kedaluwarsa pukul 10.15 WIB.
+      const terbitkan = qrispyTiruan.buatQris;
+      const buatQris = vi
+        .spyOn(qrispyTiruan, "buatQris")
+        .mockImplementationOnce(async (permintaan) => ({
+          ...(await terbitkan(permintaan)),
+          expiredAt: new Date("2026-11-11T10:15:00+07:00"),
+        }));
+      const varianId = await netflixSatuBulan({ Tersedia: 1 });
+      const email = emailUnik();
+      await checkoutSampaiDiarahkan(varianId, email);
+      buatQris.mockClear();
+      browserBaru().pakai();
+
+      const keadaan = await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email }),
+      );
+
+      expect(keadaan).toEqual({
+        email,
+        galat: {
+          checkout:
+            "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul 10.15 WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.",
+        },
+      });
+      expect(buatQris).not.toHaveBeenCalled();
+      expect(await statusPesananDenganEmail(email)).toEqual([
+        { status: "Menunggu Pembayaran" },
+      ]);
+    });
+
+    it("email lain tanpa Pesanan menunggu yang checkout Varian itu tetap mendapat pesan stok habis, tanpa QRIS", async () => {
+      const varianId = await netflixSatuBulan({ Tersedia: 1 });
+      await checkoutSampaiDiarahkan(varianId, emailUnik());
+      const emailLain = emailUnik();
+      const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+      const keadaan = await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email: emailLain }),
+      );
+
+      expect(keadaan).toEqual({
+        email: emailLain,
+        galat: {
+          checkout:
+            "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
+        },
+      });
+      expect(buatQris).not.toHaveBeenCalled();
+      expect(await statusPesananDenganEmail(emailLain)).toEqual([]);
+    });
+  });
 });

@@ -761,6 +761,115 @@ describe("buatPesanan dengan email yang masih punya Pesanan Menunggu Pembayaran 
       qrisDitolak?.qrisId,
     );
   });
+
+  // ▶ Keputusan 2026-11-12 (#87): batas Pesanan menunggu didahulukan sebelum penolakan karena Stok Varian 0
+  // (§5.2). Contoh PRD: Item stok terakhir sebuah Varian sedang ditahan Pesanan Andi.
+  describe("saat Item stok terakhir Varian itu ditahan Pesanan email itu", () => {
+    /** Checkout Varian dengan 1 Item stok Tersedia sampai Item stok itu ditahan Pesanan email itu. */
+    async function tahanItemStokTerakhir(email: string) {
+      const varianId = await disneyPlusSatuBulan({ Tersedia: 1 });
+      const hasil = await buatPesanan(
+        { varianId, email },
+        { qrispy: qrispyKodeUnik123() },
+      );
+      if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+      expect((await bacaStokVarian(varianId)).stokVarian).toBe(0);
+      return { varianId, tautan: hasil.tautan };
+    }
+
+    it("checkout lagi Varian itu dari browser yang memegang Tautan Pesanan-nya diarahkan ke Pesanan itu, tanpa QRIS baru", async () => {
+      const email = emailUnik();
+      const pertama = await tahanItemStokTerakhir(email);
+      const qrispy = qrispyKodeUnik123();
+
+      const hasil = await buatPesanan(
+        {
+          varianId: pertama.varianId,
+          email,
+          tautanDiBrowser: [pertama.tautan],
+        },
+        { qrispy },
+      );
+
+      expect(hasil).toEqual({
+        hasil: "pesanan-menunggu-di-browser-ini",
+        tautan: pertama.tautan,
+      });
+      expect(qrispy.buatQris).not.toHaveBeenCalled();
+      expect(await statusPesananDenganEmail(email)).toEqual([
+        { status: "Menunggu Pembayaran" },
+      ]);
+    });
+
+    it("checkout lagi Varian itu dari browser lain ditolak dengan waktu kedaluwarsa Pesanan itu, bukan karena stok habis, tanpa QRIS baru", async () => {
+      const email = emailUnik();
+      const { varianId } = await tahanItemStokTerakhir(email);
+      const qrispy = qrispyKodeUnik123();
+
+      const hasil = await buatPesanan(
+        { varianId, email, tautanDiBrowser: [tautanLain()] },
+        { qrispy },
+      );
+
+      expect(hasil).toEqual({
+        hasil: "pesanan-menunggu-di-browser-lain",
+        kedaluwarsaPada: new Date("2026-11-11T10:15:00+07:00"),
+      });
+      expect(qrispy.buatQris).not.toHaveBeenCalled();
+      expect(await statusPesananDenganEmail(email)).toEqual([
+        { status: "Menunggu Pembayaran" },
+      ]);
+    });
+
+    it("email lain tanpa Pesanan menunggu yang checkout Varian itu tetap ditolak karena stok habis, tanpa QRIS", async () => {
+      const { varianId } = await tahanItemStokTerakhir(emailUnik());
+      const emailLain = emailUnik();
+      const qrispy = qrispyKodeUnik123();
+
+      const hasil = await buatPesanan(
+        { varianId, email: emailLain, tautanDiBrowser: [] },
+        { qrispy },
+      );
+
+      expect(hasil).toEqual({ hasil: "stok-habis" });
+      expect(qrispy.buatQris).not.toHaveBeenCalled();
+      expect(await pesananDenganEmail(emailLain)).toEqual([]);
+    });
+  });
+
+  it("dua checkout bersamaan dengan email yang sama untuk Varian yang tinggal punya 1 Item stok: yang kalah mendapat batas Pesanan menunggu, bukan stok habis", async () => {
+    const varianId = await disneyPlusSatuBulan({ Tersedia: 1 });
+    const email = emailUnik();
+    const qrispy = qrispyKodeUnik123();
+    // QRIS baru terbit setelah kedua checkout memintanya, jadi keduanya sudah lolos pemeriksaan sebelum
+    // salah satunya menahan Item stok terakhir itu.
+    const terbitkan = qrispy.buatQris.getMockImplementation()!;
+    let lepaskan = () => {};
+    const keduanyaMeminta = new Promise<void>((r) => (lepaskan = r));
+    qrispy.buatQris.mockImplementation(async (permintaan) => {
+      if (qrispy.buatQris.mock.calls.length === 2) lepaskan();
+      await keduanyaMeminta;
+      return terbitkan(permintaan);
+    });
+
+    const hasil = await Promise.all(
+      [email, email.toUpperCase()].map((tulisan) =>
+        buatPesanan(
+          { varianId, email: tulisan, tautanDiBrowser: [] },
+          { qrispy },
+        ),
+      ),
+    );
+
+    expect(hasil.map((h) => h.hasil).sort()).toEqual([
+      "dibuat",
+      "pesanan-menunggu-di-browser-lain",
+    ]);
+    expect(await statusPesananDenganEmail(email, email.toUpperCase())).toEqual([
+      { status: "Menunggu Pembayaran" },
+    ]);
+    expect(qrispy.batalkanQris).toHaveBeenCalledOnce();
+  });
 });
 
 // PRD §5.2 dan docs/DESIGN.md "Rincian Total bayar": form checkout menampilkan Produk dan Varian yang

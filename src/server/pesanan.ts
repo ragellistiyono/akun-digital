@@ -158,11 +158,14 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
 /**
  * Checkout satu Varian: membuat Pesanan Menunggu Pembayaran beserta QRIS-nya (PRD §5.1, ADR-0004).
  *
+ * Pemeriksaannya berurutan: Produk dan Varian yang dijual, lalu batas Pesanan menunggu, lalu Stok Varian
+ * (PRD §5.2, §5.4 ▶ Keputusan 2026-11-12).
+ *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
+ * - Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), tidak ada QRIS maupun Pesanan baru,
+ *   walaupun Stok Varian-nya 0. Hasilnya Tautan Pesanan itu bila `tautanDiBrowser`, yaitu Tautan Pesanan
+ *   yang dibuat di browser Pembeli, memuatnya; bila tidak, hasilnya hanya waktu kedaluwarsa Pesanan itu.
  * - Checkout ditolak karena stok habis bila Stok Varian-nya 0 (PRD §5.2), juga tanpa QRIS maupun Pesanan.
- * - Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), tidak ada QRIS maupun Pesanan baru.
- *   Hasilnya Tautan Pesanan itu bila `tautanDiBrowser`, yaitu Tautan Pesanan yang dibuat di browser
- *   Pembeli, memuatnya; bila tidak, hasilnya hanya waktu kedaluwarsa Pesanan itu.
  * - Harga jual dan potongan voucher dicatat saat checkout. Kode unik, Total bayar, waktu kedaluwarsa, dan
  *   gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
@@ -170,10 +173,11 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
  * - Pesanan, baris pertama Riwayat status Pesanan, Penahanan satu Item stok Tersedia dari Varian itu
  *   (PRD §5.3), dan pekerjaan kedaluwarsa pada waktu kedaluwarsa QRIS-nya (PRD §5.8) ditulis dalam satu
  *   transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
+ * - Checkout bersamaan dengan email yang sama menulis transaksinya satu per satu, lalu batas Pesanan
+ *   menunggu diperiksa lagi di dalam transaksi, sebelum Item stok ditahan. Yang kalah membatalkan
+ *   QRIS-nya, tanpa Pesanan.
  * - Bila Item stok terakhirnya sudah ditahan checkout lain setelah QRIS terbit, QRIS itu dibatalkan dan
  *   checkout ditolak karena stok habis, tanpa Pesanan.
- * - Checkout bersamaan dengan email yang sama menulis transaksinya satu per satu, lalu batas Pesanan
- *   menunggu diperiksa lagi di dalam transaksi. Yang kalah membatalkan QRIS-nya, tanpa Pesanan.
  * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, QRIS-nya dibatalkan, lalu nomor dan QRIS
  *   dibuat ulang.
  *
@@ -192,11 +196,11 @@ export async function buatPesanan(
 ): Promise<HasilBuatPesanan> {
   const dijual = await varianDijual(varianId);
   if (!dijual) return { hasil: "tidak-dijual" };
+  const menunggu = await pesananMenungguEmail(db, email, tautanDiBrowser);
+  if (menunggu) return menunggu;
   if (varianHabis((await bacaStokVarian(varianId)).stokVarian)) {
     return STOK_HABIS;
   }
-  const menunggu = await pesananMenungguEmail(db, email, tautanDiBrowser);
-  if (menunggu) return menunggu;
 
   const { hargaJual } = dijual;
   const potonganVoucher = POTONGAN_VOUCHER_TANPA_VOUCHER;
@@ -241,6 +245,10 @@ export async function buatPesanan(
           sql`select pg_advisory_xact_lock(hashtext(${KUNCI_BATAS_PESANAN_MENUNGGU}), hashtext(${emailBaku(email)}))`,
         );
 
+        // Batas Pesanan menunggu didahulukan sebelum stok habis (PRD §5.4 ▶ Keputusan 2026-11-12).
+        const menunggu = await pesananMenungguEmail(tx, email, tautanDiBrowser);
+        if (menunggu) return menunggu;
+
         // Penahanan Item stok (PRD §5.3). Item stok yang sedang dikunci checkout lain dilewati, supaya
         // dua checkout bersamaan tidak pernah menahan Item stok yang sama.
         const [tersedia] = await tx
@@ -255,9 +263,6 @@ export async function buatPesanan(
           .limit(1)
           .for("update", { skipLocked: true });
         if (!tersedia) return STOK_HABIS;
-
-        const menunggu = await pesananMenungguEmail(tx, email, tautanDiBrowser);
-        if (menunggu) return menunggu;
 
         const [{ id }] = await tx
           .insert(pesanan)
