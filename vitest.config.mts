@@ -11,7 +11,8 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: [...configDefaults.exclude, ".claude/worktrees/**"],
-    // Migrasi Drizzle dijalankan ke app_test sebelum test pertama.
+    // Sebelum test pertama, migrasi Drizzle dijalankan ke app_test, lalu app_test dan folder unggahan test
+    // dikosongkan.
     globalSetup: ["./e2e/global-setup.ts"],
   },
 });
