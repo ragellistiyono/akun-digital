@@ -16,6 +16,7 @@ import {
   kerjakanEmailPesananSelesai,
   pekerjaanEmailPesananSelesai,
 } from "@/server/pekerjaan-latar";
+import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanPesanan } from "@/server/uji-pesanan";
@@ -34,6 +35,13 @@ import {
 // email yang dijadwalkan aksi.
 vi.mock("next/headers", () => ({ headers: vi.fn() }));
 vi.mock("next/cache", () => ({ refresh: vi.fn(), revalidatePath: vi.fn() }));
+// Footer email memuat nomor WhatsApp dari Pengaturan toko (PRD §10.2), padahal baris Pengaturan toko dipakai
+// bersama test lain yang berjalan bersamaan (pengaturan/aksi.test.ts menimpanya). Jadi nomor WhatsApp yang
+// dibaca email diatur lewat bacaPengaturanToko tiruan, seperti di email-pesanan-selesai.test.ts.
+vi.mock("@/server/pengaturan-toko", async (asli) => ({
+  ...(await asli<typeof import("@/server/pengaturan-toko")>()),
+  bacaPengaturanToko: vi.fn(),
+}));
 
 function sebagaiPengunjung(kepala: Headers) {
   vi.mocked(headers).mockResolvedValue(kepala);
@@ -59,6 +67,12 @@ const isiItemStokUnik = () => [
 let varianId = "";
 
 beforeAll(async () => {
+  // Nomor WhatsApp toko [CONTOH], dalam bentuk yang disimpan (tests/golden/nomor-whatsapp.json).
+  vi.mocked(bacaPengaturanToko).mockResolvedValue({
+    nomorWhatsapp: "6281234567890",
+    syaratKetentuan: "",
+    kebijakanPrivasi: "",
+  });
   // Produk [CONTOH] dengan akhiran unik, karena database test dipakai bersama oleh semua test.
   const produkId = await sisipkanProduk({
     nama: `Kirim Ulang ${randomUUID().slice(0, 8)}`,

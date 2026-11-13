@@ -267,7 +267,8 @@ test("di layar ponsel, Admin mengubah lalu menghapus Item stok Tersedia, dan isi
   await form.getByRole("button", { name: "Simpan Item stok" }).click();
   await expect(form).toHaveCount(0);
   const barisBaru = itemStokBerisi(page, baru[0]);
-  expect(await kolomItemStok(barisBaru)).toEqual(teksKolom(baru));
+  // Daftar bisa diperbarui sesaat sesudah form tertutup, jadi kolomnya dibaca ulang sampai isi barunya tampil.
+  await expect.poll(() => kolomItemStok(barisBaru)).toEqual(teksKolom(baru));
   await expect(barisBaru.getByText("Tersedia", { exact: true })).toBeVisible();
   await expect(itemStokBerisi(page, lama[0])).toHaveCount(0);
   await expect(angkaStokVarian(page)).toHaveText("1");
