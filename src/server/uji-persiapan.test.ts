@@ -177,6 +177,28 @@ describe("persiapan di awal run test", () => {
     expect((await readdir(folderUnggahan)).sort()).toEqual(BERKAS_LAMA);
   }, 60_000);
 
+  it("berhenti dengan pesan galat tanpa mengosongkan tabel bila nama database di URL berakhiran _test tetapi parameter ?database= menunjuk database lain", async () => {
+    const urlTanpaTest = await buatDatabaseTermigrasi("");
+    await sisipkanBaris(urlTanpaTest);
+    // postgres.js meneruskan parameter ?database= ke PostgreSQL, sehingga koneksi ini sebenarnya
+    // membuka database tanpa akhiran _test.
+    const url = new URL(await buatDatabaseTermigrasi("_test"));
+    url.searchParams.set("database", new URL(urlTanpaTest).pathname.slice(1));
+    const { folderUnggahan, envCi } = await buatFolderUnggahan();
+    await taruhBerkas(folderUnggahan);
+
+    await expect(
+      siapkanRunTest({ databaseUrl: url.toString(), folderUnggahan, envCi }),
+    ).rejects.toThrow(/berakhiran _test/);
+
+    expect((await jumlahBaris(urlTanpaTest)).tabelAplikasi).toMatchObject({
+      kategori: 1,
+      produk: 1,
+      batas_login: 1,
+    });
+    expect((await readdir(folderUnggahan)).sort()).toEqual(BERKAS_LAMA);
+  }, 60_000);
+
   it("berhenti dengan pesan galat tanpa menghapus berkas atau mengosongkan tabel bila folder unggahan bukan UPLOAD_DIR dari .env.ci", async () => {
     const url = await buatDatabaseTermigrasi("_test");
     await sisipkanBaris(url);

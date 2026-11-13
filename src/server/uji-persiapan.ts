@@ -19,6 +19,14 @@ function namaDatabase(url: string) {
   }
 }
 
+/** Menghentikan run test bila nama database tidak berakhiran `_test`. */
+function pastikanDatabaseTest(database: string) {
+  if (database.endsWith("_test")) return;
+  throw new Error(
+    `Run test dihentikan sebelum menghapus apa pun, karena DATABASE_URL menunjuk database "${database}", padahal pengosongan di awal run test hanya boleh menyentuh database yang namanya berakhiran _test. Arahkan DATABASE_URL di .env.ci ke database app_test, pastikan konfigurasi test memuat .env.ci, lalu jalankan ulang \`pnpm test\` atau \`pnpm test:e2e\`.`,
+  );
+}
+
 /**
  * Kode galat PostgreSQL saat kunci tabel tidak didapat dalam batas lock_timeout (55P03) dan saat deadlock
  * (40P01). Pengosongan yang gagal karena salah satunya dicoba lagi.
@@ -84,9 +92,10 @@ async function kosongkanFolder(folder: string) {
  * Menyiapkan database dan folder unggahan test sebelum test pertama: memigrasi database test, lalu
  * mengosongkan semua tabel aplikasinya dan folder unggahan test.
  *
- * Pengamannya diperiksa sebelum apa pun disentuh: nama database harus berakhiran `_test`, dan folder
- * unggahan harus sama dengan UPLOAD_DIR di berkas `envCi` (bawaannya .env.ci). Bila salah satunya tidak
- * terpenuhi, run berhenti dengan galat tanpa menghapus apa pun.
+ * Pengamannya diperiksa sebelum apa pun disentuh: nama database harus berakhiran `_test`, baik di URL
+ * maupun database yang benar-benar terbuka, dan folder unggahan harus sama dengan UPLOAD_DIR di berkas
+ * `envCi` (bawaannya .env.ci). Bila salah satunya tidak terpenuhi, run berhenti dengan galat tanpa
+ * menghapus apa pun.
  */
 export async function siapkanRunTest({
   databaseUrl,
@@ -102,12 +111,7 @@ export async function siapkanRunTest({
       "DATABASE_URL kosong, jadi migrasi database test tidak bisa dijalankan. Isi DATABASE_URL di .env.ci dengan database app_test, lalu jalankan ulang `pnpm test` atau `pnpm test:e2e`.",
     );
   }
-  const database = namaDatabase(databaseUrl);
-  if (!database.endsWith("_test")) {
-    throw new Error(
-      `Run test dihentikan sebelum menghapus apa pun, karena DATABASE_URL menunjuk database "${database}", padahal pengosongan di awal run test hanya boleh menyentuh database yang namanya berakhiran _test. Arahkan DATABASE_URL di .env.ci ke database app_test, pastikan konfigurasi test memuat .env.ci, lalu jalankan ulang \`pnpm test\` atau \`pnpm test:e2e\`.`,
-    );
-  }
+  pastikanDatabaseTest(namaDatabase(databaseUrl));
   const folderEnvCi = parse(readFileSync(envCi)).UPLOAD_DIR;
   if (
     !folderUnggahan ||
@@ -121,6 +125,11 @@ export async function siapkanRunTest({
 
   const klien = postgres(databaseUrl, { max: 1, onnotice: () => {} });
   try {
+    // Parameter di URL, misalnya ?database=, bisa membuat koneksi membuka database lain daripada yang
+    // tertulis di path URL. Jadi nama database yang benar-benar terbuka diperiksa lagi.
+    const [{ terbuka }] = await klien<{ terbuka: string }[]>`
+      select current_database() as terbuka`;
+    pastikanDatabaseTest(terbuka);
     await migrate(drizzle(klien), { migrationsFolder: "drizzle" });
     await kosongkanTabelAplikasi(klien);
   } finally {
