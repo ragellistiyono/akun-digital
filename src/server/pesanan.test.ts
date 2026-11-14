@@ -537,50 +537,98 @@ describe("buatPesanan dengan Qrispy sungguhan (ADR-0004)", () => {
       fetch: async () => jawaban(),
     });
 
-  it("contoh respons 201 menjadi Pesanan dengan Kode unik Rp 123, Total bayar Rp 50.123, dan waktu kedaluwarsa dari Qrispy", async () => {
-    const netflix = await netflixPremium();
-    const email = emailUnik();
-    // qris_id contoh diganti yang acak, karena database ini dipakai bersama run sebelumnya.
-    const qrisId = randomUUID();
-    const qrispy = qrispySungguhanUji(() =>
-      Response.json(
-        {
-          status: "success",
-          data: {
-            qris_id: qrisId,
-            qris_image_url: `https://api.qrispy.id/api/public/qris/${qrisId}.png`,
-            qris_image_base64: "data:image/png;base64,iVBORw0KGgo=",
-            amount: 50123,
-            requested_amount: 50000,
-            unique_id: 123,
-            expired_at: "2026-03-09T14:00:00+07:00",
-            expires_in_seconds: 900,
-            checkout_url: `https://qrispy.id/payment/${qrisId}`,
-            payment_reference: "MIWE-7K3P9Q",
-            return_url: null,
-          },
+  /**
+   * Respons `201 Created` membuat QRIS dari uji sungguhan (referensi bagian 3 dan 9), untuk nominal
+   * Rp 10.000 dengan Kode unik Rp 281, dengan qris_id dan amount itu. qris_id contoh diganti yang acak,
+   * karena database ini dipakai bersama run sebelumnya.
+   */
+  const qrisBaru201 = (qrisId: string, amount: string) =>
+    Response.json(
+      {
+        status: "success",
+        message: "QRIS generated successfully",
+        data: {
+          qris_id: qrisId,
+          qris_image_url: `https://api.qrispy.id/api/public/qris/${qrisId}/image`,
+          qris_image_base64: "data:image/png;base64,iVBORw0KGgo=",
+          amount,
+          requested_amount: 10000,
+          unique_id: 281,
+          merchant_name: "<nama merchant>",
+          expired_at: "2026-11-15T00:11:14+07:00",
+          expires_in_seconds: -898.897257,
+          payment_reference: "MIWE-7K3P9Q",
+          checkout_url: `https://qrispy.id/payment/${qrisId}`,
+          return_url: null,
         },
-        { status: 201 },
-      ),
+      },
+      { status: 201 },
     );
 
-    const hasil = await buatPesanan(
-      { varianId: netflix.satuBulan, email },
-      { qrispy },
-    );
+  /** Varian 1 Bulan Rp 10.000 dengan 2 Item stok Tersedia, seharga nominal di referensi bagian 3. */
+  async function varianSepuluhRibu() {
+    const produkId = await sisipkanProduk({
+      nama: `Spotify Premium ${akhiran()}`,
+      varian: [{ nama: "1 Bulan", hargaJual: 10000, Tersedia: 2 }],
+    });
+    const [{ id }] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, produkId));
+    return id;
+  }
+
+  it('contoh respons 201 dengan amount "10281.00" menjadi Pesanan dengan Kode unik Rp 281, Total bayar Rp 10.281, dan waktu kedaluwarsa dari Qrispy', async () => {
+    const varianId = await varianSepuluhRibu();
+    const email = emailUnik();
+    const qrisId = randomUUID();
+    const qrispy = qrispySungguhanUji(() => qrisBaru201(qrisId, "10281.00"));
+
+    const hasil = await buatPesanan({ varianId, email }, { qrispy });
 
     expect(hasil).toEqual({ hasil: "dibuat", tautan: expect.any(String) });
     const tersimpan = await pesananDenganEmail(email);
     expect(tersimpan).toHaveLength(1);
     expect(tersimpan[0]).toMatchObject({
       qrisId,
-      hargaJual: 50000,
+      hargaJual: 10000,
       potonganVoucher: 0,
-      kodeUnik: 123,
-      totalBayar: 50123,
-      kedaluwarsaPada: new Date("2026-03-09T14:00:00+07:00"),
+      kodeUnik: 281,
+      totalBayar: 10281,
+      kedaluwarsaPada: new Date("2026-11-15T00:11:14+07:00"),
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
     });
+  });
+
+  // ADR-0004: pemeriksaan Total bayar berlaku pada nominal yang sudah dibaca. "10282.00" tidak sama dengan
+  // requested_amount 10000 + unique_id 281, jadi QRIS itu dibatalkan dan checkout gagal.
+  it('amount "10282.00" dengan requested_amount 10000 dan unique_id 281: QRIS dibatalkan, checkout gagal, tanpa Pesanan dan tanpa Item stok yang ditahan', async () => {
+    const varianId = await varianSepuluhRibu();
+    const email = emailUnik();
+    const qrisId = randomUUID();
+    const fetch = vi.fn<typeof globalThis.fetch>(async (alamat) =>
+      String(alamat).endsWith("/cancel")
+        ? Response.json({
+            status: "success",
+            message: "QRIS cancelled successfully",
+          })
+        : qrisBaru201(qrisId, "10282.00"),
+    );
+    const qrispy = qrispySungguhan({
+      alamatDasar: "https://qrispy.uji.example",
+      token: "token-uji-bukan-token-asli-9Hc4Lp",
+      fetch,
+    });
+
+    const hasil = await buatPesanan({ varianId, email }, { qrispy });
+
+    expect(hasil).toEqual({ hasil: "qris-gagal" });
+    expect(fetch.mock.calls.map(([alamat]) => String(alamat))).toEqual([
+      "https://qrispy.uji.example/api/payment/qris/generate",
+      `https://qrispy.uji.example/api/payment/qris/${qrisId}/cancel`,
+    ]);
+    expect(await pesananDenganEmail(email)).toEqual([]);
+    expect((await bacaStokVarian(varianId)).stokVarian).toBe(2);
   });
 
   // Pesan 400 diambil dari contoh batas nominal di referensi bagian 3; pesan lainnya sintetis.
