@@ -35,7 +35,13 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
+
+/** Menyadap console.info, tempat webhook menulis baris log bentuknya, tanpa mencetaknya saat test. */
+function sadapLogBentuk() {
+  return vi.spyOn(console, "info").mockImplementation(() => {});
+}
 
 /** Signature seperti yang dikirim Qrispy: HMAC-SHA256 dari body dengan secret webhook sebagai kunci. */
 function signatureQrispy(body: string, bentuk: "hex" | "base64") {
@@ -100,6 +106,29 @@ function paymentSuccess(dipesan: Dipesan) {
     payment_reference: dipesan.nomorPesanan,
     paid_at: PAID_AT,
     merchant_id: 42,
+  };
+}
+
+/** Waktu bayar di contoh bentuk dashboard, yang ditulis dengan zona +00:00 seperti di referensi bagian 6. */
+const PAID_AT_DASHBOARD = "2026-11-11T03:07:00+00:00";
+
+/**
+ * Payload payment.received untuk Pesanan itu dalam bentuk dashboard, mengikuti contoh di
+ * docs/referensi/qrispy-api.md bagian 6: field-nya ada di dalam data. Seperti di contoh itu, amount adalah
+ * nominal tanpa Kode unik, sedangkan received_amount adalah Total bayar. Isi data bisa ditimpa per test.
+ */
+function paymentReceived(dipesan: Dipesan, data: Record<string, unknown> = {}) {
+  return {
+    event: "payment.received",
+    data: {
+      qris_id: dipesan.qrisId,
+      amount: dipesan.hargaJual,
+      received_amount: dipesan.totalBayar,
+      payment_reference: dipesan.nomorPesanan,
+      paid_at: PAID_AT_DASHBOARD,
+      unique_id: dipesan.kodeUnik,
+      ...data,
+    },
   };
 }
 
@@ -188,6 +217,29 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
     });
   });
 
+  // ADR-0004: nominal dari Qrispy bisa berupa teks desimal, seperti di jawaban API (referensi bagian 9).
+  for (const [kasus, amount] of [
+    ["teks angka bulat", (d: Dipesan) => String(d.totalBayar)],
+    ["teks desimal", (d: Dipesan) => `${d.totalBayar}.00`],
+  ] as const) {
+    it(`amount berupa ${kasus} yang sama dengan Total bayar diproses sama seperti angka: Pesanan Selesai`, async () => {
+      const dipesan = await checkout();
+      const body = JSON.stringify({
+        ...paymentSuccess(dipesan),
+        amount: amount(dipesan),
+      });
+
+      const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+      expect(respons.status).toBe(200);
+      expect(await keadaan(dipesan)).toEqual({
+        status: "Selesai",
+        waktuBayar: new Date(PAID_AT),
+        itemStok: ["Terkirim"],
+      });
+    });
+  }
+
   for (const [kasus, ubahPayload] of [
     ["bukan JSON", () => "event=payment.success"],
     ["JSON null", () => "null"],
@@ -203,9 +255,13 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
         JSON.stringify({ ...paymentSuccess(d), qris_id: undefined }),
     ],
     [
-      "amount berupa teks",
+      "amount 0",
+      (d: Dipesan) => JSON.stringify({ ...paymentSuccess(d), amount: 0 }),
+    ],
+    [
+      "amount berupa teks yang punya sen",
       (d: Dipesan) =>
-        JSON.stringify({ ...paymentSuccess(d), amount: String(d.totalBayar) }),
+        JSON.stringify({ ...paymentSuccess(d), amount: `${d.totalBayar}.50` }),
     ],
     [
       "amount bukan rupiah bulat",
@@ -226,13 +282,16 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
       },
     ],
   ] as const) {
-    it(`payload payment.success ${kasus} dengan signature yang benar dijawab 400, dan Pesanan tidak berubah`, async () => {
+    it(`payload payment.success ${kasus} dengan signature yang benar dijawab 400 dengan pesan yang menyebut kedua bentuk, dan Pesanan tidak berubah`, async () => {
       const dipesan = await checkout();
       const body = ubahPayload(dipesan);
 
       const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
 
       expect(respons.status).toBe(400);
+      expect(await respons.text()).toMatch(
+        /payment\.success.*payment\.received/s,
+      );
       expect(await keadaan(dipesan)).toEqual({
         status: "Menunggu Pembayaran",
         waktuBayar: null,
@@ -243,13 +302,16 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
 
   for (const [kasus, buatPayload] of [
     [
-      // Nama event di draf awal yang dikoreksi di docs/referensi/qrispy-api.md bagian 8.
-      "payment.received dengan field lengkap",
-      (d: Dipesan) => ({ ...paymentSuccess(d), event: "payment.received" }),
-    ],
-    [
       "payment.expired yang bentuknya tidak dijelaskan dokumentasi",
       (d: Dipesan) => ({ event: "payment.expired", qris_id: d.qrisId }),
+    ],
+    [
+      "payment.expired dengan field bentuk referensi",
+      (d: Dipesan) => ({ ...paymentSuccess(d), event: "payment.expired" }),
+    ],
+    [
+      "payment.expired dengan field bentuk dashboard",
+      (d: Dipesan) => ({ ...paymentReceived(d), event: "payment.expired" }),
     ],
   ] as const) {
     it(`event ${kasus} dijawab 200, dan Pesanan tidak berubah`, async () => {
@@ -305,13 +367,246 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
     ["signature kosong", () => ""],
     ["tanpa header X-Qrispy-Signature", () => undefined],
   ] as const) {
-    it(`${kasus} dijawab 401, dan Pesanan tidak berubah`, async () => {
+    for (const [bentuk, buatPayload] of [
+      ["referensi", paymentSuccess],
+      ["dashboard", paymentReceived],
+    ] as const) {
+      it(`bentuk ${bentuk} dengan ${kasus} dijawab 401, tanpa baris log bentuk, dan Pesanan tidak berubah`, async () => {
+        const dipesan = await checkout();
+        const body = JSON.stringify(buatPayload(dipesan));
+        const logBentuk = sadapLogBentuk();
+
+        const respons = await kirimWebhook(body, tandatangani(body));
+
+        expect(respons.status).toBe(401);
+        expect(logBentuk).not.toHaveBeenCalled();
+        expect(await keadaan(dipesan)).toEqual({
+          status: "Menunggu Pembayaran",
+          waktuBayar: null,
+          itemStok: ["Ditahan"],
+        });
+      });
+    }
+  }
+
+  // ADR-0004: setiap webhook yang signature-nya cocok meninggalkan satu baris log berisi bentuk dan
+  // event-nya, supaya pembayaran sungguhan pertama menunjukkan bentuk yang dipakai Qrispy.
+  for (const [kasus, buatBody, baris] of [
+    [
+      "bentuk referensi",
+      (d: Dipesan) => JSON.stringify(paymentSuccess(d)),
+      'Webhook Qrispy diterima: bentuk referensi, event "payment.success".',
+    ],
+    [
+      "bentuk dashboard",
+      (d: Dipesan) => JSON.stringify(paymentReceived(d)),
+      'Webhook Qrispy diterima: bentuk dashboard, event "payment.received".',
+    ],
+    [
+      "bentuk dashboard tanpa received_amount, yang dijawab 400",
+      (d: Dipesan) =>
+        JSON.stringify(paymentReceived(d, { received_amount: undefined })),
+      'Webhook Qrispy diterima: bentuk dashboard, event "payment.received".',
+    ],
+    [
+      "bentuk referensi dengan nominal teks yang punya sen, yang dijawab 400",
+      (d: Dipesan) =>
+        JSON.stringify({ ...paymentSuccess(d), amount: `${d.totalBayar}.50` }),
+      'Webhook Qrispy diterima: bentuk referensi, event "payment.success".',
+    ],
+    [
+      "event lain",
+      (d: Dipesan) =>
+        JSON.stringify({ ...paymentReceived(d), event: "payment.expired" }),
+      'Webhook Qrispy diterima: bentuk tidak dikenal, event "payment.expired".',
+    ],
+    [
+      "body bukan JSON",
+      () => "event=payment.success",
+      "Webhook Qrispy diterima: bentuk tidak dikenal, event -.",
+    ],
+    [
+      "JSON tanpa event",
+      (d: Dipesan) => JSON.stringify(paymentReceived(d).data),
+      "Webhook Qrispy diterima: bentuk tidak dikenal, event -.",
+    ],
+  ] as const) {
+    it(`webhook bersignature benar (${kasus}) menulis tepat satu baris log berisi bentuk dan event-nya, tanpa qris_id, nominal, atau secret`, async () => {
       const dipesan = await checkout();
-      const body = JSON.stringify(paymentSuccess(dipesan));
+      const body = buatBody(dipesan);
+      const logBentuk = sadapLogBentuk();
 
-      const respons = await kirimWebhook(body, tandatangani(body));
+      await kirimWebhook(body, signatureQrispy(body, "hex"));
 
-      expect(respons.status).toBe(401);
+      expect(logBentuk.mock.calls).toEqual([[baris]]);
+      for (const rahasia of [
+        dipesan.qrisId,
+        String(dipesan.totalBayar),
+        String(dipesan.hargaJual),
+        RAHASIA,
+      ]) {
+        expect(baris).not.toContain(rahasia);
+      }
+    });
+  }
+});
+
+// Issue T37 dan ADR-0004: selain bentuk referensi, webhook juga menerima bentuk dashboard, yaitu event
+// payment.received dengan field di dalam data. Nominal diterima-nya adalah received_amount.
+describe("webhook Qrispy bentuk dashboard", () => {
+  it("payment.received bersignature benar untuk Pesanan Menunggu Pembayaran dengan received_amount sama dengan Total bayar dijawab 200, dan membuat Pesanan itu Selesai", async () => {
+    const dipesan = await checkout();
+    const body = JSON.stringify(paymentReceived(dipesan));
+
+    const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect(respons.status).toBe(200);
+    expect(await keadaan(dipesan)).toEqual({
+      status: "Selesai",
+      waktuBayar: new Date(PAID_AT_DASHBOARD),
+      itemStok: ["Terkirim"],
+    });
+  });
+
+  // PRD §5.7: satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabarnya datang dalam dua bentuk.
+  for (const [urutan, bentukPertama, bentukKedua, waktuBayar] of [
+    ["referensi lalu dashboard", paymentSuccess, paymentReceived, PAID_AT],
+    [
+      "dashboard lalu referensi",
+      paymentReceived,
+      paymentSuccess,
+      PAID_AT_DASHBOARD,
+    ],
+  ] as const) {
+    it(`kabar untuk qris_id yang sama dikirim sekali dalam tiap bentuk (${urutan}): keduanya dijawab 200, dan hanya kabar pertama yang diproses, sehingga Pesanan hanya punya satu Item stok`, async () => {
+      const dipesan = await checkout();
+      const pertama = JSON.stringify(bentukPertama(dipesan));
+      const kedua = JSON.stringify(bentukKedua(dipesan));
+
+      const respons = [
+        await kirimWebhook(pertama, signatureQrispy(pertama, "hex")),
+        await kirimWebhook(kedua, signatureQrispy(kedua, "hex")),
+      ];
+
+      expect(respons.map((r) => r.status)).toEqual([200, 200]);
+      expect(await keadaan(dipesan)).toEqual({
+        status: "Selesai",
+        waktuBayar: new Date(waktuBayar),
+        itemStok: ["Terkirim"],
+      });
+    });
+  }
+
+  // PRD §5.9 butir 2: yang dibandingkan dengan Total bayar adalah received_amount, bukan amount.
+  it("received_amount kurang dari Total bayar membuat Pesanan Bermasalah dan melepas Item stok yang ditahannya, walaupun amount sama dengan Total bayar", async () => {
+    const dipesan = await checkout();
+    const body = JSON.stringify(
+      paymentReceived(dipesan, {
+        amount: dipesan.totalBayar,
+        received_amount: dipesan.totalBayar - 1,
+      }),
+    );
+
+    const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect(respons.status).toBe(200);
+    expect(await keadaan(dipesan)).toEqual({
+      status: "Bermasalah",
+      waktuBayar: new Date(PAID_AT_DASHBOARD),
+      itemStok: [],
+    });
+  });
+
+  // ADR-0004: nominal dari Qrispy bisa berupa teks desimal, seperti di jawaban API (referensi bagian 9).
+  for (const [kasus, nominal] of [
+    ["teks angka bulat", (d: Dipesan) => String(d.totalBayar)],
+    ["teks desimal", (d: Dipesan) => `${d.totalBayar}.00`],
+  ] as const) {
+    it(`received_amount berupa ${kasus} yang sama dengan Total bayar diproses sama seperti angka: Pesanan Selesai`, async () => {
+      const dipesan = await checkout();
+      const body = JSON.stringify(
+        paymentReceived(dipesan, {
+          amount: nominal(dipesan),
+          received_amount: nominal(dipesan),
+        }),
+      );
+
+      const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+      expect(respons.status).toBe(200);
+      expect(await keadaan(dipesan)).toEqual({
+        status: "Selesai",
+        waktuBayar: new Date(PAID_AT_DASHBOARD),
+        itemStok: ["Terkirim"],
+      });
+    });
+  }
+
+  it("received_amount teks desimal yang Rp 1 kurang dari Total bayar dibaca sebagai nominalnya, sehingga Pesanan Bermasalah seperti bila nominal itu dikirim sebagai angka", async () => {
+    const dipesan = await checkout();
+    const body = JSON.stringify(
+      paymentReceived(dipesan, {
+        received_amount: `${dipesan.totalBayar - 1}.00`,
+      }),
+    );
+
+    const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect(respons.status).toBe(200);
+    expect((await keadaan(dipesan)).status).toBe("Bermasalah");
+  });
+
+  for (const [kasus, buatPayload] of [
+    // ADR-0004: tanpa received_amount, pembayarannya tetap tertangkap lewat cek status.
+    [
+      "tanpa received_amount",
+      (d: Dipesan) => paymentReceived(d, { received_amount: undefined }),
+    ],
+    [
+      // Bentuk draf awal dengan nama event dashboard, yang tidak punya received_amount.
+      "berfield datar tanpa pembungkus data",
+      (d: Dipesan) => ({ ...paymentSuccess(d), event: "payment.received" }),
+    ],
+    [
+      "dengan received_amount di luar data",
+      (d: Dipesan) => {
+        const { data } = paymentReceived(d);
+        return { event: "payment.received", ...data };
+      },
+    ],
+    [
+      "tanpa qris_id",
+      (d: Dipesan) => paymentReceived(d, { qris_id: undefined }),
+    ],
+    [
+      "dengan received_amount 0",
+      (d: Dipesan) => paymentReceived(d, { received_amount: 0 }),
+    ],
+    [
+      "dengan received_amount bukan rupiah bulat",
+      (d: Dipesan) =>
+        paymentReceived(d, { received_amount: d.totalBayar + 0.5 }),
+    ],
+    [
+      "dengan received_amount berupa teks yang punya sen",
+      (d: Dipesan) =>
+        paymentReceived(d, { received_amount: `${d.totalBayar}.50` }),
+    ],
+    [
+      "dengan paid_at bukan waktu",
+      (d: Dipesan) => paymentReceived(d, { paid_at: "kemarin" }),
+    ],
+  ] as const) {
+    it(`payload payment.received ${kasus} dengan signature yang benar dijawab 400 dengan pesan yang menyebut kedua bentuk, dan Pesanan tetap Menunggu Pembayaran`, async () => {
+      const dipesan = await checkout();
+      const body = JSON.stringify(buatPayload(dipesan));
+
+      const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+      expect(respons.status).toBe(400);
+      expect(await respons.text()).toMatch(
+        /payment\.success.*payment\.received/s,
+      );
       expect(await keadaan(dipesan)).toEqual({
         status: "Menunggu Pembayaran",
         waktuBayar: null,
