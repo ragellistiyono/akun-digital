@@ -13,23 +13,28 @@ function fetchTiruan(jawaban: () => Response) {
   return vi.fn<typeof fetch>(async () => jawaban());
 }
 
-/** Contoh respons `201 Created` membuat QRIS (docs/referensi/qrispy-api.md bagian 3). */
+/**
+ * Contoh respons `201 Created` membuat QRIS dari uji sungguhan (docs/referensi/qrispy-api.md bagian 3 dan
+ * 9): `amount` berupa teks desimal, ada `message` dan `merchant_name`, dan `expires_in_seconds` negatif.
+ */
 const QRIS_BARU_201 = {
   status: "success",
+  message: "QRIS generated successfully",
   data: {
     qris_id: "550e8400-e29b-41d4-a716-446655440000",
     qris_image_url:
-      "https://api.qrispy.id/api/public/qris/550e8400-e29b-41d4-a716-446655440000.png",
+      "https://api.qrispy.id/api/public/qris/550e8400-e29b-41d4-a716-446655440000/image",
     // Contoh di referensi dipotong dengan "..."; di sini diganti potongan PNG base64 yang utuh.
     qris_image_base64: "data:image/png;base64,iVBORw0KGgo=",
-    amount: 50123,
-    requested_amount: 50000,
-    unique_id: 123,
-    expired_at: "2026-03-09T14:00:00+07:00",
-    expires_in_seconds: 900,
+    amount: "10281.00",
+    requested_amount: 10000,
+    unique_id: 281,
+    merchant_name: "<nama merchant>",
+    expired_at: "2026-11-15T00:11:14+07:00",
+    expires_in_seconds: -898.897257,
+    payment_reference: "MIWE-7K3P9Q",
     checkout_url:
       "https://qrispy.id/payment/550e8400-e29b-41d4-a716-446655440000",
-    payment_reference: "MIWE-7K3P9Q",
     return_url: null,
   },
 };
@@ -45,7 +50,7 @@ describe("Qrispy sungguhan: membuat QRIS (docs/referensi/qrispy-api.md bagian 3)
       fetch,
     });
 
-    await qrispy.buatQris({ amount: 50000, paymentReference: "MIWE-7K3P9Q" });
+    await qrispy.buatQris({ amount: 10000, paymentReference: "MIWE-7K3P9Q" });
 
     expect(fetch).toHaveBeenCalledOnce();
     const [alamat, permintaan] = fetch.mock.calls[0];
@@ -56,12 +61,12 @@ describe("Qrispy sungguhan: membuat QRIS (docs/referensi/qrispy-api.md bagian 3)
     expect(kepala.get("Content-Type")).toBe("application/json");
     expect(kepala.get("Accept")).toBe("application/json");
     expect(JSON.parse(String(permintaan?.body))).toEqual({
-      amount: 50000,
+      amount: 10000,
       payment_reference: "MIWE-7K3P9Q",
     });
   });
 
-  it("contoh respons 201 menjadi Kode unik Rp 123, Total bayar Rp 50.123, dan kedaluwarsa 9 Maret 2026 pukul 14.00 WIB", async () => {
+  it('contoh respons 201 dengan amount "10281.00" menjadi Total bayar Rp 10.281, nominal dikirim Rp 10.000, Kode unik Rp 281, dan kedaluwarsa 15 November 2026 pukul 00.11.14 WIB', async () => {
     const qrispy = qrispySungguhan({
       alamatDasar: ALAMAT_DASAR,
       token: TOKEN,
@@ -69,25 +74,44 @@ describe("Qrispy sungguhan: membuat QRIS (docs/referensi/qrispy-api.md bagian 3)
     });
 
     const qris = await qrispy.buatQris({
-      amount: 50000,
+      amount: 10000,
       paymentReference: "MIWE-7K3P9Q",
     });
 
     expect(qris).toEqual({
       qrisId: "550e8400-e29b-41d4-a716-446655440000",
-      amount: 50123,
-      requestedAmount: 50000,
-      uniqueId: 123,
-      expiredAt: new Date("2026-03-09T07:00:00Z"),
+      amount: 10281,
+      requestedAmount: 10000,
+      uniqueId: 281,
+      expiredAt: new Date("2026-11-14T17:11:14Z"),
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
     });
+  });
+
+  // Dokumentasi publik menulis amount sebagai angka (referensi bagian 3); bentuk itu tetap diterima.
+  it("amount berupa angka 10281 tetap diterima, dengan hasil yang sama", async () => {
+    const qrispy = qrispySungguhan({
+      alamatDasar: ALAMAT_DASAR,
+      token: TOKEN,
+      fetch: fetchTiruan(() =>
+        Response.json(
+          { ...QRIS_BARU_201, data: { ...QRIS_BARU_201.data, amount: 10281 } },
+          { status: 201 },
+        ),
+      ),
+    });
+
+    expect(
+      await qrispy.buatQris({ amount: 10000, paymentReference: "MIWE-7K3P9Q" }),
+    ).toMatchObject({ amount: 10281, requestedAmount: 10000, uniqueId: 281 });
   });
 });
 
 /**
- * Respons status QRIS (docs/referensi/qrispy-api.md bagian 4) dengan payment_status dan paid_at itu.
- * Contoh di referensi berstatus pending; waktu bayar untuk status paid diambil dari contoh webhook di
- * bagian 6.
+ * Respons status QRIS dari uji sungguhan (docs/referensi/qrispy-api.md bagian 4 dan 9) dengan
+ * payment_status dan paid_at itu: `amount` berupa teks desimal, dan ada `merchant_name` dan `created_at`.
+ * Yang teruji baru pending dan cancelled; bentuk paid belum diuji, jadi waktu bayarnya sintetis, di dalam
+ * masa berlaku QRIS contoh.
  */
 function statusQris(paymentStatus: string, paidAt: string | null = null) {
   return {
@@ -95,9 +119,11 @@ function statusQris(paymentStatus: string, paidAt: string | null = null) {
     data: {
       qris_id: "550e8400-e29b-41d4-a716-446655440000",
       payment_status: paymentStatus,
-      amount: 50123,
+      amount: "10281.00",
+      merchant_name: "<nama merchant>",
+      created_at: "2026-11-14T23:56:14+07:00",
+      expired_at: "2026-11-15T00:11:14+07:00",
       paid_at: paidAt,
-      expired_at: "2026-03-09T14:00:00+07:00",
       payment_reference: "MIWE-7K3P9Q",
     },
   };
@@ -125,12 +151,12 @@ describe("Qrispy sungguhan: cek status (docs/referensi/qrispy-api.md bagian 4)",
     expect(kepala.get("Accept")).toBe("application/json");
   });
 
-  it("paid menjadi status paid dengan amount sebagai nominal diterima dan paid_at sebagai waktu bayar", async () => {
+  it('paid dengan amount "10281.00" menjadi status paid dengan Nominal diterima Rp 10.281 dan paid_at sebagai waktu bayar', async () => {
     const qrispy = qrispySungguhan({
       alamatDasar: ALAMAT_DASAR,
       token: TOKEN,
       fetch: fetchTiruan(() =>
-        Response.json(statusQris("paid", "2026-03-09T13:45:21+07:00")),
+        Response.json(statusQris("paid", "2026-11-15T00:05:42+07:00")),
       ),
     });
 
@@ -138,8 +164,8 @@ describe("Qrispy sungguhan: cek status (docs/referensi/qrispy-api.md bagian 4)",
       await qrispy.cekStatusQris("550e8400-e29b-41d4-a716-446655440000"),
     ).toEqual({
       paymentStatus: "paid",
-      amount: 50123,
-      paidAt: new Date("2026-03-09T06:45:21Z"),
+      amount: 10281,
+      paidAt: new Date("2026-11-14T17:05:42Z"),
     });
   });
 
@@ -287,15 +313,15 @@ describe("Qrispy sungguhan: respons yang tidak cocok skema", () => {
           data: {
             qris_id: "550e8400-e29b-41d4-a716-446655440000",
             qris_image_base64: "data:image/png;base64,iVBORw0KGgo=",
-            amount: 50000,
-            expired_at: "2026-03-09T14:00:00+07:00",
+            amount: "10000.00",
+            expired_at: "2026-11-15T00:11:14+07:00",
           },
         }),
       ),
     });
 
     const galat = await qrispy
-      .buatQris({ amount: 50000, paymentReference: "MIWE-7K3P9Q" })
+      .buatQris({ amount: 10000, paymentReference: "MIWE-7K3P9Q" })
       .catch((g: unknown) => g);
 
     expect(galat).toBeInstanceOf(GalatQrispy);
@@ -303,6 +329,67 @@ describe("Qrispy sungguhan: respons yang tidak cocok skema", () => {
     expect(String(galat)).toContain("tidak cocok");
     expect(String(galat)).not.toContain(TOKEN);
   });
+
+  // Nominal tidak sah menurut issue T36: sen selain .00, pemisah ribuan, bukan angka, teks kosong, angka
+  // pecahan, dan angka negatif.
+  const NOMINAL_TIDAK_SAH = [
+    "10281.50",
+    "10.281",
+    "abc",
+    "",
+    10281.5,
+    -1,
+  ] as const;
+
+  for (const nominal of NOMINAL_TIDAK_SAH) {
+    for (const field of ["amount", "requested_amount", "unique_id"] as const) {
+      it(`respons membuat QRIS dengan ${field} ${JSON.stringify(nominal)} ditolak sebagai GalatQrispy yang menyebut ${field}`, async () => {
+        const qrispy = qrispySungguhan({
+          alamatDasar: ALAMAT_DASAR,
+          token: TOKEN,
+          fetch: fetchTiruan(() =>
+            Response.json(
+              {
+                ...QRIS_BARU_201,
+                data: { ...QRIS_BARU_201.data, [field]: nominal },
+              },
+              { status: 201 },
+            ),
+          ),
+        });
+
+        const galat = await qrispy
+          .buatQris({ amount: 10000, paymentReference: "MIWE-7K3P9Q" })
+          .catch((g: unknown) => g);
+
+        expect(galat).toBeInstanceOf(GalatQrispy);
+        expect(galat).toMatchObject({ statusHttp: 201 });
+        expect(String(galat)).toContain(`data.${field}`);
+      });
+    }
+
+    it(`respons cek status paid dengan amount ${JSON.stringify(nominal)} ditolak sebagai GalatQrispy yang menyebut amount`, async () => {
+      const qrispy = qrispySungguhan({
+        alamatDasar: ALAMAT_DASAR,
+        token: TOKEN,
+        fetch: fetchTiruan(() => {
+          const jawaban = statusQris("paid", "2026-11-15T00:05:42+07:00");
+          return Response.json({
+            ...jawaban,
+            data: { ...jawaban.data, amount: nominal },
+          });
+        }),
+      });
+
+      const galat = await qrispy
+        .cekStatusQris("550e8400-e29b-41d4-a716-446655440000")
+        .catch((g: unknown) => g);
+
+      expect(galat).toBeInstanceOf(GalatQrispy);
+      expect(galat).toMatchObject({ statusHttp: 200 });
+      expect(String(galat)).toContain("data.amount");
+    });
+  }
 
   it("gambar QR yang bukan data URL PNG ditolak", async () => {
     const qrispy = qrispySungguhan({
@@ -320,7 +407,7 @@ describe("Qrispy sungguhan: respons yang tidak cocok skema", () => {
     });
 
     await expect(
-      qrispy.buatQris({ amount: 50000, paymentReference: "MIWE-7K3P9Q" }),
+      qrispy.buatQris({ amount: 10000, paymentReference: "MIWE-7K3P9Q" }),
     ).rejects.toBeInstanceOf(GalatQrispy);
   });
 

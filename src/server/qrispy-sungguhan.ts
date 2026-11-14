@@ -4,31 +4,39 @@
 // dikirim di header X-API-TOKEN dan tidak pernah ikut dalam pesan galat.
 import { z } from "zod";
 
+import { NominalQrispy } from "./nominal-qrispy";
 import type { Qrispy } from "./qrispy";
 
-/** Respons membuat QRIS (bagian 3). Field yang tidak dipakai toko, misalnya checkout_url, tidak diperiksa. */
+/** Nominal dari Qrispy yang harus lebih dari nol, misalnya Total bayar dan Nominal diterima. */
+const NominalPositifQrispy = NominalQrispy.pipe(z.number().positive());
+
+/**
+ * Respons membuat QRIS (bagian 3). `amount` berupa teks desimal, sedangkan `requested_amount` dan
+ * `unique_id` berupa angka (bagian 9); ketiganya dibaca dengan NominalQrispy. Field yang tidak dipakai toko,
+ * misalnya checkout_url dan expires_in_seconds, tidak diperiksa.
+ */
 const QrisBaruQrispy = z.object({
   status: z.literal("success"),
   data: z.object({
     qris_id: z.string().min(1),
     qris_image_base64: z.string().startsWith("data:image/png;base64,"),
-    amount: z.number().int().positive(),
-    requested_amount: z.number().int().positive(),
-    unique_id: z.number().int(),
+    amount: NominalPositifQrispy,
+    requested_amount: NominalPositifQrispy,
+    unique_id: NominalQrispy,
     expired_at: z.iso.datetime({ offset: true }),
   }),
 });
 
 /**
- * Respons status QRIS (bagian 4). Status paid membawa nominal diterima dan waktu bayarnya; paid_at bernilai
- * null selama belum dibayar.
+ * Respons status QRIS (bagian 4). Status paid membawa Nominal diterima dan waktu bayarnya; paid_at bernilai
+ * null selama belum dibayar. `amount` berupa teks desimal (bagian 9), jadi dibaca dengan NominalQrispy.
  */
 const StatusQrisQrispy = z.object({
   status: z.literal("success"),
   data: z.discriminatedUnion("payment_status", [
     z.object({
       payment_status: z.literal("paid"),
-      amount: z.number().int().positive(),
+      amount: NominalPositifQrispy,
       paid_at: z.iso.datetime({ offset: true }),
     }),
     z.object({ payment_status: z.enum(["pending", "expired", "cancelled"]) }),
