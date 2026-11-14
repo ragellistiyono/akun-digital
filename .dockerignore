@@ -1,0 +1,14 @@
+# Berkas yang tidak ikut ke image produksi (Dockerfile). Rahasia lokal tidak boleh masuk image, dan hasil build
+# serta dependency dibuat ulang di dalam image.
+.git
+.env
+.env.*
+node_modules
+.next
+*.tsbuildinfo
+.unggahan
+test-results
+playwright-report
+blob-report
+coverage
+.claude

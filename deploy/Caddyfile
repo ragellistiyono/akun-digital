@@ -1,0 +1,9 @@
+# Proxy HTTPS toko (PRD §12), dipakai layanan caddy di compose.prod.yml.
+#
+# Alamat situsnya APP_URL dari berkas env produksi, misalnya https://akun.miwedigital.store. Untuk alamat itu
+# Caddy mengambil sertifikat Let's Encrypt saat pertama kali menyala, memperbaruinya sendiri sebelum habis,
+# dan mengalihkan setiap akses http:// ke https:// (UAT-L1). Semua permintaan diteruskan ke aplikasi.
+{$APP_URL} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
