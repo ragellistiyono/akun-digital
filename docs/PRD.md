@@ -567,6 +567,8 @@ Log aktivitas Admin, ekspor CSV, dan notifikasi email ke Admin.
 - Email dikirim dari domain toko yang sudah diverifikasi di Resend. Pengirimnya tampil sebagai `MIWE Digital Store <no-reply@domain-toko>`. Nama domainnya masih keputusan terbuka (OD-1).
 - Email tidak bisa dibalas.
 
+▶ Keputusan 2026-11-15 (#115): Domain toko adalah `akun.miwedigital.store`, dan domain ini sudah terverifikasi di Resend. Email dikirim dari `MIWE Digital Store <no-reply@akun.miwedigital.store>`.
+
 ### 10.2 Jenis email
 
 Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
@@ -637,6 +639,8 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - Aplikasi berjalan di satu VPS lewat Docker Compose dan hanya bisa diakses lewat HTTPS.
 - Database dicadangkan otomatis setiap hari. Tujuh cadangan terakhir disimpan, dan cadangan yang lebih lama dihapus.
 - Isi Item stok disimpan terenkripsi di database.
+
+▶ Keputusan 2026-11-15 (#115): Toko diakses di `https://akun.miwedigital.store`. Alamat ini juga yang dipakai Tautan Pesanan di email.
 
 ## 13. Milestone
 
