@@ -14,6 +14,10 @@
 # Berkas env produksi dibaca dari BERKAS_ENV, bawaannya /opt/akun-digital/produksi.env. Docker Compose memakai
 # compose.prod.yml di repo ini, kecuali COMPOSE_FILE sudah diisi.
 #
+# Keluaran skrip ini masuk log GitHub Actions, yang terbuka untuk umum karena repo-nya publik. Karena itu skrip
+# ini tidak pernah mencetak log container atau galat database, yang bisa memuat email Pembeli, nomor Pesanan,
+# atau IP pengunjung. Bila ada yang gagal, skrip menyebut perintah untuk melihatnya langsung di server.
+#
 # Semua langkah ada di dalam fungsi, dan baris terakhir berkas ini memanggilnya, sehingga bash sudah membaca
 # seluruh berkas sebelum `git checkout` menggantinya. Setelah commit diambil, langkah 2–5 dijalankan oleh
 # deploy.sh dari commit itu sendiri, yang dipanggil ulang dengan DEPLOY_COMMIT_DIAMBIL berisi commit tersebut.
@@ -54,14 +58,20 @@ ambil_commit() {
 		exec bash "$REPO/deploy/deploy.sh" "$commit"
 }
 
-# Dipanggil lewat trap EXIT bila deploy gagal setelah commit diambil: menampilkan keadaan layanan dan log
-# terakhir.
+# Awalan perintah docker compose yang bisa disalin pengelola server, dengan berkas compose dan env yang sama
+# seperti deploy ini.
+perintah_compose() {
+	printf 'cd %s && COMPOSE_FILE=%s COMPOSE_ENV_FILES=%s docker compose' "$REPO" "$COMPOSE_FILE" "$BERKAS_ENV"
+}
+
+# Dipanggil lewat trap EXIT bila deploy gagal setelah commit diambil: menampilkan keadaan layanan, termasuk
+# status health, tanpa isi log-nya.
 # shellcheck disable=SC2317
 tampilkan_keadaan() {
 	printf '\n--- Keadaan layanan ---\n' >&2
 	docker compose ps --all >&2 || true
-	printf '\n--- Log terakhir aplikasi dan Caddy ---\n' >&2
-	docker compose logs --no-color --tail 60 app caddy >&2 || true
+	printf '\nLog aplikasi dan Caddy tidak ditampilkan di sini, karena log GitHub Actions terbuka untuk umum. Lihat log itu di server dengan:\n  %s logs --tail 100 app caddy\n' \
+		"$(perintah_compose)" >&2
 	printf '\n✗ Deploy %s gagal. Data tidak dihapus. Untuk kembali ke versi sebelumnya, jalankan:\n  bash %s/deploy/deploy.sh %s\n' \
 		"${DEPLOY_COMMIT_DIAMBIL:-}" "$REPO" "${DEPLOY_COMMIT_SEBELUMNYA:-<commit sebelumnya>}" >&2
 }
@@ -69,7 +79,7 @@ tampilkan_keadaan() {
 cek_kesehatan() {
 	local alamat host i hasil
 	alamat="$(docker compose exec -T caddy printenv APP_URL)" ||
-		gagal "APP_URL tidak bisa dibaca dari layanan caddy, karena layanan itu tidak berjalan. Lihat keadaan layanan dan log Caddy di bawah, perbaiki penyebabnya, lalu jalankan ulang deploy."
+		gagal "APP_URL tidak bisa dibaca dari layanan caddy, karena layanan itu tidak berjalan. Lihat keadaan layanan dan perintah melihat log di bawah, perbaiki penyebabnya, lalu jalankan ulang deploy."
 	[[ "$alamat" == https://* ]] ||
 		gagal "APP_URL di $BERKAS_ENV bernilai \"$alamat\", padahal harus diawali https://. Perbaiki APP_URL, lalu jalankan ulang deploy."
 	host="${alamat#https://}"
@@ -81,7 +91,7 @@ cek_kesehatan() {
 			break
 		fi
 		((i < PERCOBAAN_CEK_HTTPS)) ||
-			gagal "https://$host/ belum terbuka setelah $PERCOBAAN_CEK_HTTPS percobaan. Bila ini deploy pertama, pastikan domain menunjuk ke server ini dan port 80 serta 443 terbuka, lalu lihat log Caddy di bawah."
+			gagal "https://$host/ belum terbuka setelah $PERCOBAAN_CEK_HTTPS percobaan. Bila ini deploy pertama, pastikan domain menunjuk ke server ini dan port 80 serta 443 terbuka. Lihat juga log Caddy di server dengan perintah di bawah."
 		sleep 5
 	done
 	echo "  https://$host/ terbuka."
@@ -92,7 +102,7 @@ cek_kesehatan() {
 		gagal "http://$host/ tidak bisa dibuka (galat curl di atas). Pastikan layanan caddy berjalan dan port 80 di server tidak dipakai program lain, lalu jalankan ulang deploy."
 	case "$hasil" in
 	"301 https://$host/" | "302 https://$host/" | "307 https://$host/" | "308 https://$host/") ;;
-	*) gagal "http://$host/ tidak dialihkan ke https://$host/ (jawaban: $hasil). Periksa deploy/Caddyfile dan log Caddy di bawah." ;;
+	*) gagal "http://$host/ tidak dialihkan ke https://$host/ (jawaban: $hasil). Periksa deploy/Caddyfile dan log Caddy di server dengan perintah di bawah." ;;
 	esac
 	echo "  http://$host/ dialihkan ke https://$host/."
 }
@@ -112,7 +122,10 @@ pasang() {
 
 	langkah "3/5 Migrasi database"
 	docker compose up --detach --wait postgres
-	docker compose run --rm --no-deps app node_modules/.bin/drizzle-kit migrate
+	# Galat migrasi bisa memuat isi baris database, jadi keluarannya tidak dicetak ke log Actions.
+	docker compose run --rm --no-deps app node_modules/.bin/drizzle-kit migrate >/dev/null 2>&1 ||
+		gagal "Migrasi database gagal. Galatnya tidak ditampilkan di sini, karena log GitHub Actions terbuka untuk umum dan galat database bisa memuat data toko. Lihat galatnya dengan menjalankan migrasi di server: $(perintah_compose) run --rm --no-deps app node_modules/.bin/drizzle-kit migrate"
+	echo "  Migrasi selesai."
 
 	langkah "4/5 Menyalakan ulang aplikasi"
 	docker compose up --detach --wait --wait-timeout 300 --remove-orphans

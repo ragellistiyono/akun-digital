@@ -154,7 +154,7 @@ Setiap merge ke `main` yang membuat CI hijau otomatis memicu workflow **Deploy**
 4. Nyalakan ulang aplikasi. Volume tidak dihapus, jadi database, unggahan, backup, dan sertifikat tetap ada.
 5. Cek kesehatan: `https://<domain>/` terbuka, dan `http://<domain>/` dialihkan ke `https://`.
 
-Bila deploy gagal, lognya menampilkan keadaan layanan, log terakhir aplikasi dan Caddy, serta perintah untuk kembali ke commit sebelumnya:
+Bila deploy gagal, keluarannya menampilkan keadaan layanan, perintah untuk melihat log aplikasi dan Caddy di server, serta perintah untuk kembali ke commit sebelumnya. Log GitHub Actions terbuka untuk umum karena repo ini publik, jadi log aplikasi dan galat database hanya dibaca di server, tidak pernah di log Actions. Keduanya bisa memuat email Pembeli, nomor Pesanan, dan IP pengunjung. Perintah untuk kembali ke commit sebelumnya:
 
 ```bash
 bash /opt/akun-digital/repo/deploy/deploy.sh <commit sebelumnya>
@@ -225,7 +225,7 @@ Restore mengganti seluruh isi database dengan isi satu backup. Pesanan dan perub
    4. menjalankan migrasi dari versi yang sedang terpasang;
    5. menyalakan aplikasi dan layanan cadangan lagi.
 
-   Restore berhasil bila baris terakhirnya `✓ Database dipulihkan dari <nama backup>.`
+   Restore berhasil bila baris terakhirnya `✓ Database dipulihkan dari <nama backup>.` Bila salah satu langkah gagal, skrip menyebut langkah yang gagal, keadaan toko saat itu, dan perintah berikutnya, misalnya mengulang restore atau menyalakan lagi aplikasi.
 4. Buka toko dan dasbor admin, lalu periksa datanya.
 
 ### Restore ke database kosong, misalnya di server baru
