@@ -31,6 +31,10 @@ Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikiri
   - Event selain `payment.success` dan `payment.received` dijawab `200` dan diabaikan.
   - Pada bentuk dashboard tanpa `received_amount`, webhook dijawab `400` tanpa perubahan apa pun. Pembayarannya tetap tertangkap lewat cek status.
   - Setiap webhook yang signature-nya cocok dicatat satu baris di log server. Isinya hanya bentuknya (referensi, dashboard, atau tidak dikenal) dan nama event-nya.
+
+    ▶ Keputusan 2026-11-15 (#113): Peringatan penolakan `400` tetap ditulis sebagai baris tersendiri, di samping baris log bentuk.
+    - Peringatan itu boleh memuat alasan penolakan, termasuk nilai nominal yang tidak sah, misalnya `nominal "45123.50" tidak sah`.
+    - Alasannya, isi penolakan itulah petunjuk untuk memastikan bentuk webhook pada pembayaran sungguhan pertama, dan nilai nominal bukan rahasia.
   - Kabar pembayaran diproses dalam satu transaksi database, lalu dijawab `200`. Kabar dengan `qris_id` yang sama hanya diproses sekali (PRD §5.7).
 - **Nominal diterima** diambil dari:
   - `amount`, pada webhook bentuk referensi;
