@@ -1,0 +1,102 @@
+# Toko di server produksi (PRD §12, ADR-0001): satu VPS, dijalankan deploy/deploy.sh. Runbook: docs/DEPLOY.md.
+#
+# Pengaturan dan rahasia produksi dibaca dari berkas env di server, di luar repo (bawaannya
+# /opt/akun-digital/produksi.env). deploy/deploy.sh memberikan berkas itu ke Docker Compose, sehingga nilainya
+# juga dipakai untuk mengisi ${...} di bawah.
+#
+# Data yang harus bertahan antar-deploy ada di volume bernama: database (postgres-data), unggahan Admin
+# (unggahan), cadangan harian (cadangan), dan sertifikat HTTPS (caddy-data). Deploy tidak pernah menghapus
+# volume.
+name: akun-digital
+
+services:
+  # Aplikasi Next.js beserta pekerja latar pg-boss, yang berjalan di proses yang sama (src/instrumentation.ts).
+  app:
+    build: .
+    restart: unless-stopped
+    init: true
+    env_file: ${BERKAS_ENV:-/opt/akun-digital/produksi.env}
+    environment:
+      DATABASE_URL: postgres://app:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD belum diisi di berkas env produksi (docs/DEPLOY.md)}@postgres:5432/app
+      UPLOAD_DIR: /data/unggahan
+    volumes:
+      - unggahan:/data/unggahan
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Sehat bila Beranda, yang membaca katalog dari database, terbuka.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
+
+  postgres:
+    image: postgres:17-trixie
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD belum diisi di berkas env produksi (docs/DEPLOY.md)}
+      POSTGRES_DB: app
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 2s
+
+  # Proxy HTTPS. Caddy mengambil dan memperbarui sertifikat Let's Encrypt sendiri untuk alamat APP_URL, dan
+  # mengalihkan setiap akses http:// ke https:// (deploy/Caddyfile).
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_URL: ${APP_URL:?APP_URL belum diisi di berkas env produksi (docs/DEPLOY.md)}
+    volumes:
+      # Folder deploy/ dipasang utuh, bukan berkas Caddyfile saja, supaya Caddyfile dari commit baru terbaca
+      # saat deploy/deploy.sh memuat ulang Caddy.
+      - ./deploy:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  # Cadangan database harian dengan pg_dump, disimpan di volume cadangan (deploy/cadangan.sh).
+  cadangan:
+    image: postgres:17-trixie
+    restart: unless-stopped
+    init: true
+    command: ["bash", "/deploy/cadangan.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: app
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD belum diisi di berkas env produksi (docs/DEPLOY.md)}
+      PGDATABASE: app
+      # Tanggal cadangan memakai zona waktu toko, WIB (PRD §9.1).
+      TZ: Asia/Jakarta
+    volumes:
+      - ./deploy:/deploy:ro
+      - cadangan:/cadangan
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  unggahan:
+  cadangan:
+  caddy-data:
+  caddy-config:
