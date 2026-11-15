@@ -9,6 +9,8 @@ Toko menerbitkan QRIS dan menerima kabar pembayaran dari Qrispy (PRD §5). Ada t
 
 Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikirim sebagai teks desimal. Selain itu, dokumentasi di dashboard Qrispy memakai bentuk webhook yang berbeda dari dokumentasi publik (`docs/referensi/qrispy-api.md` bagian 6 dan 9).
 
+Diperbarui lagi 2026-11-15 (#118). Dua pembayaran sungguhan membuktikan bahwa Qrispy mengirim webhook dalam bentuk dashboard, jadi bentuk referensi tidak lagi diterima.
+
 ## Keputusan
 
 - **Satu adaptor.** Semua panggilan ke Qrispy lewat satu antarmuka di `src/server/`. Antarmuka itu punya dua implementasi:
@@ -25,20 +27,21 @@ Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikiri
   - Route handler membaca body mentah dengan `request.text()` sebelum di-parse.
   - Signature dihitung dengan HMAC-SHA256 memakai `QRISPY_WEBHOOK_SECRET`. Selama formatnya belum dipastikan, signature diterima bila sama dengan digest dalam hex atau base64. Perbandingannya memakai `timingSafeEqual`, setelah panjangnya dicek sama.
   - Signature salah dijawab `401` tanpa perubahan apa pun.
-  - Payload diterima dalam dua bentuk. Alasannya, dokumentasi publik dan dokumentasi dashboard Qrispy berbeda, dan belum ada pembayaran sungguhan yang membuktikan salah satunya:
-    - **bentuk referensi:** event `payment.success` dengan field datar;
-    - **bentuk dashboard:** event `payment.received` dengan field di dalam `data`.
-  - Event selain `payment.success` dan `payment.received` dijawab `200` dan diabaikan.
-  - Pada bentuk dashboard tanpa `received_amount`, webhook dijawab `400` tanpa perubahan apa pun. Pembayarannya tetap tertangkap lewat cek status.
-  - Setiap webhook yang signature-nya cocok dicatat satu baris di log server. Isinya hanya bentuknya (referensi, dashboard, atau tidak dikenal) dan nama event-nya.
+  - Kabar pembayaran hanya diterima dalam **bentuk dashboard**: event `payment.received` dengan field di dalam `data`. Bentuk ini terbukti pada pembayaran sungguhan 2026-11-15 (`docs/referensi/qrispy-api.md` bagian 9).
+  - Event `payment.test` dari tombol "Test Webhook" di dashboard Qrispy dikenali sebagai **webhook uji**. Webhook ini dijawab `200` dan tidak mengubah apa pun.
+  - Event lain dijawab `200` dan diabaikan. Ini termasuk `payment.success`, yang dulu diterima sebagai bentuk referensi.
+  - Pada `payment.received` tanpa `received_amount`, webhook dijawab `400` tanpa perubahan apa pun. Pembayarannya tetap tertangkap lewat cek status.
+  - Setiap webhook yang signature-nya cocok dicatat satu baris di log server. Isinya hanya:
+    - bentuknya: `dashboard` untuk `payment.received`, `uji` untuk `payment.test`, atau `tidak dikenal`;
+    - nama event-nya;
+    - format signature yang cocok, yaitu `hex` atau `base64`.
 
     ▶ Keputusan 2026-11-15 (#113): Peringatan penolakan `400` tetap ditulis sebagai baris tersendiri, di samping baris log bentuk.
     - Peringatan itu boleh memuat alasan penolakan, termasuk nilai nominal yang tidak sah, misalnya `nominal "45123.50" tidak sah`.
     - Alasannya, isi penolakan itulah petunjuk untuk memastikan bentuk webhook pada pembayaran sungguhan pertama, dan nilai nominal bukan rahasia.
   - Kabar pembayaran diproses dalam satu transaksi database, lalu dijawab `200`. Kabar dengan `qris_id` yang sama hanya diproses sekali (PRD §5.7).
 - **Nominal diterima** diambil dari:
-  - `amount`, pada webhook bentuk referensi;
-  - `received_amount`, pada webhook bentuk dashboard;
+  - `received_amount`, pada webhook `payment.received`;
   - `amount` dari cek status, bila statusnya `paid`.
 
   Nominal ini dibandingkan dengan Total bayar menurut PRD §5.9.
@@ -56,7 +59,9 @@ Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikiri
 ## Considered Options
 
 - **Mengikuti draf integrasi dari pemilik apa adanya.** Ditolak. Draf itu berbeda dari dokumentasi publik dalam nama event, bentuk payload, dan nominal (`docs/referensi/qrispy-api.md` bagian 8). Pada 2026-11-15, bentuk webhook di draf ternyata sama dengan dokumentasi dashboard, jadi bentuk itu kini ikut diterima sebagai bentuk dashboard.
-- **Hanya menerima bentuk webhook dashboard.** Ditolak. Dokumentasi dashboard terbukti keliru soal jawaban membuat QRIS (`docs/referensi/qrispy-api.md` bagian 9), jadi contoh webhook-nya juga belum tentu benar.
+- **Hanya menerima bentuk webhook dashboard sejak awal.** Ditolak pada 2026-11-15 pagi. Waktu itu dokumentasi dashboard terbukti keliru soal jawaban membuat QRIS (`docs/referensi/qrispy-api.md` bagian 9), jadi contoh webhook-nya juga belum tentu benar. Setelah pembayaran sungguhan membuktikan bentuk dashboard, keputusan ini diganti (#118).
+- **Tetap menerima bentuk referensi.** Ditolak (#118). Qrispy terbukti tidak memakainya, dan bentuk yang tidak terpakai hanya menambah jalur yang harus dijaga.
+- **Menolak `payment.success` dengan `400`.** Ditolak (#118). Event ini tidak dipakai Qrispy. Jawaban `200` mencegah Qrispy mengirim ulang event yang memang tidak diproses toko.
 - **Membulatkan nominal yang punya sen.** Ditolak. Nominal QRIS rupiah selalu bulat. Bila ada sen, berarti API Qrispy berubah, dan itu harus dicek dulu, bukan ditebak.
 - **Server Qrispy tiruan yang mengirim JSON lewat HTTP.** Ditolak. Server seperti itu menambah bagian baru tanpa menambah bukti. Bentuk JSON Qrispy sudah diuji lewat contoh jawaban di test adaptor dan contoh webhook di test e2e.
 - **Hanya mengandalkan webhook.** Ditolak. Kebijakan kirim ulang dan format signature-nya belum pasti. Bila satu webhook hilang, Pesanan yang sudah dibayar akan menjadi Kedaluwarsa.
@@ -66,5 +71,7 @@ Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikiri
 
 - Semua tiket checkout dan pembayaran bisa diuji di CI tanpa uang sungguhan.
 - Contoh jawaban Qrispy di test adaptor dan contoh webhook di test e2e memakai bentuk dari uji sungguhan (`docs/referensi/qrispy-api.md` bagian 9). Qrispy tiruan bekerja di tingkat adaptor, jadi bentuk JSON tidak memengaruhinya.
-- Beberapa hal baru terbukti pada pembayaran sungguhan pertama (UAT-A1): bentuk webhook, format signature, dan arti nominal di webhook. Log webhook menunjukkan bentuk yang dipakai Qrispy. Setelah terbukti, bentuk webhook dan format signature yang tidak terpakai dihapus lewat tiket baru.
+- Bentuk webhook sudah terbukti pada pembayaran sungguhan 2026-11-15, dan bentuk referensi dihapus (#118). Dua hal masih menunggu bukti:
+  - format signature. Log webhook kini mencatat format yang cocok. Setelah terbukti, format yang tidak terpakai dihapus lewat tiket baru;
+  - apakah `received_amount` sudah termasuk Kode unik (`docs/referensi/qrispy-api.md` bagian 6).
 - Toko memanggil API status Qrispy secara berkala. Bila Qrispy menjawab `429`, toko menunggu sampai giliran cek berikutnya.

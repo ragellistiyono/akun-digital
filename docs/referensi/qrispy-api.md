@@ -5,7 +5,7 @@ Berkas ini menjelaskan perilaku layanan luar Qrispy yang dipakai toko untuk QRIS
 - **Sumber:**
   1. Dokumentasi publik Qrispy API v1.0 di <https://api.qrispy.id> dan halaman <https://qrispy.id>, dibaca pada 2026-11-11.
   2. Dokumentasi di dashboard merchant Qrispy, yaitu halaman dokumentasi API dan pengaturan webhook. Pemilik menyalinnya pada 2026-11-14.
-  3. Uji API sungguhan pada 2026-11-14 (bagian 9).
+  3. Uji API sungguhan pada 2026-11-14, dan pembayaran sungguhan pada 2026-11-15 (bagian 9).
 - **Asal berkas:** draf pemilik yang sebagian ditulis AI lain, lalu dicocokkan dengan dokumentasi publik. Perbedaannya tercatat di bagian 8.
 - **Bila sumber berbeda:**
   - Hasil uji sungguhan yang berlaku.
@@ -120,10 +120,10 @@ Kedua dokumentasi keliru soal respons ini:
 }
 ```
 
-- `payment_status` bernilai `pending`, `paid`, `expired`, atau `cancelled`. Yang sudah teruji baru `pending` dan `cancelled`.
+- `payment_status` bernilai `pending`, `paid`, `expired`, atau `cancelled`. Yang sudah teruji: `pending` dan `cancelled` (2026-11-14), serta `paid` (2026-11-15). `expired` belum teruji.
 - `amount` berupa teks desimal, sama seperti respons membuat QRIS.
 - `paid_at` bernilai `null` selama belum dibayar.
-- Bentuk status `paid` **belum diuji**, karena butuh pembayaran sungguhan.
+- Status `paid` terbukti terbaca pada pembayaran sungguhan 2026-11-15: `amount` berupa teks desimal, dan `paid_at` berisi waktu bayar dengan zona waktu (bagian 9).
 
 `GET /api/payment/qris/{qrisId}` mengembalikan detail QRIS di dalam `data`:
 - `qris_id`, `qris_image_url`, `qris_image_base64`, dan `amount` (teks desimal);
@@ -154,30 +154,18 @@ Arti kedua error itu **belum diuji**. Karena itu, kegagalan pembatalan tidak bol
 
 ## 6. Webhook
 
-Qrispy mengirim `POST` ke URL webhook setiap kali pembayaran berhasil. URL itu didaftarkan di dashboard Qrispy. Qrispy tidak mengirim webhook untuk QRIS yang kedaluwarsa atau dibatalkan.
+Qrispy mengirim `POST` ke URL webhook setiap kali pembayaran berhasil. Qrispy tidak mengirim webhook untuk QRIS yang kedaluwarsa atau dibatalkan.
+
+**Pengaturan di dashboard.** URL webhook dan webhook secret diatur di dashboard Qrispy, menu API Docs, tab Webhooks.
+- **Save Settings** menyimpan URL. Pada pembayaran sungguhan pertama 2026-11-15, webhook tidak sampai ke toko. Webhook baru sampai setelah pengaturan ini disimpan lagi (bagian 9).
+- **Test Webhook** mengirim webhook uji ke URL itu (lihat di bawah).
+- **Regenerate** membuat webhook secret baru. Setelah itu, `QRISPY_WEBHOOK_SECRET` di server harus ikut diganti.
 
 **Header:**
 - `Content-Type: application/json`
 - `X-Qrispy-Signature`: HMAC-SHA256 dari body payload, dengan `QRISPY_WEBHOOK_SECRET` sebagai kunci. Contoh PHP di dokumentasi dashboard memakai `hash_hmac('sha256', $payload, $secret)` pada body mentah. Fungsi itu menghasilkan hex huruf kecil.
 
-**Payload.** Kedua dokumentasi memberi bentuk yang berbeda, dan belum ada pembayaran sungguhan yang membuktikan salah satunya. Toko menerima keduanya (ADR-0004).
-
-Bentuk referensi, dari dokumentasi publik. Bentuknya datar, tanpa pembungkus `data`:
-
-```json
-{
-  "event": "payment.success",
-  "qris_id": "550e8400-e29b-41d4-a716-446655440000",
-  "amount": 50123,
-  "requested_amount": 50000,
-  "unique_id": 123,
-  "payment_reference": "MIWE-7K3P9Q",
-  "paid_at": "2026-03-09T13:45:21+07:00",
-  "merchant_id": 42
-}
-```
-
-Bentuk dashboard, dari dokumentasi dashboard. Field-nya ada di dalam `data`:
+**Payload.** Pembayaran sungguhan 2026-11-15 membuktikan bentuk dashboard: event `payment.received`, dengan field di dalam `data`, termasuk `received_amount` (bagian 9). Contoh di bawah berasal dari dokumentasi dashboard. Nilai pada pembayaran sungguhan tidak dicatat di log.
 
 ```json
 {
@@ -193,16 +181,46 @@ Bentuk dashboard, dari dokumentasi dashboard. Field-nya ada di dalam `data`:
 }
 ```
 
+**Webhook uji.** Tombol Test Webhook mengirim event `payment.test` dalam bentuk yang sama, ditambah field `message`. Contoh di bawah adalah payload yang tampil di dashboard pada 2026-11-15. Toko menjawab webhook uji dengan `200` tanpa mengubah apa pun (ADR-0004).
+
+```json
+{
+  "event": "payment.test",
+  "data": {
+    "qris_id": "test-a62c12ad-56f1-4a90-aa40-cc588327aebe",
+    "amount": 15000,
+    "received_amount": 15000,
+    "payment_reference": "TEST-REF-7063",
+    "paid_at": "2026-11-15T13:14:02+07:00",
+    "unique_id": 836
+  },
+  "message": "This is a test webhook from Qrispy to verify your integration."
+}
+```
+
+**Bentuk referensi** dari dokumentasi publik di bawah ini tidak pernah terlihat pada pembayaran sungguhan. Sejak #118, toko tidak menerimanya lagi. Event `payment.success` dijawab `200` dan diabaikan.
+
+```json
+{
+  "event": "payment.success",
+  "qris_id": "550e8400-e29b-41d4-a716-446655440000",
+  "amount": 50123,
+  "requested_amount": 50000,
+  "unique_id": 123,
+  "payment_reference": "MIWE-7K3P9Q",
+  "paid_at": "2026-03-09T13:45:21+07:00",
+  "merchant_id": 42
+}
+```
+
 **Belum pasti.** Hal-hal berikut belum terbukti:
-- bentuk mana yang benar-benar dikirim Qrispy;
-- apakah signature ditulis sebagai hex atau base64. Contoh dashboard menunjuk ke hex;
-- pada bentuk dashboard, apakah `amount` adalah nominal tagihan tanpa Kode unik, dan `received_amount` nominal yang benar-benar diterima. Contoh dashboard memberi `amount` 50000 dengan `unique_id` 123, sehingga tidak cocok dengan respons membuat QRIS;
-- apakah nominal di webhook berupa angka atau teks desimal seperti di respons API;
+- apakah signature ditulis sebagai hex atau base64. Contoh dashboard menunjuk ke hex. Sejak #118, log webhook mencatat format yang cocok;
+- apakah `received_amount` sudah termasuk Kode unik, dan apa arti `amount` di webhook. Pada pembayaran sungguhan 2026-11-15, Pesanan sudah Selesai lewat cek status sebelum webhook datang, jadi nilai itu belum dibandingkan dengan Total bayar. Contoh dashboard memberi `amount` 50000 dengan `unique_id` 123, sehingga tidak cocok dengan respons membuat QRIS;
+- apakah nominal di webhook berupa angka atau teks desimal. Webhook uji memakai angka. Toko menerima keduanya;
 - respons apa yang diharapkan dari server toko;
 - apakah webhook dikirim ulang bila gagal;
 - apakah ada daftar IP pengirim;
-- apakah QRIS yang sudah kedaluwarsa masih bisa dibayar;
-- tipe `merchant_id` di bentuk referensi: angka di webhook, tetapi UUID di respons saldo.
+- apakah QRIS yang sudah kedaluwarsa masih bisa dibayar.
 
 Cara toko menghadapi ketidakpastian ini ada di ADR-0004.
 
@@ -254,10 +272,12 @@ Draf yang diberikan pemilik pada 2026-11-11 berbeda dari dokumentasi publik dala
 
 Akibatnya terhadap tabel di atas:
 - **Baris "Respons generate" tetap berlaku.** Uji sungguhan (bagian 9) membuktikan bahwa `requested_amount` dan `unique_id` memang ada. Bedanya, `amount` ternyata berupa teks desimal.
-- **Baris "Nama event webhook", "Bentuk payload webhook", dan "Nominal di webhook" tidak lagi berarti draf keliru.** Kedua bentuk kini diterima toko sampai pembayaran sungguhan pertama membuktikan salah satunya (bagian 6, ADR-0004).
+- **Baris "Nama event webhook", "Bentuk payload webhook", dan "Nominal di webhook" tidak lagi berarti draf keliru.** Pembayaran sungguhan 2026-11-15 membuktikan bentuk draf dan dashboard, yaitu `payment.received` dengan field di dalam `data` dan `received_amount`. Sejak #118, hanya bentuk itu yang diterima toko (bagian 6 dan 9, ADR-0004).
 - **Baris "Error pembatalan" tetap berlaku.** Arti kode error itu belum diuji.
 
-## 9. Hasil uji API sungguhan 2026-11-14
+## 9. Hasil uji sungguhan
+
+### Uji API tanpa pembayaran 2026-11-14
 
 Pemilik menjalankan skrip uji dengan token API sungguhan. Skrip itu:
 1. membuat satu QRIS Rp 10.000;
@@ -276,9 +296,18 @@ Tidak ada pembayaran. ID QRIS, nama merchant, dan transaksi lain di akun itu tid
 | Status setelah dibatalkan | `200` | `payment_status` `cancelled` |
 | Membatalkan lagi | `200` | `"status": "success"` dengan pesan `"QRIS already cancelled"` |
 
-**Belum diuji:**
-- status `paid` dan `expired`;
-- webhook dan format signature-nya;
-- error pembatalan QRIS yang sudah dibayar.
+### Pembayaran sungguhan 2026-11-15
 
-Semuanya diuji pada pembayaran sungguhan pertama, yaitu skenario UAT bertanda **(bayar)**.
+Setelah toko terpasang di `https://akun.miwedigital.store`, pemilik membeli dua kali Varian Rp 1.000 dan membayar QRIS-nya dengan e-wallet. Email Pembeli dan ID QRIS tidak dicatat di sini.
+
+| Kejadian (WIB) | Temuan |
+|---|---|
+| Pembayaran 1: Pesanan dibuat 12.31, dibayar 12.34, Selesai 12.35 | Total bayar Rp 1.182, dengan Kode unik Rp 182. Webhook tidak sampai ke toko. Pesanan menjadi Selesai lewat cek status, jadi status `paid` dengan `amount` teks desimal terbaca. Email Pesanan selesai terkirim. |
+| Pengaturan webhook disimpan lagi, lalu Test Webhook ditekan pukul 13.14 | Webhook `payment.test` sampai, signature-nya cocok, dan toko menjawab `200` tanpa perubahan |
+| Pembayaran 2: Pesanan dibuat 13.18, dibayar 13.19.31, Selesai 13.19.32 | Total bayar Rp 1.234. Cek status lebih dulu menangkapnya. Webhook `payment.received` dalam bentuk dashboard sampai pukul 13.19.34, signature-nya cocok, payload-nya sah, dan karena sudah diproses, tidak ada perubahan ganda. Email Pesanan selesai terkirim. |
+
+**Belum diuji:**
+- status `expired`;
+- format signature (hex atau base64);
+- arti `received_amount` terhadap Total bayar (bagian 6);
+- error pembatalan QRIS yang sudah dibayar.
