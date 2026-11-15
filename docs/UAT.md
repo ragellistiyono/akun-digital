@@ -43,6 +43,12 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - Kedua Pesanan Bermasalah memakai email contoh `bermasalah-1@miwe.example` dan `bermasalah-2@miwe.example`, yang tidak bisa menerima email. UAT-E6 mengoreksi email Pesanan pertama menjadi Email A lebih dulu (§6.4).
 - Produk "Game Lama" tidak punya Varian. Akibatnya Kategori "Game" tetap tersembunyi di toko walaupun Game Lama diaktifkan.
 
+▶ Keputusan 2026-11-15 (#121): UAT M1 di server produksi dijalankan **tanpa data seed**.
+- Alasannya, Produk sungguhan sudah diisi di produksi. Bila database dikosongkan sesudah seed, Produk itu ikut terhapus.
+- Admin dibuat dengan `pnpm admin:buat` mengikuti `docs/DEPLOY.md`, bukan Admin seed.
+- Pemilik menyiapkan data uji sendiri lewat dasbor admin, termasuk Produk "Uji Bayar" dengan satu Varian Rp 1.000 dan beberapa Item stok. Nama dan harga Produk seed di skenario bisa diganti dengan Produk milik pemilik yang punya sifat sama, misalnya Produk dengan dua Varian, atau Varian tanpa Item stok.
+- UAT-E6 membutuhkan Pesanan Bermasalah dari seed. Skenario ini dijalankan saat ada Pesanan Bermasalah sungguhan, atau ditunda.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -584,6 +590,8 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Langkah 1 dialihkan ke `https://`.
   - Folder cadangan berisi tepat 7 cadangan harian terakhir.
 - PRD: §12
+
+▶ Keputusan 2026-11-15 (#121): Setelah T33-b terpasang, folder cadangan berisi tepat 7 cadangan database dan 7 cadangan folder unggahan dari hari-hari terakhir.
 
 ## M. Milestone (§13)
 
