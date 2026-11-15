@@ -642,6 +642,11 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 
 ▶ Keputusan 2026-11-15 (#115): Toko diakses di `https://akun.miwedigital.store`. Alamat ini juga yang dipakai Tautan Pesanan di email.
 
+▶ Keputusan 2026-11-15 (#121):
+- **Isi cadangan.** Cadangan harian juga mencakup folder unggahan, yaitu ikon Kategori dan foto Produk. Folder unggahan mengikuti aturan simpan yang sama dengan database: tujuh cadangan terakhir disimpan, dan yang lebih lama dihapus.
+- **Tempat cadangan.** Cadangan disimpan di server. Pemilik menyalinnya ke komputer sendiri sesekali, misalnya seminggu sekali, mengikuti `docs/DEPLOY.md`. Penyalinan otomatis ke luar server belum dibuat.
+- **Password database.** Password PostgreSQL di server adalah nilai acak dari `openssl rand -hex 32`. Nilai itu disimpan di berkas env produksi sebagai `POSTGRES_PASSWORD`, dan tidak pernah diganti setelah deploy pertama.
+
 ## 13. Milestone
 
 | Milestone | Nama | Isi | Bagian PRD |
