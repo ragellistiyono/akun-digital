@@ -186,7 +186,7 @@ Bila aplikasi bermasalah tetapi kodenya tidak berubah, nyalakan ulang aplikasiny
   | `akun-digital-<tahun>-<bulan>-<tanggal>-<jam><menit><detik>.dump` | Backup database, misalnya `akun-digital-2026-11-16-000512.dump` |
   | `akun-digital-unggahan-<tahun>-<bulan>-<tanggal>-<jam><menit><detik>.tar.gz` | Arsip folder unggahan, misalnya `akun-digital-unggahan-2026-11-16-000512.tar.gz` |
 
-- Backup database dan arsip unggahan masing-masing menyimpan tujuh hari terakhir. Yang lebih lama dihapus setiap kali backup baru jenis itu selesai dibuat. Folder unggahan yang kosong tetap menghasilkan arsip kosong.
+- Backup database dan arsip unggahan masing-masing menyimpan tujuh cadangan terakhir. Yang lebih lama dihapus setiap kali backup baru jenis itu selesai dibuat. Folder unggahan yang kosong tetap menghasilkan arsip kosong.
 - Bila arsip unggahan gagal dibuat, backup database hari itu tetap tersimpan, dan arsip lama tidak dihapus. Galatnya tercatat di log layanan `cadangan`, dan arsip dicoba lagi pada pemeriksaan berikutnya, sekitar satu jam kemudian.
 - Isi Item stok di dalam backup tetap terenkripsi. Backup hanya bisa dipakai bersama `ITEM_STOK_KEY` yang sama.
 
