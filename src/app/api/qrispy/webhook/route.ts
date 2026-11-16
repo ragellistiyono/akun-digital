@@ -2,44 +2,35 @@ import { z } from "zod";
 
 import { prosesKabarPembayaran } from "@/server/kabar-pembayaran";
 import { NominalQrispy } from "@/server/nominal-qrispy";
-import { signatureWebhookCocok } from "@/server/webhook-qrispy";
+import {
+  type FormatSignature,
+  formatSignatureWebhook,
+} from "@/server/webhook-qrispy";
 
-// Payload webhook diterima dalam dua bentuk, karena dokumentasi publik dan dokumentasi dashboard Qrispy
-// berbeda, dan belum ada pembayaran sungguhan yang membuktikan salah satunya (ADR-0004,
-// docs/referensi/qrispy-api.md bagian 6). Bentuknya dikenali dari field event; event lain diabaikan.
+// Kabar pembayaran hanya diterima dalam bentuk dashboard, yang terbukti dipakai Qrispy pada pembayaran
+// sungguhan (ADR-0004, docs/referensi/qrispy-api.md bagian 6 dan 9). Bentuknya dikenali dari field event;
+// webhook uji dan event lain dijawab 200 tanpa mengubah apa pun.
 const Webhook = z.object({ event: z.string() });
+
+/** Event kabar pembayaran dan event webhook uji dari tombol Test Webhook di Dashboard Qrispy. */
+const EVENT_PEMBAYARAN = "payment.received";
+const EVENT_UJI = "payment.test";
 
 /** Nominal diterima: rupiah bulat lebih dari 0, berupa angka atau teks desimal seperti "50123.00". */
 const NominalDiterima = NominalQrispy.pipe(z.number().positive());
 
-const WaktuBayar = z.iso.datetime({ offset: true });
-
-/** Bentuk referensi, dari dokumentasi publik: event payment.success dengan field datar. */
-const KabarReferensi = z
-  .object({
-    event: z.literal("payment.success"),
-    qris_id: z.string().min(1),
-    amount: NominalDiterima,
-    paid_at: WaktuBayar,
-  })
-  .transform((kabar) => ({
-    qrisId: kabar.qris_id,
-    nominalDiterima: kabar.amount,
-    waktuBayar: new Date(kabar.paid_at),
-  }));
-
 /**
- * Bentuk dashboard, dari dokumentasi dashboard Qrispy: event payment.received dengan field di dalam data.
- * Nominal diterima-nya received_amount, bukan amount. Field lain di data, seperti amount dan unique_id,
- * tidak dipakai, jadi tidak diperiksa.
+ * Bentuk dashboard: event payment.received dengan field di dalam data. Nominal diterima-nya
+ * received_amount, bukan amount. Field lain di data, seperti amount dan unique_id, tidak dipakai, jadi
+ * tidak diperiksa.
  */
 const KabarDashboard = z
   .object({
-    event: z.literal("payment.received"),
+    event: z.literal(EVENT_PEMBAYARAN),
     data: z.object({
       qris_id: z.string().min(1),
       received_amount: NominalDiterima,
-      paid_at: WaktuBayar,
+      paid_at: z.iso.datetime({ offset: true }),
     }),
   })
   .transform(({ data }) => ({
@@ -48,14 +39,15 @@ const KabarDashboard = z
     waktuBayar: new Date(data.paid_at),
   }));
 
-/** Bentuk webhook yang diproses, menurut event-nya. Event lain berbentuk "tidak dikenal" dan diabaikan. */
-const BENTUK_WEBHOOK = new Map([
-  ["payment.success", { nama: "referensi", Kabar: KabarReferensi }],
-  ["payment.received", { nama: "dashboard", Kabar: KabarDashboard }],
-]);
+/** Nama bentuk webhook di baris log, menurut event-nya. */
+function namaBentuk(event: string | undefined) {
+  if (event === EVENT_PEMBAYARAN) return "dashboard";
+  if (event === EVENT_UJI) return "uji";
+  return "tidak dikenal";
+}
 
 const BentukDiterima =
-  'Toko menerima dua bentuk. Bentuk referensi: event payment.success dengan qris_id, amount, dan paid_at sebagai field datar tanpa pembungkus data. Bentuk dashboard: event payment.received dengan qris_id, received_amount, dan paid_at di dalam data. Di kedua bentuk, qris_id berupa teks, nominal berupa rupiah bulat lebih dari 0 dalam angka atau teks seperti "50123.00", dan paid_at berupa waktu ISO 8601 dengan zona waktu.';
+  'Toko hanya menerima bentuk dashboard: event payment.received dengan qris_id, received_amount, dan paid_at di dalam data. qris_id berupa teks, received_amount berupa rupiah bulat lebih dari 0 dalam angka atau teks seperti "50123.00", dan paid_at berupa waktu ISO 8601 dengan zona waktu.';
 
 const teks = (isi: string, status: number) =>
   new Response(isi, {
@@ -79,23 +71,30 @@ function bacaJson(body: string): unknown {
 }
 
 /**
- * Baris log bentuk webhook (ADR-0004), supaya pembayaran sungguhan pertama menunjukkan bentuk yang dipakai
- * Qrispy. Isinya hanya bentuk dan nama event-nya; qris_id, nominal, dan secret sengaja tidak dicatat. Nama
- * event ditulis sebagai teks JSON, supaya isinya tetap satu baris.
+ * Baris log bentuk webhook (ADR-0004): bentuk, nama event, dan format signature yang cocok, supaya format
+ * signature yang dipakai Qrispy bisa dipastikan dari log. qris_id, nominal, dan secret sengaja tidak
+ * dicatat. Nama event ditulis sebagai teks JSON, supaya isinya tetap satu baris.
  */
-function catatBentuk(bentuk: string, event: string | undefined) {
+function catatBentuk(
+  event: string | undefined,
+  formatSignature: FormatSignature,
+) {
   console.info(
-    `Webhook Qrispy diterima: bentuk ${bentuk}, event ${event === undefined ? "-" : JSON.stringify(event)}.`,
+    `Webhook Qrispy diterima: bentuk ${namaBentuk(event)}, event ${event === undefined ? "-" : JSON.stringify(event)}, signature ${formatSignature}.`,
   );
 }
 
 // Webhook Qrispy (ADR-0004). Alamat ini didaftarkan pemilik di Dashboard Qrispy → Webhook Settings.
-// Signature diperiksa dari body mentah sebelum body di-parse. Kabar dari kedua bentuk diteruskan ke pemroses
+// Signature diperiksa dari body mentah sebelum body di-parse. Kabar bentuk dashboard diteruskan ke pemroses
 // kabar pembayaran yang sama dengan jalur cek status, yang memprosesnya dalam satu transaksi dan hanya
-// sekali untuk qris_id yang sama, apa pun bentuk kabarnya.
+// sekali untuk qris_id yang sama.
 export async function POST(request: Request) {
   const body = await request.text();
-  if (!signatureWebhookCocok(body, request.headers.get("X-Qrispy-Signature"))) {
+  const formatSignature = formatSignatureWebhook(
+    body,
+    request.headers.get("X-Qrispy-Signature"),
+  );
+  if (formatSignature === null) {
     return tolak(
       "Header X-Qrispy-Signature tidak ada atau tidak cocok dengan HMAC-SHA256 dari body, jadi webhook ini tidak diproses. Pastikan QRISPY_WEBHOOK_SECRET di server toko sama dengan secret di Dashboard Qrispy → Webhook Settings.",
       401,
@@ -105,8 +104,7 @@ export async function POST(request: Request) {
   const payload = bacaJson(body);
   const webhook = Webhook.safeParse(payload);
   const event = webhook.success ? webhook.data.event : undefined;
-  const bentuk = event === undefined ? undefined : BENTUK_WEBHOOK.get(event);
-  catatBentuk(bentuk?.nama ?? "tidak dikenal", event);
+  catatBentuk(event, formatSignature);
 
   if (event === undefined) {
     return tolak(
@@ -114,16 +112,22 @@ export async function POST(request: Request) {
       400,
     );
   }
-  if (bentuk === undefined) {
+  if (event === EVENT_UJI) {
     return teks(
-      `Event ${event} diabaikan, karena toko hanya memproses payment.success dan payment.received.`,
+      "Webhook uji payment.test diterima. Signature-nya cocok, dan tidak ada yang diubah.",
       200,
     );
   }
-  const kabar = bentuk.Kabar.safeParse(payload);
+  if (event !== EVENT_PEMBAYARAN) {
+    return teks(
+      `Event ${event} diabaikan, karena toko hanya memproses payment.received.`,
+      200,
+    );
+  }
+  const kabar = KabarDashboard.safeParse(payload);
   if (!kabar.success) {
     return tolak(
-      `Payload ${event} tidak sesuai bentuk ${bentuk.nama} (${z.prettifyError(kabar.error)}), jadi tidak ada yang diproses. ${BentukDiterima}`,
+      `Payload ${event} tidak sesuai bentuk dashboard (${z.prettifyError(kabar.error)}), jadi tidak ada yang diproses. ${BentukDiterima}`,
       400,
     );
   }

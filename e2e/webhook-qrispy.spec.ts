@@ -78,36 +78,9 @@ async function kirimWebhook(request: APIRequestContext, body: string) {
   });
 }
 
-// Issue T17 dan ADR-0004: Qrispy mengirim webhook payment.success ke alamat yang didaftarkan pemilik di
-// Dashboard Qrispy.
-test("webhook payment.success bersignature benar ke /api/qrispy/webhook membuat pil status di Tautan Pesanan menjadi Selesai", async ({
-  page,
-  request,
-}) => {
-  const { tautan, qrisId, nomor } = await siapkanPesanan();
-
-  const body = JSON.stringify({
-    event: "payment.success",
-    qris_id: qrisId,
-    amount: 45123,
-    requested_amount: 45000,
-    unique_id: 123,
-    payment_reference: nomor,
-    paid_at: new Date().toISOString(),
-    merchant_id: 42,
-  });
-  const respons = await kirimWebhook(request, body);
-  expect(respons.status()).toBe(200);
-
-  await page.goto(`/pesanan/${tautan}`);
-  const isi = page.getByRole("main");
-  await expect(isi.getByText("Selesai", { exact: true })).toBeVisible();
-  await expect(isi.locator("svg.lucide-check")).toBeVisible();
-});
-
-// Issue T37 dan ADR-0004: dokumentasi dashboard Qrispy memakai bentuk lain, yaitu event payment.received
-// dengan field di dalam data, seperti contoh di docs/referensi/qrispy-api.md bagian 6. Nominal diterima-nya
-// received_amount, yang di sini sama dengan Total bayar.
+// Issue T37, T38 dan ADR-0004: Qrispy mengirim kabar pembayaran dalam bentuk dashboard, yaitu event
+// payment.received dengan field di dalam data, seperti contoh di docs/referensi/qrispy-api.md bagian 6.
+// Nominal diterima-nya received_amount, yang di sini sama dengan Total bayar.
 test("webhook payment.received bentuk dashboard bersignature benar ke /api/qrispy/webhook membuat pil status di Tautan Pesanan menjadi Selesai", async ({
   page,
   request,
@@ -132,4 +105,62 @@ test("webhook payment.received bentuk dashboard bersignature benar ke /api/qrisp
   const isi = page.getByRole("main");
   await expect(isi.getByText("Selesai", { exact: true })).toBeVisible();
   await expect(isi.locator("svg.lucide-check")).toBeVisible();
+});
+
+// Issue T38 dan ADR-0004: bentuk referensi dari dokumentasi publik tidak lagi diproses, jadi
+// payment.success dijawab 200 seperti event lain yang tidak dikenal, dan Pesanan tidak berubah.
+test("webhook payment.success berfield datar bersignature benar dijawab 200, dan pil status di Tautan Pesanan tetap Menunggu Pembayaran", async ({
+  page,
+  request,
+}) => {
+  const { tautan, qrisId, nomor } = await siapkanPesanan();
+
+  const body = JSON.stringify({
+    event: "payment.success",
+    qris_id: qrisId,
+    amount: 45123,
+    requested_amount: 45000,
+    unique_id: 123,
+    payment_reference: nomor,
+    paid_at: new Date().toISOString(),
+    merchant_id: 42,
+  });
+  const respons = await kirimWebhook(request, body);
+  expect(respons.status()).toBe(200);
+
+  await page.goto(`/pesanan/${tautan}`);
+  const isi = page.getByRole("main");
+  await expect(
+    isi.getByText("Menunggu Pembayaran", { exact: true }),
+  ).toBeVisible();
+  await expect(isi.getByText("Selesai", { exact: true })).toHaveCount(0);
+});
+
+// Issue T38 dan ADR-0004: tombol Test Webhook di Dashboard Qrispy mengirim webhook uji payment.test,
+// persis seperti contoh di docs/referensi/qrispy-api.md bagian 6. qris_id-nya tidak dimiliki Pesanan mana
+// pun, dan toko menjawabnya 200 tanpa mengubah apa pun.
+test("webhook uji payment.test dari tombol Test Webhook bersignature benar dijawab 200", async ({
+  request,
+}) => {
+  const body = `{
+  "event": "payment.test",
+  "data": {
+    "qris_id": "test-a62c12ad-56f1-4a90-aa40-cc588327aebe",
+    "amount": 15000,
+    "received_amount": 15000,
+    "payment_reference": "TEST-REF-7063",
+    "paid_at": "2026-11-15T13:14:02+07:00",
+    "unique_id": 836
+  },
+  "message": "This is a test webhook from Qrispy to verify your integration."
+}`;
+  const respons = await kirimWebhook(request, body);
+
+  expect(respons.status()).toBe(200);
+  expect(
+    await db
+      .select({ id: pesanan.id })
+      .from(pesanan)
+      .where(eq(pesanan.qrisId, "test-a62c12ad-56f1-4a90-aa40-cc588327aebe")),
+  ).toEqual([]);
 });

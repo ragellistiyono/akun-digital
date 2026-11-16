@@ -27,7 +27,10 @@ const JEDA_CEK_STATUS_MS = 15_000;
 /** Kabar bahwa QRIS sebuah Pesanan sudah dibayar. */
 type KabarPembayaran = {
   qrisId: string;
-  /** Nominal yang diterima Qrispy (`amount`), yang dibandingkan dengan Total bayar (PRD §5.9). */
+  /**
+   * Nominal yang diterima Qrispy, yang dibandingkan dengan Total bayar (PRD §5.9): `received_amount` dari
+   * webhook `payment.received`, atau `amount` dari cek status yang menjawab `paid` (ADR-0004).
+   */
   nominalDiterima: number;
   waktuBayar: Date;
 };
