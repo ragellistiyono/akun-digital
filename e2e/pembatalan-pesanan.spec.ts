@@ -185,7 +185,8 @@ async function batalkanSetelahDibayar(
 
 /**
  * Pembayaran Pesanan itu tercatat sebelum "Batalkan" ditekan: QRIS-nya dibayar lewat Qrispy tiruan, lalu
- * Qrispy mengirim webhook payment.success bersignature benar dengan nominal itu (ADR-0004).
+ * Qrispy mengirim webhook payment.received bentuk dashboard bersignature benar dengan nominal itu sebagai
+ * received_amount (ADR-0004).
  */
 async function catatPembayaran(
   request: APIRequestContext,
@@ -194,10 +195,12 @@ async function catatPembayaran(
 ) {
   await bayarQris(request, dipesan, amount);
   const body = JSON.stringify({
-    event: "payment.success",
-    qris_id: dipesan.qrisId,
-    amount,
-    paid_at: new Date().toISOString(),
+    event: "payment.received",
+    data: {
+      qris_id: dipesan.qrisId,
+      received_amount: amount,
+      paid_at: new Date().toISOString(),
+    },
   });
   const secret = process.env.QRISPY_WEBHOOK_SECRET;
   if (!secret) {
