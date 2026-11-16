@@ -20,7 +20,7 @@ Layanan di `compose.prod.yml`:
 | `app` | Aplikasi toko, termasuk pekerja latar pg-boss |
 | `postgres` | Database PostgreSQL 17 |
 | `caddy` | Proxy HTTPS. Caddy mengambil dan memperbarui sertifikat Let's Encrypt sendiri, dan mengalihkan `http://` ke `https://`. |
-| `cadangan` | Backup database harian dengan `pg_dump` |
+| `cadangan` | Backup harian database (`pg_dump`) dan folder unggahan (arsip `tar`) |
 
 Data yang bertahan antar-deploy disimpan di volume Docker:
 
@@ -28,7 +28,7 @@ Data yang bertahan antar-deploy disimpan di volume Docker:
 |---|---|
 | `akun-digital_postgres-data` | Database |
 | `akun-digital_unggahan` | Ikon Kategori dan Foto Produk yang diunggah Admin (`UPLOAD_DIR`) |
-| `akun-digital_cadangan` | Tujuh backup database terakhir |
+| `akun-digital_cadangan` | Tujuh backup database terakhir dan tujuh arsip unggahan terakhir |
 | `akun-digital_caddy-data`, `akun-digital_caddy-config` | Sertifikat HTTPS dan pengaturan Caddy |
 
 Deploy tidak pernah menghapus volume. **Jangan pernah menjalankan `docker compose down -v`**, karena `-v` menghapus semua volume beserta datanya.
@@ -178,71 +178,84 @@ Bila aplikasi bermasalah tetapi kodenya tidak berubah, nyalakan ulang aplikasiny
 
 ## Backup
 
-- Layanan `cadangan` membuat satu backup database setiap hari dengan `pg_dump`. Backup dibuat pada pemeriksaan pertama setelah pukul 00.00 WIB, paling lambat sekitar pukul 01.00 WIB. Bila layanan baru menyala dan backup hari itu belum ada, backup langsung dibuat.
-- Backup disimpan di volume `akun-digital_cadangan` dengan nama `akun-digital-<tahun>-<bulan>-<tanggal>-<jam><menit><detik>.dump`. Hanya tujuh backup terakhir yang disimpan. Backup yang lebih lama dihapus setiap kali backup baru selesai dibuat (PRD §12).
-- Backup hanya berisi database. Foto dan ikon di volume unggahan tidak ikut.
+- Layanan `cadangan` membuat backup setiap hari: satu backup database dengan `pg_dump`, dan satu arsip folder unggahan (ikon Kategori dan foto Produk) bertanggal sama. Backup dibuat pada pemeriksaan pertama setelah pukul 00.00 WIB, paling lambat sekitar pukul 01.00 WIB. Bila layanan baru menyala dan backup hari itu belum ada, backup langsung dibuat.
+- Isi volume `akun-digital_cadangan` (PRD §12, Keputusan #121):
+
+  | Berkas | Isi |
+  |---|---|
+  | `akun-digital-<tahun>-<bulan>-<tanggal>-<jam><menit><detik>.dump` | Backup database, misalnya `akun-digital-2026-11-16-000512.dump` |
+  | `akun-digital-unggahan-<tahun>-<bulan>-<tanggal>-<jam><menit><detik>.tar.gz` | Arsip folder unggahan, misalnya `akun-digital-unggahan-2026-11-16-000512.tar.gz` |
+
+- Backup database dan arsip unggahan masing-masing menyimpan tujuh hari terakhir. Yang lebih lama dihapus setiap kali backup baru jenis itu selesai dibuat. Folder unggahan yang kosong tetap menghasilkan arsip kosong.
+- Bila arsip unggahan gagal dibuat, backup database hari itu tetap tersimpan, dan arsip lama tidak dihapus. Galatnya tercatat di log layanan `cadangan`, dan arsip dicoba lagi pada pemeriksaan berikutnya, sekitar satu jam kemudian.
 - Isi Item stok di dalam backup tetap terenkripsi. Backup hanya bisa dipakai bersama `ITEM_STOK_KEY` yang sama.
 
 Perintah di server:
 
 | Perintah | Kegunaan |
 |---|---|
-| `docker compose exec cadangan ls -l /cadangan` | Melihat daftar backup |
+| `docker compose exec cadangan ls -l /cadangan` | Melihat daftar backup database dan arsip unggahan |
 | `docker compose logs --tail 50 cadangan` | Melihat kapan backup dibuat atau gagal |
 
-Backup di volume ikut hilang bila servernya rusak. Karena itu, sesekali salin backup terbaru ke komputer Anda:
+Backup di volume ikut hilang bila servernya rusak. Karena itu, sesekali, misalnya seminggu sekali, salin backup database dan arsip unggahan terbaru dari tanggal yang sama ke komputer Anda. Keduanya dibutuhkan untuk memulihkan toko seutuhnya.
 
-1. Di server, salin backup dari volume ke folder `/opt/akun-digital`:
+1. Di server, salin kedua berkas dari volume ke folder `/opt/akun-digital`:
 
    ```bash
    docker compose cp cadangan:/cadangan/<nama backup> /opt/akun-digital/<nama backup>
+   docker compose cp cadangan:/cadangan/<nama arsip unggahan> /opt/akun-digital/<nama arsip unggahan>
    ```
 
-2. Di komputer Anda, ambil berkasnya, lalu hapus salinan di server:
+2. Di komputer Anda, ambil kedua berkas, lalu hapus salinannya di server:
 
    ```bash
    scp -i <berkas kunci deploy> deploy@akun.miwedigital.store:/opt/akun-digital/<nama backup> .
-   ssh -i <berkas kunci deploy> deploy@akun.miwedigital.store rm /opt/akun-digital/<nama backup>
+   scp -i <berkas kunci deploy> deploy@akun.miwedigital.store:/opt/akun-digital/<nama arsip unggahan> .
+   ssh -i <berkas kunci deploy> deploy@akun.miwedigital.store rm /opt/akun-digital/<nama backup> /opt/akun-digital/<nama arsip unggahan>
    ```
 
 ## Restore
 
-Restore mengganti seluruh isi database dengan isi satu backup. Pesanan dan perubahan yang dibuat setelah backup itu hilang. Folder unggahan tidak disentuh.
+Restore mengganti seluruh isi database dengan isi satu backup database, dan seluruh isi folder unggahan dengan arsip unggahan bertanggal sama. Pesanan, perubahan, dan unggahan yang dibuat setelah backup itu hilang.
+
+Bila arsip unggahan bertanggal sama tidak ada, misalnya untuk backup yang dibuat sebelum folder unggahan ikut dicadangkan, restore tetap memulihkan database, tetapi folder unggahan tidak disentuh. Skrip menyebut hal itu sebelum meminta konfirmasi dan lagi di akhir restore. Setelah itu, periksa ikon Kategori dan foto Produk di toko, lalu unggah ulang yang hilang lewat dasbor admin.
 
 ### Restore di server yang sama
 
 1. Jalankan dua baris di [Menjalankan perintah `docker compose` di server](#menjalankan-perintah-docker-compose-di-server), lalu lihat daftar backup dengan `docker compose exec cadangan ls -l /cadangan`.
-2. Jalankan restore dengan nama backup yang dipilih:
+2. Jalankan restore dengan nama backup database yang dipilih. Arsip unggahan bertanggal sama dicari sendiri oleh skrip:
 
    ```bash
    bash /opt/akun-digital/repo/deploy/pulihkan.sh <nama backup>
    ```
 
-3. Ketik `PULIHKAN` saat diminta. Skrip ini menjalankan lima langkah:
+3. Periksa pesan yang tampil: skrip menyebut arsip unggahan yang akan dipakai, atau bahwa folder unggahan tidak disentuh karena arsipnya tidak ada. Ketik `PULIHKAN` saat diminta. Skrip ini menjalankan enam langkah:
    1. menghentikan aplikasi dan layanan cadangan;
    2. menghapus database, lalu membuatnya ulang kosong;
-   3. memuat isi backup;
+   3. memuat isi backup database;
    4. menjalankan migrasi dari versi yang sedang terpasang;
-   5. menyalakan aplikasi dan layanan cadangan lagi.
+   5. mengganti isi folder unggahan dengan isi arsip unggahan, atau melewati langkah ini bila arsipnya tidak ada;
+   6. menyalakan aplikasi dan layanan cadangan lagi.
 
-   Restore berhasil bila baris terakhirnya `✓ Database dipulihkan dari <nama backup>.` Bila salah satu langkah gagal, skrip menyebut langkah yang gagal, keadaan toko saat itu, dan perintah berikutnya, misalnya mengulang restore atau menyalakan lagi aplikasi.
-4. Buka toko dan dasbor admin, lalu periksa datanya.
+   Restore berhasil bila baris terakhirnya diawali `✓ Database dipulihkan dari <nama backup>`. Bila salah satu langkah gagal, skrip menyebut langkah yang gagal, keadaan toko saat itu, dan perintah berikutnya, misalnya mengulang restore atau menyalakan lagi aplikasi. Arsip unggahan yang rusak ditolak sebelum database dan folder unggahan diubah.
+4. Buka toko dan dasbor admin, lalu periksa datanya, termasuk ikon Kategori dan foto Produk.
 
 ### Restore ke database kosong, misalnya di server baru
 
 1. Jalankan [Deploy pertama](#deploy-pertama) langkah 1–5. Pakai `ITEM_STOK_KEY` yang sama dengan server lama. Setelah itu database berisi tabel kosong.
-2. Dari komputer Anda, kirim berkas backup ke server. Ganti `<IP server>` dengan alamat IP server baru, karena domain toko mungkin masih menunjuk ke server lama:
+2. Dari komputer Anda, kirim backup database dan arsip unggahan bertanggal sama ke server. Ganti `<IP server>` dengan alamat IP server baru, karena domain toko mungkin masih menunjuk ke server lama:
 
    ```bash
-   scp -i <berkas kunci deploy> <nama backup> deploy@<IP server>:/opt/akun-digital/
+   scp -i <berkas kunci deploy> <nama backup> <nama arsip unggahan> deploy@<IP server>:/opt/akun-digital/
    ```
 
-3. Di server, masukkan berkas itu ke volume backup:
+3. Di server, masukkan kedua berkas itu ke volume backup:
 
    ```bash
    cd /opt/akun-digital/repo
    export COMPOSE_FILE=compose.prod.yml COMPOSE_ENV_FILES=/opt/akun-digital/produksi.env
    docker compose cp /opt/akun-digital/<nama backup> cadangan:/cadangan/<nama backup>
+   docker compose cp /opt/akun-digital/<nama arsip unggahan> cadangan:/cadangan/<nama arsip unggahan>
    ```
 
 4. Ikuti [Restore di server yang sama](#restore-di-server-yang-sama) langkah 2–4. Akun Admin ikut terpulihkan dari backup, jadi langkah 6 deploy pertama tidak perlu dijalankan.

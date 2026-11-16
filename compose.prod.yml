@@ -74,7 +74,8 @@ services:
     depends_on:
       - app
 
-  # Cadangan database harian dengan pg_dump, disimpan di volume cadangan (deploy/cadangan.sh).
+  # Cadangan harian database (pg_dump) dan folder unggahan (arsip tar), disimpan di volume cadangan
+  # (deploy/cadangan.sh). Volume unggahan hanya dibaca di sini.
   cadangan:
     image: postgres:17-trixie
     restart: unless-stopped
@@ -90,6 +91,7 @@ services:
     volumes:
       - ./deploy:/deploy:ro
       - cadangan:/cadangan
+      - unggahan:/unggahan:ro
     depends_on:
       postgres:
         condition: service_healthy
