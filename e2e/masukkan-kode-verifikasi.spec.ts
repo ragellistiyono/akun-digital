@@ -64,6 +64,12 @@ async function masukkanKode(page: Page, kode: string) {
   await tombol.click();
 }
 
+/** Menekan "Kirim ulang kode" setelah jeda 60 detik dilewati dengan memundurkan kode terakhir. */
+async function kirimUlangSetelahJeda(page: Page, email: string) {
+  await mundurkanKode(email, 61);
+  await page.getByRole("button", { name: "Kirim ulang kode" }).click();
+}
+
 const peringatan = (page: Page) => page.getByRole("main").getByRole("alert");
 const kodeLainDari = (kode: string) =>
   kode === "000000" ? "111111" : "000000";
@@ -150,13 +156,50 @@ test("setelah 5 kali salah, kode yang benar pun ditolak karena hangus; kode baru
   await masukkanKode(page, kode);
   await expect(peringatan(page)).toHaveText(PESAN_KODE_HANGUS);
 
-  // Jeda 60 detik untuk Kirim ulang kode dilewati dengan memundurkan kode terakhir.
-  await mundurkanKode(email, 61);
-  await page.getByRole("button", { name: "Kirim ulang kode" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(
-    "Kode verifikasi baru sudah kami kirim",
+  await kirimUlangSetelahJeda(page, email);
+  // PRD §7.3 ▶ Keputusan 2026-11-17 (#174): pesan kode hangus hilang, hanya kabar kode baru yang tampil.
+  await expect(peringatan(page)).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
+    `Kode verifikasi baru sudah kami kirim ke ${email}.`,
   );
 
   await masukkanKode(page, await kodeTerakhir(request, email));
   await expect(page).toHaveURL("/riwayat");
+});
+
+test('pesan "Kode verifikasi salah." hilang setelah Kirim ulang kode berhasil', async ({
+  page,
+  request,
+}) => {
+  const email = emailBaru();
+  await daftar(page, email);
+  const kode = await kodeTerakhir(request, email);
+
+  await masukkanKode(page, kodeLainDari(kode));
+  await expect(peringatan(page)).toHaveText(PESAN_KODE_SALAH);
+
+  await kirimUlangSetelahJeda(page, email);
+  await expect(peringatan(page)).toHaveCount(0);
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
+    `Kode verifikasi baru sudah kami kirim ke ${email}.`,
+  );
+});
+
+test("Kirim ulang kode yang ditolak karena jeda 60 detik membiarkan pesan kode sebelumnya", async ({
+  page,
+  request,
+}) => {
+  const email = emailBaru();
+  await daftar(page, email);
+  const kode = await kodeTerakhir(request, email);
+
+  await masukkanKode(page, kodeLainDari(kode));
+  await page.getByRole("button", { name: "Kirim ulang kode" }).click();
+
+  await expect(
+    page.getByRole("main").getByText("Kode verifikasi baru bisa dikirim lagi"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText(PESAN_KODE_SALAH),
+  ).toBeVisible();
 });

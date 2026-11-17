@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { bacaEmailPendaftar } from "../email-pendaftar";
-import { FormKirimUlang } from "./_components/form-kirim-ulang";
-import { FormKodeVerifikasi } from "./_components/form-kode-verifikasi";
+import { VerifikasiKode } from "./_components/verifikasi-kode";
 
 // Halaman verifikasi setelah mendaftar (PRD §7.2, §7.3): menyebut email tujuan Kode verifikasi, lalu
 // menyediakan isian kode dan "Kirim ulang kode". Browser yang belum mendaftar dibawa ke halaman Daftar.
@@ -21,8 +20,7 @@ export default async function HalamanVerifikasi() {
           </strong>
           . Kode berlaku 10 menit. Periksa juga folder spam.
         </p>
-        <FormKodeVerifikasi />
-        <FormKirimUlang />
+        <VerifikasiKode />
       </section>
     </div>
   );
