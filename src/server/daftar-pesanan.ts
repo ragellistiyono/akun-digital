@@ -38,7 +38,7 @@ type SaringanPesanan = {
  * Waktu dibuat setiap Pesanan, yaitu waktu baris pertama Riwayat status Pesanan-nya, yang ditulis saat
  * Pesanan dibuat (src/server/db/schema.ts).
  */
-const waktuDibuat = db.$with("waktu_dibuat").as(
+export const waktuDibuat = db.$with("waktu_dibuat").as(
   db
     .select({
       pesananId: riwayatStatusPesanan.pesananId,
