@@ -104,6 +104,11 @@ const { buatAdmin } = await import("../src/server/auth/buat-admin");
 const { koneksi } = await import("../src/server/db");
 try {
   const hasil = await buatAdmin({ email: email.data, password });
+  if (hasil.hasil === "email-milik-member") {
+    gagal(
+      `Email ${email.data} sudah dipakai Member, dan satu email hanya bisa menjadi Admin atau Member. Admin tidak dibuat. Jalankan ulang perintahnya dengan email lain untuk Admin.`,
+    );
+  }
   if (hasil.hasil === "email-sudah-dipakai") {
     gagal(
       `Email ${email.data} sudah dipakai Admin lain. Pakai email lain, atau login di /admin dengan email itu.`,

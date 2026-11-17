@@ -11,8 +11,9 @@ import {
 } from "vitest";
 
 import { koneksi } from "../db";
+import { sisipkanMember } from "../uji-member";
 import { buatAdmin } from "./buat-admin";
-import { masukAdmin } from "./masuk-admin";
+import { masukAdmin, masukMember } from "./masuk";
 
 // Test integrasi dengan database app_test (.env.ci). Jam dikendalikan lewat Date palsu, sementara
 // timer asli tetap jalan supaya koneksi database tidak terganggu.
@@ -154,6 +155,97 @@ describe("batas salah password login Admin (PRD §7.7)", () => {
 
     pada("10:14:00");
     expect(await masuk(email, PASSWORD)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+  });
+});
+
+const PASSWORD_MEMBER = "sandi-uji-member-123";
+
+async function memberBaru() {
+  const email = `member-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: PASSWORD_MEMBER });
+  return email;
+}
+
+function masukSebagaiMember(email: string, password: string) {
+  return masukMember({ email, password, kepala: new Headers() });
+}
+
+describe("login Member (PRD §7.5 ▶ Keputusan 2026-11-17)", () => {
+  it("password benar diterima, juga bila email diketik dengan huruf besar", async () => {
+    const email = await memberBaru();
+    pada("10:00:00");
+
+    expect(
+      await masukSebagaiMember(`  ${email.toUpperCase()} `, PASSWORD_MEMBER),
+    ).toEqual({ hasil: "berhasil" });
+  });
+
+  it("password salah ditolak", async () => {
+    const email = await memberBaru();
+    pada("10:00:00");
+
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+      hasil: "ditolak",
+    });
+  });
+
+  // tests/golden/batas-login.json: kasus "Salah kelima", "Benar saat masih terkunci", dan
+  // "Benar tepat saat kunci berakhir".
+  it("setelah 5 kali salah, password benar ditolak sampai 15 menit sejak kesalahan kelima", async () => {
+    const email = await memberBaru();
+    for (const jam of ["09:56:00", "09:57:00", "09:58:00", "09:59:00"]) {
+      pada(jam);
+      expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+        hasil: "ditolak",
+      });
+    }
+
+    pada("10:00:00");
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+
+    pada("10:14:00");
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+
+    pada("10:15:00");
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "berhasil",
+    });
+  });
+
+  it("email dan password Admin yang benar ditolak seperti email yang tidak terdaftar", async () => {
+    const email = await adminBaru();
+    pada("10:00:00");
+
+    expect(await masukSebagaiMember(email, PASSWORD)).toEqual({
+      hasil: "ditolak",
+    });
+  });
+
+  it("email dan password Member yang benar ditolak di login Admin", async () => {
+    const email = await memberBaru();
+    pada("10:00:00");
+
+    expect(await masuk(email, PASSWORD_MEMBER)).toEqual({ hasil: "ditolak" });
+  });
+
+  it("kesalahan di login Admin dan login Member dihitung bersama untuk email yang sama", async () => {
+    const email = await memberBaru();
+    for (const jam of ["09:56:00", "09:57:00", "09:58:00", "09:59:00"]) {
+      pada(jam);
+      await masuk(email, PASSWORD_SALAH);
+    }
+
+    pada("10:00:00");
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
       hasil: "terkunci",
       terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
     });

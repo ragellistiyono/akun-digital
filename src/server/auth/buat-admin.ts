@@ -1,16 +1,20 @@
 import { eq } from "drizzle-orm";
-import { generateId } from "better-auth";
+
+import { emailBaku } from "@/domain/kesamaan-email";
 
 import { db } from "../db";
-import { account, user } from "../db/schema";
-import { auth } from "./auth";
+import { user } from "../db/schema";
+import { sisipkanAkun } from "./sisipkan-akun";
 
-type HasilBuatAdmin = { hasil: "dibuat" } | { hasil: "email-sudah-dipakai" };
+type HasilBuatAdmin =
+  | { hasil: "dibuat" }
+  | { hasil: "email-sudah-dipakai" }
+  | { hasil: "email-milik-member" };
 
 /**
  * Membuat Admin baru dengan email dan password (PRD §2.2). Dipanggil oleh `pnpm admin:buat`;
- * masukannya sudah divalidasi di sana. User dan akun password-nya ditulis dalam satu transaksi,
- * dengan format yang sama seperti pendaftaran email Better Auth, supaya Admin bisa langsung login.
+ * masukannya sudah divalidasi di sana. Satu email hanya bisa menjadi Admin atau Member
+ * (PRD §7.2 ▶ Keputusan 2026-11-17), jadi email Member ditolak.
  */
 export async function buatAdmin({
   email,
@@ -19,32 +23,14 @@ export async function buatAdmin({
   email: string;
   password: string;
 }): Promise<HasilBuatAdmin> {
-  const emailKecil = email.toLowerCase();
-  const sudahAda = await db
-    .select({ id: user.id })
+  const emailAdmin = emailBaku(email);
+  const [pemilik] = await db
+    .select({ peran: user.peran })
     .from(user)
-    .where(eq(user.email, emailKecil));
-  if (sudahAda.length > 0) return { hasil: "email-sudah-dipakai" };
+    .where(eq(user.email, emailAdmin));
+  if (pemilik?.peran === "Member") return { hasil: "email-milik-member" };
+  if (pemilik) return { hasil: "email-sudah-dipakai" };
 
-  const konteks = await auth.$context;
-  const hash = await konteks.password.hash(password);
-
-  await db.transaction(async (tx) => {
-    const idUser = generateId();
-    await tx.insert(user).values({
-      id: idUser,
-      name: "Admin",
-      email: emailKecil,
-      emailVerified: true,
-    });
-    await tx.insert(account).values({
-      id: generateId(),
-      accountId: idUser,
-      providerId: "credential",
-      userId: idUser,
-      password: hash,
-    });
-  });
-
+  await sisipkanAkun({ email: emailAdmin, password, peran: "Admin" });
   return { hasil: "dibuat" };
 }

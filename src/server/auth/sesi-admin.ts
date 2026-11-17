@@ -5,12 +5,12 @@ import { sesiAdminBerlaku } from "@/domain/sesi-admin";
 import { auth } from "./auth";
 
 /**
- * Membaca sesi Admin dari cookie permintaan. Hasilnya null bila tidak ada sesi, atau bila sesi
- * sudah melewati 12 jam sejak login (PRD §2.2 ▶ Keputusan 2026-11-11).
+ * Membaca sesi Admin dari cookie permintaan. Hasilnya null bila tidak ada sesi, bila sesi itu milik
+ * Member (UAT-B1), atau bila sesi sudah melewati 12 jam sejak login (PRD §2.2 ▶ Keputusan 2026-11-11).
  */
 export async function bacaSesiAdmin(kepala: Headers) {
   const sesi = await auth.api.getSession({ headers: kepala });
-  if (!sesi) return null;
+  if (sesi?.user.peran !== "Admin") return null;
 
   const berlaku = sesiAdminBerlaku({
     waktuLogin: sesi.session.createdAt,

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 
 import { bacaSesiAdmin } from "@/server/auth/sesi-admin";
 
-import { FormMasuk } from "./_components/form-masuk";
+import { FormMasuk } from "../_masuk/form-masuk";
+import { aksiMasukAdmin } from "./aksi";
 import { MerekAdmin } from "./_components/merek-admin";
 
 // Halaman login Admin (PRD §2.2). Admin yang sesinya masih berlaku langsung dibawa ke dasbor admin.
@@ -23,7 +24,7 @@ export default async function HalamanLoginAdmin() {
         <p className="mt-2 text-tinta-redup">
           Halaman ini khusus Admin MIWE Digital Store.
         </p>
-        <FormMasuk />
+        <FormMasuk aksiMasuk={aksiMasukAdmin} />
       </main>
     </>
   );
