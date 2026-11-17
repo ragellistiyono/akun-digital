@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import type { StatusPesanan } from "@/domain/status-pesanan";
+
 import kesamaanEmail from "../../tests/golden/kesamaan-email.json";
 
 import { db, koneksi } from "./db";
@@ -64,6 +66,25 @@ describe("riwayatPesanan: kesamaan email (PRD §7.4, tests/golden/kesamaan-email
       );
     });
   }
+
+  it("Pesanan beremail dengan tab, NBSP, atau baris baru di ujung tetap ada di Riwayat Pesanan Member itu, sedangkan email yang hanya memuat email Member tidak", async () => {
+    const akhiran = randomUUID();
+    const emailMember = denganAkhiran("budi@mail.com", akhiran);
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      email: `\t${emailMember.toUpperCase()}\u00a0\n`,
+    });
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      email: `x${emailMember}`,
+    });
+
+    const riwayat = await riwayatPesanan(emailMember);
+
+    expect(nomor(riwayat)).toEqual([dipesan.nomorPesanan]);
+  });
 });
 
 describe("riwayatPesanan: isi dan urutan (PRD §7.4)", () => {
@@ -72,13 +93,7 @@ describe("riwayatPesanan: isi dan urutan (PRD §7.4)", () => {
     const emailMember = denganAkhiran("budi@mail.com", akhiran);
     const emailTamu = denganAkhiran("BUDI@Mail.com", akhiran);
     const pesananPada = (
-      status:
-        | "Selesai"
-        | "Menunggu Pembayaran"
-        | "Bermasalah"
-        | "Kedaluwarsa"
-        | "Dibatalkan"
-        | "Dana Dikembalikan",
+      status: StatusPesanan,
       dibuatPada: string,
       email = emailMember,
     ) =>

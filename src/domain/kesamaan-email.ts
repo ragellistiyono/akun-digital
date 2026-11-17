@@ -5,3 +5,8 @@
 export function emailBaku(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/** Apakah dua email dianggap sama (PRD §7.4), yaitu bentuk bakunya menurut emailBaku sama. */
+export function emailSama(a: string, b: string): boolean {
+  return emailBaku(a) === emailBaku(b);
+}

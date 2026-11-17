@@ -201,6 +201,19 @@ test('Riwayat Pesanan Member tanpa Pesanan berbunyi "Belum ada Pesanan dengan em
   await expect(daftarRiwayat(page)).toHaveCount(0);
 });
 
+// DESIGN.md Elevation & Depth: kartu yang di-hover terangkat 2 px dengan Bayang naik.
+test("baris Riwayat terangkat 2 px saat di-hover", async ({ page }) => {
+  const email = await masukSebagaiMemberBaru(page);
+  await pesananPada(email, "Selesai", "2026-11-11T20:14:00+07:00");
+  await page.reload();
+  const kartu = barisRiwayat(page).first().getByRole("link");
+  await expect(kartu).toHaveCSS("translate", "none");
+
+  await kartu.hover();
+
+  await expect(kartu).toHaveCSS("translate", "0px -2px");
+});
+
 // PRD §11.1.
 test("di lebar 360 px, Riwayat Pesanan dengan nama Produk dan Varian yang panjang tidak bisa digulir ke samping", async ({
   page,

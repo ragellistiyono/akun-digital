@@ -26,6 +26,12 @@ export default async function HalamanRiwayat() {
   );
 }
 
+// Kartu Baris Riwayat (DESIGN.md Status Pesanan) yang terangkat 2 px dengan Bayang naik saat di-hover, sama
+// seperti kartu Produk. Varian hover Tailwind 4 hanya berlaku di perangkat hover:hover, dan transisinya
+// dimatikan saat gerak dikurangi (DESIGN.md Elevation & Depth).
+const KELAS_BARIS_RIWAYAT =
+  "grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-[20px] bg-permukaan p-4 shadow-bayang transition-[translate,box-shadow] duration-200 ease-[cubic-bezier(.16,1,.3,1)] hover:-translate-y-0.5 hover:shadow-bayang-naik motion-reduce:transition-none";
+
 /**
  * Riwayat Pesanan Member (PRD §7.4), terbaru di atas. Setiap baris adalah kartu Baris Riwayat (DESIGN.md
  * Status Pesanan) yang membuka Halaman Pesanan lewat Tautan Pesanan-nya (PRD §7.4 ▶ Keputusan 2026-11-17).
@@ -47,7 +53,7 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
         <li key={satu.nomorPesanan}>
           <Link
             href={`/pesanan/${satu.tautan}`}
-            className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+            className={KELAS_BARIS_RIWAYAT}
           >
             <span className="justify-self-start">
               <PilStatusPesanan status={satu.status} />
