@@ -10,4 +10,5 @@ Setelah pemilik memutuskan lewat `/tiket:catat-keputusan`, keputusan itu ditulis
 
 | ID | Pertanyaan | Pemilik keputusan | Yang terblokir | Nilai contoh untuk pengujian |
 |---|---|---|---|---|
-| OD-3 | Bila potongan voucher menjadi Rp 0 karena batas bawah Rp 1.000 (Varian dengan Harga jual tepat Rp 1.000), apakah Voucher ditolak atau tetap tercatat dipakai? | Pemilik | Tiket penerapan Voucher di checkout (M2), PRD §8.3, §8.7 | Voucher ditolak dengan pesan "Voucher tidak memberi potongan untuk produk ini", dan tidak tercatat di Pesanan `[CONTOH]` |
+
+Saat ini tidak ada keputusan terbuka. OD-3 diputuskan 2026-11-17 (PRD §8.3).

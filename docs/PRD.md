@@ -65,6 +65,13 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Admin bisa menonaktifkan Member dan mengaktifkannya kembali. Member nonaktif tidak bisa login, dan checkout baru dengan emailnya ditolak.
 - Admin tidak bisa melihat atau mengubah password Member.
 
+▶ Keputusan 2026-11-17 (#128):
+- Daftar Member hanya memuat Member yang sudah memasukkan Kode verifikasi yang benar. Pendaftar (§7.2) tidak tampil. Member terbaru di atas, dan setiap baris menampilkan status Aktif atau Nonaktif.
+- Admin bisa mencari Member dengan sebagian email, tanpa membedakan huruf besar dan kecil, sama seperti pencarian daftar Pesanan (§9.5). Contoh: "budi" dan "BUDI" menemukan `budi@mail.com`.
+- Riwayat Pesanan seorang Member di dasbor admin berisi Pesanan yang sama dengan §7.4. Setiap Pesanan menaut ke detail Pesanan di dasbor admin (§9.5).
+- Begitu Admin menonaktifkan Member, Member itu langsung keluar di semua perangkat. Setelah diaktifkan kembali, Member login lagi seperti biasa.
+- Member aktif adalah Member yang sudah diverifikasi dan tidak nonaktif. Jumlah inilah yang tampil di Ringkasan (§9.2).
+
 ## 3. Katalog
 
 ### 3.1 Kategori
@@ -219,6 +226,17 @@ Saat menempel banyak baris:
 
 ▶ Keputusan 2026-11-12 (#87): Checkout yang ditolak karena Stok Varian 0 menampilkan pesan "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda." Bila email itu juga masih punya Pesanan Menunggu Pembayaran, §5.4 didahulukan.
 
+▶ Keputusan 2026-11-17 (#128):
+- Checkout dengan email Member nonaktif ditolak dengan pesan "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp."
+- Pemeriksaan checkout berjalan berurutan, dan pemeriksaan pertama yang menolak menentukan hasilnya:
+  1. Produk atau Varian tidak dijual (§3.7);
+  2. email milik Member nonaktif;
+  3. email masih punya Pesanan Menunggu Pembayaran (§5.4);
+  4. Stok Varian 0;
+  5. Voucher (§8.7).
+- Contoh: email Andi masih punya Pesanan Menunggu Pembayaran. Andi checkout lagi dari browser yang sama dengan Voucher yang sudah berakhir. Ia diarahkan ke Pesanannya, bukan melihat "Voucher sudah berakhir".
+- Contoh: Admin menonaktifkan Member Budi saat Budi masih punya Pesanan Menunggu Pembayaran. Checkout baru dengan email Budi ditolak dengan pesan Member nonaktif, sedangkan Pesanan yang sudah ada tetap berjalan seperti biasa.
+
 ### 5.3 Penahanan Item stok
 
 - Begitu Pesanan dibuat dan QRIS-nya terbit, satu Item stok Varian itu ditahan untuk Pesanan tersebut.
@@ -365,9 +383,24 @@ Email berisi Item stok, rincian nominal sesuai §5.5, dan Tautan Pesanan.
 - Bila email Pesanan belum milik Member, di bawah Item stok tampil ajakan menonjol "Buat akun untuk menyimpan riwayat", berisi isian password. Emailnya diambil dari Pesanan.
 - Bila email Pesanan sudah milik Member yang sedang tidak login, Pesanan itu otomatis masuk Riwayat Pesanan Member tersebut. Halaman Pesanan menampilkan "Login untuk melihat riwayat", bukan form buat akun.
 
+▶ Keputusan 2026-11-17 (#128): Yang tampil di bawah Item stok Halaman Pesanan Selesai bergantung pada siapa yang membukanya.
+- Tidak ada yang login, dan email Pesanan belum milik Member: ajakan "Buat akun untuk menyimpan riwayat". Email Pendaftar (§7.2) dan email Admin juga dianggap belum milik Member. Untuk email Admin, pendaftarannya ditolak menurut §7.2.
+- Tidak ada yang login, dan email Pesanan milik Member, aktif maupun nonaktif: "Login untuk melihat riwayat".
+- Member yang sedang login membuka Pesanan dengan emailnya sendiri: tautan "Lihat Riwayat Pesanan".
+- Member yang sedang login membuka Pesanan dengan email lain: tidak ada ajakan apa pun.
+
 ### 7.2 Daftar tanpa membeli
 
 Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caranya sama: membuat password, lalu memasukkan Kode verifikasi (§7.3).
+
+▶ Keputusan 2026-11-17 (#128):
+- Orang yang sudah membuat password tetapi belum memasukkan Kode verifikasi yang benar disebut Pendaftar. Pendaftar belum menjadi Member: ia tidak bisa login, tidak tampil di daftar Member, dan emailnya dianggap belum milik Member.
+- Pendaftar boleh mengulang pendaftaran kapan saja, lewat halaman Daftar atau ajakan di Halaman Pesanan. Password baru menggantikan password lama, Kode verifikasi lama tidak berlaku lagi, dan Kode verifikasi baru dikirim.
+- Jeda 60 detik (§7.7) juga berlaku untuk pendaftaran ulang. Pendaftaran ulang sebelum 60 detik sejak kode terakhir dikirim ditolak dengan pesan "Kode verifikasi baru bisa dikirim lagi dalam N detik.", dan tidak ada yang berubah.
+- Contoh: Sinta membuat password pukul 10.00.00, lalu menutup tab. Pukul 10.00.30 ia mendaftar lagi dan ditolak dengan "… dalam 30 detik.". Pukul 10.20 ia mendaftar lagi dengan password lain. Kode baru dikirim, kode pukul 10.00 tidak berlaku lagi, dan password yang dipakai adalah password terakhir.
+- Pendaftaran dengan email yang sudah dipakai Member, aktif maupun nonaktif, atau dipakai Admin, ditolak dengan pesan "Email ini sudah terdaftar. Masuk dengan email ini, atau pakai Lupa password bila lupa password-nya." Pesannya sama untuk ketiganya.
+- Satu email hanya bisa menjadi Admin atau Member, tidak keduanya. Admin yang ingin berbelanja sebagai Member memakai email lain.
+- Email dibandingkan menurut §7.4.
 
 ### 7.3 Kode verifikasi
 
@@ -376,11 +409,15 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 - Akun Member baru aktif, dan Riwayat Pesanannya baru tertaut, setelah Kode verifikasi yang benar dimasukkan. Sebelum itu akun Member tidak bisa dipakai login.
 - Contoh: kode dikirim pukul 10.00. Kode masih diterima pukul 10.09, dan ditolak pukul 10.11.
 
+▶ Keputusan 2026-11-17 (#128): Begitu Kode verifikasi yang benar dimasukkan, akun Member aktif, dan Pendaftar langsung masuk sebagai Member lalu dibawa ke Riwayat Pesanan. Ini berlaku untuk pendaftaran dari halaman Daftar maupun dari Halaman Pesanan (§7.1). Lama sesinya sama dengan login Member biasa, yaitu 30 hari (§7.5).
+
 ### 7.4 Riwayat Pesanan
 
 - Riwayat Pesanan Member berisi semua Pesanan yang emailnya sama dengan email Member, termasuk Pesanan yang dibuat sebelum ia menjadi Member.
 - Email dianggap sama tanpa membedakan huruf besar dan kecil, dan tanpa spasi di awal atau akhir. Contoh: `Budi@Mail.com` sama dengan `budi@mail.com`.
 - Semua status Pesanan tampil, dengan Pesanan terbaru di atas.
+
+▶ Keputusan 2026-11-17 (#128): Setiap baris Riwayat Pesanan membuka Halaman Pesanan yang sama dengan Tautan Pesanan (§6.2). Pesanan Menunggu Pembayaran membuka Halaman bayar, lengkap dengan tombol "Batalkan" (§5.6). Item stok tidak dibuka di dalam daftar Riwayat Pesanan.
 
 ### 7.5 Login dan lupa password
 
@@ -390,11 +427,34 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 
 ▶ Keputusan 2026-11-11: Member tetap login selama 30 hari sejak login. Setelah itu Member diminta login ulang. (Sebelumnya OD-2.)
 
+▶ Keputusan 2026-11-17 (#128): Login Member
+- Pesan password salah dan pesan kunci 15 menit sama dengan login Admin (§2.2, §7.7). Pesan password salahnya: "Email atau password salah. Periksa keduanya, lalu coba masuk lagi."
+- Di login Member, email Pendaftar (§7.2) dan email Admin diperlakukan seperti email yang tidak terdaftar.
+- Member nonaktif yang memasukkan password benar melihat "Akun Member ini dinonaktifkan, jadi tidak bisa masuk. Hubungi kami di WhatsApp." beserta tombol WhatsApp. Bila password-nya salah, ia melihat pesan password salah biasa, dan kesalahan itu dihitung ke batas salah password (§7.7).
+- Member yang login lewat tautan Masuk di Checkout kembali ke Checkout Varian yang sama (§8.7). Login dari bilah atas atau tab Akun membuka Riwayat Pesanan.
+
+▶ Keputusan 2026-11-17 (#128): Lupa password
+- Setelah email diisi, halaman selalu menampilkan "Bila email ini terdaftar sebagai Member, tautan atur ulang password sudah kami kirim. Periksa juga folder spam.", apa pun emailnya.
+- Tautan atur ulang password hanya dikirim ke Member aktif. Pendaftar, Member nonaktif, Admin, dan email yang tidak terdaftar tidak menerima email apa pun.
+- Tautan baru untuk email yang sama paling cepat dikirim 60 detik setelah tautan sebelumnya, sama seperti Kode verifikasi (§7.7). Permintaan yang lebih cepat tidak mengirim email, tetapi pesannya tetap sama. Contohnya ada di `tests/golden/kirim-tautan-atur-ulang-password.json`.
+- Tautan baru membuat tautan sebelumnya tidak berlaku lagi, walaupun 30 menitnya belum habis (`tests/golden/tautan-atur-ulang-password.json`).
+- Password baru minimal 8 karakter.
+- Setelah password baru disimpan lewat tautan:
+  - Member keluar dari semua perangkat;
+  - kunci login 15 menit untuk email itu dicabut, dan hitungan kesalahannya kembali ke 0 (§7.7);
+  - Member dibawa ke halaman Masuk dengan pesan "Password sudah diganti. Masuk dengan password baru."
+
 ### 7.6 Dasbor Member
 
 - Dasbor Member berisi Riwayat Pesanan, dengan Item stok yang bisa dibuka dan disalin; profil untuk mengganti password; dan tombol keluar.
 - Email Member tidak bisa diganti, karena email itulah yang menautkan Pesanan.
 - Tidak ada fitur hapus akun.
+
+▶ Keputusan 2026-11-17 (#128): Ganti password di profil
+- Member mengisi password lama dan password baru. Password baru minimal 8 karakter (§7.5).
+- Bila password lama salah, password tidak diganti, dan Member melihat "Password lama salah, jadi password tidak diganti."
+- Setelah password diganti, Member keluar di semua perangkat lain dan tetap masuk di perangkat yang sedang dipakai.
+- Letak profil dan Riwayat Pesanan di navigasi toko diatur di §11.1.
 
 ### 7.7 Keamanan Kode verifikasi dan login
 
@@ -433,6 +493,11 @@ Admin memilih satu jenis potongan untuk setiap Voucher:
 
 Varian dengan Harga jual tepat Rp 1.000 mendapat potongan voucher Rp 0. Apakah Voucher dalam keadaan itu ditolak atau tetap tercatat dipakai belum diputuskan (OD-3).
 
+▶ Keputusan 2026-11-17 (#128): Voucher yang potongan vouchernya Rp 0 ditolak dengan pesan "Voucher tidak memberi potongan untuk produk ini", dan tidak tercatat di Pesanan. (Sebelumnya OD-3.)
+- Keadaan ini hanya terjadi pada Varian dengan Harga jual tepat Rp 1.000, karena nominal tetap, persen, dan batas maksimum selalu minimal Rp 1 atau 1% (§8.4).
+- Pesan ini paling bawah dalam urutan §8.7. Bila ada syarat lain yang tidak terpenuhi, pesan syarat itulah yang tampil.
+- Contoh: `HEMAT5` untuk Varian Rp 1.000 ditolak dengan "Voucher tidak memberi potongan untuk produk ini". `HEMAT10`, yang mensyaratkan minimal Harga jual Rp 50.000, untuk Varian yang sama ditolak dengan "Minimal pembelian Rp 50.000". Contoh lengkapnya ada di `tests/golden/penerapan-voucher.json`.
+
 Contoh:
 
 | Harga jual | Voucher | Potongan voucher | Harga jual − potongan |
@@ -453,6 +518,16 @@ Setiap syarat berikut opsional dan diatur Admin per Voucher:
 - **khusus Member**: Pembeli harus login sebagai Member untuk memakainya.
 
 Syarat diperiksa saat Pesanan dibuat.
+
+▶ Keputusan 2026-11-17 (#128): Isian Voucher di dasbor admin
+- **Kode:** hanya huruf A–Z dan angka 0–9, 3 sampai 20 karakter. Spasi di awal dan akhir dibuang, lalu kode disimpan dalam huruf besar. Kode harus unik tanpa membedakan huruf besar dan kecil. Contoh: bila sudah ada `HEMAT5`, Voucher baru `hemat5` ditolak. Kode tidak bisa diubah setelah Voucher dibuat.
+- **Nominal tetap** dan **batas maksimum:** rupiah bulat, minimal Rp 1.
+- **Persen:** bilangan bulat 1 sampai 100.
+- **Kuota voucher** dan **Batas per email:** bilangan bulat minimal 1. Isian kosong berarti tanpa batas. Saat form Voucher baru dibuka, Batas per email sudah terisi 1.
+- **Minimal Harga jual:** rupiah bulat minimal Rp 1, atau kosong.
+- **Masa berlaku:** waktu mulai dan waktu berakhir boleh diisi salah satu, keduanya, atau tidak sama sekali. Bila keduanya diisi, waktu berakhir harus setelah waktu mulai.
+- **Cakupan:** semua Produk, satu Produk atau lebih, atau satu Kategori atau lebih. Produk dan Kategori tidak dicampur dalam satu Voucher. Cakupan Kategori memakai Kategori Produk pada saat checkout.
+- Contoh lengkapnya ada di `tests/golden/kode-voucher.json` dan `tests/golden/isian-voucher.json`.
 
 ### 8.5 Menghitung pemakaian
 
@@ -478,12 +553,30 @@ Bila Voucher ditolak, Pembeli melihat alasannya:
 
 Bila lebih dari satu syarat tidak terpenuhi, yang tampil adalah pesan yang paling atas dalam daftar ini.
 
+▶ Keputusan 2026-11-17 (#128): Voucher di Checkout
+- Pesan "Voucher tidak memberi potongan untuk produk ini" (§8.3) berada di urutan paling bawah daftar di atas.
+- Tombol "Pakai" di samping isian kode voucher langsung memeriksa kode itu.
+  - Bila diterima, tampil "<KODE> dipakai: potongan Rp X", misalnya "HEMAT5 dipakai: potongan Rp 5.000", dan Perkiraan bayar dihitung ulang.
+  - Bila ditolak, tampil pesan penolakannya.
+  - Batas per email baru diperiksa bila email sudah diisi. Bila email masih kosong saat "Pakai" ditekan, syarat itu diperiksa saat Pesanan dibuat.
+- Saat Pesanan dibuat, semua syarat diperiksa sekali lagi (§8.4), termasuk kode yang diisi tanpa menekan "Pakai".
+  - Bila Voucher ditolak saat itu, Pesanan tidak dibuat, pesan penolakannya tampil, dan isian kode tetap berisi. Pembeli bisa menghapus kode, lalu membayar tanpa Voucher.
+  - Pesanan tidak pernah dibuat tanpa Voucher bila Pembeli mengisi kode.
+  - Contoh: Pembeli menekan "Pakai" untuk `SATUKALI`, dan Voucher diterima. Sebelum ia menekan "Bayar dengan QRIS", Pembeli lain memakai kuota terakhirnya. Pesanan tidak dibuat, dan Pembeli melihat "Kuota voucher habis".
+- Pesan "Voucher khusus Member, silakan login" punya tautan Masuk. Setelah login, Member kembali ke Checkout Varian yang sama.
+
 ### 8.8 Kelola voucher
 
 - Admin bisa membuat, mengubah, menonaktifkan, dan mengaktifkan kembali Voucher.
 - Admin melihat jumlah pemakaian setiap Voucher menurut §8.5.
 - Voucher yang pernah tercatat di Pesanan berstatus apa pun, termasuk Kedaluwarsa dan Dibatalkan, tidak bisa dihapus, hanya dinonaktifkan.
 - Mengubah syarat Voucher tidak mengubah Pesanan yang sudah dibuat.
+
+▶ Keputusan 2026-11-17 (#128):
+- Daftar Voucher di dasbor admin menampilkan kode, potongan, masa berlaku, pemakaian, dan status Aktif atau Nonaktif, dengan Voucher terbaru di atas.
+  - Potongan ditulis seperti "Rp 5.000", "10%", atau "10%, maks Rp 10.000".
+  - Pemakaian dihitung menurut §8.5. Bila Voucher punya Kuota voucher, pemakaian ditulis "3 dari 10". Bila tidak, cukup "3".
+- Pesanan yang memakai Voucher mencatat kode Voucher-nya. Di setiap rincian nominal (§5.5), baris potongannya ditulis "Potongan voucher (HEMAT5)": di Checkout, Halaman bayar, Halaman Pesanan, email "Pesanan selesai", dan detail Pesanan di dasbor admin. Pesanan tanpa Voucher tetap menulis "Potongan voucher".
 
 ## 9. Dasbor admin
 
@@ -503,6 +596,12 @@ Halaman depan dasbor admin menampilkan kartu angka:
 
 Ringkasan hanya berupa angka, tanpa grafik.
 
+▶ Keputusan 2026-11-17 (#128):
+- Pesanan Selesai hari ini dan bulan ini dihitung menurut waktu pembayaran, sama seperti Pendapatan (§9.3). Pesanan Bermasalah yang kemudian diselesaikan Admin dihitung pada tanggal pembayarannya. Contohnya ada di `tests/golden/jumlah-pesanan-selesai.json`.
+- Member aktif mengikuti §2.3 (▶ Keputusan 2026-11-17).
+- Kartu Pesanan Bermasalah membuka daftar Pesanan yang sudah disaring ke status Bermasalah (§9.5).
+- Daftar Stok menipis (§9.4) tampil di halaman Ringkasan, di bawah kartu angka.
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -516,6 +615,11 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Ambang stok menipis diatur di pengaturan toko, dengan nilai awal 5.
 - Contoh dengan ambang 5: Varian dengan Stok Varian 5 atau 0 masuk daftar. Varian dengan Stok Varian 6 tidak masuk.
 - Tidak ada email peringatan ke Admin.
+
+▶ Keputusan 2026-11-17 (#128):
+- Daftar Stok menipis menampilkan nama Produk, nama Varian, dan Stok Varian, dengan Stok Varian terkecil di atas. Setiap baris membuka halaman Varian di dasbor admin (§9.7).
+- Bila tidak ada Varian yang menipis, daftar itu berbunyi "Tidak ada Varian yang stoknya menipis."
+- Ambang stok menipis berupa bilangan bulat 0 sampai 999. Isian di luar itu ditolak dengan pesan. Contohnya ada di `tests/golden/ambang-stok-menipis.json`.
 
 ### 9.5 Daftar dan detail Pesanan
 
@@ -584,6 +688,11 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 
 ▶ Keputusan 2026-11-12 (#87): Selama nomor WhatsApp belum diisi di pengaturan toko, footer WhatsApp tidak ditampilkan, sama seperti tombol WhatsApp di toko (§9.8). Bila nomor sudah diisi, footer berbunyi "Butuh bantuan? Hubungi kami di WhatsApp +62…", dengan nomor yang menaut ke WhatsApp.
 
+▶ Keputusan 2026-11-17 (#128): Isi dua email Member
+- **Kode verifikasi.** Subjeknya "Kode verifikasi: <kode>", misalnya "Kode verifikasi: 482913". Isinya kalimat "Masukkan kode ini untuk menyelesaikan pendaftaran Member MIWE Digital Store. Kode berlaku 10 menit. Abaikan email ini bila Anda tidak mendaftar." beserta kodenya.
+- **Atur ulang password.** Subjeknya "Atur ulang password". Isinya kalimat "Buka tautan berikut untuk membuat password baru. Tautan berlaku 30 menit dan hanya bisa dipakai sekali. Abaikan email ini bila Anda tidak memintanya, password Anda tidak berubah." beserta tautannya.
+- Keduanya memakai footer WhatsApp yang sama dengan email "Pesanan selesai".
+
 ## 11. Tampilan
 
 ### 11.1 Responsif dan navigasi
@@ -611,6 +720,12 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 ▶ Keputusan 2026-11-11 (#53):
 - Tab Riwayat untuk Tamu berjudul "Riwayat Pesanan" dan berisi kalimat: "Setiap Pesanan Selesai punya Tautan Pesanan di email "Pesanan selesai". Buka tautan itu untuk melihat dan menyalin Item stok tanpa login."
 - Tab Kategori berisi daftar Kategori. Setiap Kategori membuka Beranda yang sudah disaring menurut Kategori itu, bukan halaman Kategori tersendiri.
+
+▶ Keputusan 2026-11-17 (#128): Bilah atas dan tab di M2
+- **Bilah atas:** Tamu melihat tombol "Masuk". Member tidak punya nama, jadi Member melihat bagian emailnya sebelum "@". Bila bagian itu lebih dari 12 karakter, yang tampil adalah 12 karakter pertamanya diikuti "…". Contoh: `budi@mail.com` tampil "budi", dan `budisantoso2026@mail.com` tampil "budisantoso2…" (`tests/golden/label-member.json`). Tombol itu membuka tab Akun.
+- **Tab Akun untuk Tamu:** tombol "Masuk" dan "Daftar", lalu tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan Privasi.
+- **Tab Akun untuk Member:** email Member, form ganti password (§7.6), tombol "Keluar", lalu tombol WhatsApp serta tautan yang sama.
+- **Tab Riwayat:** Tamu melihat ajakan login beserta penjelasan Tautan Pesanan. Member melihat Riwayat Pesanan (§7.4). Riwayat Pesanan hanya ada di tab Riwayat dan tidak diulang di tab Akun.
 
 ### 11.2 Animasi navbar
 
@@ -666,3 +781,10 @@ Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checko
 - M1 juga memuat data seed untuk UAT sesuai "Persiapan bersama" di `docs/UAT.md`, tanpa Member dan Voucher.
 - Pemasangan di VPS (§12) dikerjakan lewat dua tiket: penyiapan server, domain, dan akun layanan oleh pemilik, lalu deploy otomatis oleh agent.
 - Integrasi Qrispy mengikuti `docs/referensi/qrispy-api.md` dan ADR-0004.
+
+▶ Keputusan 2026-11-17 (#128): Urutan tayang M2. Setiap merge ke `main` langsung tayang di produksi (`docs/DEPLOY.md`), jadi tiket M2 diurutkan supaya pintu masuk yang dilihat Pembeli baru dipasang setelah fitur di belakangnya selesai:
+- tombol "Masuk" dan "Daftar" di bilah atas dan tab Akun, serta Riwayat Pesanan di tab Riwayat, dipasang setelah daftar, Kode verifikasi, login, dan lupa password selesai;
+- ajakan "Buat akun untuk menyimpan riwayat" di Halaman Pesanan dipasang setelah login Member selesai;
+- isian kode voucher di Checkout dipasang setelah Admin bisa membuat Voucher.
+
+Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dari halaman mana pun yang dibuka Pembeli.

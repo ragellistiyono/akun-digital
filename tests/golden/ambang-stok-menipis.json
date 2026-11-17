@@ -1,0 +1,37 @@
+{
+  "aturan": "Isian Ambang stok menipis",
+  "prd": "§9.4 (▶ Keputusan 2026-11-17), §9.8",
+  "keterangan": "Ambang stok menipis berupa bilangan bulat 0 sampai 999.",
+  "kasus": [
+    {
+      "nama": "Nol",
+      "input": { "ambang": 0 },
+      "output": { "sah": true, "alasan": null }
+    },
+    {
+      "nama": "Nilai awal",
+      "input": { "ambang": 5 },
+      "output": { "sah": true, "alasan": null }
+    },
+    {
+      "nama": "Tepat maksimum",
+      "input": { "ambang": 999 },
+      "output": { "sah": true, "alasan": null }
+    },
+    {
+      "nama": "Di atas maksimum",
+      "input": { "ambang": 1000 },
+      "output": { "sah": false, "alasan": "di-luar-rentang" }
+    },
+    {
+      "nama": "Negatif",
+      "input": { "ambang": -1 },
+      "output": { "sah": false, "alasan": "di-luar-rentang" }
+    },
+    {
+      "nama": "Pecahan",
+      "input": { "ambang": 2.5 },
+      "output": { "sah": false, "alasan": "bukan-bilangan-bulat" }
+    }
+  ]
+}

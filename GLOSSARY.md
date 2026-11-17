@@ -176,6 +176,10 @@ _Avoid_: panel admin, backoffice, CMS
 Bagian toko tempat Member melihat Riwayat Pesanan dan mengelola profilnya.
 _Avoid_: dashboard user, akun saya
 
+**Ringkasan**:
+Halaman depan dasbor admin yang berisi kartu angka dan daftar Stok menipis.
+_Avoid_: dashboard, statistik, laporan
+
 **Pengaturan toko**:
 Isian yang diubah Admin untuk nomor WhatsApp, Ambang stok menipis, dan teks halaman Syarat & Ketentuan serta Kebijakan Privasi.
 _Avoid_: settings, konfigurasi
@@ -202,6 +206,14 @@ _Avoid_: user, customer, pelanggan, pengguna
 Pembeli yang sudah punya akun login terverifikasi di toko.
 _Avoid_: akun, user, pengguna terdaftar
 
+**Member aktif**:
+Member yang sudah terverifikasi dan tidak dinonaktifkan Admin.
+_Avoid_: member valid, user aktif
+
+**Pendaftar**:
+Orang yang sudah membuat password untuk menjadi Member tetapi belum memasukkan Kode verifikasi yang benar, sehingga belum bisa login.
+_Avoid_: Member belum aktif, user pending, calon member
+
 **Member nonaktif**:
 Member yang dinonaktifkan Admin, sehingga tidak bisa login maupun checkout dengan emailnya.
 _Avoid_: diblokir, banned, suspended
@@ -209,6 +221,10 @@ _Avoid_: diblokir, banned, suspended
 **Kode verifikasi**:
 Kode 6 digit yang dikirim ke email untuk membuktikan bahwa pendaftar memang memegang email itu.
 _Avoid_: OTP, PIN, token
+
+**Tautan atur ulang password**:
+Alamat sekali pakai yang dikirim lewat email kepada Member yang lupa password, untuk membuat password baru dalam 30 menit.
+_Avoid_: reset link, token reset, link lupa password
 
 **Riwayat Pesanan**:
 Daftar semua Pesanan yang emailnya sama dengan email seorang Member.

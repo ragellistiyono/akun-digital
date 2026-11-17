@@ -49,6 +49,12 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - Pemilik menyiapkan data uji sendiri lewat dasbor admin, termasuk Produk "Uji Bayar" dengan satu Varian Rp 1.000 dan beberapa Item stok. Nama dan harga Produk seed di skenario bisa diganti dengan Produk milik pemilik yang punya sifat sama, misalnya Produk dengan dua Varian, atau Varian tanpa Item stok.
 - UAT-E6 membutuhkan Pesanan Bermasalah dari seed. Skenario ini dijalankan saat ada Pesanan Bermasalah sungguhan, atau ditunda.
 
+▶ Keputusan 2026-11-17 (#128): UAT M2 di server produksi juga dijalankan **tanpa data seed**, sama seperti M1.
+- **Voucher uji.** Buat sendiri lewat dasbor admin enam Voucher yang syaratnya sama dengan Voucher seed di atas: `HEMAT5`, `HEMAT10`, `MEMBER20`, `SATUKALI`, `LAMA`, dan `MATI`. Untuk `LAMA`, isi waktu berakhir dengan waktu yang sudah lewat.
+- **Member uji.** Daftarkan lewat halaman Daftar sebuah email yang bisa Anda buka sendiri, selain Email A dan Email B, lalu pakai email itu di setiap skenario yang menyebut `member@miwe.example`. Skenario G3 dan G4 butuh email baru lagi. Bila Anda memakai Gmail, alamat seperti `nama+uji3@gmail.com` masuk ke kotak surat yang sama tetapi dihitung sebagai email lain oleh toko.
+- **Pesanan Selesai dengan `HEMAT5`** untuk UAT-H4 langkah 5 dibuat dengan pembelian sungguhan (bayar). Ubah sementara Harga jual Uji Bayar menjadi Rp 2.000, beli dengan email Member uji dan `HEMAT5`, lalu kembalikan Harga jualnya ke Rp 1.000. Potongannya dipangkas menjadi Rp 1.000, jadi Anda membayar Rp 1.000 ditambah Kode unik (PRD §8.3).
+- **Seed lokal.** `pnpm db:seed` tetap dilengkapi Member dan Voucher sesuai daftar di atas, untuk dicoba di komputer lokal.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -81,16 +87,21 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 
 **UAT-B3 — Menonaktifkan dan mengaktifkan Member**
 - Langkah:
-  1. Sebagai Admin, buka daftar Member, lalu nonaktifkan `member@miwe.example`.
-  2. Coba login sebagai Member itu.
-  3. Sebagai Tamu, coba checkout dengan email itu.
-  4. Aktifkan kembali Member itu, lalu login lagi.
+  1. Di ponsel, login sebagai `member@miwe.example`.
+  2. Di laptop, sebagai Admin, buka daftar Member dan cari dengan "MEMBER". Lalu nonaktifkan `member@miwe.example`.
+  3. Muat ulang toko di ponsel.
+  4. Coba login lagi sebagai Member itu dengan password yang benar.
+  5. Sebagai Tamu, coba checkout dengan email itu.
+  6. Aktifkan kembali Member itu, lalu login lagi.
 - Hasil:
-  - Daftar Member menampilkan email, tanggal daftar, jumlah Pesanan Selesai, dan total belanja.
-  - Selama nonaktif, login dan checkout ditolak.
+  - Daftar Member menampilkan email, tanggal daftar, jumlah Pesanan Selesai, total belanja, dan status Aktif atau Nonaktif.
+  - Pencarian "MEMBER" menemukan `member@miwe.example`.
+  - Langkah 3: Member di ponsel sudah keluar.
+  - Langkah 4 ditolak dengan "Akun Member ini dinonaktifkan, jadi tidak bisa masuk. Hubungi kami di WhatsApp." beserta tombol WhatsApp.
+  - Langkah 5 ditolak dengan "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp."
   - Setelah diaktifkan kembali, login berhasil.
   - Admin tidak pernah melihat password Member.
-- PRD: §2.3
+- PRD: §2.3, §5.2, §7.5
 
 **UAT-B4 — Password Admin baru**
 - Langkah:
@@ -251,7 +262,7 @@ Pengarahan ke Pesanan yang menunggu saat Stok Varian 0 (§5.4 ▶ Keputusan 2026
 - Langkah: di ponsel, checkout Netflix Premium 1 Bulan dengan Email A dan Voucher `HEMAT5`.
 - Hasil:
   - Halaman menampilkan gambar QR dan hitung mundur.
-  - Rinciannya: Harga jual Rp 50.000, potongan voucher − Rp 5.000, Kode unik antara Rp 1 dan Rp 499, dan Total bayar yang sama dengan nominal di aplikasi e-wallet.
+  - Rinciannya: Harga jual Rp 50.000, "Potongan voucher (HEMAT5)" − Rp 5.000, Kode unik antara Rp 1 dan Rp 499, dan Total bayar yang sama dengan nominal di aplikasi e-wallet.
   - Tombol "Simpan gambar QR" menyimpan gambar ke galeri, dan gambar itu bisa dibuka dari aplikasi e-wallet.
   - Batalkan Pesanan setelah selesai melihat.
 - Catatan (▶ Keputusan 2026-11-12, #87): di iPhone (Safari), gambar yang diunduh masuk ke aplikasi Files, bukan galeri Foto. Catat apakah ini mengganggu; bila ya, perilakunya dijadikan tiket baru.
@@ -328,23 +339,35 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
   3. Masukkan Kode verifikasi dari email.
 - Hasil:
   - Item stok sudah tampil sebelum akun dibuat.
-  - Setelah Kode verifikasi benar, Member masuk.
+  - Setelah Kode verifikasi benar, Anda langsung masuk sebagai Member dan dibawa ke Riwayat Pesanan, tanpa login lagi.
   - Riwayat Pesanan memuat semua Pesanan Email B dari skenario sebelumnya, termasuk yang Kedaluwarsa dan Dibatalkan, dengan yang terbaru di atas.
 - PRD: §7.1, §7.3, §7.4
 
 **UAT-G2 — Email yang sudah Member (bayar)**
-- Langkah: tanpa login, beli Uji Bayar dengan email `member@miwe.example`.
+- Langkah:
+  1. Tanpa login, beli Uji Bayar dengan email `member@miwe.example`.
+  2. Login sebagai Member itu, lalu buka Halaman Pesanan tadi lagi.
+  3. Keluar, login sebagai Member Email B dari UAT-G1, lalu buka Halaman Pesanan yang sama.
 - Hasil:
-  - Halaman Pesanan menampilkan "Login untuk melihat riwayat", bukan form buat akun.
+  - Langkah 1: Halaman Pesanan menampilkan "Login untuk melihat riwayat", bukan form buat akun.
   - Setelah login, Pesanan itu ada di Riwayat Pesanan.
+  - Langkah 2: Halaman Pesanan menampilkan tautan "Lihat Riwayat Pesanan".
+  - Langkah 3: Item stok tetap tampil, tanpa ajakan apa pun.
 - PRD: §7.1, §7.4
 
 **UAT-G3 — Daftar tanpa membeli**
-- Langkah: buka tab Akun, pilih Daftar, isi email baru dan password 8 karakter, lalu masukkan Kode verifikasi.
+- Langkah:
+  1. Buka tab Akun, pilih Daftar, lalu isi email baru dengan password 7 karakter.
+  2. Isi password 8 karakter. Jangan masukkan kodenya dulu: tutup tab, lalu coba login dengan email dan password itu.
+  3. Tunggu 60 detik, daftar lagi dengan email yang sama dan password lain, lalu masukkan kode dari email pertama.
+  4. Masukkan kode dari email kedua.
+  5. Keluar, lalu daftar dengan email `member@miwe.example`.
 - Hasil:
-  - Akun aktif.
-  - Password 7 karakter ditolak.
-  - Sebelum Kode verifikasi dimasukkan, akun belum bisa dipakai login.
+  - Langkah 1 ditolak karena password kurang dari 8 karakter.
+  - Langkah 2: login ditolak dengan "Email atau password salah. Periksa keduanya, lalu coba masuk lagi."
+  - Langkah 3: kode pertama ditolak.
+  - Langkah 4: akun aktif, Anda langsung masuk, dan password yang berlaku adalah password kedua.
+  - Langkah 5 ditolak dengan "Email ini sudah terdaftar. Masuk dengan email ini, atau pakai Lupa password bila lupa password-nya."
 - PRD: §7.2, §7.3, §7.5
 
 **UAT-G4 — Aturan Kode verifikasi (tunggu)**
@@ -362,13 +385,20 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
 
 **UAT-G5 — Lupa password (tunggu)**
 - Langkah:
-  1. Minta atur ulang password untuk `member@miwe.example`, lalu pakai tautannya.
-  2. Buka tautan yang sama sekali lagi.
-  3. Minta tautan baru, tunggu 31 menit, lalu buka.
+  1. Di laptop, login sebagai `member@miwe.example`.
+  2. Di ponsel, minta atur ulang password untuk `member@miwe.example`, lalu langsung minta lagi.
+  3. Pakai tautan dari email untuk membuat password baru.
+  4. Muat ulang toko di laptop.
+  5. Buka tautan yang sama sekali lagi.
+  6. Minta atur ulang password untuk email yang tidak pernah mendaftar.
+  7. Minta tautan baru untuk `member@miwe.example`, tunggu 31 menit, lalu buka.
 - Hasil:
-  - Langkah 1 berhasil.
-  - Langkah 2 ditolak karena tautan sudah dipakai.
-  - Langkah 3 ditolak karena tautan kedaluwarsa.
+  - Langkah 2 dan 6 menampilkan pesan yang sama: "Bila email ini terdaftar sebagai Member, tautan atur ulang password sudah kami kirim. Periksa juga folder spam."
+  - Langkah 2 hanya mengirim satu email, dan langkah 6 tidak mengirim email.
+  - Langkah 3 berhasil. Halaman Masuk lalu menampilkan "Password sudah diganti. Masuk dengan password baru."
+  - Langkah 4: laptop sudah keluar.
+  - Langkah 5 ditolak karena tautan sudah dipakai.
+  - Langkah 7 ditolak karena tautan kedaluwarsa.
 - PRD: §7.5
 
 **UAT-G6 — Salah password berturut-turut (tunggu)**
@@ -385,14 +415,18 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
 
 **UAT-G7 — Dasbor Member**
 - Langkah:
-  1. Login sebagai Member dengan email yang diketik `Member@MIWE.example`.
-  2. Buka profil.
+  1. Login sebagai Member di ponsel. Di laptop, login sebagai Member yang sama dengan email yang diketik `Member@MIWE.example`.
+  2. Di laptop, buka tab Riwayat, lalu buka satu Pesanan Selesai.
+  3. Buka tab Akun. Ganti password dengan password lama yang salah, lalu dengan password lama yang benar.
+  4. Muat ulang toko di ponsel.
 - Hasil:
-  - Login berhasil.
-  - Riwayat Pesanan bisa dibuka dan Item stoknya bisa disalin.
-  - Password bisa diganti.
-  - Tidak ada isian untuk mengganti email, dan tidak ada tombol hapus akun.
-- PRD: §7.4, §7.6
+  - Login berhasil, dan bilah atas menampilkan "member", yaitu bagian email sebelum "@".
+  - Langkah 2 membuka Halaman Pesanan itu, dan Item stoknya bisa disalin.
+  - Password lama yang salah ditolak dengan "Password lama salah, jadi password tidak diganti."
+  - Dengan password lama yang benar, password diganti dan laptop tetap masuk.
+  - Langkah 4: ponsel sudah keluar.
+  - Tab Akun tidak punya isian untuk mengganti email, tidak punya tombol hapus akun, dan tidak menampilkan Riwayat Pesanan.
+- PRD: §7.4, §7.6, §11.1
 
 ## H. Voucher (§8)
 
@@ -403,7 +437,7 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   1. Checkout Netflix Premium 1 Bulan dengan `HEMAT5`.
   2. Checkout Netflix Premium 3 Bulan dengan `hemat10`, ditulis huruf kecil.
 - Hasil:
-  - Langkah 1: potongan voucher Rp 5.000.
+  - Langkah 1: tombol "Pakai" menampilkan "HEMAT5 dipakai: potongan Rp 5.000", dan Halaman bayar menampilkan "Potongan voucher (HEMAT5)" − Rp 5.000.
   - Langkah 2: potongan voucher Rp 10.000, karena 10% dari Rp 135.000 adalah Rp 13.500 dan dibatasi maksimal Rp 10.000.
 - PRD: §8.1, §8.2, §8.3
 
@@ -414,7 +448,7 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   3. Checkout Uji Bayar dengan `HEMAT5`.
 - Hasil:
   - Langkah 1: potongan voucher dipangkas menjadi Rp 2.000, sehingga Total bayar Rp 1.000 ditambah Kode unik.
-  - Langkah 3: Voucher ditolak dengan pesan "Voucher tidak memberi potongan untuk produk ini" `[CONTOH]` (OD-3).
+  - Langkah 3: Voucher ditolak dengan pesan "Voucher tidak memberi potongan untuk produk ini", dan Pesanan tidak dibuat.
 - PRD: §8.3
 
 **UAT-H3 — Syarat dan pesan penolakan**
@@ -427,7 +461,7 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   | `MATI` | "Kode voucher tidak ditemukan" |
   | `LAMA` | "Voucher sudah berakhir" |
   | `HEMAT10` untuk Uji Bayar (Rp 1.000) | "Minimal pembelian Rp 50.000" |
-  | `MEMBER20` sebagai Tamu | "Voucher khusus Member, silakan login" |
+  | `MEMBER20` sebagai Tamu | "Voucher khusus Member, silakan login", dengan tautan Masuk. Setelah login, Anda kembali ke Checkout yang sama |
   | `MEMBER20` setelah login Member | Diterima, potongan voucher Rp 10.000 untuk Netflix Premium 1 Bulan |
 
   Lalu, sebagai Admin, batasi `HEMAT5` hanya untuk Kategori Musik. Checkout Netflix Premium dengan `HEMAT5`. Pesannya: "Voucher tidak berlaku untuk produk ini". Setelah itu kembalikan cakupan `HEMAT5` ke semua Produk.
@@ -440,11 +474,13 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   3. Batalkan Pesanan Email A, lalu ulangi langkah 2.
   4. Sebagai Admin, lihat pemakaian `SATUKALI`, lalu batalkan Pesanan Email B.
   5. Checkout Netflix Premium 1 Bulan dengan email `MEMBER@miwe.example` dan `HEMAT5`.
+  6. Di browser pertama, isi Email A dan `SATUKALI`, lalu tekan "Pakai". Di browser kedua, checkout dengan Email B dan `SATUKALI` sampai halaman bayar. Kembali ke browser pertama, lalu tekan "Bayar dengan QRIS". Setelah itu batalkan Pesanan Email B.
 - Hasil:
   - Langkah 2: "Kuota voucher habis".
   - Langkah 3: diterima.
-  - Langkah 4: pemakaian `SATUKALI` tercatat 1 sebelum Pesanan Email B dibatalkan, lalu 0 sesudahnya.
+  - Langkah 4: pemakaian `SATUKALI` tercatat "1 dari 1" sebelum Pesanan Email B dibatalkan, lalu "0 dari 1" sesudahnya.
   - Langkah 5: ditolak dengan "Anda sudah memakai voucher ini", karena email itu sudah punya Pesanan Selesai yang memakai `HEMAT5`.
+  - Langkah 6: "Pakai" menerima `SATUKALI`, tetapi "Bayar dengan QRIS" ditolak dengan "Kuota voucher habis", dan Pesanan Email A tidak dibuat.
 - PRD: §8.5, §8.8
 
 **UAT-H5 — Kelola voucher**
@@ -455,12 +491,16 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   4. Coba hapus `COBA` dan `HEMAT5`.
   5. Buat Voucher `HAPUS` tanpa memakainya, lalu hapus.
   6. Nonaktifkan `HEMAT5`, lalu aktifkan kembali.
+  7. Coba buat Voucher baru dengan kode `hemat5`, lalu dengan kode `HEMAT-10`.
+  8. Buka form ubah `COBA`.
 - Hasil:
   - Langkah 2 diterima.
   - Langkah 3 ditolak dengan "Voucher sudah berakhir".
   - Langkah 4 ditolak. `COBA` pernah tercatat di Pesanan walaupun Pesanannya Dibatalkan, dan `HEMAT5` pernah dipakai.
   - Langkah 5 berhasil.
   - `HEMAT5` bisa dinonaktifkan dan diaktifkan kembali.
+  - Langkah 7: `hemat5` ditolak karena kodenya sudah dipakai, dan `HEMAT-10` ditolak karena kode hanya boleh berisi huruf dan angka.
+  - Langkah 8: kode `COBA` tidak bisa diubah.
 - PRD: §8.4, §8.8
 
 ## I. Dasbor admin (§9)
@@ -470,7 +510,9 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 - Hasil:
   - Pendapatan hari ini sama dengan hasil penjumlahan Anda, termasuk Kode unik.
   - Pesanan Bermasalah dan Dana Dikembalikan tidak ikut dihitung.
-  - Jumlah Member aktif sesuai daftar Member.
+  - Pesanan Selesai hari ini sama dengan jumlah Pesanan Selesai yang dibayar hari ini.
+  - Jumlah Member aktif sama dengan jumlah Member berstatus Aktif di daftar Member.
+  - Kartu Pesanan Bermasalah membuka daftar Pesanan yang sudah disaring ke status Bermasalah.
   - Tidak ada grafik.
 - PRD: §9.1, §9.2, §9.3
 
@@ -478,9 +520,12 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 - Langkah:
   1. Pastikan tidak ada Pesanan Menunggu Pembayaran, lalu lihat daftar "Stok menipis".
   2. Ubah Ambang stok menipis menjadi 3 di pengaturan toko.
+  3. Coba simpan Ambang stok menipis 1000.
 - Hasil:
+  - Daftar "Stok menipis" ada di Ringkasan, di bawah kartu angka. Stok Varian terkecil di atas, dan setiap baris membuka halaman Varian.
   - Langkah 1: daftar memuat Netflix Premium 3 Bulan (stok 4), YouTube Premium 1 Bulan (stok 0), YouTube Premium 3 Bulan (stok 3), dan Spotify Premium (stok 0). Netflix Premium 1 Bulan tidak masuk karena stoknya di atas 5. Uji Bayar masuk hanya bila stoknya 5 atau kurang.
   - Langkah 2: Netflix Premium 3 Bulan keluar dari daftar, sedangkan YouTube Premium 3 Bulan tetap ada.
+  - Langkah 3 ditolak, karena Ambang stok menipis hanya boleh 0 sampai 999.
   - Kembalikan ambangnya ke 5.
 - PRD: §9.4, §9.8
 
@@ -529,6 +574,7 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Pengirimnya "MIWE Digital Store".
   - Semua berbahasa Indonesia.
   - Setiap email punya footer WhatsApp dengan nomor dari pengaturan toko.
+  - Email Kode verifikasi bersubjek "Kode verifikasi: <kode>", dan email Atur ulang password bersubjek "Atur ulang password". Keduanya menyebut masa berlakunya dan meminta Anda mengabaikan email bila tidak memintanya.
   - Tidak ada email pengingat pembayaran.
 - PRD: §10.1, §10.2
 
@@ -541,8 +587,10 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   3. Buka toko di laptop.
   4. Buka dasbor admin di ponsel.
 - Hasil:
+  - Bilah atas menampilkan tombol "Masuk" untuk Tamu.
   - Tab Riwayat untuk Tamu menampilkan ajakan login dan penjelasan tentang Tautan Pesanan.
-  - Untuk Member, tab Riwayat menampilkan Riwayat Pesanan, dan tab Akun menampilkan dasbor Member.
+  - Tab Akun untuk Tamu menampilkan tombol "Masuk" dan "Daftar", tombol WhatsApp, serta tautan Syarat & Ketentuan dan Kebijakan Privasi.
+  - Untuk Member, tab Riwayat menampilkan Riwayat Pesanan. Tab Akun menampilkan email Member, form ganti password, tombol "Keluar", tombol WhatsApp, dan kedua tautan tadi.
   - Di laptop tampil navbar atas tanpa navigasi bawah.
   - Dasbor admin di ponsel memakai menu lipat.
   - Tidak ada gulir ke samping di layar selebar 360 piksel.

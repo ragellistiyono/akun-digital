@@ -1,7 +1,7 @@
 {
   "aturan": "Menghitung potongan voucher",
   "prd": "§8.2, §8.3",
-  "keterangan": "Persen dibulatkan ke bawah lalu dibatasi batas maksimum. Potongan tidak boleh membuat Harga jual − potongan < Rp 1.000. Apakah potongan Rp 0 membuat Voucher ditolak belum diputuskan (OD-3), jadi tidak diuji di sini.",
+  "keterangan": "Persen dibulatkan ke bawah lalu dibatasi batas maksimum. Potongan tidak boleh membuat Harga jual − potongan < Rp 1.000. Voucher yang potongannya Rp 0 ditolak (§8.3 ▶ Keputusan 2026-11-17, sebelumnya OD-3); hasil akhirnya ada di penerapan-voucher.json.",
   "kasus": [
     {
       "nama": "50000, nominal 5000",

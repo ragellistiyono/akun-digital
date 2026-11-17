@@ -445,6 +445,8 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 - **Kecil:** 36 px, radius 10 px, 14 px.
 - **Tombol langit:** pil 40 px dengan garis `langit-garis` di atas langit (Masuk atau nama Member). Saat hover latarnya `langit-2`.
 
+▶ Keputusan 2026-11-17 (#128): Member tidak punya nama. "Nama Member" di tombol langit dan bilah atas adalah bagian email Member sebelum "@", dipotong menjadi 12 karakter diikuti "…" bila lebih panjang (PRD §11.1, `tests/golden/label-member.json`).
+
 ### Chips
 - **Chip Kategori:** pil 40 px, latar `permukaan`, garis 1,5 px `garis`, teks label. Saat hover garisnya `monogram`. Chip yang terpilih (`aria-pressed`) berlatar `langit` dengan teks putih. Deret chip bisa digeser ke samping sampai tepi layar.
 - **Label Hemat:** pil `persik` dengan teks `persik-teks`, "Hemat N%" (PRD §3.5).
@@ -464,6 +466,8 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 ▶ Keputusan 2026-11-12 (#87):
 - Baris Varian di Kartu Produk Unggulan berurutan: nama Varian, Harga normal yang dicoret, "Hemat N%", lalu Harga jual rata kanan. Contoh: "1 Bulan · ~~Rp 75.000~~ · Hemat 33% · Rp 50.000".
 - Varian yang habis di daftar itu hanya menampilkan label Habis, tanpa Harga normal dan tanpa Harga jual.
+
+▶ Keputusan 2026-11-17 (#128): Bila Pesanan memakai Voucher, baris potongan di Rincian Total bayar ditulis "Potongan voucher (HEMAT5)", dengan kode Voucher di dalam kurung (PRD §8.8).
 
 #### Keputusan teknis: harga di kartu Produk "Mulai Rp X"
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
