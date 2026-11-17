@@ -112,6 +112,18 @@ export const batasLogin = pgTable("batas_login", {
   terkunciSampai: instan("terkunci_sampai"),
 });
 
+// Pendaftar (PRD §7.2 ▶ Keputusan 2026-11-17): orang yang sudah membuat password tetapi belum memasukkan
+// Kode verifikasi yang benar. Pendaftar belum menjadi Member, jadi disimpan terpisah dari tabel user:
+// ia tidak bisa login dan tidak terhitung sebagai Member. Satu baris per email dalam bentuk bakunya
+// (PRD §7.4). Password disimpan sebagai hash dengan format Better Auth. Hanya Kode verifikasi terakhir
+// yang disimpan, jadi setiap kode baru membuat kode sebelumnya tidak berlaku (PRD §7.2, §7.3).
+export const pendaftar = pgTable("pendaftar", {
+  email: text("email").primaryKey(),
+  password: text("password").notNull(),
+  kodeVerifikasi: text("kode_verifikasi").notNull(),
+  kodeDikirimPada: instan("kode_dikirim_pada").notNull(),
+});
+
 // Kategori (PRD §3.1): satu tingkat, dengan nama dan gambar ikon. Kolom ikon berisi nama berkas
 // gambar di folder unggahan (src/server/berkas-unggahan.ts). Nama Kategori unik (PRD §3.1 ▶ Keputusan
 // 2026-11-11); aturannya diperiksa namaKategoriDipakai di domain. Indeks unik atas nama tanpa huruf

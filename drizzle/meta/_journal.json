@@ -113,6 +113,13 @@
       "when": 1794896529681,
       "tag": "0015_peran_akun",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794897636514,
+      "tag": "0016_pendaftar",
+      "breakpoints": true
     }
   ]
 }
