@@ -20,8 +20,9 @@ type HasilPercobaanLogin = {
  * password-nya benar, dan keadaannya tidak berubah. Tepat saat kunci berakhir, login sudah boleh.
  *
  * Untuk Member nonaktif (`memberNonaktif`), password benar menghasilkan "nonaktif" tanpa login, dan
- * hitungan kesalahannya kembali ke 0 seperti password benar lainnya, karena kesalahannya tidak lagi
- * berturut-turut. Password salah dihitung seperti biasa (PRD §7.5 ▶ Keputusan 2026-11-17).
+ * keadaannya tidak berubah: hitungan kesalahan tidak naik dan tidak kembali ke 0, karena hanya login yang
+ * berhasil atau berakhirnya kunci yang mengembalikan hitungan ke 0 (PRD §7.7). Password salah dihitung
+ * seperti biasa (PRD §7.5 ▶ Keputusan 2026-11-17).
  */
 export function percobaanLogin({
   keadaan,
@@ -42,9 +43,13 @@ export function percobaanLogin({
     return { hasil: "terkunci", keadaanBaru: keadaan };
   }
 
+  if (passwordBenar && memberNonaktif) {
+    return { hasil: "nonaktif", keadaanBaru: keadaan };
+  }
+
   if (passwordBenar) {
     return {
-      hasil: memberNonaktif ? "nonaktif" : "berhasil",
+      hasil: "berhasil",
       keadaanBaru: { jumlahSalah: 0, terkunciSampai: null },
     };
   }

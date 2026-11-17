@@ -4,14 +4,14 @@ import { emailSama } from "./kesamaan-email";
 
 /**
  * Apakah email itu milik salah satu Member nonaktif (PRD §5.2 ▶ Keputusan 2026-11-17), yaitu sama menurut
- * §7.4 dengan email salah satu Member di `memberNonaktif`.
+ * §7.4 dengan email salah satu Member di `semuaMemberNonaktif`.
  */
 export function emailMilikMemberNonaktif({
   email,
-  memberNonaktif,
+  semuaMemberNonaktif,
 }: {
   email: string;
-  memberNonaktif: readonly { email: string }[];
+  semuaMemberNonaktif: readonly { email: string }[];
 }): boolean {
-  return memberNonaktif.some((member) => emailSama(member.email, email));
+  return semuaMemberNonaktif.some((member) => emailSama(member.email, email));
 }

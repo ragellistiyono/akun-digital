@@ -130,7 +130,7 @@ async function periksaCheckout<V>(
 ) {
   // Saringan Member nonaktif dan status Pesanan hanya mempersempit bacaan; emailMilikMemberNonaktif dan
   // batasPesananMenunggu yang memutuskan.
-  const memberNonaktif = await penghubung
+  const semuaMemberNonaktif = await penghubung
     .select({ email: user.email })
     .from(user)
     .where(and(eq(user.peran, "Member"), eq(user.nonaktif, true)));
@@ -146,7 +146,7 @@ async function periksaCheckout<V>(
   const { stokVarian } = await bacaStokVarian(varianId, penghubung);
   return hasilCheckout({
     varianDijual,
-    memberNonaktif: emailMilikMemberNonaktif({ email, memberNonaktif }),
+    memberNonaktif: emailMilikMemberNonaktif({ email, semuaMemberNonaktif }),
     batasPesananMenunggu: batasPesananMenunggu({ email, pesananLain }),
     stokVarian,
   });

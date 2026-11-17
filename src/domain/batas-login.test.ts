@@ -33,17 +33,18 @@ describe("percobaanLogin", () => {
 // Bila password-nya salah, ia melihat pesan password salah biasa, dan kesalahan itu dihitung (§7.7).
 // Jam dan hitungan mengikuti contoh §7.7: kesalahan kelima pukul 10.00 mengunci sampai 10.15.
 describe("percobaanLogin Member nonaktif", () => {
-  const belumSalah = { jumlahSalah: 0, terkunciSampai: null };
-
-  it("password benar menghasilkan nonaktif tanpa login, dan tidak dihitung sebagai kesalahan", () => {
+  // §7.7: hanya login yang berhasil atau berakhirnya kunci yang mengembalikan hitungan ke 0. Login Member
+  // nonaktif bukan login yang berhasil, jadi hitungannya tidak naik dan tidak kembali ke 0.
+  it("password benar menghasilkan nonaktif tanpa login, dan hitungan salahnya tidak berubah", () => {
+    const duaKaliSalah = { jumlahSalah: 2, terkunciSampai: null };
     expect(
       percobaanLogin({
-        keadaan: { jumlahSalah: 2, terkunciSampai: null },
+        keadaan: duaKaliSalah,
         sekarang: new Date("2026-11-17T10:00:00+07:00"),
         passwordBenar: true,
         memberNonaktif: true,
       }),
-    ).toEqual({ hasil: "nonaktif", keadaanBaru: belumSalah });
+    ).toEqual({ hasil: "nonaktif", keadaanBaru: duaKaliSalah });
   });
 
   it("password salah dihitung seperti biasa: salah ketiga menjadi 3", () => {

@@ -299,6 +299,32 @@ describe("login Member nonaktif (PRD §7.5 ▶ Keputusan 2026-11-17, UAT-B3 lang
     });
   });
 
+  // PRD §7.7: hanya login yang berhasil atau berakhirnya kunci yang mengembalikan hitungan ke 0.
+  it("password benar dari Member nonaktif tidak mengubah hitungan salah: tidak naik dan tidak kembali ke 0", async () => {
+    const email = await memberNonaktifBaru();
+    for (const jam of ["09:56:00", "09:57:00", "09:58:00"]) {
+      pada(jam);
+      await masukSebagaiMember(email, PASSWORD_SALAH);
+    }
+
+    pada("09:58:30");
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "nonaktif",
+    });
+
+    // Kesalahan keempat: masih ditolak biasa, jadi password benar tadi tidak dihitung sebagai kesalahan.
+    pada("09:59:00");
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+      hasil: "ditolak",
+    });
+    // Kesalahan kelima mengunci, jadi password benar tadi juga tidak mengembalikan hitungan ke 0.
+    pada("10:00:00");
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+  });
+
   it("setelah diaktifkan kembali, Member itu login dengan password benar (UAT-B3 langkah 6)", async () => {
     const email = await memberNonaktifBaru();
     const [{ id }] = await db
