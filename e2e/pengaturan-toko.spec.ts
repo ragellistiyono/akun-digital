@@ -1,7 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-import { expect, test, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 import { and, eq } from "drizzle-orm";
 
 // Bahan test katalog dan Pesanan. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk
@@ -15,8 +20,9 @@ import { sisipkanPesanan } from "../src/server/uji-pesanan";
 
 // Pengaturan toko berlaku untuk seluruh toko, jadi test di berkas ini berjalan berurutan dan setiap
 // test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13), Halaman Pesanan
-// Bermasalah (T19), login Member nonaktif (T48), dan checkout Member nonaktif (T48-b) juga diuji di sini,
-// karena hanya berkas ini yang mengubah nomor WhatsApp.
+// Bermasalah (T19), login Member nonaktif (T48), checkout Member nonaktif (T48-b), dan Tautan atur ulang
+// password milik Member nonaktif (T49-b) juga diuji di sini, karena hanya berkas ini yang mengubah nomor
+// WhatsApp.
 test.describe.configure({ mode: "serial" });
 
 const PASSWORD = "sandi-uji-admin-123";
@@ -284,6 +290,65 @@ test("checkout Varian yang stoknya habis ditolak dengan pesan stok habis tanpa t
   await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
 });
 
+const PESAN_TAUTAN_MEMBER_NONAKTIF =
+  "Akun Member ini dinonaktifkan, jadi password tidak bisa diganti. Hubungi kami di WhatsApp.";
+
+/**
+ * Member aktif baru meminta Tautan atur ulang password di halaman Lupa password, lalu Admin menonaktifkannya.
+ * Hasilnya alamat halaman tautan itu, dibaca dari email tiruan (.env.ci, APP_URL https://miwe.example
+ * [CONTOH]) tanpa alamat tokonya.
+ */
+async function tautanMemberYangLaluDinonaktifkan(
+  page: Page,
+  request: APIRequestContext,
+) {
+  const email = `budi-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  await page.goto("/lupa-password");
+  await page.getByLabel("Email").fill(email);
+  await page.getByRole("button", { name: "Kirim tautan" }).click();
+  await expect(page.getByRole("main").getByRole("status")).toBeVisible();
+  const respons = await request.get(
+    `/api/email-tiruan?kepada=${encodeURIComponent(email)}`,
+  );
+  const [surat] = (await respons.json()) as { teks: string }[];
+  const cocok = /^https:\/\/miwe\.example(\/atur-ulang-password\/\S+)$/m.exec(
+    surat.teks,
+  );
+  if (!cocok) throw new Error(`Email ke ${email} tidak memuat tautan.`);
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  await ubahStatusMember({ idMember: id, nonaktif: true });
+  return cocok[1];
+}
+
+// Issue T49-b, PRD §7.5 ▶ Keputusan 2026-11-17 (#174), UAT-G5 langkah 8.
+test("tautan atur ulang password yang dibuka setelah Member-nya dinonaktifkan menampilkan pesan nonaktif dan tombol WhatsApp, tanpa form password", async ({
+  page,
+  request,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  await page.context().clearCookies();
+  const alamat = await tautanMemberYangLaluDinonaktifkan(page, request);
+
+  await page.goto(alamat);
+
+  const isi = page.getByRole("main");
+  await expect(isi.getByRole("alert")).toHaveText(PESAN_TAUTAN_MEMBER_NONAKTIF);
+  await expect(
+    isi.getByRole("link", { name: "Hubungi kami di WhatsApp" }),
+  ).toHaveAttribute("href", "https://wa.me/6281234567890");
+  await expect(page.getByLabel("Password baru")).toHaveCount(0);
+  await expect(
+    isi.getByRole("button", { name: "Simpan password" }),
+  ).toHaveCount(0);
+});
+
 // Issue T19 dan PRD §5.9: Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp dari T05.
 test("Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp yang membuka wa.me dengan nomor dari Pengaturan toko", async ({
   page,
@@ -397,6 +462,7 @@ test("tab Akun menautkan halaman Syarat & Ketentuan dan Kebijakan Privasi", asyn
 
 test("selama nomor WhatsApp belum diisi, tab Akun tidak menampilkan tombol WhatsApp", async ({
   page,
+  request,
 }) => {
   await masukSebagaiAdmin(page);
   await bukaPengaturanToko(page);
@@ -429,6 +495,16 @@ test("selama nomor WhatsApp belum diisi, tab Akun tidak menampilkan tombol Whats
   await expect(page.getByRole("main").getByRole("alert")).toHaveText(
     PESAN_CHECKOUT_NONAKTIF,
   );
+  await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
+  await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
+
+  // Tautan atur ulang password milik Member nonaktif hanya menampilkan pesannya, tanpa form password (issue
+  // T49-b, PRD §7.5 ▶ Keputusan 2026-11-17).
+  await page.goto(await tautanMemberYangLaluDinonaktifkan(page, request));
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    PESAN_TAUTAN_MEMBER_NONAKTIF,
+  );
+  await expect(page.getByLabel("Password baru")).toHaveCount(0);
   await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
   await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
 });
