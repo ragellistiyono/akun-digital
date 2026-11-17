@@ -137,7 +137,13 @@ function TabelMember({
                 scope="row"
                 className="py-3 pr-4 font-bold [overflow-wrap:anywhere]"
               >
-                {member.email}
+                {/* Email membuka Riwayat Pesanan Member itu (PRD §2.3 ▶ Keputusan 2026-11-17). */}
+                <Link
+                  href={`${ALAMAT}/${member.id}`}
+                  className="inline-flex min-h-6 items-center text-aksi-teks underline-offset-2 hover:underline"
+                >
+                  {member.email}
+                </Link>
               </th>
               <td className="py-3 pr-4 whitespace-nowrap">
                 {tanggalWib(member.terdaftarPada)}

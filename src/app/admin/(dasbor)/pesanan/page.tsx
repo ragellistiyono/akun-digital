@@ -1,18 +1,15 @@
-import { MailX, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { z } from "zod";
 
-import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import { STATUS_PESANAN } from "@/domain/status-pesanan";
-import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { daftarPesanan } from "@/server/daftar-pesanan";
-import { waktuWib } from "@/server/zona-waktu-toko";
 
 import { KELAS_ISIAN } from "../_components/isian-form";
-import { Pil } from "../_components/pil";
+import { TabelPesanan } from "./_components/tabel-pesanan";
 
 const ALAMAT = "/admin/pesanan";
 
@@ -138,92 +135,6 @@ function FormSaringan({
 
 type HasilDaftar = Awaited<ReturnType<typeof daftarPesanan>>;
 
-/**
- * Tabel Pesanan dengan kolom PRD §9.5. Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar
- * sempit, supaya halaman tidak ikut bergulir ke samping (PRD §11.1).
- */
-function TabelPesanan({
-  semuaPesanan,
-}: {
-  semuaPesanan: HasilDaftar["pesanan"];
-}) {
-  return (
-    <div className="mt-4 max-w-[1120px] overflow-x-auto rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
-      <table className="w-full min-w-[880px] text-left">
-        <caption className="sr-only">Daftar Pesanan</caption>
-        <thead className="text-[13px] font-bold text-tinta-redup">
-          <tr className="border-b border-garis">
-            <th scope="col" className="py-2 pr-4">
-              Nomor Pesanan
-            </th>
-            <th scope="col" className="py-2 pr-4">
-              Waktu dibuat (WIB)
-            </th>
-            <th scope="col" className="min-w-48 py-2 pr-4">
-              Email
-            </th>
-            <th scope="col" className="min-w-48 py-2 pr-4">
-              Produk dan Varian
-            </th>
-            <th scope="col" className="py-2 pr-4 text-right">
-              Total bayar
-            </th>
-            <th scope="col" className="py-2">
-              Status
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {semuaPesanan.map((satu) => (
-            <tr
-              key={satu.nomorPesanan}
-              className="border-b border-garis align-top last:border-b-0"
-            >
-              <th
-                scope="row"
-                className="py-3 pr-4 font-mono text-[13px] font-bold whitespace-nowrap"
-              >
-                {/* Nomor Pesanan membuka detail Pesanan (PRD §9.5). */}
-                <Link
-                  href={`${ALAMAT}/${satu.nomorPesanan}`}
-                  className="inline-flex min-h-6 items-center text-aksi-teks underline-offset-2 hover:underline"
-                >
-                  {satu.nomorPesanan}
-                </Link>
-              </th>
-              <td className="py-3 pr-4 whitespace-nowrap">
-                {satu.waktuDibuat ? waktuWib(satu.waktuDibuat) : "—"}
-              </td>
-              <td className="py-3 pr-4 [overflow-wrap:anywhere]">
-                {satu.email}
-              </td>
-              <td className="py-3 pr-4 [overflow-wrap:anywhere]">
-                <span className="font-bold">{satu.namaProduk}</span>{" "}
-                <span className="text-tinta-redup">· {satu.namaVarian}</span>
-              </td>
-              <td className="py-3 pr-4 text-right font-bold whitespace-nowrap">
-                {rupiah(satu.totalBayar)}
-              </td>
-              <td className="py-3">
-                <div className="flex flex-wrap gap-2">
-                  <PilStatusPesanan status={satu.status} />{" "}
-                  {satu.emailGagal && (
-                    <Pil
-                      ikon={MailX}
-                      label="Email gagal"
-                      className="bg-st-masalah-bg text-st-masalah"
-                    />
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /** Tautan ke halaman sebelum dan sesudahnya, bila daftar punya lebih dari satu halaman. */
 function NavigasiHalaman({
   saringan,
@@ -331,7 +242,10 @@ export default async function HalamanDaftarPesanan({
               {daftar.jumlahHalaman} halaman. Pilih Sebelumnya untuk kembali.
             </p>
           ) : (
-            <TabelPesanan semuaPesanan={daftar.pesanan} />
+            <TabelPesanan
+              semuaPesanan={daftar.pesanan}
+              judul="Daftar Pesanan"
+            />
           )}
           <NavigasiHalaman saringan={saringan} daftar={daftar} />
         </>

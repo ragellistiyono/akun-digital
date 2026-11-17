@@ -7,7 +7,7 @@ import { rupiah } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { jumlahPesananBermasalah } from "@/server/daftar-pesanan";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
-import { angkaRingkasan } from "@/server/ringkasan";
+import { angkaMemberAktif, angkaRingkasan } from "@/server/ringkasan";
 import { daftarStokMenipis } from "@/server/stok-menipis";
 
 import { DaftarStokMenipis } from "./_components/daftar-stok-menipis";
@@ -61,13 +61,14 @@ function KartuHariIniBulanIni({
   );
 }
 
-// Halaman depan dasbor admin (PRD §9.2): kartu angka, lalu daftar Stok menipis di bawahnya (PRD §9.4). Kartu
-// Member aktif ditambahkan oleh tiketnya sendiri. Ringkasan hanya berupa angka, tanpa grafik.
+// Halaman depan dasbor admin (PRD §9.2): kartu angka dengan urutan PRD §9.2, lalu daftar Stok menipis di
+// bawahnya (PRD §9.4). Ringkasan hanya berupa angka, tanpa grafik.
 export default async function HalamanRingkasan() {
   await wajibSesiAdmin(await headers());
   const { ambangStokMenipis } = await bacaPengaturanToko();
-  const [angka, bermasalah, stokMenipis] = await Promise.all([
+  const [angka, memberAktif, bermasalah, stokMenipis] = await Promise.all([
     angkaRingkasan(),
+    angkaMemberAktif(),
     jumlahPesananBermasalah(),
     daftarStokMenipis({ ambang: ambangStokMenipis }),
   ]);
@@ -92,6 +93,17 @@ export default async function HalamanRingkasan() {
           bulanIni={String(angka.bulanIni.pesananSelesai.jumlah)}
           keterangan="Dihitung menurut waktu pembayaran (WIB), bukan waktu Pesanan dibuat."
         />
+
+        <article aria-labelledby="kartu-member-aktif" className={KELAS_KARTU}>
+          <h2 id="kartu-member-aktif" className="text-sm font-bold">
+            Member aktif
+          </h2>
+          <p className={KELAS_ANGKA}>{memberAktif.jumlah}</p>
+          <p className={KELAS_KETERANGAN}>
+            Member yang sudah diverifikasi dan tidak nonaktif, sama dengan
+            Member berstatus Aktif di daftar Member. Pendaftar tidak dihitung.
+          </p>
+        </article>
 
         <article aria-labelledby="kartu-pesanan-bermasalah">
           <Link
