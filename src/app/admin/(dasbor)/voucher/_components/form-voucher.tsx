@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
-import type { JenisPotongan } from "@/domain/isian-voucher";
+import type { JenisCakupan, JenisPotongan } from "@/domain/isian-voucher";
 import { cn } from "@/lib/utils";
 
 import {
@@ -23,6 +23,71 @@ const PILIHAN_JENIS: { nilai: JenisPotongan; label: string }[] = [
   { nilai: "nominal", label: "Nominal tetap" },
   { nilai: "persen", label: "Persen" },
 ];
+
+const PILIHAN_CAKUPAN: { nilai: JenisCakupan; label: string }[] = [
+  { nilai: "semua", label: "Semua Produk" },
+  { nilai: "produk", label: "Produk tertentu" },
+  { nilai: "kategori", label: "Kategori tertentu" },
+];
+
+/** Produk yang bisa dipilih di Cakupan voucher, beserta nama Kategori-nya sebagai pembeda. */
+type PilihanProduk = { id: string; nama: string; namaKategori: string };
+
+/** Kategori yang bisa dipilih di Cakupan voucher. */
+type PilihanKategori = { id: string; nama: string };
+
+/**
+ * Daftar kotak centang Produk atau Kategori untuk Cakupan voucher. Setiap pilihan terkirim dengan `nama` yang
+ * sama, satu kali untuk setiap kotak yang dicentang.
+ */
+function DaftarCentang({
+  nama,
+  legenda,
+  pilihan,
+  terpilih,
+  kosong,
+}: {
+  nama: "produkId" | "kategoriId";
+  legenda: string;
+  pilihan: { id: string; nama: string; keterangan?: string }[];
+  terpilih: string[];
+  kosong: string;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-bold">{legenda}</legend>
+      {pilihan.length === 0 ? (
+        <p className="text-tinta-redup">{kosong}</p>
+      ) : (
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+          {pilihan.map((satu) => (
+            <label
+              key={satu.id}
+              className="flex min-h-10 items-center gap-3 text-base"
+            >
+              <input
+                type="checkbox"
+                name={nama}
+                value={satu.id}
+                defaultChecked={terpilih.includes(satu.id)}
+                className="size-6 shrink-0 accent-aksi"
+              />
+              <span className="min-w-0 break-words">
+                {satu.nama}
+                {satu.keterangan && (
+                  <span className="text-[13px] text-tinta-redup">
+                    {" "}
+                    · {satu.keterangan}
+                  </span>
+                )}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
+    </fieldset>
+  );
+}
 
 /** Isian tanggal dan jam sampai menit, yang dibaca server sebagai WIB (PRD §8.4, §9.1). */
 function IsianWaktu({
@@ -62,14 +127,20 @@ function IsianWaktu({
 /**
  * Form Voucher untuk membuat (tanpa `idVoucher`) atau mengubah Voucher yang sudah ada (PRD §8.2, §8.4
  * ▶ Keputusan 2026-11-17). Kode hanya bisa diisi saat Voucher dibuat; di form ubah, kode hanya ditampilkan.
- * Batas maksimum hanya tampil untuk jenis persen. Cakupan voucher untuk sementara selalu semua Produk.
+ * Batas maksimum hanya tampil untuk jenis persen. Cakupan voucher berupa semua Produk, Produk tertentu, atau
+ * Kategori tertentu; hanya daftar centang untuk cakupan terpilih yang tampil, jadi Produk dan Kategori tidak
+ * dicampur.
  */
 export function FormVoucher({
   idVoucher,
   awal,
+  pilihanProduk,
+  pilihanKategori,
 }: {
   idVoucher?: string;
   awal: KeadaanFormVoucher;
+  pilihanProduk: PilihanProduk[];
+  pilihanKategori: PilihanKategori[];
 }) {
   const [keadaan, aksi, sedangMenyimpan] = useActionState(
     idVoucher ? aksiUbahVoucher : aksiBuatVoucher,
@@ -77,6 +148,7 @@ export function FormVoucher({
   );
   const { isian, galat } = keadaan;
   const [jenis, setJenis] = useState(isian.jenisPotongan);
+  const [cakupan, setCakupan] = useState(isian.cakupan);
 
   return (
     <form
@@ -193,10 +265,58 @@ export function FormVoucher({
         inputMode="numeric"
       />
 
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-bold">Cakupan voucher</p>
-        <p>Semua Produk</p>
-      </div>
+      <fieldset
+        className="flex flex-col gap-2"
+        aria-describedby="cakupan-keterangan"
+      >
+        <legend className="mb-2 text-sm font-bold">Cakupan voucher</legend>
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          {PILIHAN_CAKUPAN.map((pilihan) => (
+            <label
+              key={pilihan.nilai}
+              className="flex min-h-10 items-center gap-3 text-base"
+            >
+              <input
+                type="radio"
+                name="cakupan"
+                value={pilihan.nilai}
+                defaultChecked={isian.cakupan === pilihan.nilai}
+                onChange={() => setCakupan(pilihan.nilai)}
+                className="size-6 shrink-0 accent-aksi"
+              />
+              {pilihan.label}
+            </label>
+          ))}
+        </div>
+        <Keterangan
+          id="cakupan-keterangan"
+          galat={galat?.cakupan}
+          bantuan="Voucher hanya berlaku untuk Produk atau Kategori yang dicentang. Produk dan Kategori tidak bisa dicampur dalam satu Voucher."
+        />
+      </fieldset>
+
+      {cakupan === "produk" && (
+        <DaftarCentang
+          nama="produkId"
+          legenda="Produk"
+          pilihan={pilihanProduk.map((p) => ({
+            id: p.id,
+            nama: p.nama,
+            keterangan: p.namaKategori,
+          }))}
+          terpilih={isian.produkId}
+          kosong="Belum ada Produk. Buat Produk dulu, atau pilih Semua Produk."
+        />
+      )}
+      {cakupan === "kategori" && (
+        <DaftarCentang
+          nama="kategoriId"
+          legenda="Kategori"
+          pilihan={pilihanKategori}
+          terpilih={isian.kategoriId}
+          kosong="Belum ada Kategori. Buat Kategori dulu, atau pilih Semua Produk."
+        />
+      )}
 
       <KotakCentang
         nama="khususMember"

@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { afterAll, describe, expect, it } from "vitest";
 
+import type { CakupanVoucher } from "@/domain/isian-voucher";
+
 import { koneksi } from "./db";
 import {
   buatKategori,
@@ -11,6 +13,7 @@ import {
 } from "./kategori";
 import { sisipkanProduk } from "./uji-katalog";
 import { adaBerkasBerisi, pngUnik } from "./uji-unggahan";
+import { bacaVoucher, buatVoucher, daftarVoucher } from "./voucher";
 
 // Test integrasi dengan database app_test dan folder unggahan dari .env.ci. PostgreSQL menolak teks
 // yang memuat karakter NUL, jadi nama seperti itu dipakai untuk membuat penulisan database gagal.
@@ -27,6 +30,28 @@ async function kategoriBernama(nama: string) {
 afterAll(async () => {
   await koneksi.end();
 });
+
+/** Voucher nominal Rp 5.000 dengan cakupan yang diberikan, dibuat seperti dari form Admin. Hasilnya id-nya. */
+async function voucherBercakupan(cakupan: CakupanVoucher) {
+  const kode = `V${randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+  await buatVoucher({
+    kode,
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan,
+    khususMember: false,
+    aktif: true,
+  });
+  const voucher = (await daftarVoucher()).find((v) => v.kode === kode);
+  if (!voucher) throw new Error("Voucher tidak tersimpan");
+  return voucher.id;
+}
 
 describe("nama Kategori unik saat dua penyimpanan terjadi bersamaan (PRD §3.1)", () => {
   // Kategori yang kalah tidak meninggalkan berkas ikon, jadi tepat satu dari kedua isi ikon tersimpan.
@@ -190,6 +215,26 @@ describe("hapusKategori", () => {
 
     expect(await kategoriBernama(nama)).toEqual([]);
     expect(await adaBerkasBerisi(isi)).toBe(false);
+  });
+
+  it("Kategori kosong yang ada di cakupan sebuah Voucher tetap terhapus, dan hilang dari cakupan itu (T54)", async () => {
+    const film = namaUnik("Film");
+    const musik = namaUnik("Musik");
+    await buatKategori({ nama: film, ikon: gambar(pngUnik()) });
+    await buatKategori({ nama: musik, ikon: gambar(pngUnik()) });
+    const [{ id: filmId }] = await kategoriBernama(film);
+    const [{ id: musikId }] = await kategoriBernama(musik);
+    const voucherId = await voucherBercakupan({
+      jenis: "kategori",
+      daftar: [filmId, musikId],
+    });
+
+    expect(await hapusKategori(filmId)).toEqual({ hasil: "dihapus" });
+
+    expect((await bacaVoucher(voucherId))?.cakupan).toEqual({
+      jenis: "kategori",
+      daftar: [musikId],
+    });
   });
 
   it("Kategori yang tidak ada tidak menghapus apa pun", async () => {

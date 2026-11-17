@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { auth } from "@/server/auth/auth";
 import { koneksi } from "@/server/db";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
+import { sisipkanKategori, sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 import { bacaVoucher, daftarVoucher } from "@/server/voucher";
 
@@ -65,17 +66,23 @@ const AWAL: KeadaanFormVoucher = {
     minimalHargaJual: "",
     khususMember: false,
     aktif: true,
+    cakupan: "semua",
+    produkId: [],
+    kategoriId: [],
   },
 };
 
-function formulir(isian: Record<string, string>) {
+/** Isian form. Isian berisi daftar dikirim berulang dengan nama yang sama, seperti kotak centang. */
+function formulir(isian: Record<string, string | string[]>) {
   const data = new FormData();
-  for (const [nama, nilai] of Object.entries(isian)) data.set(nama, nilai);
+  for (const [nama, nilai] of Object.entries(isian)) {
+    for (const satu of [nilai].flat()) data.append(nama, satu);
+  }
   return data;
 }
 
 /** Form Voucher baru dengan isian bawaannya, ditimpa `isian`. */
-const formBaru = (isian: Record<string, string>) =>
+const formBaru = (isian: Record<string, string | string[]>) =>
   formulir({
     jenisPotongan: "nominal",
     batasPerEmail: "1",
@@ -89,7 +96,9 @@ async function voucherDenganKode(kode: string) {
 }
 
 /** Membuat Voucher lewat aksi sebagai Admin, lalu mengembalikan Voucher yang tersimpan. */
-async function buatSebagaiAdmin(isian: Record<string, string>) {
+async function buatSebagaiAdmin(
+  isian: Record<string, string | string[]> & { kode: string },
+) {
   sebagaiPengunjung(await cookieAdminBaru());
   await expect(aksiBuatVoucher(AWAL, formBaru(isian))).rejects.toSatisfy(
     arahKe("/admin/voucher"),
@@ -230,6 +239,119 @@ describe("aksiBuatVoucher", () => {
       jenisPotongan: "persen",
       nilai: "101",
       kuotaVoucher: "0",
+    });
+  });
+});
+
+const akhiranUnik = () => randomUUID().slice(0, 8);
+
+/** Produk uji dengan satu Varian di Kategorinya sendiri. Hasilnya id Produk itu. */
+const produkBaru = (nama: string) =>
+  sisipkanProduk({
+    nama: `${nama} ${akhiranUnik()}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+  });
+
+// Cakupan voucher (T54, PRD §8.4 ▶ Keputusan 2026-11-17): semua Produk, satu Produk atau lebih, atau satu
+// Kategori atau lebih, tanpa mencampur Produk dan Kategori.
+describe("cakupan voucher", () => {
+  it("Voucher baru tanpa pilihan cakupan berlaku untuk semua Produk", async () => {
+    const voucher = await buatSebagaiAdmin({ kode: kodeBaru(), nilai: "5000" });
+
+    expect((await bacaVoucher(voucher.id))?.cakupan).toEqual({
+      jenis: "semua",
+    });
+  });
+
+  it("Voucher dibatasi untuk dua Produk sekaligus, dan Voucher yang tersimpan membawa kedua Produk itu", async () => {
+    const netflix = await produkBaru("Netflix Premium");
+    const spotify = await produkBaru("Spotify Premium");
+
+    const voucher = await buatSebagaiAdmin({
+      kode: kodeBaru(),
+      nilai: "5000",
+      cakupan: "produk",
+      produkId: [netflix, spotify],
+    });
+
+    const cakupan = (await bacaVoucher(voucher.id))?.cakupan;
+    expect(cakupan?.jenis).toBe("produk");
+    expect(
+      cakupan && "daftar" in cakupan ? [...cakupan.daftar].sort() : [],
+    ).toEqual([netflix, spotify].sort());
+  });
+
+  it.each([
+    [
+      "produk",
+      "Belum ada Produk yang dipilih. Centang satu Produk atau lebih, atau pilih Semua Produk.",
+    ],
+    [
+      "kategori",
+      "Belum ada Kategori yang dipilih. Centang satu Kategori atau lebih, atau pilih Semua Produk.",
+    ],
+  ])(
+    "cakupan %s tanpa satu pun pilihan ditolak dengan pesan, dan Voucher tidak dibuat",
+    async (cakupan, pesan) => {
+      sebagaiPengunjung(await cookieAdminBaru());
+      const kode = kodeBaru();
+
+      const hasil = await aksiBuatVoucher(
+        AWAL,
+        formBaru({ kode, nilai: "5000", cakupan }),
+      );
+
+      expect(hasil.galat).toEqual({ cakupan: pesan });
+      expect(hasil.isian.cakupan).toBe(cakupan);
+      expect(await voucherDenganKode(kode)).toBeUndefined();
+    },
+  );
+
+  it("Produk dan Kategori tidak tersimpan bersamaan: hanya pilihan untuk jenis cakupan terpilih yang disimpan", async () => {
+    const netflix = await produkBaru("Netflix Premium");
+    const musik = await sisipkanKategori({ nama: `Musik ${akhiranUnik()}` });
+
+    const voucher = await buatSebagaiAdmin({
+      kode: kodeBaru(),
+      nilai: "5000",
+      cakupan: "kategori",
+      produkId: [netflix],
+      kategoriId: [musik],
+    });
+
+    expect((await bacaVoucher(voucher.id))?.cakupan).toEqual({
+      jenis: "kategori",
+      daftar: [musik],
+    });
+  });
+
+  it("Admin membatasi Voucher hanya untuk Kategori Musik, lalu mengembalikannya ke semua Produk (UAT-H3)", async () => {
+    const musik = await sisipkanKategori({ nama: `Musik ${akhiranUnik()}` });
+    const voucher = await buatSebagaiAdmin({ kode: kodeBaru(), nilai: "5000" });
+    const ubah = (isian: Record<string, string | string[]>) =>
+      expect(
+        aksiUbahVoucher(
+          AWAL,
+          formulir({
+            id: voucher.id,
+            jenisPotongan: "nominal",
+            nilai: "5000",
+            batasPerEmail: "1",
+            aktif: "on",
+            ...isian,
+          }),
+        ),
+      ).rejects.toSatisfy(arahKe("/admin/voucher"));
+
+    await ubah({ cakupan: "kategori", kategoriId: [musik] });
+    expect((await bacaVoucher(voucher.id))?.cakupan).toEqual({
+      jenis: "kategori",
+      daftar: [musik],
+    });
+
+    await ubah({ cakupan: "semua", kategoriId: [musik] });
+    expect((await bacaVoucher(voucher.id))?.cakupan).toEqual({
+      jenis: "semua",
     });
   });
 });

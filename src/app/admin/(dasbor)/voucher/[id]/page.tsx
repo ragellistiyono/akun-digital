@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { angkaRupiah } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
+import { daftarKategori } from "@/server/kategori";
+import { daftarProduk } from "@/server/produk";
 import { bacaVoucher } from "@/server/voucher";
 import { isianWib } from "@/server/zona-waktu-toko";
 
@@ -14,7 +16,8 @@ const teksAngka = (nilai: number | null, rupiah = false) =>
   nilai === null ? "" : rupiah ? angkaRupiah(nilai) : String(nilai);
 
 // Mengubah syarat sebuah Voucher (PRD §8.4 ▶ Keputusan 2026-11-17, §8.8). Kodenya hanya ditampilkan, karena
-// kode tidak bisa diubah setelah Voucher dibuat.
+// kode tidak bisa diubah setelah Voucher dibuat. Cakupan voucher yang tersimpan tampil sebagai pilihan
+// yang tercentang.
 export default async function HalamanUbahVoucher({
   params,
 }: PageProps<"/admin/voucher/[id]">) {
@@ -23,6 +26,11 @@ export default async function HalamanUbahVoucher({
   const id = z.uuid().safeParse((await params).id);
   const voucher = id.success ? await bacaVoucher(id.data) : null;
   if (!voucher) notFound();
+  const [semuaProduk, semuaKategori] = await Promise.all([
+    daftarProduk(),
+    daftarKategori(),
+  ]);
+  const { cakupan } = voucher;
 
   const nominal = voucher.jenisPotongan === "nominal";
   return (
@@ -43,8 +51,13 @@ export default async function HalamanUbahVoucher({
             minimalHargaJual: teksAngka(voucher.minimalHargaJual, true),
             khususMember: voucher.khususMember,
             aktif: voucher.aktif,
+            cakupan: cakupan.jenis,
+            produkId: cakupan.jenis === "produk" ? [...cakupan.daftar] : [],
+            kategoriId: cakupan.jenis === "kategori" ? [...cakupan.daftar] : [],
           },
         }}
+        pilihanProduk={semuaProduk}
+        pilihanKategori={semuaKategori}
       />
     </>
   );

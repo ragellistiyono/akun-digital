@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import postgres from "postgres";
 
+import { sisipkanKategori, sisipkanProduk } from "../src/server/uji-katalog";
+
 // Membuat, mengubah, menonaktifkan, dan mengaktifkan kembali Voucher di dasbor admin (T53, PRD §8.2, §8.4,
 // §8.8 ▶ Keputusan 2026-11-17, UAT-H5 langkah 6–8).
 const PASSWORD = "sandi-uji-admin-123";
@@ -172,6 +174,98 @@ test("Admin membuat HEMAT5 dan HEMAT10, menolak kode kembar dan kode bertanda hu
   await expect(
     hemat5.getByRole("button", { name: "Nonaktifkan HEMAT5" }),
   ).toBeVisible();
+});
+
+// Cakupan voucher (T54, PRD §8.4 ▶ Keputusan 2026-11-17, UAT-H3 bagian Admin). Pemeriksaan cakupan saat
+// checkout ada di T56.
+test("Admin membatasi HEMAT5 hanya untuk Kategori Musik, lalu untuk dua Produk, lalu mengembalikannya ke semua Produk", async ({
+  page,
+}) => {
+  const akhiran = randomUUID().slice(0, 8);
+  const musik = `Musik ${akhiran}`;
+  const netflix = `Netflix Premium ${akhiran}`;
+  const spotify = `Spotify Premium ${akhiran}`;
+  const kategoriMusik = await sisipkanKategori({ nama: musik });
+  await sisipkanProduk({
+    nama: netflix,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+  });
+  await sisipkanProduk({
+    nama: spotify,
+    kategoriId: kategoriMusik,
+    varian: [{ nama: "1 Bulan", hargaJual: 30000 }],
+  });
+  // HEMAT5 dibuat test sebelumnya; bila test itu tidak berjalan, HEMAT5 dibuat di sini.
+  const sql = postgres(process.env.DATABASE_URL ?? "", {
+    max: 1,
+    onnotice: () => {},
+  });
+  try {
+    await sql`insert into voucher (kode, jenis_potongan, nilai, batas_per_email)
+      values ('HEMAT5', 'nominal', 5000, 1) on conflict do nothing`;
+  } finally {
+    await sql.end();
+  }
+
+  await masukSebagaiAdmin(page);
+  const bukaUbahHemat5 = async () => {
+    await page.goto("/admin/voucher");
+    await barisVoucher(page, "HEMAT5")
+      .getByRole("link", { name: "Ubah HEMAT5" })
+      .click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Ubah Voucher" }),
+    ).toBeVisible();
+  };
+  const cakupan = (label: string) => page.getByRole("radio", { name: label });
+
+  // UAT-H3: HEMAT5 hanya untuk Kategori Musik.
+  await bukaUbahHemat5();
+  await expect(cakupan("Semua Produk")).toBeChecked();
+  await cakupan("Kategori tertentu").check();
+  await expect(page.getByRole("checkbox", { name: netflix })).toHaveCount(0);
+  await page.getByRole("checkbox", { name: musik, exact: true }).check();
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(page).toHaveURL("/admin/voucher");
+
+  await bukaUbahHemat5();
+  await expect(cakupan("Kategori tertentu")).toBeChecked();
+  await expect(
+    page.getByRole("checkbox", { name: musik, exact: true }),
+  ).toBeChecked();
+
+  // Pindah ke Produk tertentu: daftar Kategori hilang, jadi Produk dan Kategori tidak bisa dicampur.
+  await cakupan("Produk tertentu").check();
+  await expect(
+    page.getByRole("checkbox", { name: musik, exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(
+    page.getByRole("group", { name: "Cakupan voucher" }),
+  ).toHaveAccessibleDescription(
+    "Belum ada Produk yang dipilih. Centang satu Produk atau lebih, atau pilih Semua Produk.",
+  );
+  await expect(page).toHaveURL(/\/admin\/voucher\/[0-9a-f-]{36}$/);
+
+  // Dua Produk sekaligus, dan form ubah menampilkan pilihan yang tersimpan.
+  await page.getByRole("checkbox", { name: netflix }).check();
+  await page.getByRole("checkbox", { name: spotify }).check();
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(page).toHaveURL("/admin/voucher");
+
+  await bukaUbahHemat5();
+  await expect(cakupan("Produk tertentu")).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: netflix })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: spotify })).toBeChecked();
+
+  // UAT-H3: cakupan HEMAT5 dikembalikan ke semua Produk.
+  await cakupan("Semua Produk").check();
+  await expect(page.getByRole("checkbox", { name: netflix })).toHaveCount(0);
+  await page.getByRole("button", { name: "Simpan" }).click();
+  await expect(page).toHaveURL("/admin/voucher");
+
+  await bukaUbahHemat5();
+  await expect(cakupan("Semua Produk")).toBeChecked();
 });
 
 test("Tamu yang membuka daftar atau form Voucher diarahkan ke halaman login admin", async ({
