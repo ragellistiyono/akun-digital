@@ -8,6 +8,7 @@ import {
   Package,
   ReceiptText,
   Settings,
+  TicketPercent,
   TriangleAlert,
   Users,
   X,
@@ -31,6 +32,7 @@ const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/member", label: "Member", ikon: Users },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
   { href: "/admin/produk", label: "Produk", ikon: Package },
+  { href: "/admin/voucher", label: "Voucher", ikon: TicketPercent },
   { href: "/admin/pengaturan", label: "Pengaturan toko", ikon: Settings },
 ];
 

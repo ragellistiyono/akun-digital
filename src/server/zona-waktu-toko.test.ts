@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  instanDariIsianWib,
+  isianWib,
   jamWibDibulatkanKeAtas,
   rentangTanggalWib,
   tanggalWib,
@@ -97,5 +99,27 @@ describe("tanggalWib", () => {
 
   it("memakai tanggal WIB walaupun tanggal UTC-nya masih kemarin", () => {
     expect(tanggalWib(new Date("2026-11-30T17:05:00Z"))).toBe("1 Des 2026");
+  });
+});
+
+// PRD §8.4: masa berlaku Voucher diisi sampai menit dalam Zona waktu toko, lewat isian tanggal-dan-jam
+// browser yang berbentuk "YYYY-MM-DDTHH:MM" tanpa zona.
+describe("instanDariIsianWib", () => {
+  it("membaca 30 November 23.59 WIB sebagai instan UTC 16.59", () => {
+    expect(instanDariIsianWib("2026-11-30T23:59")).toEqual(
+      new Date("2026-11-30T16:59:00Z"),
+    );
+  });
+
+  it("menolak teks yang bukan tanggal dan jam sampai menit", () => {
+    expect(instanDariIsianWib("30-11-2026 23.59")).toBeNull();
+    expect(instanDariIsianWib("2026-11-30T23:59:40")).toBeNull();
+    expect(instanDariIsianWib("2026-02-30T10:00")).toBeNull();
+  });
+});
+
+describe("isianWib", () => {
+  it("menulis instan sebagai isian tanggal-dan-jam WIB", () => {
+    expect(isianWib(new Date("2026-11-30T17:05:00Z"))).toBe("2026-12-01T00:05");
   });
 });

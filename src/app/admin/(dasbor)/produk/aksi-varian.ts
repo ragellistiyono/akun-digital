@@ -11,7 +11,7 @@ import {
   periksaHarga,
   type AlasanHargaDitolak,
 } from "@/domain/validasi-harga";
-import { rupiah } from "@/lib/rupiah";
+import { rupiah, rupiahDariTeks } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { hapusVarian, tambahVarian, ubahVarian } from "@/server/varian";
 
@@ -50,17 +50,6 @@ function bacaId(formData: FormData, nama: string) {
   const id = z.uuid().safeParse(formData.get(nama));
   if (!id.success) notFound();
   return id.data;
-}
-
-// Harga ditulis seperti kebiasaan di Indonesia: titik memisahkan ribuan dan koma memisahkan sen,
-// boleh diawali "Rp". Contohnya "50000", "50.000", "Rp 50.000", dan "1.500,5".
-const POLA_RUPIAH = /^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d+)?$/;
-
-/** Nilai rupiah dari teks isian, atau null bila teksnya bukan angka rupiah. */
-function rupiahDariTeks(teks: string) {
-  const angka = teks.replace(/^rp\.?\s*/i, "");
-  if (!POLA_RUPIAH.test(angka)) return null;
-  return Number(angka.replaceAll(".", "").replace(",", "."));
 }
 
 const Nama = z
