@@ -23,3 +23,8 @@ export async function bacaEmailPendaftar() {
   const email = z.email().safeParse(isi);
   return email.success ? email.data : null;
 }
+
+/** Menghapus email Pendaftar dari cookie browser ini, setelah ia menjadi Member. */
+export async function hapusEmailPendaftar() {
+  (await cookies()).delete(COOKIE_EMAIL_PENDAFTAR);
+}

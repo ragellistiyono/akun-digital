@@ -1,0 +1,1 @@
+ALTER TABLE "pendaftar" ADD COLUMN "jumlah_salah_kode" integer DEFAULT 0 NOT NULL;
