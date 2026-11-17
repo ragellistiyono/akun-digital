@@ -4,7 +4,7 @@
 // ada di src/domain/stok-varian.ts; kapan dan bagaimana Item stok Terkirim tampil ada di
 // src/domain/item-stok-terkirim.ts; batas Pesanan Menunggu Pembayaran per email ada di
 // src/domain/batas-pesanan-menunggu.ts; email Member nonaktif ada di src/domain/member-nonaktif.ts; urutan
-// pemeriksaan checkout ada di src/domain/checkout.ts.
+// pemeriksaan checkout ada di src/domain/checkout.ts; penilaian Voucher ada di src/server/penilaian-voucher.ts.
 import { randomBytes } from "node:crypto";
 
 import { and, DrizzleQueryError, eq, sql } from "drizzle-orm";
@@ -12,7 +12,7 @@ import postgres from "postgres";
 import { z } from "zod";
 
 import { batasPesananMenunggu } from "@/domain/batas-pesanan-menunggu";
-import { hasilCheckout, type HasilCheckout } from "@/domain/checkout";
+import { hasilCheckout } from "@/domain/checkout";
 import {
   itemStokTampil,
   kolomItemStokTerkirim,
@@ -34,9 +34,10 @@ import {
 import { bukaItemStok } from "./enkripsi-item-stok";
 import { bacaStokVarian } from "./item-stok";
 import { jadwalkanKedaluwarsaPesanan } from "./pekerjaan-latar";
+import { nilaiVoucherCheckout } from "./penilaian-voucher";
 import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
 
-/** Voucher baru ada di M2 (PRD §13), jadi potongan voucher setiap Pesanan saat ini Rp 0. */
+/** Potongan voucher Pesanan tanpa Voucher, dan Perkiraan bayar di form Checkout sebelum Voucher dipakai. */
 const POTONGAN_VOUCHER_TANPA_VOUCHER = 0;
 
 /**
@@ -45,7 +46,10 @@ const POTONGAN_VOUCHER_TANPA_VOUCHER = 0;
  */
 const KUNCI_BATAS_PESANAN_MENUNGGU = "batas-pesanan-menunggu";
 
-/** Berapa kali Nomor Pesanan dibuat ulang bila nomornya sudah dipakai Pesanan lain. */
+/**
+ * Berapa kali checkout dicoba ulang bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, atau potongan Voucher
+ * yang dipakai berubah setelah QRIS diminta.
+ */
 const BATAS_PERCOBAAN_NOMOR = 5;
 
 const nomorPesananAcak = () => nomorPesanan(randomBytes(6));
@@ -78,13 +82,18 @@ async function batalkanQrisTakTerpakai(qrispy: Qrispy, qris: QrisBaru) {
   }
 }
 
-/** Varian yang bisa dibeli, yaitu Varian aktif dari Produk aktif (PRD §3.7), atau undefined. */
+/**
+ * Varian yang bisa dibeli, yaitu Varian aktif dari Produk aktif (PRD §3.7), atau undefined. Produk dan Kategori
+ * Produk-nya ikut dibaca untuk Cakupan voucher (PRD §8.4).
+ */
 async function varianDijual(varianId: string) {
   const [baris] = await db
     .select({
       namaProduk: produk.nama,
       namaVarian: varian.nama,
       hargaJual: varian.hargaJual,
+      produkId: produk.id,
+      kategoriId: produk.kategoriId,
     })
     .from(varian)
     .innerJoin(produk, eq(varian.produkId, produk.id))
@@ -106,27 +115,49 @@ async function varianDijual(varianId: string) {
 export async function bacaCheckout(varianId: string) {
   const dijual = await varianDijual(varianId);
   if (!dijual) return null;
+  const { namaProduk, namaVarian, hargaJual } = dijual;
   const { nominal } = nominalTagihanQris({
-    hargaJual: dijual.hargaJual,
+    hargaJual,
     potonganVoucher: POTONGAN_VOUCHER_TANPA_VOUCHER,
   });
-  return { varianId, ...dijual, perkiraanBayar: nominal };
+  return {
+    varianId,
+    namaProduk,
+    namaVarian,
+    hargaJual,
+    perkiraanBayar: nominal,
+  };
 }
 
 type Penghubung = Pick<typeof db, "select">;
 
+type VarianDijual = NonNullable<Awaited<ReturnType<typeof varianDijual>>>;
+
 /**
- * Hasil checkout Varian itu menurut hasilCheckout (PRD §3.7, §5.2, §5.4). `varianDijual` adalah Varian yang
+ * Hasil checkout Varian itu menurut hasilCheckout (PRD §3.7, §5.2, §5.4, §8.7). `varianDijual` adalah Varian yang
  * dijual menurut varianDijual, atau undefined bila tidak dijual. Member nonaktif, Pesanan Menunggu Pembayaran,
- * dan Stok Varian dibaca lewat `penghubung`, supaya pemeriksaan ini bisa diulang di dalam transaksi checkout.
+ * Stok Varian, dan Voucher dibaca lewat `penghubung`, supaya pemeriksaan ini bisa diulang di dalam transaksi
+ * checkout. Hasil yang boleh membawa Voucher yang dipakai, atau null. Kode voucher hanya dinilai bila diisi (`kodeVoucher` tidak null) dan Varian itu dijual, dengan Harga
+ * jual `varianDijual`. Bila `kunciVoucher`, Voucher itu dikunci sampai transaksi `penghubung` selesai
+ * (nilaiVoucherCheckout).
  */
-async function periksaCheckout<V>(
+async function periksaCheckout(
   penghubung: Penghubung,
   {
     varianDijual,
     varianId,
     email,
-  }: { varianDijual: V | undefined; varianId: string; email: string },
+    kodeVoucher,
+    member,
+    kunciVoucher,
+  }: {
+    varianDijual: VarianDijual | undefined;
+    varianId: string;
+    email: string;
+    kodeVoucher: string | null;
+    member: boolean;
+    kunciVoucher: boolean;
+  },
 ) {
   // Saringan Member nonaktif dan status Pesanan hanya mempersempit bacaan; emailMilikMemberNonaktif dan
   // batasPesananMenunggu yang memutuskan.
@@ -144,12 +175,31 @@ async function periksaCheckout<V>(
     .from(pesanan)
     .where(eq(pesanan.status, "Menunggu Pembayaran"));
   const { stokVarian } = await bacaStokVarian(varianId, penghubung);
-  return hasilCheckout({
+  const voucherDinilai =
+    kodeVoucher !== null && varianDijual
+      ? await nilaiVoucherCheckout(penghubung, {
+          kode: kodeVoucher,
+          varian: {
+            produk: varianDijual.produkId,
+            kategori: varianDijual.kategoriId,
+            hargaJual: varianDijual.hargaJual,
+          },
+          emailCheckout: email,
+          member,
+          kunci: kunciVoucher,
+        })
+      : null;
+  const hasil = hasilCheckout({
     varianDijual,
     memberNonaktif: emailMilikMemberNonaktif({ email, semuaMemberNonaktif }),
     batasPesananMenunggu: batasPesananMenunggu({ email, pesananLain }),
     stokVarian,
+    voucher: voucherDinilai,
   });
+  // Checkout yang boleh membawa Voucher yang dipakai, atau null bila kode voucher tidak diisi.
+  return hasil.hasil === "boleh"
+    ? { ...hasil, voucher: voucherDinilai?.dipakai ? voucherDinilai : null }
+    : hasil;
 }
 
 type HasilPesananMenunggu =
@@ -160,19 +210,20 @@ type HasilCheckoutDitolak =
   | { hasil: "tidak-dijual" }
   | { hasil: "member-nonaktif" }
   | { hasil: "stok-habis" }
+  | { hasil: "voucher-ditolak"; pesan: string }
   | HasilPesananMenunggu;
+
+type PemeriksaanCheckout = Awaited<ReturnType<typeof periksaCheckout>>;
 
 /**
  * Hasil buatPesanan untuk checkout yang ditolak hasilCheckout. Bila email itu masih punya Pesanan Menunggu
  * Pembayaran (PRD §5.4) dan browser ini memegang Tautan Pesanan-nya, karena Pesanan itu dibuat di browser
  * ini, hasilnya Tautan Pesanan itu. Bila tidak, hasilnya hanya waktu kedaluwarsanya, supaya Tautan Pesanan
- * itu tidak pernah sampai ke browser lain (▶ Keputusan 2026-11-11).
+ * itu tidak pernah sampai ke browser lain (▶ Keputusan 2026-11-11). Voucher yang ditolak menghasilkan pesan
+ * penolakannya (PRD §8.7).
  */
 function checkoutDitolak(
-  ditolak: Exclude<
-    HasilCheckout<unknown, { tautan: string; kedaluwarsaPada: Date }>,
-    { hasil: "boleh" }
-  >,
+  ditolak: Exclude<PemeriksaanCheckout, { hasil: "boleh" }>,
   tautanDiBrowser: readonly string[],
 ): HasilCheckoutDitolak {
   if (ditolak.hasil !== "pesanan-menunggu") return ditolak;
@@ -190,11 +241,19 @@ type HasilBuatPesanan =
 const QRIS_GAGAL = { hasil: "qris-gagal" } as const;
 const STOK_HABIS = { hasil: "stok-habis" } as const;
 
+/** Hasil transaksi checkout bila Voucher yang dipakai atau potongannya berubah sejak QRIS diminta. */
+const VOUCHER_BERUBAH = { hasil: "voucher-berubah" } as const;
+
+/** Kode voucher yang diisi Pembeli, atau null bila isiannya kosong atau hanya spasi. */
+const kodeVoucherDiisi = (kode: string | null) =>
+  kode === null || kode.trim() === "" ? null : kode;
+
 /**
  * Checkout satu Varian: membuat Pesanan Menunggu Pembayaran beserta QRIS-nya (PRD §5.1, ADR-0004).
  *
  * Urutan pemeriksaannya ditentukan hasilCheckout: Produk dan Varian yang dijual, lalu Member nonaktif, lalu
- * batas Pesanan menunggu, lalu Stok Varian (PRD §5.2 ▶ Keputusan 2026-11-17, §5.4 ▶ Keputusan 2026-11-12).
+ * batas Pesanan menunggu, lalu Stok Varian, lalu Voucher (PRD §5.2 ▶ Keputusan 2026-11-17, §5.4 ▶ Keputusan
+ * 2026-11-12).
  *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
  * - Email milik Member nonaktif ditolak (PRD §2.3), tanpa QRIS maupun Pesanan, walaupun email itu masih punya
@@ -203,20 +262,25 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
  *   walaupun Stok Varian-nya 0. Hasilnya Tautan Pesanan itu bila `tautanDiBrowser`, yaitu Tautan Pesanan
  *   yang dibuat di browser Pembeli, memuatnya; bila tidak, hasilnya hanya waktu kedaluwarsa Pesanan itu.
  * - Checkout ditolak karena stok habis bila Stok Varian-nya 0 (PRD §5.2), juga tanpa QRIS maupun Pesanan.
- * - Harga jual dan potongan voucher dicatat saat checkout. Kode unik, Total bayar, waktu kedaluwarsa, dan
- *   gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
+ * - Bila `kodeVoucher` diisi, Voucher itu dinilai nilaiVoucherCheckout dengan `email` dan `member` (Pembeli
+ *   login sebagai Member). Voucher yang ditolak menolak checkout dengan pesan penolakannya, tanpa QRIS maupun
+ *   Pesanan; Pesanan tidak pernah dibuat tanpa Voucher bila kodenya diisi (PRD §8.7 ▶ Keputusan 2026-11-17).
+ * - Harga jual dan potongan voucher dicatat saat checkout, beserta id dan kode Voucher yang dipakai. Qrispy
+ *   diminta Harga jual − potongan voucher. Kode unik, Total bayar, waktu kedaluwarsa, dan gambar QR diambil
+ *   dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
  *   tidak ada Pesanan yang tersisa.
  * - Pesanan, baris pertama Riwayat status Pesanan, Penahanan satu Item stok Tersedia dari Varian itu
  *   (PRD §5.3), dan pekerjaan kedaluwarsa pada waktu kedaluwarsa QRIS-nya (PRD §5.8) ditulis dalam satu
  *   transaksi. Item stok Ditahan mencatat Pesanan yang menahannya.
- * - Checkout bersamaan dengan email yang sama menulis transaksinya satu per satu, lalu batas Pesanan
- *   menunggu diperiksa lagi di dalam transaksi, sebelum Item stok ditahan. Yang kalah membatalkan
- *   QRIS-nya, tanpa Pesanan.
+ * - Di dalam transaksi itu, pemeriksaan checkout diulang sebelum Item stok ditahan. Checkout bersamaan dengan
+ *   email yang sama menulis transaksinya satu per satu, dan Voucher yang dipakai dikunci, sehingga checkout
+ *   bersamaan yang berebut sisa Kuota voucher atau Batas per email menghasilkan paling banyak satu Pesanan
+ *   yang memakai Voucher itu (PRD §8.5). Yang kalah membatalkan QRIS-nya, tanpa Pesanan.
  * - Bila Item stok terakhirnya sudah ditahan checkout lain setelah QRIS terbit, QRIS itu dibatalkan dan
  *   checkout ditolak karena stok habis, tanpa Pesanan.
- * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, QRIS-nya dibatalkan, lalu nomor dan QRIS
- *   dibuat ulang.
+ * - Bila Nomor Pesanan acaknya sudah dipakai Pesanan lain, atau Voucher yang dipakai berubah potongannya
+ *   setelah QRIS diminta, QRIS-nya dibatalkan, lalu pemeriksaan, nomor, dan QRIS dibuat ulang.
  *
  * Adaptor Qrispy dan pembuat Nomor Pesanan bisa diganti untuk test.
  */
@@ -225,27 +289,42 @@ export async function buatPesanan(
     varianId,
     email,
     tautanDiBrowser = [],
-  }: { varianId: string; email: string; tautanDiBrowser?: readonly string[] },
+    kodeVoucher = null,
+    member = false,
+  }: {
+    varianId: string;
+    email: string;
+    tautanDiBrowser?: readonly string[];
+    kodeVoucher?: string | null;
+    member?: boolean;
+  },
   {
     qrispy = qrispyAktif(),
     buatNomorPesanan = nomorPesananAcak,
   }: { qrispy?: Qrispy; buatNomorPesanan?: () => string } = {},
 ): Promise<HasilBuatPesanan> {
-  const pemeriksaan = await periksaCheckout(db, {
-    varianDijual: await varianDijual(varianId),
-    varianId,
-    email,
-  });
-  if (pemeriksaan.hasil !== "boleh") {
-    return checkoutDitolak(pemeriksaan, tautanDiBrowser);
-  }
-  const dijual = pemeriksaan.varianDijual;
-
-  const { hargaJual } = dijual;
-  const potonganVoucher = POTONGAN_VOUCHER_TANPA_VOUCHER;
-  const { nominal } = nominalTagihanQris({ hargaJual, potonganVoucher });
+  const kode = kodeVoucherDiisi(kodeVoucher);
 
   for (let percobaan = 1; ; percobaan++) {
+    const pemeriksaan = await periksaCheckout(db, {
+      varianDijual: await varianDijual(varianId),
+      varianId,
+      email,
+      kodeVoucher: kode,
+      member,
+      kunciVoucher: false,
+    });
+    if (pemeriksaan.hasil !== "boleh") {
+      return checkoutDitolak(pemeriksaan, tautanDiBrowser);
+    }
+    const dijual = pemeriksaan.varianDijual;
+    const voucherDipakai = pemeriksaan.voucher;
+
+    const { hargaJual } = dijual;
+    const potonganVoucher =
+      voucherDipakai?.potonganVoucher ?? POTONGAN_VOUCHER_TANPA_VOUCHER;
+    const { nominal } = nominalTagihanQris({ hargaJual, potonganVoucher });
+
     const nomor = buatNomorPesanan();
 
     let qris: QrisBaru;
@@ -275,8 +354,9 @@ export async function buatPesanan(
     }
 
     const tautan = tautanPesananAcak();
+    let hasil;
     try {
-      const hasil = await db.transaction(async (tx) => {
+      hasil = await db.transaction(async (tx) => {
         // Checkout dengan email yang sama menurut §7.4 menunggu giliran di sini sampai transaksi checkout
         // sebelumnya selesai, sehingga pemeriksaan Pesanan menunggu di bawah melihat Pesanan yang baru saja
         // disimpannya (PRD §5.4). Kunci ini lepas sendiri di akhir transaksi.
@@ -285,14 +365,26 @@ export async function buatPesanan(
         );
 
         // Pemeriksaan checkout diulang dengan urutan yang sama, untuk Varian yang dijual saat pemeriksaan
-        // pertama, sehingga batas Pesanan menunggu tetap didahulukan sebelum stok habis.
+        // pertama, sehingga batas Pesanan menunggu tetap didahulukan sebelum stok habis. Voucher yang dipakai
+        // dikunci sampai transaksi ini selesai, jadi checkout lain dengan Voucher yang sama menunggu di sini
+        // lalu menghitung Pesanan yang disimpan transaksi ini (PRD §8.5).
         const pemeriksaanUlang = await periksaCheckout(tx, {
           varianDijual: dijual,
           varianId,
           email,
+          kodeVoucher: kode,
+          member,
+          kunciVoucher: true,
         });
         if (pemeriksaanUlang.hasil !== "boleh") {
           return checkoutDitolak(pemeriksaanUlang, tautanDiBrowser);
+        }
+        const voucherUlang = pemeriksaanUlang.voucher;
+        if (
+          voucherUlang?.voucherId !== voucherDipakai?.voucherId ||
+          voucherUlang?.potonganVoucher !== voucherDipakai?.potonganVoucher
+        ) {
+          return VOUCHER_BERUBAH;
         }
 
         // Penahanan Item stok (PRD §5.3). Item stok yang sedang dikunci checkout lain dilewati, supaya
@@ -326,6 +418,8 @@ export async function buatPesanan(
             kedaluwarsaPada: qris.expiredAt,
             gambarQr: qris.gambarQr,
             status: "Menunggu Pembayaran",
+            voucherId: voucherDipakai?.voucherId ?? null,
+            kodeVoucher: voucherDipakai?.kodeVoucher ?? null,
           })
           .returning({ id: pesanan.id });
         await tx.insert(riwayatStatusPesanan).values({
@@ -344,16 +438,21 @@ export async function buatPesanan(
         );
         return { hasil: "dibuat", tautan } as const;
       });
-      if (hasil.hasil !== "dibuat") {
-        await batalkanQrisTakTerpakai(qrispy, qris);
-      }
-      return hasil;
     } catch (galat) {
       await batalkanQrisTakTerpakai(qrispy, qris);
       if (nomorSudahDipakai(galat) && percobaan < BATAS_PERCOBAAN_NOMOR) {
         continue;
       }
       throw galat;
+    }
+    if (hasil.hasil === "dibuat") return hasil;
+    await batalkanQrisTakTerpakai(qrispy, qris);
+    if (hasil.hasil !== VOUCHER_BERUBAH.hasil) return hasil;
+    if (percobaan >= BATAS_PERCOBAAN_NOMOR) {
+      console.error(
+        `Checkout Varian ${varianId} dihentikan: potongan Voucher berubah di setiap ${percobaan} percobaan.`,
+      );
+      return QRIS_GAGAL;
     }
   }
 }
@@ -402,7 +501,7 @@ async function bacaItemStokPesananSelesai(pesananId: string, nomor: string) {
 /**
  * Pesanan yang dibuka lewat Tautan Pesanan (PRD §6.2), untuk Halaman bayar dan Halaman Pesanan: Nomor
  * Pesanan, status, id dan nama Produk beserta nama Varian, gambar QR beserta waktu kedaluwarsa QRIS-nya,
- * rincian nominal yang dicatat di Pesanan (PRD §5.5), dan kolom-kolom Item stok-nya. Item stok hanya
+ * rincian nominal yang dicatat di Pesanan (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, dan kolom-kolom Item stok-nya. Item stok hanya
  * dibaca untuk Pesanan Selesai (PRD §6.1); untuk status lain `itemStok` selalu null. `dibacaPada` adalah
  * jam server saat Pesanan dibaca, yang menjadi titik awal hitung mundur di Halaman bayar. Hasilnya null
  * bila tidak ada Pesanan dengan Tautan Pesanan itu.
@@ -420,6 +519,7 @@ export async function bacaPesananLewatTautan(tautan: string) {
       kedaluwarsaPada: pesanan.kedaluwarsaPada,
       hargaJual: pesanan.hargaJual,
       potonganVoucher: pesanan.potonganVoucher,
+      kodeVoucher: pesanan.kodeVoucher,
       kodeUnik: pesanan.kodeUnik,
       totalBayar: pesanan.totalBayar,
     })
@@ -429,11 +529,18 @@ export async function bacaPesananLewatTautan(tautan: string) {
     .where(eq(pesanan.tautan, tautan));
   if (!baris) return null;
 
-  const { id, hargaJual, potonganVoucher, kodeUnik, totalBayar, ...lainnya } =
-    baris;
+  const {
+    id,
+    hargaJual,
+    potonganVoucher,
+    kodeVoucher,
+    kodeUnik,
+    totalBayar,
+    ...lainnya
+  } = baris;
   return {
     ...lainnya,
-    rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
+    rincian: { hargaJual, potonganVoucher, kodeVoucher, kodeUnik, totalBayar },
     itemStok: itemStokTampil(baris.status)
       ? await bacaItemStokPesananSelesai(id, baris.nomorPesanan)
       : null,

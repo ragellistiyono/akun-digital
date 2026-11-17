@@ -47,7 +47,11 @@ type PesananDibaca = NonNullable<
   Awaited<ReturnType<typeof bacaPesananLewatTautan>>
 >;
 
-/** Rincian nominal yang dicatat di Pesanan (PRD §5.5). */
+/**
+ * Rincian nominal yang dicatat di Pesanan (PRD §5.5). Pesanan yang memakai Voucher menulis kode Voucher-nya di
+ * baris potongan, misalnya "Potongan voucher (HEMAT5)"; Pesanan tanpa Voucher menulis "Potongan voucher"
+ * (PRD §8.8 ▶ Keputusan 2026-11-17).
+ */
 function PanelRincian({ rincian }: { rincian: PesananDibaca["rincian"] }) {
   return (
     <section aria-label="Rincian pembayaran" className={PANEL}>
@@ -55,7 +59,10 @@ function PanelRincian({ rincian }: { rincian: PesananDibaca["rincian"] }) {
         baris={[
           { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
           {
-            label: "Potongan voucher",
+            label:
+              rincian.kodeVoucher === null
+                ? "Potongan voucher"
+                : `Potongan voucher (${rincian.kodeVoucher})`,
             nilai:
               rincian.potonganVoucher === 0
                 ? rupiah(0)

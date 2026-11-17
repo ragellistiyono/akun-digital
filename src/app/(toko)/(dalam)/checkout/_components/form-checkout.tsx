@@ -27,10 +27,14 @@ const KELAS_ISIAN =
   "h-[52px] rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta placeholder:text-tinta-redup read-only:bg-permukaan-2 focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
 
 /**
- * Form checkout satu Varian (PRD §5.2, UAT-E7): hanya isian email dengan pengingatnya, rincian perkiraan
- * dengan Kode unik yang belum diketahui (DESIGN.md "Rincian Total bayar"), kalimat Syarat & Ketentuan
- * bertaut tanpa kotak centang, lalu tombol "Bayar dengan QRIS" di bilah lekat. Isian voucher baru ada di
- * M2. Di layar lebar, isian dan rinciannya menjadi dua kolom sama lebar.
+ * Form checkout satu Varian (PRD §5.2, UAT-E7): isian email dengan pengingatnya dan isian kode voucher yang
+ * opsional, rincian perkiraan dengan Kode unik yang belum diketahui (DESIGN.md "Rincian Total bayar"), kalimat
+ * Syarat & Ketentuan bertaut tanpa kotak centang, lalu tombol "Bayar dengan QRIS" di bilah lekat. Di layar
+ * lebar, isian dan rinciannya menjadi dua kolom sama lebar.
+ *
+ * Kode voucher tampil dalam huruf kapital (DESIGN.md Inputs, isian gabung) dan diperiksa saat Pesanan dibuat.
+ * Bila Voucher ditolak, pesan penolakannya menggantikan teks bantuan isian itu, dan kodenya tetap berisi
+ * (PRD §8.7 ▶ Keputusan 2026-11-17).
  *
  * Bila Member sedang login (`emailMember`), isian email sudah berisi email Member dan tidak bisa diubah
  * (PRD §5.2). Server tetap memakai email dari sesi Member, bukan dari isian ini.
@@ -45,8 +49,9 @@ export function FormCheckout({
   const [keadaan, aksi, sedangMemproses] = useActionState<
     KeadaanFormCheckout,
     FormData
-  >(aksiCheckout, { email: emailMember ?? "" });
+  >(aksiCheckout, { email: emailMember ?? "", kodeVoucher: "" });
   const galatEmail = keadaan.galat?.email;
+  const galatKodeVoucher = keadaan.galat?.kodeVoucher;
   const galatCheckout = keadaan.galat?.checkout;
 
   return (
@@ -86,6 +91,29 @@ export function FormCheckout({
             <p id="email-keterangan" className="text-[13px] text-tinta-redup">
               Pastikan email benar, detail pesanan dikirim ke sini.
             </p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="kodeVoucher" className="text-sm font-bold">
+            Kode voucher (opsional)
+          </label>
+          <input
+            id="kodeVoucher"
+            name="kodeVoucher"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            defaultValue={keadaan.kodeVoucher}
+            aria-invalid={galatKodeVoucher ? true : undefined}
+            aria-describedby={
+              galatKodeVoucher ? "kode-voucher-keterangan" : undefined
+            }
+            className={cn(KELAS_ISIAN, "uppercase")}
+          />
+          {galatKodeVoucher && (
+            <PesanGalat id="kode-voucher-keterangan" pesan={galatKodeVoucher} />
           )}
         </div>
       </div>

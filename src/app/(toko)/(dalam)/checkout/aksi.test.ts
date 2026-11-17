@@ -14,9 +14,10 @@ import {
 
 import { auth } from "@/server/auth/auth";
 import { db, koneksi } from "@/server/db";
-import { pesanan, user, varian } from "@/server/db/schema";
+import { pesanan, user, varian, voucher } from "@/server/db/schema";
 import { qrispyTiruan } from "@/server/qrispy-tiruan";
 import { ubahStatusMember } from "@/server/status-member";
+import { buatVoucher, type SyaratVoucher } from "@/server/voucher";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 
@@ -117,7 +118,7 @@ function alamatPengalihan(galat: unknown) {
   throw galat;
 }
 
-const keadaanAwal = () => ({ email: "" });
+const keadaanAwal = () => ({ email: "", kodeVoucher: "" });
 
 const PESAN_TIDAK_DIJUAL =
   "Produk atau Varian ini sedang tidak dijual, jadi Pesanan tidak dibuat. Pilih Produk lain di Beranda.";
@@ -167,7 +168,11 @@ describe("checkout (PRD §5.2)", () => {
         formulir({ varianId, email }),
       );
 
-      expect(keadaan).toEqual({ email, galat: { email: pesan } });
+      expect(keadaan).toEqual({
+        email,
+        kodeVoucher: "",
+        galat: { email: pesan },
+      });
       expect(buatQris).not.toHaveBeenCalled();
     });
   }
@@ -179,6 +184,7 @@ describe("checkout (PRD §5.2)", () => {
 
     expect(keadaan).toEqual({
       email: "",
+      kodeVoucher: "",
       galat: {
         email:
           "Email belum diisi. Tulis email Anda, misalnya nama@email.com, supaya detail pesanan bisa dikirim.",
@@ -202,6 +208,7 @@ describe("checkout (PRD §5.2)", () => {
 
       expect(keadaan).toEqual({
         email,
+        kodeVoucher: "",
         galat: { checkout: PESAN_TIDAK_DIJUAL },
       });
       expect(await pesananDenganEmail(email)).toEqual([]);
@@ -221,6 +228,7 @@ describe("checkout (PRD §5.2)", () => {
 
     expect(keadaan).toEqual({
       email,
+      kodeVoucher: "",
       galat: {
         checkout:
           "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
@@ -249,6 +257,7 @@ describe("checkout (PRD §5.2)", () => {
 
     expect(keadaan).toEqual({
       email: email.toUpperCase(),
+      kodeVoucher: "",
       galat: {
         checkout:
           "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.",
@@ -271,7 +280,11 @@ describe("checkout (PRD §5.2)", () => {
       formulir({ varianId: "bukan-varian", email }),
     );
 
-    expect(keadaan).toEqual({ email, galat: { checkout: PESAN_TIDAK_DIJUAL } });
+    expect(keadaan).toEqual({
+      email,
+      kodeVoucher: "",
+      galat: { checkout: PESAN_TIDAK_DIJUAL },
+    });
   });
 
   // ADR-0004: bila Qrispy gagal, tidak ada Pesanan yang tersisa, dan Pembeli diminta mencoba lagi.
@@ -290,6 +303,7 @@ describe("checkout (PRD §5.2)", () => {
 
     expect(keadaan).toEqual({
       email,
+      kodeVoucher: "",
       galat: {
         checkout:
           "QRIS gagal dibuat, jadi Pesanan belum dibuat. Tekan Bayar dengan QRIS untuk mencoba lagi.",
@@ -400,6 +414,7 @@ describe("checkout dengan email yang masih punya Pesanan Menunggu Pembayaran (PR
 
     expect(keadaan).toEqual({
       email,
+      kodeVoucher: "",
       galat: {
         checkout:
           "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul 10.15 WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.",
@@ -449,6 +464,7 @@ describe("checkout dengan email yang masih punya Pesanan Menunggu Pembayaran (PR
 
       expect(keadaan).toEqual({
         email,
+        kodeVoucher: "",
         galat: {
           checkout:
             "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul 10.15 WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.",
@@ -473,6 +489,7 @@ describe("checkout dengan email yang masih punya Pesanan Menunggu Pembayaran (PR
 
       expect(keadaan).toEqual({
         email: emailLain,
+        kodeVoucher: "",
         galat: {
           checkout:
             "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
@@ -570,6 +587,7 @@ describe("checkout dari sesi Member (PRD §5.2)", () => {
 
     expect(keadaan).toEqual({
       email: emailMember,
+      kodeVoucher: "",
       galat: {
         checkout:
           "Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul 10.15 WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.",
@@ -577,6 +595,173 @@ describe("checkout dari sesi Member (PRD §5.2)", () => {
     });
     expect(await pesananDenganEmail(emailMember)).toEqual([
       { email: emailMember, status: "Menunggu Pembayaran" },
+    ]);
+  });
+});
+
+// T57: kode voucher di form Checkout diperiksa saat Pesanan dibuat (PRD §5.2 ▶ Keputusan 2026-11-17, §8.7 ▶
+// Keputusan 2026-11-17, UAT-H1–UAT-H4). Voucher-nya meniru Voucher seed docs/UAT.md [CONTOH] dengan kode unik.
+describe("checkout dengan kode voucher (PRD §8)", () => {
+  const HEMAT5: SyaratVoucher = {
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan: { jenis: "semua" },
+    khususMember: false,
+    aktif: true,
+  };
+
+  /** Membuat Voucher dengan syarat HEMAT5 yang diganti sebagian. Hasilnya kodenya. */
+  async function voucherBaru(
+    awalan: string,
+    syarat: Partial<SyaratVoucher> = {},
+  ) {
+    const kode = `${awalan}${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+    await buatVoucher({ kode, ...HEMAT5, ...syarat });
+    const [{ id }] = await db
+      .select({ id: voucher.id })
+      .from(voucher)
+      .where(eq(voucher.kode, kode));
+    return { id, kode };
+  }
+
+  function pesananDenganVoucher(email: string) {
+    return db
+      .select({
+        potonganVoucher: pesanan.potonganVoucher,
+        kodeVoucher: pesanan.kodeVoucher,
+      })
+      .from(pesanan)
+      .where(eq(pesanan.email, email));
+  }
+
+  it("HEMAT5 yang ditulis huruf kecil membuat Pesanan dengan potongan Rp 5.000, lalu Pembeli diarahkan ke Tautan Pesanan", async () => {
+    const hemat5 = await voucherBaru("HEMAT");
+    const email = emailUnik();
+
+    const alamat = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await netflixSatuBulan(),
+        email,
+        kodeVoucher: hemat5.kode.toLowerCase(),
+      }),
+    ).then(
+      () => null,
+      (galat: unknown) => alamatPengalihan(galat),
+    );
+
+    expect(alamat).toMatch(/^\/pesanan\/[A-Za-z0-9_-]{43}$/);
+    expect(await pesananDenganVoucher(email)).toEqual([
+      { potonganVoucher: 5000, kodeVoucher: hemat5.kode },
+    ]);
+  });
+
+  it("Voucher yang ditolak tidak membuat Pesanan, menampilkan pesan penolakannya di isian kode, dan isian kode tetap berisi", async () => {
+    const lama = await voucherBaru("LAMA", {
+      berakhir: new Date("2026-11-10T10:00:00+07:00"),
+    });
+    const email = emailUnik();
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+    const kodeDiketik = lama.kode.toLowerCase();
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await netflixSatuBulan(),
+        email,
+        kodeVoucher: kodeDiketik,
+      }),
+    );
+
+    expect(keadaan).toEqual({
+      email,
+      kodeVoucher: kodeDiketik,
+      galat: { kodeVoucher: "Voucher sudah berakhir" },
+    });
+    expect(buatQris).not.toHaveBeenCalled();
+    expect(await pesananDenganEmail(email)).toEqual([]);
+  });
+
+  it("isian kode tetap berisi saat checkout ditolak karena email salah tulis", async () => {
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await netflixSatuBulan(),
+        email: "budi@",
+        kodeVoucher: "HEMAT5",
+      }),
+    );
+
+    expect(keadaan).toMatchObject({ kodeVoucher: "HEMAT5" });
+  });
+
+  it("Pembeli yang masih punya Pesanan menunggu dan checkout lagi dari browser yang sama dengan Voucher yang sudah berakhir diarahkan ke Pesanannya", async () => {
+    const lama = await voucherBaru("LAMA", {
+      berakhir: new Date("2026-11-10T10:00:00+07:00"),
+    });
+    const email = emailUnik();
+    const pertama = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId: await netflixSatuBulan(), email }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    const kedua = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await netflixSatuBulan(),
+        email,
+        kodeVoucher: lama.kode,
+      }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    expect(kedua).toBe(pertama);
+  });
+
+  it("Voucher khusus Member ditolak untuk Tamu, dan diterima untuk Member yang login", async () => {
+    const member20 = await voucherBaru("MEMBER", {
+      jenisPotongan: "persen",
+      nilai: 20,
+      batasMaksimum: 10000,
+      khususMember: true,
+    });
+    const varianId = await netflixSatuBulan();
+
+    expect(
+      await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email: emailUnik(), kodeVoucher: member20.kode }),
+      ),
+    ).toMatchObject({
+      galat: { kodeVoucher: "Voucher khusus Member, silakan login" },
+    });
+
+    const email = `member-${randomUUID()}@example.test`;
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const { headers: kepalaRespons } = await auth.api.signInEmail({
+      body: { email, password: "sandi-uji-member-123" },
+      returnHeaders: true,
+    });
+    vi.mocked(headers).mockResolvedValue(
+      new Headers({
+        cookie: kepalaRespons
+          .getSetCookie()
+          .map((baris) => baris.split(";")[0])
+          .join("; "),
+      }),
+    );
+    await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email, kodeVoucher: member20.kode }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    expect(await pesananDenganVoucher(email)).toEqual([
+      { potonganVoucher: 10000, kodeVoucher: member20.kode },
     ]);
   });
 });
