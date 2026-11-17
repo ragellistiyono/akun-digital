@@ -55,6 +55,12 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - **Pesanan Selesai dengan `HEMAT5`** untuk UAT-H4 langkah 5 dibuat dengan pembelian sungguhan (bayar). Ubah sementara Harga jual Uji Bayar menjadi Rp 2.000, beli dengan email Member uji dan `HEMAT5`, lalu kembalikan Harga jualnya ke Rp 1.000. Potongannya dipangkas menjadi Rp 1.000, jadi Anda membayar Rp 1.000 ditambah Kode unik (PRD §8.3).
 - **Seed lokal.** `pnpm db:seed` tetap dilengkapi Member dan Voucher sesuai daftar di atas, untuk dicoba di komputer lokal.
 
+▶ Keputusan 2026-11-17 (#174): Nilai Voucher seed yang tidak disebut di daftar di atas, juga untuk Voucher uji di produksi:
+- Batas per email semua Voucher seed adalah 1, nilai bawaan PRD §8.4.
+- `LAMA` dan `MATI` memberi potongan nominal Rp 5.000.
+- Waktu berakhir `LAMA` adalah waktu seed dijalankan dikurangi 24 jam, dibulatkan ke bawah ke menit.
+- Database lokal yang diisi seed sebelum M2 masih menyimpan Pesanan Selesai tanpa voucher. Kosongkan database lokal, lalu jalankan `pnpm db:seed` lagi sebelum UAT M2.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -102,6 +108,8 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Setelah diaktifkan kembali, login berhasil.
   - Admin tidak pernah melihat password Member.
 - PRD: §2.3, §5.2, §7.5
+
+▶ Keputusan 2026-11-17 (#174): Di langkah 5, pesan penolakan checkout tampil beserta tombol WhatsApp, sama seperti di langkah 4 (PRD §5.2).
 
 **UAT-B4 — Password Admin baru**
 - Langkah:
@@ -383,6 +391,8 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
   - Langkah 4: kode ditolak karena kedaluwarsa.
 - PRD: §7.3, §7.7
 
+▶ Keputusan 2026-11-17 (#174): Setelah langkah 3, tekan "Kirim ulang kode". Pesan kode hangus langsung hilang, dan yang tampil hanya "Kode verifikasi baru sudah kami kirim ke <email>." (PRD §7.3).
+
 **UAT-G5 — Lupa password (tunggu)**
 - Langkah:
   1. Di laptop, login sebagai `member@miwe.example`.
@@ -399,6 +409,15 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
   - Langkah 4: laptop sudah keluar.
   - Langkah 5 ditolak karena tautan sudah dipakai.
   - Langkah 7 ditolak karena tautan kedaluwarsa.
+- PRD: §7.5
+
+▶ Keputusan 2026-11-17 (#174): Langkah tambahan setelah langkah 7.
+- Langkah:
+  8. Minta tautan baru untuk `member@miwe.example`. Sebelum membukanya, nonaktifkan Member itu sebagai Admin, lalu buka tautannya.
+  9. Aktifkan kembali Member itu, lalu login dengan password dari langkah 3.
+- Hasil:
+  - Langkah 8 menampilkan "Akun Member ini dinonaktifkan, jadi password tidak bisa diganti. Hubungi kami di WhatsApp." beserta tombol WhatsApp, tanpa form password.
+  - Langkah 9 berhasil, karena password tidak berubah di langkah 8.
 - PRD: §7.5
 
 **UAT-G6 — Salah password berturut-turut (tunggu)**
@@ -427,6 +446,17 @@ Tanda "Email gagal" (§6.4) diuji lewat test otomatis, karena kegagalan kirim em
   - Langkah 4: ponsel sudah keluar.
   - Tab Akun tidak punya isian untuk mengganti email, tidak punya tombol hapus akun, dan tidak menampilkan Riwayat Pesanan.
 - PRD: §7.4, §7.6, §11.1
+
+▶ Keputusan 2026-11-17 (#174) (tunggu): Langkah tambahan setelah langkah 4.
+- Langkah:
+  5. Di laptop, ganti password dengan password lama yang salah 5 kali berturut-turut, lalu sekali lagi dengan password lama yang benar.
+  6. Keluar, lalu login lagi dengan password yang sekarang.
+  7. Tunggu sampai jam di pesan kunci, lalu ganti password dengan password lama yang benar.
+- Hasil:
+  - Langkah 5: percobaan keenam ditolak dengan "Password lama salah 5 kali berturut-turut, jadi ganti password dikunci 15 menit. Coba lagi mulai pukul HH.MM WIB.", walaupun password lamanya benar.
+  - Langkah 6 berhasil. Kunci ganti password tidak memengaruhi login.
+  - Langkah 7 berhasil.
+- PRD: §7.6
 
 ## H. Voucher (§8)
 
@@ -466,6 +496,8 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 
   Lalu, sebagai Admin, batasi `HEMAT5` hanya untuk Kategori Musik. Checkout Netflix Premium dengan `HEMAT5`. Pesannya: "Voucher tidak berlaku untuk produk ini". Setelah itu kembalikan cakupan `HEMAT5` ke semua Produk.
 - PRD: §8.4, §8.7
+
+▶ Keputusan 2026-11-17 (#174): Pada baris `MEMBER20` sebagai Tamu, setelah login lewat tautan Masuk, isian kode voucher di Checkout sudah berisi `MEMBER20` tanpa diketik ulang (PRD §8.7).
 
 **UAT-H4 — Kuota dan Batas per email**
 - Langkah:

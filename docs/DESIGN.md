@@ -469,6 +469,11 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 
 ▶ Keputusan 2026-11-17 (#128): Bila Pesanan memakai Voucher, baris potongan di Rincian Total bayar ditulis "Potongan voucher (HEMAT5)", dengan kode Voucher di dalam kurung (PRD §8.8).
 
+▶ Keputusan 2026-11-17 (#174):
+- Rincian Total bayar di Checkout selalu menampilkan baris "Potongan voucher": "Rp 0" bila belum ada Voucher yang diterima, dan "Potongan voucher (KODE)" "− Rp X" setelah "Pakai" menerima Voucher.
+- Di bawah Item stok Halaman Pesanan Selesai, "Login untuk melihat riwayat" dan "Lihat Riwayat Pesanan" berupa tombol garis selebar kolom (PRD §7.1).
+- Kartu Pesanan Bermasalah di Ringkasan memakai token `st-masalah`, ikon `TriangleAlert`, dan teks "Perlu tindakan. Buka daftar Pesanan Bermasalah", sama dengan pintasan Bermasalah di daftar Pesanan (PRD §9.2).
+
 #### Keputusan teknis: harga di kartu Produk "Mulai Rp X"
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
 
@@ -482,6 +487,8 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - **Kontrol segmen mode** (PRD §11.3): tiga pilihan, yaitu Perangkat, Terang, dan Gelap, di wadah `permukaan-2` radius 14 px. Pilihan aktif berlatar `permukaan` dengan Bayang.
 
 ▶ Keputusan 2026-11-11 (#53): Kotak cari menjalankan pencarian saat Pembeli menekan Enter atau tombol cari di papan ketik, tidak sambil mengetik seperti di prototipe. Hasilnya terbuka di alamat yang bisa dibagikan dan bekerja dengan tombol kembali.
+
+▶ Keputusan 2026-11-17 (#174): Isian yang tidak bisa diubah, seperti email Member di Checkout (PRD §5.2), tetap berbentuk isian dengan latar `permukaan-2` dan teks `tinta`. Teks bantuannya tetap tampil.
 
 ### Navigation
 - **Bilah atas:** latar `langit`, lekat di atas, 64 px, dan ciut ke 52 px dengan Bayang bilah saat digulir. Monogram ikut mengecil dari 28 ke 24 px.
@@ -503,6 +510,8 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - Setelah email Pesanan Bermasalah dikoreksi, panel itu menampilkan "Email Pesanan diganti menjadi <email>. Belum ada email yang dikirim: email "Pesanan selesai" dikirim ke alamat itu setelah Anda menekan "Kirim Item stok"." Pesan ini tetap ada, karena hanya pesan ini yang memberi tahu Admin bahwa belum ada email terkirim.
 - Penegasan "Kirim Item stok" berbunyi "Kirim satu Item stok Tersedia dari Varian yang sama ke Pesanan ini? Pesanan menjadi Selesai, dan email "Pesanan selesai" dikirim ke <email Pesanan>. Aksi ini tidak bisa dibatalkan."
 - Penegasan "Tandai Dana Dikembalikan" berbunyi "Tandai Pesanan ini Dana Dikembalikan? Pesanan ini tidak akan mendapat Item stok, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan."
+
+▶ Keputusan 2026-11-17 (#174): Hapus Voucher memakai panel "Hapus Voucher" di bawah halaman ubah Voucher, sama seperti hapus Produk dan Kategori. Penegasannya berbunyi "Hapus Voucher KODE? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan." (PRD §8.8).
 
 ### Penanda tab aktif: matahari terbit (komponen khas)
 Setengah lingkaran `matahari` (28×14 px, radius `14px 14px 0 0`) dengan pendar `0 -2px 14px 3px` emas 55%. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seolah matahari terbit dari cakrawala. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas, ukurannya 20×10 px dan duduk di tepi bawah bilah langit, di bawah tautan aktif. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
