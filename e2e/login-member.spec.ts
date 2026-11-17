@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanMember } from "../src/server/uji-member";
 
 // Login dan keluar Member (T41, PRD §7.5 ▶ Keputusan 2026-11-11 dan 2026-11-17). Pendaftaran baru
@@ -177,27 +176,4 @@ test("pnpm admin:buat dengan email Member ditolak, dan tidak ada Admin yang dibu
   await page.getByRole("button", { name: "Masuk" }).click();
   await expect(peringatan(page)).toHaveText(PESAN_PASSWORD_SALAH);
   await expect(page).toHaveURL("/admin");
-});
-
-// PRD §13 ▶ Keputusan 2026-11-17: tombol Masuk baru dipasang di T51.
-test("tidak ada tautan ke halaman Masuk Member dari halaman toko yang dibuka Pembeli", async ({
-  page,
-}) => {
-  const produkId = await sisipkanProduk({
-    nama: `Netflix Premium ${randomUUID().slice(0, 8)}`,
-    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 1 }],
-  });
-
-  for (const alamat of [
-    "/",
-    "/kategori",
-    "/riwayat",
-    "/akun",
-    "/syarat-ketentuan",
-    "/kebijakan-privasi",
-    `/produk/${produkId}`,
-  ]) {
-    await page.goto(alamat);
-    await expect(page.locator('a[href^="/masuk"]')).toHaveCount(0);
-  }
 });

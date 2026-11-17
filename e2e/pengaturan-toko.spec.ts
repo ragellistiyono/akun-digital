@@ -98,6 +98,20 @@ test("setelah Admin mengubah nomor WhatsApp, tombol WhatsApp di tab Akun membuka
   await expect(
     page.getByRole("link", { name: "Hubungi kami di WhatsApp" }),
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
+  // UAT-K1 dan PRD §11.1 ▶ Keputusan 2026-11-17: sesi Admin bukan Member, jadi tab Akun tampil untuk
+  // Tamu, dengan tombol "Masuk" dan "Daftar" di atas tombol WhatsApp dan tautan halaman hukum.
+  const isiAkun = page.getByRole("main");
+  const atas = async (nama: string) =>
+    (await isiAkun
+      .getByRole("link", { name: nama, exact: true })
+      .boundingBox())!.y;
+  expect(await atas("Masuk")).toBeLessThan(await atas("Daftar"));
+  expect(await atas("Daftar")).toBeLessThan(
+    await atas("Hubungi kami di WhatsApp"),
+  );
+  expect(await atas("Hubungi kami di WhatsApp")).toBeLessThan(
+    await atas("Syarat & Ketentuan"),
+  );
 
   await page.goto("/admin/pengaturan");
   await expect(nomor).toHaveValue("6281234567890");

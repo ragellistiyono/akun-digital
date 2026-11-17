@@ -8,7 +8,6 @@ import {
 } from "@playwright/test";
 
 import { buatAdmin } from "../src/server/auth/buat-admin";
-import { sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanMember } from "../src/server/uji-member";
 
 // Daftar sebagai Pendaftar dan kirim Kode verifikasi (T42, PRD §7.2, §7.3, §7.7, §10.2). Server e2e
@@ -135,28 +134,4 @@ test("login dengan email dan password Pendaftar ditolak dengan pesan password sa
 
   await expect(peringatan(page)).toHaveText(PESAN_PASSWORD_SALAH);
   await expect(page).toHaveURL("/masuk");
-});
-
-// PRD §13 ▶ Keputusan 2026-11-17: tautan ke halaman Daftar baru dipasang di T51.
-test("tidak ada tautan ke halaman Daftar dari halaman toko yang dibuka Pembeli", async ({
-  page,
-}) => {
-  const produkId = await sisipkanProduk({
-    nama: `Uji Tautan Daftar ${randomUUID().slice(0, 8)}`,
-    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 1 }],
-  });
-
-  for (const alamat of [
-    "/",
-    "/kategori",
-    "/riwayat",
-    "/akun",
-    "/masuk",
-    "/syarat-ketentuan",
-    "/kebijakan-privasi",
-    `/produk/${produkId}`,
-  ]) {
-    await page.goto(alamat);
-    await expect(page.locator('a[href^="/daftar"]')).toHaveCount(0);
-  }
 });
