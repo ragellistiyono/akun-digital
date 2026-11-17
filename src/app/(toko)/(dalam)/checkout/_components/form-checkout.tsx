@@ -13,6 +13,7 @@ import {
 } from "../../../_components/bilah-lekat";
 import { PesanGalat } from "../../../_components/pesan-galat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
+import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import {
   aksiCheckout,
   aksiPakaiVoucher,
@@ -56,6 +57,9 @@ type PakaiVoucher = { hasil: HasilPakaiVoucher; keadaan: KeadaanFormCheckout };
  * Perkiraan bayar yang baru; bila ditolak, tampil pesan penolakannya. Kode diperiksa sekali lagi saat Pesanan
  * dibuat. Bila Voucher ditolak saat itu, pesan penolakannya tampil di isian kode, dan kodenya tetap berisi. Pesan
  * Voucher khusus Member diberi tautan Masuk yang membawa Member kembali ke Checkout Varian ini setelah login.
+ *
+ * Penolakan checkout karena email milik Member nonaktif diberi tombol WhatsApp di bawah pesannya, sama seperti login
+ * Member nonaktif (PRD §5.2 ▶ Keputusan 2026-11-17). Tanpa nomor WhatsApp toko, hanya pesannya yang tampil.
  *
  * Bila Member sedang login (`emailMember`), isian email sudah berisi email Member dan tidak bisa diubah
  * (PRD §5.2). Server tetap memakai email dari sesi Member, bukan dari isian ini.
@@ -271,6 +275,13 @@ export function FormCheckout({
           .
         </p>
         {galatCheckout && <PesanGalat pesan={galatCheckout} className="mt-4" />}
+        {keadaan.nomorWhatsapp && (
+          <div className="mt-4 flex flex-col">
+            <TombolWhatsApp nomor={keadaan.nomorWhatsapp}>
+              Hubungi kami di WhatsApp
+            </TombolWhatsApp>
+          </div>
+        )}
         <BilahLekat>
           <button
             type="submit"
