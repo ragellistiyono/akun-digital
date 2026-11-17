@@ -136,6 +136,39 @@ test("setelah diganti, perangkat lain keluar, perangkat ini tetap masuk, dan han
   await laptop.context().close();
 });
 
+// UAT-G7 ▶ Keputusan 2026-11-17 (#174) langkah 5–6. Jam kunci yang tepat diuji di test integrasi dengan
+// jam palsu; server e2e memakai jam asli, jadi di sini cukup bentuk jam WIB-nya.
+test("setelah password lama salah 5 kali berturut-turut, password lama yang benar pun ditolak dengan pesan kunci, dan login tetap bisa", async ({
+  page,
+}) => {
+  const email = await memberBaru();
+  const pesanTerkunci =
+    /^Password lama salah 5 kali berturut-turut, jadi ganti password dikunci 15 menit\. Coba lagi mulai pukul \d{2}\.\d{2} WIB\.$/;
+  await masukMember(page, email, PASSWORD_LAMA);
+  await expect(page).toHaveURL("/riwayat");
+
+  for (let i = 1; i <= 4; i++) {
+    await gantiPassword(page, "password-yang-salah", PASSWORD_BARU);
+    await expect(isi(page).getByRole("alert")).toHaveText(
+      PESAN_PASSWORD_LAMA_SALAH,
+    );
+  }
+  await gantiPassword(page, "password-yang-salah", PASSWORD_BARU);
+  await expect(isi(page).getByRole("alert")).toHaveText(pesanTerkunci);
+
+  await gantiPassword(page, PASSWORD_LAMA, PASSWORD_BARU);
+  await expect(isi(page).getByRole("alert")).toHaveText(pesanTerkunci);
+  await expect(isi(page).getByText("Password sudah diganti.")).toHaveCount(0);
+
+  // Kunci ganti password tidak memengaruhi login: keluar, lalu login lagi dengan password yang sekarang.
+  await isi(page).getByRole("button", { name: "Keluar" }).click();
+  await expect(isi(page).getByRole("button", { name: "Keluar" })).toHaveCount(
+    0,
+  );
+  await masukMember(page, email, PASSWORD_LAMA);
+  await expect(page).toHaveURL("/riwayat");
+});
+
 test("tab Akun Member tidak punya isian ganti email maupun tombol hapus akun", async ({
   page,
 }) => {

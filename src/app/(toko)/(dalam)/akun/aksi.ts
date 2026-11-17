@@ -16,6 +16,7 @@ import {
   type KeadaanFormGantiPassword,
   PESAN_PASSWORD_LAMA_SALAH,
   PESAN_PASSWORD_SUDAH_DIGANTI,
+  pesanGantiPasswordTerkunci,
 } from "./pesan-akun";
 
 /** Tombol "Keluar" di tab Akun: mengakhiri sesi Member, lalu tab Akun tampil lagi untuk Tamu. */
@@ -50,8 +51,9 @@ const MasukanGantiPassword = z.object({
 
 /**
  * Form ganti password di tab Akun (PRD §7.6 ▶ Keputusan 2026-11-17). Password lama yang salah ditolak
- * tanpa mengubah apa pun. Setelah diganti, Member keluar di perangkat lain dan tetap masuk di perangkat
- * ini. Permintaan tanpa sesi Member dibawa kembali ke tab Akun.
+ * tanpa mengganti password. Sejak kesalahan kelima berturut-turut, ganti password ditolak dengan pesan
+ * kunci sampai kunci berakhir. Setelah diganti, Member keluar di perangkat lain dan tetap masuk di
+ * perangkat ini. Permintaan tanpa sesi Member dibawa kembali ke tab Akun.
  */
 export async function aksiGantiPassword(
   _sebelumnya: KeadaanFormGantiPassword,
@@ -81,6 +83,11 @@ export async function aksiGantiPassword(
   });
   if (ganti.hasil === "password-lama-salah") {
     return { galat: { umum: PESAN_PASSWORD_LAMA_SALAH } };
+  }
+  if (ganti.hasil === "terkunci") {
+    return {
+      galat: { umum: pesanGantiPasswordTerkunci(ganti.terkunciSampai) },
+    };
   }
   return { berhasil: PESAN_PASSWORD_SUDAH_DIGANTI };
 }
