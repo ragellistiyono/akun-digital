@@ -6,10 +6,12 @@ import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { TautanHalamanHukum } from "../../_components/tautan-halaman-hukum";
 import { TombolWhatsApp } from "../../_components/tombol-whatsapp";
+import { FormGantiPassword } from "./_components/form-ganti-password";
 import { aksiKeluarMember } from "./aksi";
 
-// Tab Akun (PRD §11.1). Member yang login melihat emailnya dan tombol "Keluar" (T41), di atas tombol
-// WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan Privasi. Tamu melihat isi sebelum M2:
+// Tab Akun (PRD §11.1). Member yang login melihat emailnya, form ganti password (T46, PRD §7.6), dan
+// tombol "Keluar" (T41), di atas tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan
+// Privasi. Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat isi sebelum M2:
 // tombol Masuk dan Daftar untuk Tamu baru dipasang di T51 (PRD §13 ▶ Keputusan 2026-11-17).
 export default async function HalamanAkun() {
   // Nomor WhatsApp dibaca setiap kali halaman dibuka, supaya perubahan Admin langsung tampil.
@@ -34,6 +36,7 @@ export default async function HalamanAkun() {
                 {sesiMember.user.email}
               </p>
             </section>
+            <FormGantiPassword />
             <form action={aksiKeluarMember}>
               <button
                 type="submit"
