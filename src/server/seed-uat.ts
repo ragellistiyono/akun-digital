@@ -1,33 +1,46 @@
-// Data seed UAT M1 untuk `pnpm db:seed` (scripts/db-seed.mts): isi "Persiapan bersama" di docs/UAT.md,
-// tanpa Member dan Voucher (PRD §13 ▶ Keputusan 2026-11-11). Semua nilai di berkas ini contoh [CONTOH],
-// bukan aturan.
+// Data seed UAT lokal untuk `pnpm db:seed` (scripts/db-seed.mts): isi "Persiapan bersama" di docs/UAT.md,
+// termasuk Member dan Voucher (docs/UAT.md ▶ Keputusan 2026-11-17). Seed ini hanya untuk komputer lokal; UAT di
+// server produksi dijalankan tanpa seed. Semua nilai di berkas ini contoh [CONTOH], bukan aturan.
 //
 // Data ditulis lewat fungsi server yang sama dengan dasbor admin, supaya melewati aturan yang sama: nama
 // Kategori unik, Format Item stok dan harga diperiksa domain, gambar diperiksa simpanGambar, dan Item stok
 // disimpan terenkripsi seperti Item stok yang ditempel Admin (PRD §12).
 //
-// Seed boleh dijalankan ulang tanpa menggandakan data. Data seed yang sudah ada dikenali dari email Admin,
-// nama Kategori, nama Produk, nama Varian di Produknya, isi Item stok di Variannya, dan qris_id Pesanan seed,
-// lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan Pengaturan toko hanya diisi
-// selama masih kosong. Data yang sudah ada tidak diubah, jadi perubahan pemilik selama UAT tetap tersimpan.
+// Seed boleh dijalankan ulang tanpa menggandakan data. Data seed yang sudah ada dikenali dari email Admin dan
+// Member, nama Kategori, nama Produk, nama Varian di Produknya, isi Item stok di Variannya, kode Voucher, dan
+// qris_id Pesanan seed, lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan
+// Pengaturan toko hanya diisi selama masih kosong. Data yang sudah ada tidak diubah, jadi perubahan pemilik
+// selama UAT tetap tersimpan. Akibatnya Pesanan Selesai seed yang dibuat sebelum T60, tanpa voucher, tetap
+// tanpa voucher; kosongkan database lokal lalu jalankan ulang seed untuk mendapat Pesanan Selesai dengan HEMAT5.
 import { randomBytes } from "node:crypto";
 import { crc32, deflateSync } from "node:zlib";
 
 import { and, eq } from "drizzle-orm";
 
 import { periksaFormatItemStok } from "@/domain/format-item-stok";
+import { periksaIsianVoucher } from "@/domain/isian-voucher";
 import { tempelItemStok } from "@/domain/item-stok";
+import { emailBaku } from "@/domain/kesamaan-email";
 import { namaKategoriDipakai } from "@/domain/nama-kategori";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { rapikanNomorWhatsapp } from "@/domain/nomor-whatsapp";
+import { potonganVoucher } from "@/domain/potongan-voucher";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 import { totalBayar } from "@/domain/total-bayar";
 import { periksaHarga } from "@/domain/validasi-harga";
 
+import { auth } from "./auth/auth";
 import { buatAdmin } from "./auth/buat-admin";
+import { tulisAkun } from "./auth/sisipkan-akun";
 import { BATAS_UKURAN_GAMBAR_MB } from "./berkas-unggahan";
 import { db } from "./db";
-import { itemStok, pesanan, riwayatStatusPesanan } from "./db/schema";
+import {
+  itemStok,
+  pesanan,
+  riwayatStatusPesanan,
+  user,
+  voucher,
+} from "./db/schema";
 import { bacaKunciItemStok, sidikJariItemStok } from "./enkripsi-item-stok";
 import { unggahFotoProduk } from "./foto-produk";
 import { tempelItemStokVarian } from "./item-stok";
@@ -35,6 +48,7 @@ import { buatKategori, daftarKategori } from "./kategori";
 import { bacaPengaturanToko, simpanPengaturanToko } from "./pengaturan-toko";
 import { bacaProduk, buatProduk, daftarProduk } from "./produk";
 import { daftarVarian, tambahVarian } from "./varian";
+import { buatVoucher, type SyaratVoucher } from "./voucher";
 
 /**
  * Admin seed. Password-nya sengaja ditulis di sini supaya pemilik bisa login saat UAT (docs/UAT.md,
@@ -43,6 +57,18 @@ import { daftarVarian, tambahVarian } from "./varian";
 export const ADMIN_SEED = {
   email: "admin@miwe.example",
   password: "sandi-contoh-admin-uat",
+};
+
+/**
+ * Member seed, keduanya sudah diverifikasi: satu aktif dan satu nonaktif (PRD §2.3). Password-nya sengaja
+ * ditulis di sini supaya pemilik bisa login saat UAT (docs/UAT.md, "Persiapan bersama"). [CONTOH]
+ */
+export const MEMBER_SEED = {
+  aktif: { email: "member@miwe.example", password: "sandi-contoh-member-uat" },
+  nonaktif: {
+    email: "nonaktif@miwe.example",
+    password: "sandi-contoh-nonaktif-uat",
+  },
 };
 
 /**
@@ -218,6 +244,62 @@ const PENGATURAN_TOKO = {
   ambangStokMenipis: 5,
 };
 
+/** Satu hari dalam milidetik, untuk masa berlaku Voucher LAMA. */
+const SEHARI_MS = 24 * 60 * 60_000;
+const SATU_MENIT_MS = 60_000;
+
+/** Syarat Voucher yang tidak disebut di daftar Voucher seed: kosong, kecuali Batas per email bawaan. */
+const TANPA_SYARAT: SyaratVoucher = {
+  jenisPotongan: "nominal",
+  nilai: 0,
+  batasMaksimum: null,
+  kuotaVoucher: null,
+  // Nilai bawaan Batas per email (PRD §8.4), sama seperti form Voucher baru.
+  batasPerEmail: 1,
+  minimalHargaJual: null,
+  mulai: null,
+  berakhir: null,
+  cakupan: { jenis: "semua" },
+  khususMember: false,
+  aktif: true,
+};
+
+/**
+ * Voucher seed menurut "Persiapan bersama" di docs/UAT.md, dibuat sesuai urutan daftarnya. Masa berlaku LAMA
+ * berakhir sehari sebelum `sekarang`, dibulatkan ke bawah ke menit seperti isian dasbor admin (PRD §8.4).
+ * Potongan LAMA dan MATI tidak disebut di sana, jadi memakai nominal Rp 5.000 seperti HEMAT5. [CONTOH]
+ */
+function voucherSeed(sekarang: number): (SyaratVoucher & { kode: string })[] {
+  const kemarin =
+    Math.floor((sekarang - SEHARI_MS) / SATU_MENIT_MS) * SATU_MENIT_MS;
+  return [
+    { ...TANPA_SYARAT, kode: "HEMAT5", nilai: 5000 },
+    {
+      ...TANPA_SYARAT,
+      kode: "HEMAT10",
+      jenisPotongan: "persen",
+      nilai: 10,
+      batasMaksimum: 10000,
+      minimalHargaJual: 50000,
+    },
+    {
+      ...TANPA_SYARAT,
+      kode: "MEMBER20",
+      jenisPotongan: "persen",
+      nilai: 20,
+      khususMember: true,
+    },
+    { ...TANPA_SYARAT, kode: "SATUKALI", nilai: 2000, kuotaVoucher: 1 },
+    {
+      ...TANPA_SYARAT,
+      kode: "LAMA",
+      nilai: 5000,
+      berakhir: new Date(kemarin),
+    },
+    { ...TANPA_SYARAT, kode: "MATI", nilai: 5000, aktif: false },
+  ];
+}
+
 type PesananSeed = {
   /** qris_id contoh, yang unik, sekaligus penanda Pesanan seed yang sudah ada. */
   qrisId: string;
@@ -230,10 +312,13 @@ type PesananSeed = {
   menitLalu: number;
   /** Item stok yang Terkirim ke Pesanan Selesai, dalam bentuk baris tempelan. */
   itemStok?: string;
+  /** Kode Voucher seed yang dipakai Pesanan ini. */
+  voucher?: string;
 };
 
 /**
- * Pesanan seed menurut "Persiapan bersama" di docs/UAT.md, tanpa voucher (M2). Pesanan Bermasalah meniru
+ * Pesanan seed menurut "Persiapan bersama" di docs/UAT.md. Pesanan Selesai memakai HEMAT5 (docs/UAT.md ▶
+ * Keputusan 2026-11-17), sehingga email itu sudah memakai Batas per email HEMAT5. Pesanan Bermasalah meniru
  * pembayaran yang nominalnya kurang dari Total bayar (PRD §5.9), jadi tidak memegang Item stok dan Stok
  * Varian tetap utuh. [CONTOH]
  */
@@ -247,6 +332,7 @@ const PESANAN: PesananSeed[] = [
     kodeUnik: 123,
     menitLalu: 90,
     itemStok: "netflix-d@miwe.example|sandi-contoh-d|Profil 1",
+    voucher: "HEMAT5",
   },
   {
     qrisId: "seed-uat-bermasalah-1",
@@ -313,6 +399,8 @@ const berkasPng = (isi: Buffer, nama: string) =>
 /** Jumlah data seed yang baru dibuat oleh satu kali jalan. */
 type RingkasanSeed = {
   admin: number;
+  member: number;
+  voucher: number;
   kategori: number;
   produk: number;
   varian: number;
@@ -353,6 +441,60 @@ type KunciItemStok = Extract<
   ReturnType<typeof bacaKunciItemStok>,
   { hasil: "ada" }
 >["kunci"];
+
+/**
+ * Membuat Member seed yang emailnya belum dipakai, terverifikasi dan langsung bisa login seperti Member yang
+ * mendaftar (tulisAkun). Member nonaktif ditulis beserta tanda nonaktifnya dalam transaksi yang sama.
+ */
+async function isiMember(ringkasan: RingkasanSeed) {
+  const konteks = await auth.$context;
+  for (const [jenis, { email, password }] of Object.entries(MEMBER_SEED)) {
+    const emailMember = emailBaku(email);
+    const [ada] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, emailMember));
+    if (ada) continue;
+
+    const hash = await konteks.password.hash(password);
+    await db.transaction(async (tx) => {
+      const id = await tulisAkun(tx, {
+        email: emailMember,
+        hash,
+        peran: "Member",
+      });
+      if (jenis === "nonaktif") {
+        await tx.update(user).set({ nonaktif: true }).where(eq(user.id, id));
+      }
+    });
+    ringkasan.member++;
+  }
+}
+
+/**
+ * Membuat Voucher seed yang kodenya belum dipakai, lewat buatVoucher seperti form Voucher dasbor admin. Isiannya
+ * diperiksa periksaIsianVoucher lebih dulu, seperti Server Action form itu. Voucher yang kodenya sudah ada
+ * ditolak buatVoucher sebagai kembar, lalu dilewati tanpa diubah.
+ */
+async function isiVoucher(sekarang: number, ringkasan: RingkasanSeed) {
+  for (const { kode, khususMember, aktif, ...isian } of voucherSeed(sekarang)) {
+    const periksa = periksaIsianVoucher(isian);
+    if (!periksa.sah) {
+      gagal(
+        `Isian Voucher seed ${kode} ditolak aturan isian Voucher PRD §8.4 dengan alasan ${periksa.galat.join(", ")}.`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
+    const hasil = await buatVoucher({ kode, khususMember, aktif, ...isian });
+    if (hasil.hasil === "dibuat") ringkasan.voucher++;
+    if (hasil.hasil === "kode-ditolak" && hasil.alasan !== "kembar") {
+      gagal(
+        `Kode Voucher seed ${kode} ditolak aturan kode Voucher PRD §8.4 dengan alasan ${hasil.alasan}.`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
+  }
+}
 
 /** Membuat Kategori seed yang belum ada. Hasilnya id setiap Kategori seed menurut namanya. */
 async function isiKategori(ringkasan: RingkasanSeed) {
@@ -541,6 +683,18 @@ async function tempelSeed(
   ringkasan.itemStok += hasil.tempel.tersimpan.length;
 }
 
+/** Voucher seed dengan kode itu, untuk Pesanan seed milik `email` yang memakainya. */
+async function voucherLewatKode(kode: string, email: string) {
+  const [ada] = await db.select().from(voucher).where(eq(voucher.kode, kode));
+  if (!ada) {
+    gagal(
+      `Voucher ${kode} untuk Pesanan seed ${email} tidak ditemukan.`,
+      "Pastikan kode itu ada di daftar Voucher seed di src/server/seed-uat.ts, lalu jalankan ulang `pnpm db:seed`; data seed yang belum ada akan dibuat lagi.",
+    );
+  }
+  return ada;
+}
+
 /** Pelaku di Riwayat status Pesanan, sama dengan checkout (pesanan.ts) dan kabar pembayaran Qrispy. */
 const PELAKU_CHECKOUT = "Pembeli";
 const PELAKU_KABAR_PEMBAYARAN = "Qrispy";
@@ -555,8 +709,11 @@ const GAMBAR_QR_SEED = `data:image/png;base64,${petakWarna({ lebar: 1, tinggi: 1
  * Terkirim yang mencatat nama kolom Format Item stok saat itu (PRD §4.1). Email "Pesanan selesai" tidak
  * dijadwalkan, karena email Pesanan seed bukan email sungguhan.
  */
-async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
-  const sekarang = Date.now();
+async function isiPesanan(
+  kunci: KunciItemStok,
+  sekarang: number,
+  ringkasan: RingkasanSeed,
+) {
   for (const p of PESANAN) {
     const [ada] = await db
       .select({ id: pesanan.id })
@@ -596,11 +753,20 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
       );
     }
 
+    const voucherDipakai = p.voucher
+      ? await voucherLewatKode(p.voucher, p.email)
+      : null;
+
     const dibuat = new Date(sekarang - p.menitLalu * 60_000);
     const dibayar = new Date(dibuat.getTime() + 2 * 60_000);
     const rincian = totalBayar({
       hargaJual: dipesan.hargaJual,
-      potonganVoucher: 0,
+      potonganVoucher: voucherDipakai
+        ? potonganVoucher({
+            hargaJual: dipesan.hargaJual,
+            voucher: voucherDipakai,
+          }).potonganVoucher
+        : 0,
       kodeUnik: p.kodeUnik,
     });
     await db.transaction(async (tx) => {
@@ -621,6 +787,8 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
           gambarQr: GAMBAR_QR_SEED,
           status: p.status,
           waktuBayar: dibayar,
+          voucherId: voucherDipakai?.id ?? null,
+          kodeVoucher: voucherDipakai?.kode ?? null,
         })
         .returning({ id: pesanan.id });
       await tx.insert(riwayatStatusPesanan).values([
@@ -666,7 +834,7 @@ async function isiPesanan(kunci: KunciItemStok, ringkasan: RingkasanSeed) {
 }
 
 /**
- * Mengisi database dengan data seed UAT M1 yang belum ada. Hasilnya jumlah data yang baru dibuat. Melempar
+ * Mengisi database dengan data seed UAT yang belum ada. Hasilnya jumlah data yang baru dibuat. Melempar
  * galat yang menyebut sebabnya bila ada data seed yang ditolak.
  */
 export async function isiSeedUat(): Promise<RingkasanSeed> {
@@ -676,8 +844,11 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
     gagal(SEBAB_KUNCI_BERMASALAH, LANGKAH_KUNCI_BERMASALAH);
   }
 
+  const sekarang = Date.now();
   const ringkasan = {
     admin: 0,
+    member: 0,
+    voucher: 0,
     kategori: 0,
     produk: 0,
     varian: 0,
@@ -688,12 +859,14 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
   };
   // Admin yang emailnya sudah dipakai dilewati.
   if ((await buatAdmin(ADMIN_SEED)).hasil === "dibuat") ringkasan.admin++;
+  await isiMember(ringkasan);
   const idKategori = await isiKategori(ringkasan);
   for (const p of PRODUK) {
     const produkId = await isiProduk(p, idKategori, ringkasan);
     await isiVarian(produkId, p, ringkasan);
   }
-  await isiPesanan(kunci.kunci, ringkasan);
+  await isiVoucher(sekarang, ringkasan);
+  await isiPesanan(kunci.kunci, sekarang, ringkasan);
 
   // Pengaturan toko hanya diisi selama masih kosong, supaya isian pemilik tidak tertimpa.
   const pengaturan = await bacaPengaturanToko();

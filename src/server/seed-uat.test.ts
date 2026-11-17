@@ -30,6 +30,8 @@ const lingkunganAsli = {
   UPLOAD_DIR: process.env.UPLOAD_DIR,
 };
 let folderUnggahan = "";
+/** Waktu seed pertama dijalankan, dalam milidetik: sebelum dimulai dan sesudah selesai. */
+const waktuSeed = { mulai: 0, selesai: 0 };
 
 let katalog: typeof import("./katalog");
 let koneksi: typeof import("./db").koneksi;
@@ -50,6 +52,7 @@ async function jumlahData() {
   const { db } = await import("./db");
   const tabel = [
     "user",
+    "account",
     "kategori",
     "produk",
     "varian",
@@ -57,6 +60,7 @@ async function jumlahData() {
     "pesanan",
     "riwayat_status_pesanan",
     "pengaturan_toko",
+    "voucher",
   ] as const;
   const jumlah: Record<string, number> = {};
   for (const nama of tabel) {
@@ -93,7 +97,9 @@ beforeAll(async () => {
   katalog = await import("./katalog");
   ({ koneksi } = await import("./db"));
 
+  waktuSeed.mulai = Date.now();
   await jalankanSeed();
+  waktuSeed.selesai = Date.now();
 }, 120_000);
 
 afterAll(async () => {
@@ -177,7 +183,98 @@ describe("pnpm db:seed di database kosong", () => {
     ).toEqual({ hasil: "berhasil" });
   });
 
-  it("daftar Pesanan dasbor admin menampilkan dua Pesanan Bermasalah Netflix Premium 1 Bulan dan satu Pesanan Selesai member@miwe.example tanpa voucher", async () => {
+  // Login Member di halaman Masuk memanggil masukMember lewat Server Action
+  // (src/app/(toko)/(dalam)/masuk/aksi.ts). Hasil "nonaktif" ditampilkan sebagai pesan Member nonaktif
+  // (PRD §7.5 ▶ Keputusan 2026-11-17).
+  it("member@miwe.example bisa login, dan nonaktif@miwe.example ditolak sebagai Member nonaktif, dengan password dari berkas seed", async () => {
+    const { MEMBER_SEED } = await import("./seed-uat");
+    const { masukMember } = await import("./auth/masuk");
+    expect(MEMBER_SEED.aktif.email).toBe("member@miwe.example");
+    expect(MEMBER_SEED.nonaktif.email).toBe("nonaktif@miwe.example");
+
+    expect(
+      await masukMember({ ...MEMBER_SEED.aktif, kepala: new Headers() }),
+    ).toEqual({ hasil: "berhasil" });
+    expect(
+      await masukMember({ ...MEMBER_SEED.nonaktif, kepala: new Headers() }),
+    ).toEqual({ hasil: "nonaktif" });
+  });
+
+  // Syarat dari daftar Voucher di "Persiapan bersama" docs/UAT.md [CONTOH]. Syarat yang tidak disebut di sana
+  // dikosongkan, kecuali Batas per email yang memakai nilai bawaannya 1 (PRD §8.4).
+  it("daftar Voucher dasbor admin menampilkan keenam Voucher seed dengan syarat dari docs/UAT.md", async () => {
+    const { daftarVoucher } = await import("./voucher");
+    const daftar = await daftarVoucher();
+    const syarat = (kode: string) => {
+      const v = daftar.find((satu) => satu.kode === kode);
+      return v && { ...v, id: undefined, dibuatPada: undefined };
+    };
+    const tanpaSyarat = {
+      id: undefined,
+      dibuatPada: undefined,
+      batasMaksimum: null,
+      kuotaVoucher: null,
+      batasPerEmail: 1,
+      minimalHargaJual: null,
+      mulai: null,
+      berakhir: null,
+      cakupan: "semua",
+      khususMember: false,
+      aktif: true,
+      pemakaian: 0,
+    };
+
+    expect(daftar.map((v) => v.kode).sort()).toEqual([
+      "HEMAT10",
+      "HEMAT5",
+      "LAMA",
+      "MATI",
+      "MEMBER20",
+      "SATUKALI",
+    ]);
+    // HEMAT5 sudah dipakai Pesanan Selesai member@miwe.example.
+    expect(syarat("HEMAT5")).toEqual({
+      ...tanpaSyarat,
+      kode: "HEMAT5",
+      jenisPotongan: "nominal",
+      nilai: 5000,
+      pemakaian: 1,
+    });
+    expect(syarat("HEMAT10")).toEqual({
+      ...tanpaSyarat,
+      kode: "HEMAT10",
+      jenisPotongan: "persen",
+      nilai: 10,
+      batasMaksimum: 10000,
+      minimalHargaJual: 50000,
+    });
+    expect(syarat("MEMBER20")).toEqual({
+      ...tanpaSyarat,
+      kode: "MEMBER20",
+      jenisPotongan: "persen",
+      nilai: 20,
+      khususMember: true,
+    });
+    expect(syarat("SATUKALI")).toEqual({
+      ...tanpaSyarat,
+      kode: "SATUKALI",
+      jenisPotongan: "nominal",
+      nilai: 2000,
+      kuotaVoucher: 1,
+    });
+    expect(syarat("MATI")).toMatchObject({ kode: "MATI", aktif: false });
+
+    // Masa berlaku LAMA berakhir sehari sebelum seed dijalankan, dibulatkan ke menit.
+    const lama = syarat("LAMA");
+    expect(lama).toMatchObject({ kode: "LAMA", aktif: true, mulai: null });
+    const berakhir = lama?.berakhir?.getTime() ?? 0;
+    const SEHARI = 24 * 60 * 60_000;
+    expect(berakhir).toBeGreaterThan(waktuSeed.mulai - SEHARI - 60_000);
+    expect(berakhir).toBeLessThanOrEqual(waktuSeed.selesai - SEHARI);
+    expect(berakhir % 60_000).toBe(0);
+  });
+
+  it("daftar Pesanan dasbor admin menampilkan dua Pesanan Bermasalah Netflix Premium 1 Bulan dan satu Pesanan Selesai member@miwe.example yang memakai HEMAT5", async () => {
     const { daftarPesanan } = await import("./daftar-pesanan");
     const { bacaDetailPesanan } = await import("./detail-pesanan");
 
@@ -195,9 +292,49 @@ describe("pnpm db:seed di database kosong", () => {
     expect(selesai).toHaveLength(1);
     expect(selesai[0].email).toBe("member@miwe.example");
 
+    // PRD §8.3: Rp 50.000 dengan nominal Rp 5.000 menjadi Rp 45.000, ditambah Kode unik seed 123.
     const detail = await bacaDetailPesanan(selesai[0].nomorPesanan);
-    expect(detail?.rincian.potonganVoucher).toBe(0);
+    expect(detail?.rincian).toEqual({
+      hargaJual: 50000,
+      potonganVoucher: 5000,
+      kodeVoucher: "HEMAT5",
+      kodeUnik: 123,
+      totalBayar: 45123,
+    });
     expect(detail?.itemStok).not.toBeNull();
+  });
+
+  // UAT-H4 langkah 5: checkout sebagai Tamu dengan email Member seed yang ditulis huruf besar. Penolakan Voucher
+  // terjadi sebelum QRIS diminta, jadi Qrispy tiruan di sini tidak boleh terpanggil.
+  it('checkout Netflix Premium 1 Bulan dengan MEMBER@miwe.example dan HEMAT5 ditolak dengan "Anda sudah memakai voucher ini"', async () => {
+    const { buatPesanan } = await import("./pesanan");
+    const { semua } = await katalog.daftarProdukBeranda();
+    const netflix = await katalog.bacaHalamanProduk(
+      semua.find((k) => k.nama === "Netflix Premium")?.id ?? "",
+    );
+    const satuBulan = netflix?.varian.find((v) => v.nama === "1 Bulan");
+    const qrispyTakTerpanggil = {
+      buatQris: () => Promise.reject(new Error("QRIS tidak boleh diminta.")),
+      batalkanQris: () =>
+        Promise.reject(new Error("QRIS tidak boleh dibatalkan.")),
+      cekStatusQris: () =>
+        Promise.reject(new Error("Status QRIS tidak boleh dicek.")),
+    };
+
+    expect(
+      await buatPesanan(
+        {
+          varianId: satuBulan?.id ?? "",
+          email: "MEMBER@miwe.example",
+          kodeVoucher: "HEMAT5",
+        },
+        { qrispy: qrispyTakTerpanggil },
+      ),
+    ).toEqual({
+      hasil: "voucher-ditolak",
+      alasan: "sudah-dipakai-email-ini",
+      pesan: "Anda sudah memakai voucher ini",
+    });
   });
 
   it("pengaturan toko berisi nomor WhatsApp contoh serta teks Syarat & Ketentuan dan Kebijakan Privasi contoh", async () => {
@@ -255,9 +392,11 @@ describe("pnpm db:seed di database kosong", () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan
     // 10 Tersedia dan 1 Terkirim ke Pesanan Selesai, Netflix 3 Bulan 4, YouTube 3 Bulan 3, Uji Bayar 10),
-    // dan 8 berkas gambar (3 ikon Kategori dan 5 foto Produk).
+    // dan 8 berkas gambar (3 ikon Kategori dan 5 foto Produk). User berisi 1 Admin dan 2 Member, masing-masing
+    // dengan satu akun password, dan Voucher berisi 6 Voucher seed.
     expect(sebelum).toEqual({
-      user: 1,
+      user: 3,
+      account: 3,
       kategori: 3,
       produk: 5,
       varian: 6,
@@ -265,6 +404,7 @@ describe("pnpm db:seed di database kosong", () => {
       pesanan: 3,
       riwayat_status_pesanan: 6,
       pengaturan_toko: 1,
+      voucher: 6,
       berkas: 8,
     });
 
