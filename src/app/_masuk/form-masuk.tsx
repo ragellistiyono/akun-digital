@@ -80,15 +80,18 @@ export function Isian({
  * Form login dengan email dan password serta tombol "Masuk", dipakai login Admin (PRD §2.2) dan
  * login Member (PRD §7.5). Server Action-nya ditentukan halaman yang memasangnya. Bila Server Action
  * mengembalikan nomor WhatsApp (Member nonaktif), tombol WhatsApp tampil di bawah pesannya; tanpa nomor,
- * TombolWhatsApp tidak tampil.
+ * TombolWhatsApp tidak tampil. `children` adalah isian tersembunyi tambahan yang ikut dikirim, misalnya alamat
+ * kembali login Member.
  */
 export function FormMasuk({
   aksiMasuk,
+  children,
 }: {
   aksiMasuk: (
     sebelumnya: KeadaanFormMasuk,
     formData: FormData,
   ) => Promise<KeadaanFormMasuk>;
+  children?: ReactNode;
 }) {
   const [keadaan, aksi, sedangMengirim] = useActionState(
     aksiMasuk,
@@ -101,6 +104,7 @@ export function FormMasuk({
       noValidate
       className="mt-6 flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
     >
+      {children}
       <Isian
         nama="email"
         label="Email"

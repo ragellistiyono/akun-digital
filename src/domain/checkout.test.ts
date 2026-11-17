@@ -186,7 +186,7 @@ describe("hasilCheckout", () => {
     ).toEqual({ hasil: "stok-habis" });
   });
 
-  it("bila langkah 1–4 lolos, Voucher yang ditolak menolak checkout dengan pesan penolakannya", () => {
+  it("bila langkah 1–4 lolos, Voucher yang ditolak menolak checkout dengan alasan dan pesan penolakannya", () => {
     expect(
       hasilCheckout({
         varianDijual: netflixSatuBulan,
@@ -200,6 +200,7 @@ describe("hasilCheckout", () => {
       }),
     ).toEqual({
       hasil: "voucher-ditolak",
+      alasan: "sudah-berakhir",
       pesan: "Voucher sudah berakhir",
     });
   });

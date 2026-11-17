@@ -2,17 +2,23 @@
 // 2026-11-12). Batas Pesanan menunggu ada di batas-pesanan-menunggu.ts, email Member nonaktif ada di
 // member-nonaktif.ts, Varian habis ada di stok-varian.ts, dan penilaian Voucher ada di penerapan-voucher.ts.
 import type { HasilBatasPesananMenunggu } from "./batas-pesanan-menunggu";
+import type { AlasanVoucherDitolak } from "./kelayakan-voucher";
 import { varianHabis } from "./stok-varian";
 
-/** Hasil penilaian Voucher yang diisi Pembeli menurut penerapanVoucher: dipakai, atau ditolak dengan pesannya. */
-type VoucherDinilai = { dipakai: true } | { dipakai: false; pesan: string };
+/**
+ * Hasil penilaian Voucher yang diisi Pembeli menurut penerapanVoucher: dipakai, atau ditolak dengan alasan dan
+ * pesannya.
+ */
+type VoucherDinilai =
+  | { dipakai: true }
+  | { dipakai: false; alasan: AlasanVoucherDitolak; pesan: string };
 
 type HasilCheckout<V, P> =
   | { hasil: "tidak-dijual" }
   | { hasil: "member-nonaktif" }
   | { hasil: "pesanan-menunggu"; pesananMenunggu: P }
   | { hasil: "stok-habis" }
-  | { hasil: "voucher-ditolak"; pesan: string }
+  | { hasil: "voucher-ditolak"; alasan: AlasanVoucherDitolak; pesan: string }
   | { hasil: "boleh"; varianDijual: V };
 
 /**
@@ -26,7 +32,8 @@ type HasilCheckout<V, P> =
  *    Pesanan yang menghalangi itu;
  * 4. Varian dengan Stok Varian 0 ditolak karena stok habis (PRD §5.2);
  * 5. Voucher yang diisi Pembeli (`voucher`, hasil penerapanVoucher) dan ditolak menolak checkout, dan hasilnya
- *    membawa pesan penolakannya (PRD §8.7). `voucher` null berarti kode voucher tidak diisi.
+ *    membawa alasan dan pesan penolakannya (PRD §8.7). Alasannya membuat tampilan bisa mengenali Voucher khusus
+ *    Member tanpa mencocokkan teks pesan. `voucher` null berarti kode voucher tidak diisi.
  *
  * Bila tidak ada yang menolak, Pesanan untuk Varian itu boleh dibuat, dengan Voucher itu bila diisi, dan hasilnya
  * membawa Varian itu.
@@ -54,7 +61,11 @@ export function hasilCheckout<V, P>({
   }
   if (varianHabis(stokVarian)) return { hasil: "stok-habis" };
   if (voucher !== null && !voucher.dipakai) {
-    return { hasil: "voucher-ditolak", pesan: voucher.pesan };
+    return {
+      hasil: "voucher-ditolak",
+      alasan: voucher.alasan,
+      pesan: voucher.pesan,
+    };
   }
   return { hasil: "boleh", varianDijual };
 }

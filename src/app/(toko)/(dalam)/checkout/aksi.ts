@@ -4,7 +4,9 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { nominalTagihanQris } from "@/domain/total-bayar";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
+import { nilaiVoucher } from "@/server/penilaian-voucher";
 import { buatPesanan, TautanPesanan } from "@/server/pesanan";
 import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
 
@@ -12,6 +14,11 @@ export type KeadaanFormCheckout = {
   email: string;
   kodeVoucher: string;
   galat?: { email?: string; kodeVoucher?: string; checkout?: string };
+  /**
+   * Voucher ditolak karena khusus Member, sehingga pesan penolakannya diberi tautan Masuk (PRD §8.7 ▶ Keputusan
+   * 2026-11-17).
+   */
+  voucherKhususMember?: true;
 };
 
 const PESAN_EMAIL_KOSONG =
@@ -126,7 +133,11 @@ export async function aksiCheckout(
     return { ...isian, galat: { checkout: PESAN_STOK_HABIS } };
   }
   if (hasil.hasil === "voucher-ditolak") {
-    return { ...isian, galat: { kodeVoucher: hasil.pesan } };
+    return {
+      ...isian,
+      galat: { kodeVoucher: hasil.pesan },
+      ...(hasil.alasan === "khusus-member" && { voucherKhususMember: true }),
+    };
   }
   if (hasil.hasil === "qris-gagal") {
     return { ...isian, galat: { checkout: PESAN_QRIS_GAGAL } };
@@ -153,4 +164,64 @@ export async function aksiCheckout(
     );
   }
   redirect(`/pesanan/${hasil.tautan}`);
+}
+
+/**
+ * Hasil tombol "Pakai": Voucher diterima dengan potongan voucher dan Perkiraan bayar yang baru, beserta Harga jual
+ * sebagai bahan hitungnya, atau ditolak dengan pesan penolakannya. `khususMember` menandai penolakan Voucher
+ * khusus Member, yang pesannya diberi tautan Masuk.
+ */
+export type HasilPakaiVoucher =
+  | {
+      diterima: true;
+      kodeVoucher: string;
+      hargaJual: number;
+      potonganVoucher: number;
+      perkiraanBayar: number;
+    }
+  | { diterima: false; pesan: string; khususMember: boolean };
+
+const MasukanPakaiVoucher = z.object({
+  varianId: z.uuid(),
+  kode: z.string(),
+  email: z.string(),
+});
+
+/**
+ * Tombol "Pakai" di Checkout (PRD §8.7 ▶ Keputusan 2026-11-17): memeriksa kode voucher untuk Varian itu dengan
+ * penilaian yang sama seperti saat Pesanan dibuat (nilaiVoucher), tanpa membuat Pesanan.
+ *
+ * - Status login Member dibaca dari sesi. Bila Member sedang login, Batas per email memakai email Member itu.
+ * - `email` adalah isi isian email saat "Pakai" ditekan. Bila masih kosong, Batas per email tidak diperiksa di
+ *   sini, tetapi tetap diperiksa saat Pesanan dibuat.
+ * - Hasil ini tidak menahan Voucher. Semua syarat diperiksa sekali lagi saat Pesanan dibuat (aksiCheckout).
+ */
+export async function aksiPakaiVoucher(
+  masukan: unknown,
+): Promise<HasilPakaiVoucher> {
+  const kepala = await headers();
+  const isian = MasukanPakaiVoucher.safeParse(masukan);
+  if (!isian.success) {
+    return { diterima: false, pesan: PESAN_TIDAK_DIJUAL, khususMember: false };
+  }
+
+  const hasil = await nilaiVoucher({ ...isian.data, kepala });
+  if (hasil === null) {
+    return { diterima: false, pesan: PESAN_TIDAK_DIJUAL, khususMember: false };
+  }
+  if (!hasil.dipakai) {
+    return {
+      diterima: false,
+      pesan: hasil.pesan,
+      khususMember: hasil.alasan === "khusus-member",
+    };
+  }
+  const { nominal } = nominalTagihanQris(hasil);
+  return {
+    diterima: true,
+    kodeVoucher: hasil.kodeVoucher,
+    hargaJual: hasil.hargaJual,
+    potonganVoucher: hasil.potonganVoucher,
+    perkiraanBayar: nominal,
+  };
 }

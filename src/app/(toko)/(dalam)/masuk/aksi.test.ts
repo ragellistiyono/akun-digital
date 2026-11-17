@@ -90,3 +90,55 @@ describe("aksiMasukMember untuk Member nonaktif", () => {
     });
   });
 });
+
+/** Alamat tujuan bila galat yang dilempar Server Action adalah pengalihan Next.js. */
+function alamatPengalihan(galat: unknown) {
+  if (
+    typeof galat === "object" &&
+    galat !== null &&
+    "digest" in galat &&
+    typeof galat.digest === "string" &&
+    galat.digest.startsWith("NEXT_REDIRECT")
+  ) {
+    return galat.digest.split(";")[2];
+  }
+  throw galat;
+}
+
+/** Login Member aktif baru dengan alamat kembali itu. Hasilnya alamat tujuan pengalihan setelah login. */
+async function masukDenganAlamatKembali(kembali: string) {
+  const email = `member-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: PASSWORD });
+  return aksiMasukMember(
+    { email: "" },
+    formulir({ email, password: PASSWORD, kembali }),
+  ).then(
+    () => null,
+    (galat: unknown) => alamatPengalihan(galat),
+  );
+}
+
+// Tautan Masuk dari pesan Voucher khusus Member di Checkout (PRD §7.5 dan §8.7 ▶ Keputusan 2026-11-17, UAT-H3).
+describe("aksiMasukMember dengan alamat kembali", () => {
+  it("Member yang login lewat tautan Masuk di Checkout kembali ke Checkout Varian yang sama", async () => {
+    const checkout = `/checkout?varianId=${randomUUID()}`;
+
+    expect(await masukDenganAlamatKembali(checkout)).toBe(checkout);
+  });
+
+  for (const kembali of [
+    "https://jahat.example/checkout",
+    "//jahat.example/checkout",
+    "/\\jahat.example/checkout",
+    "javascript:alert(1)",
+    "checkout?varianId=1",
+  ]) {
+    it(`alamat kembali ke luar toko (${kembali}) diabaikan, dan Member dibawa ke Riwayat Pesanan`, async () => {
+      expect(await masukDenganAlamatKembali(kembali)).toBe("/riwayat");
+    });
+  }
+
+  it("tanpa alamat kembali, Member dibawa ke Riwayat Pesanan", async () => {
+    expect(await masukDenganAlamatKembali("")).toBe("/riwayat");
+  });
+});
