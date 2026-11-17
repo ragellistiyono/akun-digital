@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
 
+import { kodeBaku } from "@/domain/kode-voucher";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import type { bacaCheckout } from "@/server/pesanan";
@@ -44,6 +45,7 @@ const KELAS_TAUTAN =
  * hasil "Pakai", atau hasil "Bayar dengan QRIS" sesudahnya.
  */
 type PakaiVoucher = {
+  /** Kode di isian saat "Pakai" ditekan, belum dibakukan. */
   kode: string;
   hasil: HasilPakaiVoucher;
   keadaan: KeadaanFormCheckout;
@@ -109,11 +111,11 @@ export function FormCheckout({
       : pakai && hasilPakai && !hasilPakai.diterima
         ? { kode: pakai.kode, ...hasilPakai }
         : null;
-  // Kode voucher ditulis kapital, seperti yang tampil di isiannya.
+  // Kode voucher dibawa dalam bentuk bakunya (PRD §8.1), seperti yang tampil di isiannya.
   const alamatKembali = `/checkout?${new URLSearchParams({
     varianId: checkout.varianId,
     ...(penolakanVoucher && {
-      kodeVoucher: penolakanVoucher.kode.trim().toUpperCase(),
+      kodeVoucher: kodeBaku(penolakanVoucher.kode),
     }),
   })}`;
   const alamatMasuk = `/masuk?${new URLSearchParams({ kembali: alamatKembali })}`;
