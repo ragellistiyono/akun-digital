@@ -126,8 +126,15 @@ describe("aksiMasukMember dengan alamat kembali", () => {
     expect(await masukDenganAlamatKembali(checkout)).toBe(checkout);
   });
 
+  it("alamat kembali ke Checkout yang membawa kode voucher yang diketik tetap utuh setelah login", async () => {
+    const checkout = `/checkout?varianId=${randomUUID()}&kodeVoucher=MEMBER20`;
+
+    expect(await masukDenganAlamatKembali(checkout)).toBe(checkout);
+  });
+
   for (const kembali of [
     "https://jahat.example/checkout",
+    "https://jahat.example/checkout?varianId=1&kodeVoucher=MEMBER20",
     "//jahat.example/checkout",
     "/\\jahat.example/checkout",
     "javascript:alert(1)",
