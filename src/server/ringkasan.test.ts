@@ -3,11 +3,14 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { buatAdmin } from "./auth/buat-admin";
 import { db, koneksi } from "./db";
-import { varian } from "./db/schema";
+import { pendaftar, user, varian } from "./db/schema";
 import { selesaikanPesananBermasalah } from "./penyelesaian-bermasalah";
-import { angkaRingkasan } from "./ringkasan";
+import { angkaMemberAktif, angkaRingkasan } from "./ringkasan";
+import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
+import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test (.env.ci), yang dipakai bersama test lain. Test lain membuat
@@ -112,5 +115,57 @@ describe("angkaRingkasan (PRD §9.2, §9.3)", () => {
     expect(tanggalBayar.hariIni.pesananSelesai.jumlah).toBe(1);
     expect(tanggalDiselesaikan.hariIni.pendapatan.pendapatan).toBe(0);
     expect(tanggalDiselesaikan.hariIni.pesananSelesai.jumlah).toBe(0);
+  });
+});
+
+// PRD §2.3 ▶ Keputusan 2026-11-17 dan §9.2: kartu Member aktif menghitung Member yang sudah diverifikasi dan
+// tidak nonaktif. Database dipakai bersama test lain, jadi test ini memeriksa Member yang dihitung (bahan
+// hitungnya) lewat email unik, bukan jumlah semuanya.
+describe("angkaMemberAktif (PRD §2.3, §9.2)", () => {
+  it("menghitung Member aktif, tetapi tidak menghitung Pendaftar, Member nonaktif, maupun Admin", async () => {
+    const akhiran = randomUUID();
+    const PASSWORD = "sandi-uji-member-123";
+    const aktif = `aktif-${akhiran}@mail.com`;
+    const nonaktif = `nonaktif-${akhiran}@mail.com`;
+    const calon = `pendaftar-${akhiran}@mail.com`;
+    const admin = `admin-${akhiran}@example.test`;
+    await sisipkanMember({ email: aktif, password: PASSWORD });
+    await sisipkanMember({ email: nonaktif, password: PASSWORD });
+    const [{ id: idNonaktif }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, nonaktif));
+    await ubahStatusMember({ idMember: idNonaktif, nonaktif: true });
+    await db.insert(pendaftar).values({
+      email: calon,
+      password: "hash-uji",
+      kodeVerifikasi: "123456",
+      kodeDikirimPada: new Date(),
+    });
+    await buatAdmin({ email: admin, password: "sandi-uji-admin-123" });
+
+    const memberAktif = await angkaMemberAktif();
+
+    const dihitung = memberAktif.dihitung.map((member) => member.email);
+    expect(dihitung).toContain(aktif);
+    expect(dihitung).not.toContain(nonaktif);
+    expect(dihitung).not.toContain(calon);
+    expect(dihitung).not.toContain(admin);
+    expect(memberAktif.jumlah).toBe(memberAktif.dihitung.length);
+  });
+
+  it("Member nonaktif yang diaktifkan kembali dihitung lagi", async () => {
+    const email = `kembali-${randomUUID()}@mail.com`;
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    await ubahStatusMember({ idMember: id, nonaktif: true });
+    await ubahStatusMember({ idMember: id, nonaktif: false });
+
+    const memberAktif = await angkaMemberAktif();
+
+    expect(memberAktif.dihitung.map((member) => member.email)).toContain(email);
   });
 });

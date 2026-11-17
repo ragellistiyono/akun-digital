@@ -7,11 +7,13 @@ import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import kesamaanEmail from "../../tests/golden/kesamaan-email.json";
 
+import { buatAdmin } from "./auth/buat-admin";
 import { db, koneksi } from "./db";
-import { varian } from "./db/schema";
+import { user, varian } from "./db/schema";
 import { koreksiEmailPesanan } from "./detail-pesanan";
-import { riwayatPesanan } from "./riwayat-pesanan";
+import { riwayatPesanan, riwayatPesananMember } from "./riwayat-pesanan";
 import { sisipkanProduk } from "./uji-katalog";
+import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci. Database itu dipakai bersama test lain yang berjalan
@@ -88,7 +90,7 @@ describe("riwayatPesanan: kesamaan email (PRD §7.4, tests/golden/kesamaan-email
 });
 
 describe("riwayatPesanan: isi dan urutan (PRD §7.4)", () => {
-  it("memuat Pesanan semua status milik Member, terbaru di atas, beserta Tautan, Produk, Varian, Total bayar, dan waktu dibuatnya", async () => {
+  it("memuat Pesanan semua status milik Member, terbaru di atas, beserta Tautan, Produk, Varian, Total bayar, waktu dibuat, email, dan tanda Email gagal-nya", async () => {
     const akhiran = randomUUID();
     const emailMember = denganAkhiran("budi@mail.com", akhiran);
     const emailTamu = denganAkhiran("BUDI@Mail.com", akhiran);
@@ -147,6 +149,8 @@ describe("riwayatPesanan: isi dan urutan (PRD §7.4)", () => {
       tautan: selesaiTamu.tautan,
       status: "Selesai",
       totalBayar: 45123,
+      email: emailTamu,
+      emailGagal: false,
       namaProduk: NAMA_PRODUK,
       namaVarian: "1 Bulan",
       waktuDibuat: new Date("2026-11-11T20:14:00+07:00"),
@@ -183,5 +187,40 @@ describe("riwayatPesanan: koreksi email (PRD §6.4, ADR-0003)", () => {
       dipesan.nomorPesanan,
     ]);
     expect(nomor(await riwayatPesanan(emailSalahKetik))).toEqual([]);
+  });
+});
+
+describe("riwayatPesananMember: Riwayat Pesanan Member di dasbor admin (PRD §2.3 ▶ Keputusan 2026-11-17)", () => {
+  /** Id akun dengan email itu. */
+  const idAkun = async (email: string) => {
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    return id;
+  };
+
+  it("memuat email Member itu dan Pesanan yang sama dengan Riwayat Pesanan-nya di toko, termasuk yang ditulis huruf besar", async () => {
+    const email = `budi-${randomUUID()}@mail.com`;
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const dipesan = await sisipkanPesanan({
+      varianId,
+      status: "Kedaluwarsa",
+      email: email.toUpperCase(),
+    });
+
+    const hasil = await riwayatPesananMember(await idAkun(email));
+
+    expect(hasil?.member).toMatchObject({ email, nonaktif: false });
+    expect(hasil?.pesanan).toEqual(await riwayatPesanan(email));
+    expect(hasil && nomor(hasil.pesanan)).toEqual([dipesan.nomorPesanan]);
+  });
+
+  it("tidak ada untuk id yang bukan milik Member, termasuk id Admin", async () => {
+    const emailAdmin = `admin-${randomUUID()}@example.test`;
+    await buatAdmin({ email: emailAdmin, password: "sandi-uji-admin-123" });
+
+    expect(await riwayatPesananMember(await idAkun(emailAdmin))).toBeNull();
+    expect(await riwayatPesananMember(randomUUID())).toBeNull();
   });
 });

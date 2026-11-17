@@ -118,3 +118,31 @@ test("Ringkasan menampilkan Pendapatan dan Pesanan Selesai hari ini dan bulan in
   await expect(isi.getByRole("img")).toHaveCount(0);
   await expect(isi.locator('svg:not([aria-hidden="true"])')).toHaveCount(0);
 });
+
+// UAT-I1 dan PRD §9.2 (▶ Keputusan 2026-11-17): jumlah di kartu Member aktif sama dengan jumlah Member
+// berstatus Aktif di daftar Member. Test lain yang berjalan bersamaan bisa menambah atau menonaktifkan Member
+// di sela bacaan, jadi kartu hanya dibandingkan saat angkanya sama sebelum dan sesudah daftar Member dimuat,
+// dan bagian itu diulang bila angkanya terganggu.
+test("kartu Member aktif menampilkan jumlah yang sama dengan jumlah Member berstatus Aktif di daftar Member", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  const kartuMemberAktif = page.getByRole("article", { name: "Member aktif" });
+
+  await expect(async () => {
+    await page.goto("/admin/ringkasan");
+    const sebelum = await kartuMemberAktif.getByText(/^\d+$/).textContent();
+    await page.goto("/admin/member");
+    const statusAktif = await page
+      .getByRole("main")
+      .getByRole("table")
+      .locator("tbody td")
+      .filter({ hasText: /^Aktif$/ })
+      .count();
+    await page.goto("/admin/ringkasan");
+    const sesudah = await kartuMemberAktif.getByText(/^\d+$/).textContent();
+
+    expect(sesudah).toBe(sebelum);
+    expect(Number(sebelum)).toBe(statusAktif);
+  }).toPass({ timeout: 30_000 });
+});
