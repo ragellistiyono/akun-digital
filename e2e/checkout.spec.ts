@@ -8,6 +8,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../src/server/db";
 import { pesanan, riwayatStatusPesanan, varian } from "../src/server/db/schema";
 import { sisipkanProduk } from "../src/server/uji-katalog";
+import { sisipkanMember } from "../src/server/uji-member";
 
 // Data persiapan bersama docs/UAT.md, yang bertanda [CONTOH], dengan akhiran unik per run supaya Produk
 // dan Pesanan dari test lain di app_test tidak mengganggu asersi. Produk yang disisipkan di tengah test
@@ -296,6 +297,52 @@ test("form checkout hanya berisi isian email, dengan kalimat Syarat & Ketentuan 
   await expect(nilaiRincian(page, "Perkiraan bayar")).toHaveText(
     "Rp 1.000 + Kode unik",
   );
+});
+
+// PRD §5.2: Tamu mengisi email sendiri, dengan email apa pun.
+test("Tamu membuka Checkout dengan isian email kosong yang bisa diisi, lalu checkout dengan email apa pun", async ({
+  page,
+}) => {
+  await bukaCheckout(page, produk.ujiBayar);
+  const isian = page.getByRole("textbox", { name: "Email" });
+  await expect(isian).toHaveValue("");
+  await expect(isian).toBeEditable();
+
+  const email = emailUnik();
+  await bayar(page, email);
+
+  expect(await pesananDenganEmail(email)).toMatchObject([
+    { status: "Menunggu Pembayaran" },
+  ]);
+});
+
+// PRD §5.2: bila Member sedang login, emailnya sudah terisi dan tidak bisa diubah. Pendaftaran Member
+// diuji di berkas lain, jadi Member terverifikasi ditulis langsung ke database.
+test("Member yang login membuka Checkout dan melihat emailnya terisi tanpa bisa diubah, lalu Pesanan memakai email itu", async ({
+  page,
+}) => {
+  const emailMember = `member-${randomUUID()}@example.test`;
+  const password = "sandi-uji-member-123";
+  await sisipkanMember({ email: emailMember, password });
+  await page.goto("/masuk");
+  await page.getByLabel("Email").fill(emailMember);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await expect(page).toHaveURL("/riwayat");
+
+  await bukaCheckout(page, produk.ujiBayar);
+  const isian = page.getByRole("textbox", { name: "Email" });
+  await expect(isian).toHaveValue(emailMember);
+  await expect(isian).not.toBeEditable();
+  await expect(isian).toHaveAccessibleDescription(
+    "Pastikan email benar, detail pesanan dikirim ke sini.",
+  );
+
+  await page.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+  await expect(page).toHaveURL(/\/pesanan\/[A-Za-z0-9_-]{43}$/);
+  expect(await pesananDenganEmail(emailMember)).toMatchObject([
+    { status: "Menunggu Pembayaran" },
+  ]);
 });
 
 test("email yang tidak valid ditolak dengan pesan, dan Pesanan tidak dibuat", async ({
