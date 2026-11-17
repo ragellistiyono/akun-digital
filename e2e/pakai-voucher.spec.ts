@@ -199,15 +199,15 @@ test('SATUKALI yang diterima "Pakai" tetapi kuotanya dipakai Pembeli lain lebih 
   ).toEqual([]);
 });
 
-// UAT-H3: MEMBER20 sebagai Tamu, lalu setelah login Member.
-test("Tamu yang memakai MEMBER20 melihat pesan khusus Member dengan tautan Masuk, lalu setelah login kembali ke Checkout Varian yang sama dan MEMBER20 diterima", async ({
+// UAT-H3: MEMBER20 sebagai Tamu, lalu setelah login Member (PRD §8.7 ▶ Keputusan 2026-11-17, T58-b).
+test("Tamu yang memakai member20 melihat pesan khusus Member dengan tautan Masuk, lalu setelah login kembali ke Checkout Varian yang sama dengan isian kode berisi MEMBER20, dan MEMBER20 diterima setelah Pakai", async ({
   page,
 }) => {
   const email = `member-${randomUUID()}@example.test`;
   await sisipkanMember({ email, password: PASSWORD_MEMBER });
   await bukaCheckout(page);
 
-  await pakai(page, KODE.member20);
+  await pakai(page, KODE.member20.toLowerCase());
 
   const pesan = page.getByRole("alert").filter({
     hasText: "Voucher khusus Member, silakan login",
@@ -220,9 +220,16 @@ test("Tamu yang memakai MEMBER20 melihat pesan khusus Member dengan tautan Masuk
   await page.getByLabel("Password").fill(PASSWORD_MEMBER);
   await page.getByRole("button", { name: "Masuk" }).click();
 
-  await expect(page).toHaveURL(`/checkout?varianId=${varianId}`);
+  await expect(page).toHaveURL(
+    (alamat) =>
+      alamat.pathname === "/checkout" &&
+      alamat.searchParams.get("varianId") === varianId,
+  );
   await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(email);
-  await pakai(page, KODE.member20);
+  await expect(isianKode(page)).toHaveValue(KODE.member20);
+  // "Pakai" tidak ditekan otomatis: belum ada hasil pemeriksaan sampai Member menekannya.
+  await expect(nilaiRincian(page, "Potongan voucher")).toHaveText("Rp 0");
+  await page.getByRole("button", { name: "Pakai", exact: true }).click();
   await expect(
     page.getByText(`${KODE.member20} dipakai: potongan Rp 10.000`),
   ).toBeVisible();

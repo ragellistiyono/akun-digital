@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
 
+import { kodeBaku } from "@/domain/kode-voucher";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import type { bacaCheckout } from "@/server/pesanan";
@@ -43,7 +44,12 @@ const KELAS_TAUTAN =
  * Hasil tombol "Pakai" beserta keadaan form saat tombol itu ditekan. Keadaan itu menentukan mana yang lebih baru:
  * hasil "Pakai", atau hasil "Bayar dengan QRIS" sesudahnya.
  */
-type PakaiVoucher = { hasil: HasilPakaiVoucher; keadaan: KeadaanFormCheckout };
+type PakaiVoucher = {
+  /** Kode di isian saat "Pakai" ditekan, belum dibakukan. */
+  kode: string;
+  hasil: HasilPakaiVoucher;
+  keadaan: KeadaanFormCheckout;
+};
 
 /**
  * Form checkout satu Varian (PRD §5.2, UAT-E7): isian email dengan pengingatnya dan isian kode voucher yang
@@ -56,7 +62,9 @@ type PakaiVoucher = { hasil: HasilPakaiVoucher; keadaan: KeadaanFormCheckout };
  * "<KODE> dipakai: potongan Rp X" berwarna `st-selesai`, dan rincian menampilkan "Potongan voucher (KODE)" beserta
  * Perkiraan bayar yang baru; bila ditolak, tampil pesan penolakannya. Kode diperiksa sekali lagi saat Pesanan
  * dibuat. Bila Voucher ditolak saat itu, pesan penolakannya tampil di isian kode, dan kodenya tetap berisi. Pesan
- * Voucher khusus Member diberi tautan Masuk yang membawa Member kembali ke Checkout Varian ini setelah login.
+ * Voucher khusus Member diberi tautan Masuk yang membawa Member kembali ke Checkout Varian ini setelah login, dengan
+ * isian kode berisi kode yang ditolak itu (`kodeVoucher`). "Pakai" tidak ditekan otomatis (PRD §8.7 ▶ Keputusan
+ * 2026-11-17).
  *
  * Penolakan checkout karena email milik Member nonaktif diberi tombol WhatsApp di bawah pesannya, sama seperti login
  * Member nonaktif (PRD §5.2 ▶ Keputusan 2026-11-17). Tanpa nomor WhatsApp toko, hanya pesannya yang tampil.
@@ -67,14 +75,16 @@ type PakaiVoucher = { hasil: HasilPakaiVoucher; keadaan: KeadaanFormCheckout };
 export function FormCheckout({
   checkout,
   emailMember,
+  kodeVoucher,
 }: {
   checkout: IsiCheckout;
   emailMember: string | null;
+  kodeVoucher: string;
 }) {
   const [keadaan, aksi, sedangMemproses] = useActionState<
     KeadaanFormCheckout,
     FormData
-  >(aksiCheckout, { email: emailMember ?? "", kodeVoucher: "" });
+  >(aksiCheckout, { email: emailMember ?? "", kodeVoucher });
   const galatEmail = keadaan.galat?.email;
   const galatCheckout = keadaan.galat?.checkout;
 
@@ -94,13 +104,21 @@ export function FormCheckout({
   const penolakanVoucher =
     !pakaiLebihBaru && keadaan.galat?.kodeVoucher
       ? {
+          kode: keadaan.kodeVoucher,
           pesan: keadaan.galat.kodeVoucher,
           khususMember: keadaan.voucherKhususMember === true,
         }
-      : hasilPakai && !hasilPakai.diterima
-        ? hasilPakai
+      : pakai && hasilPakai && !hasilPakai.diterima
+        ? { kode: pakai.kode, ...hasilPakai }
         : null;
-  const alamatMasuk = `/masuk?kembali=${encodeURIComponent(`/checkout?varianId=${checkout.varianId}`)}`;
+  // Kode voucher dibawa dalam bentuk bakunya (PRD §8.1), seperti yang tampil di isiannya.
+  const alamatKembali = `/checkout?${new URLSearchParams({
+    varianId: checkout.varianId,
+    ...(penolakanVoucher && {
+      kodeVoucher: kodeBaku(penolakanVoucher.kode),
+    }),
+  })}`;
+  const alamatMasuk = `/masuk?${new URLSearchParams({ kembali: alamatKembali })}`;
 
   /**
    * Tombol "Pakai" memeriksa kode di isian dengan email yang sedang diisi (PRD §8.7 ▶ Keputusan 2026-11-17). Isian
@@ -120,7 +138,7 @@ export function FormCheckout({
         kode,
         email,
       });
-      setPakai({ hasil, keadaan: keadaanSaatDitekan });
+      setPakai({ kode, hasil, keadaan: keadaanSaatDitekan });
     });
   }
 
