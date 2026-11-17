@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { rupiah } from "@/lib/rupiah";
 
+import { aman, footerWhatsapp } from "./bagian-email";
 import { db } from "./db";
 import { pesanan } from "./db/schema";
 import { pengirimEmailAktif, type Email, type PengirimEmail } from "./email";
@@ -30,15 +31,6 @@ type BahanEmailPesananSelesai = Pick<
   nomorWhatsapp: string | null;
 };
 
-/** Teks yang aman ditaruh di HTML. */
-const aman = (teks: string) =>
-  teks
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-
 /** Baris rincian nominal (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. */
 function barisRincian({
   hargaJual,
@@ -60,9 +52,8 @@ function barisRincian({
 /**
  * Isi email "Pesanan selesai" dalam bahasa Indonesia, sebagai teks biasa dan HTML. HTML-nya tanpa warna:
  * aplikasi email tidak bisa memakai token warna DESIGN.md, dan hex mentah hanya boleh ada di pelukis
- * pemandangan, jadi email memakai warna bawaan aplikasi email. Footer WhatsApp
- * (PRD §10.2) membuka https://wa.me/<nomor> seperti tombol WhatsApp di web, dan seperti tombol itu tidak
- * ada selama nomor WhatsApp belum diisi (PRD §9.8).
+ * pemandangan, jadi email memakai warna bawaan aplikasi email. Footer WhatsApp-nya (PRD §10.2) sama
+ * dengan email toko lain (footerWhatsapp).
  */
 function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
   const pembuka = `Pembayaran Pesanan ${bahan.nomorPesanan} sudah kami terima. Berikut Item stok Anda.`;
@@ -70,11 +61,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
   const keteranganTautan =
     "Buka Pesanan ini kapan saja tanpa login lewat Tautan Pesanan berikut:";
   const rincian = barisRincian(bahan.rincian);
-  const whatsapp = bahan.nomorWhatsapp && {
-    label: `WhatsApp +${bahan.nomorWhatsapp}`,
-    alamat: `https://wa.me/${bahan.nomorWhatsapp}`,
-  };
-  const bantuan = "Butuh bantuan? Hubungi kami di";
+  const footer = footerWhatsapp(bahan.nomorWhatsapp);
 
   const teks = [
     "Pesanan selesai",
@@ -91,9 +78,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
     "",
     keteranganTautan,
     bahan.alamatPesanan,
-    ...(whatsapp
-      ? ["", `${bantuan} ${whatsapp.label} (${whatsapp.alamat})`]
-      : []),
+    ...footer.teks,
   ].join("\n");
 
   const html = [
@@ -117,12 +102,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
     `</table>`,
     `<p style="margin:0 0 4px">${aman(keteranganTautan)}</p>`,
     `<p style="margin:0 0 16px"><a href="${aman(bahan.alamatPesanan)}" style="word-break:break-all">${aman(bahan.alamatPesanan)}</a></p>`,
-    ...(whatsapp
-      ? [
-          `<hr style="margin:24px 0 16px">`,
-          `<p style="margin:0">${aman(bantuan)} <a href="${aman(whatsapp.alamat)}">${aman(whatsapp.label)}</a></p>`,
-        ]
-      : []),
+    ...footer.html,
     `</div>`,
   ].join("\n");
 

@@ -8,7 +8,7 @@ import type { KeadaanFormMasuk } from "./pesan-masuk";
 const KEADAAN_AWAL: KeadaanFormMasuk = { email: "" };
 
 // Pesan galat (DESIGN.md Inputs / Fields): 13 px tebal, warna st-masalah, ikon TriangleAlert.
-function PesanGalat({
+export function PesanGalat({
   id,
   peran,
   children,
@@ -29,17 +29,25 @@ function PesanGalat({
   );
 }
 
-function Isian({
+/**
+ * Isian berlabel (DESIGN.md Inputs / Fields), dipakai form login dan form Daftar. Teks bantuan di bawah
+ * isian diganti pesan galat bila ada galat.
+ */
+export function Isian({
   nama,
   label,
   galat,
+  bantuan,
   ...atribut
 }: {
   nama: string;
   label: string;
   galat?: string;
+  bantuan?: string;
 } & Omit<ComponentProps<"input">, "id" | "name">) {
   const idGalat = `${nama}-galat`;
+  const idBantuan = `${nama}-bantuan`;
+  const idKeterangan = galat ? idGalat : bantuan ? idBantuan : undefined;
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={nama} className="text-sm font-bold">
@@ -50,11 +58,19 @@ function Isian({
         name={nama}
         required
         aria-invalid={galat ? true : undefined}
-        aria-describedby={galat ? idGalat : undefined}
+        aria-describedby={idKeterangan}
         className="h-[52px] rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah"
         {...atribut}
       />
-      {galat && <PesanGalat id={idGalat}>{galat}</PesanGalat>}
+      {galat ? (
+        <PesanGalat id={idGalat}>{galat}</PesanGalat>
+      ) : (
+        bantuan && (
+          <p id={idBantuan} className="text-[13px] text-tinta-redup">
+            {bantuan}
+          </p>
+        )
+      )}
     </div>
   );
 }
