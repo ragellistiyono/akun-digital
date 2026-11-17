@@ -155,6 +155,13 @@
       "when": 1794912566318,
       "tag": "0021_cakupan_voucher",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1794917851489,
+      "tag": "0022_voucher_di_pesanan",
+      "breakpoints": true
     }
   ]
 }

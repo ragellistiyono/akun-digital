@@ -13,6 +13,9 @@ import { aksiUbahStatusVoucher } from "./aksi";
 const ALAMAT = "/admin/voucher";
 
 /** Tombol kecil 36 px bergaris (DESIGN.md Buttons). */
+/** Satu baris daftar Voucher: Voucher beserta pemakaiannya. */
+type BarisVoucher = Awaited<ReturnType<typeof daftarVoucher>>[number];
+
 const KELAS_TOMBOL_KECIL =
   "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold whitespace-nowrap text-tinta hover:border-monogram";
 
@@ -29,6 +32,19 @@ function teksMasaBerlaku({ mulai, berakhir }: Voucher) {
   if (mulai) return `Mulai ${waktuWib(mulai)}`;
   if (berakhir) return `Sampai ${waktuWib(berakhir)}`;
   return "Tanpa batas waktu";
+}
+
+/**
+ * Pemakaian Voucher menurut §8.5, ditulis "3 dari 10" bila Voucher punya Kuota voucher, atau "3" bila tidak
+ * (PRD §8.8 ▶ Keputusan 2026-11-17).
+ */
+function teksPemakaian({
+  pemakaian,
+  kuotaVoucher,
+}: Pick<BarisVoucher, "pemakaian" | "kuotaVoucher">) {
+  return kuotaVoucher === null
+    ? String(pemakaian)
+    : `${pemakaian} dari ${kuotaVoucher}`;
 }
 
 /**
@@ -56,10 +72,10 @@ function TombolStatusVoucher({ voucher }: { voucher: Voucher }) {
  * Tabel Voucher. Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar sempit, supaya halaman
  * tidak ikut bergulir ke samping (PRD §11.1).
  */
-function TabelVoucher({ semuaVoucher }: { semuaVoucher: Voucher[] }) {
+function TabelVoucher({ semuaVoucher }: { semuaVoucher: BarisVoucher[] }) {
   return (
     <div className="mt-6 max-w-[1120px] overflow-x-auto rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
-      <table className="w-full min-w-[880px] text-left">
+      <table className="w-full min-w-[960px] text-left">
         <caption className="sr-only">Daftar Voucher</caption>
         <thead className="text-[13px] font-bold text-tinta-redup">
           <tr className="border-b border-garis">
@@ -71,6 +87,9 @@ function TabelVoucher({ semuaVoucher }: { semuaVoucher: Voucher[] }) {
             </th>
             <th scope="col" className="py-2 pr-4">
               Masa berlaku (WIB)
+            </th>
+            <th scope="col" className="py-2 pr-4">
+              Pemakaian
             </th>
             <th scope="col" className="py-2 pr-4">
               Status
@@ -95,6 +114,9 @@ function TabelVoucher({ semuaVoucher }: { semuaVoucher: Voucher[] }) {
               <td className="py-3 pr-4 tabular-nums">
                 {teksMasaBerlaku(voucher)}
               </td>
+              <td className="py-3 pr-4 whitespace-nowrap tabular-nums">
+                {teksPemakaian(voucher)}
+              </td>
               <td className="py-3 pr-4">
                 <PilAktif aktif={voucher.aktif} />
               </td>
@@ -118,8 +140,8 @@ function TabelVoucher({ semuaVoucher }: { semuaVoucher: Voucher[] }) {
 }
 
 // Daftar Voucher di dasbor admin (PRD §8.8 ▶ Keputusan 2026-11-17): kode, potongan, masa berlaku dalam WIB,
-// dan status Aktif atau Nonaktif, dengan Voucher terbaru di atas. Setiap Voucher bisa diubah, dinonaktifkan,
-// dan diaktifkan kembali.
+// pemakaian, dan status Aktif atau Nonaktif, dengan Voucher terbaru di atas. Setiap Voucher bisa diubah,
+// dinonaktifkan, dan diaktifkan kembali.
 export default async function HalamanDaftarVoucher() {
   await wajibSesiAdmin(await headers());
   const semuaVoucher = await daftarVoucher();

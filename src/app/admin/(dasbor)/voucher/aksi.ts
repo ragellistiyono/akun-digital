@@ -22,6 +22,7 @@ import { rupiahDariTeks } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import {
   buatVoucher,
+  hapusVoucher,
   ubahStatusVoucher,
   ubahVoucher,
   type SyaratVoucher,
@@ -379,4 +380,35 @@ export async function aksiUbahStatusVoucher(formData: FormData) {
 
   // Daftar Voucher dibuat ulang dengan status barunya, tanpa pesan "tersimpan" (DESIGN.md Navigation).
   revalidatePath(ALAMAT_DAFTAR);
+}
+
+/** Pesan galat bila Voucher tidak dihapus. */
+type KeadaanHapusVoucher = { galat?: string };
+
+/**
+ * Menghapus Voucher yang belum pernah tercatat di Pesanan (PRD §8.8). Pemeriksaannya dilakukan hapusVoucher di
+ * server, jadi juga berlaku bila aksi ini dipanggil langsung. Voucher yang sudah tercatat di Pesanan berstatus
+ * apa pun ditolak dengan pesan untuk menonaktifkannya, seperti hapus Produk (PRD §3.7 ▶ Keputusan
+ * 2026-11-12). Setelah terhapus, dasbor kembali ke daftar Voucher.
+ */
+export async function aksiHapusVoucher(
+  _sebelumnya: KeadaanHapusVoucher,
+  formData: FormData,
+): Promise<KeadaanHapusVoucher> {
+  await wajibSesiAdmin(await headers());
+
+  const id = bacaId(formData);
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusVoucher(id);
+  switch (hasil.hasil) {
+    case "tidak-ada":
+      notFound();
+    case "pernah-dipakai":
+      return {
+        galat: `Voucher ini tidak bisa dihapus, karena sudah tercatat di ${hasil.jumlahPesanan} Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Voucher ini saja: pilih Nonaktifkan di daftar Voucher, atau hapus centang Aktif di form ini lalu simpan. Voucher nonaktif tidak bisa dipakai di checkout, sedangkan Pesanan lamanya tetap utuh.`,
+      };
+    case "dihapus":
+      redirect(ALAMAT_DAFTAR);
+  }
 }

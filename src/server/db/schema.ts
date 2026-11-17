@@ -277,6 +277,9 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // tidak bisa dihapus (PRD §3.7), jadi rujukannya restrict. Waktu bayar dari kabar pembayaran Qrispy
 // dicatat begitu kabar itu diproses, dan null selama belum dibayar. Tanda "Email gagal" (PRD §6.4) dipasang
 // bila semua percobaan kirim email "Pesanan selesai" gagal, dan dihapus begitu email itu berhasil dikirim.
+// Pesanan yang memakai Voucher mencatat rujukan ke Voucher itu beserta kodenya (PRD §8.8 ▶ Keputusan
+// 2026-11-17); keduanya null untuk Pesanan tanpa Voucher. Voucher yang pernah tercatat di Pesanan tidak bisa
+// dihapus (PRD §8.8), jadi rujukannya restrict.
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -298,12 +301,21 @@ export const pesanan = pgTable(
     status: statusPesanan("status").notNull(),
     waktuBayar: instan("waktu_bayar"),
     emailGagal: boolean("email_gagal").default(false).notNull(),
+    voucherId: uuid("voucher_id").references(() => voucher.id, {
+      onDelete: "restrict",
+    }),
+    kodeVoucher: text("kode_voucher"),
   },
   (tabel) => [
     uniqueIndex("pesanan_nomor_pesanan_unik").on(tabel.nomorPesanan),
     uniqueIndex("pesanan_tautan_unik").on(tabel.tautan),
     uniqueIndex("pesanan_qris_id_unik").on(tabel.qrisId),
     index("pesanan_varian_id_idx").on(tabel.varianId),
+    index("pesanan_voucher_id_idx").on(tabel.voucherId),
+    check(
+      "pesanan_voucher_dan_kode_bersama",
+      sql`(${tabel.voucherId} is null) = (${tabel.kodeVoucher} is null)`,
+    ),
   ],
 );
 
