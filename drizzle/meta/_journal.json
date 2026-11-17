@@ -134,6 +134,13 @@
       "when": 1794904563871,
       "tag": "0018_member_nonaktif",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794906322069,
+      "tag": "0019_tautan_atur_ulang_password",
+      "breakpoints": true
     }
   ]
 }
