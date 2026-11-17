@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 
 import { bacaEmailPendaftar } from "../email-pendaftar";
 import { FormKirimUlang } from "./_components/form-kirim-ulang";
+import { FormKodeVerifikasi } from "./_components/form-kode-verifikasi";
 
-// Halaman verifikasi setelah mendaftar (PRD §7.2, §7.3): menyebut email tujuan Kode verifikasi dan
-// menyediakan "Kirim ulang kode". Isian kodenya dibangun di T43. Browser yang belum mendaftar dibawa ke
-// halaman Daftar.
+// Halaman verifikasi setelah mendaftar (PRD §7.2, §7.3): menyebut email tujuan Kode verifikasi, lalu
+// menyediakan isian kode dan "Kirim ulang kode". Browser yang belum mendaftar dibawa ke halaman Daftar.
 export default async function HalamanVerifikasi() {
   const email = await bacaEmailPendaftar();
   if (!email) redirect("/daftar");
@@ -21,6 +21,7 @@ export default async function HalamanVerifikasi() {
           </strong>
           . Kode berlaku 10 menit. Periksa juga folder spam.
         </p>
+        <FormKodeVerifikasi />
         <FormKirimUlang />
       </section>
     </div>

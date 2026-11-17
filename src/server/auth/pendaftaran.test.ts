@@ -12,14 +12,18 @@ import {
 } from "vitest";
 
 import { db, koneksi } from "../db";
-import { pendaftar } from "../db/schema";
+import { pendaftar, user } from "../db/schema";
 import { emailTiruanKe } from "../email-tiruan";
 import { bacaPengaturanToko } from "../pengaturan-toko";
 import { sisipkanMember } from "../uji-member";
 import { auth } from "./auth";
 import { buatAdmin } from "./buat-admin";
 import { masukMember } from "./masuk";
-import { daftarPendaftar, kirimUlangKodeVerifikasi } from "./pendaftaran";
+import {
+  daftarPendaftar,
+  kirimUlangKodeVerifikasi,
+  masukkanKodeVerifikasi,
+} from "./pendaftaran";
 
 // Test integrasi dengan database app_test dan email tiruan dari .env.ci (EMAIL_MODE=tiruan). Jam
 // dikendalikan lewat Date palsu, sementara timer asli tetap jalan supaya koneksi database tidak
@@ -268,5 +272,152 @@ describe('"Kirim ulang kode" (PRD §7.7)', () => {
       hasil: "bukan-pendaftar",
     });
     expect(emailTiruanKe(email)).toHaveLength(0);
+  });
+});
+
+/** Kode 6 digit yang pasti berbeda dari kode itu. */
+const kodeLainDari = (kode: string) =>
+  kode === "000000" ? "111111" : "000000";
+
+/** Memasukkan kode itu untuk email itu, tanpa cookie browser. */
+const masukkan = (email: string, kode: string) =>
+  masukkanKodeVerifikasi({ email, kode, kepala: new Headers() });
+
+const loginMember = (email: string, password: string) =>
+  masukMember({ email, password, kepala: new Headers() });
+
+describe("memasukkan Kode verifikasi (PRD §7.3, §7.7)", () => {
+  it("kode benar pada menit ke-9 mengaktifkan akun Member dan menghapus Pendaftar", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kode = await kodeTersimpan(email);
+
+    pada("10:09:00");
+    expect(await masukkan(email, kode)).toEqual({ hasil: "aktif" });
+
+    const [member] = await db
+      .select({ peran: user.peran })
+      .from(user)
+      .where(eq(user.email, email));
+    expect(member).toEqual({ peran: "Member" });
+    expect(await loginMember(email, PASSWORD)).toEqual({ hasil: "berhasil" });
+    // Kode yang sama tidak bisa dipakai lagi, karena email itu bukan Pendaftar lagi.
+    expect(await masukkan(email, kode)).toEqual({ hasil: "bukan-pendaftar" });
+  });
+
+  it("kode benar yang dimasukkan tepat 10 menit setelah dikirim ditolak karena kedaluwarsa", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kode = await kodeTersimpan(email);
+
+    pada("10:10:00");
+    expect(await masukkan(email, kode)).toEqual({ hasil: "kedaluwarsa" });
+    expect(await loginMember(email, PASSWORD)).toEqual({ hasil: "ditolak" });
+  });
+
+  // UAT-G4 langkah 3.
+  it("setelah 5 kali salah, kode yang benar pun ditolak karena hangus; kode baru dari Kirim ulang kode diterima", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kode = await kodeTersimpan(email);
+
+    pada("10:01:00");
+    for (let ke = 1; ke <= 5; ke++) {
+      expect(await masukkan(email, kodeLainDari(kode))).toEqual({
+        hasil: "salah",
+      });
+    }
+    expect(await masukkan(email, kode)).toEqual({ hasil: "hangus" });
+
+    pada("10:02:00");
+    await kirimUlangKodeVerifikasi({ email });
+    const kodeBaru = await kodeTersimpan(email);
+    expect(await masukkan(email, kodeBaru)).toEqual({ hasil: "aktif" });
+  });
+
+  it("kode benar setelah 4 kali salah masih diterima", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kode = await kodeTersimpan(email);
+
+    for (let ke = 1; ke <= 4; ke++) await masukkan(email, kodeLainDari(kode));
+    expect(await masukkan(email, kode)).toEqual({ hasil: "aktif" });
+  });
+
+  // UAT-G3 langkah 3.
+  it("kode dari email sebelum Kirim ulang kode ditolak sebagai kode salah", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kodeLama = await kodeTersimpan(email);
+
+    pada("10:01:00");
+    await kirimUlangKodeVerifikasi({ email });
+
+    expect(await masukkan(email, kodeLama)).toEqual({ hasil: "salah" });
+  });
+
+  // UAT-G3 langkah 3–4 dan PRD §7.2 ▶ Keputusan 2026-11-17.
+  it("setelah pendaftaran ulang, kode pertama ditolak sebagai kode salah, kode kedua mengaktifkan akun dengan password terakhir, dan email itu tidak bisa didaftarkan lagi", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kodePertama = await kodeTersimpan(email);
+
+    pada("10:20:00");
+    await daftarPendaftar({ email, password: PASSWORD_LAIN });
+    const kodeKedua = await kodeTersimpan(email);
+    expect(await masukkan(email, kodePertama)).toEqual({ hasil: "salah" });
+    expect(await masukkan(email, kodeKedua)).toEqual({ hasil: "aktif" });
+
+    expect(await loginMember(email, PASSWORD)).toEqual({ hasil: "ditolak" });
+    expect(await loginMember(email, PASSWORD_LAIN)).toEqual({
+      hasil: "berhasil",
+    });
+    expect(await daftarPendaftar({ email, password: PASSWORD })).toEqual({
+      hasil: "email-terdaftar",
+    });
+  });
+
+  it("kesalahan dihitung ulang dari 0 untuk kode baru dari pendaftaran ulang", async () => {
+    const email = emailBaru();
+    pada("10:00:00");
+    await daftarPendaftar({ email, password: PASSWORD });
+    const kode = await kodeTersimpan(email);
+    for (let ke = 1; ke <= 5; ke++) await masukkan(email, kodeLainDari(kode));
+
+    pada("10:05:00");
+    await daftarPendaftar({ email, password: PASSWORD_LAIN });
+    expect(await masukkan(email, await kodeTersimpan(email))).toEqual({
+      hasil: "aktif",
+    });
+  });
+
+  it("email yang ditulis huruf besar dan spasi dicocokkan dalam bentuk bakunya", async () => {
+    const email = emailBaru();
+    await daftarPendaftar({ email, password: PASSWORD });
+
+    expect(
+      await masukkan(` ${email.toUpperCase()} `, await kodeTersimpan(email)),
+    ).toEqual({ hasil: "aktif" });
+  });
+
+  it("email yang sempat dijadikan Admin selagi masih Pendaftar ditolak tanpa membuat Member", async () => {
+    const email = emailBaru();
+    await daftarPendaftar({ email, password: PASSWORD });
+    await buatAdmin({ email, password: PASSWORD_LAIN });
+
+    expect(await masukkan(email, await kodeTersimpan(email))).toEqual({
+      hasil: "email-terdaftar",
+    });
+    const pemilik = await db
+      .select({ peran: user.peran })
+      .from(user)
+      .where(eq(user.email, email));
+    expect(pemilik).toEqual([{ peran: "Admin" }]);
   });
 });

@@ -1,17 +1,20 @@
-// Daftar sebagai Pendaftar dan kirim Kode verifikasi (PRD §7.2, §7.3, §7.7). Memasukkan kode dan
-// mengaktifkan akun Member dibangun terpisah (T43).
+// Daftar sebagai Pendaftar, kirim Kode verifikasi, lalu memasukkan kode itu untuk mengaktifkan akun
+// Member (PRD §7.2, §7.3, §7.7).
 import { randomInt } from "node:crypto";
 
 import { eq } from "drizzle-orm";
 
 import { periksaKirimUlangKodeVerifikasi } from "@/domain/kirim-ulang-kode-verifikasi";
 import { emailBaku } from "@/domain/kesamaan-email";
+import { kodeVerifikasiBerlaku } from "@/domain/masa-berlaku-kode-verifikasi";
+import { percobaanKodeVerifikasi } from "@/domain/percobaan-kode-verifikasi";
 
 import { db } from "../db";
 import { pendaftar, user } from "../db/schema";
 import { pengirimEmailAktif } from "../email";
 import { emailKodeVerifikasi } from "../email-kode-verifikasi";
 import { auth } from "./auth";
+import { tulisAkun } from "./sisipkan-akun";
 
 type HasilKirimKode =
   { hasil: "kode-terkirim" } | { hasil: "tunggu"; tungguDetik: number };
@@ -76,6 +79,7 @@ export async function daftarPendaftar({
       password: hash,
       kodeVerifikasi: kodeVerifikasiBaru(),
       kodeDikirimPada: sekarang,
+      jumlahSalahKode: 0,
     };
     // Bila email itu sudah Pendaftar, barisnya tidak ditimpa di sini, tetapi dikunci lalu diperiksa
     // jedanya lebih dulu.
@@ -129,9 +133,98 @@ export async function kirimUlangKodeVerifikasi({
     const kode = kodeVerifikasiBaru();
     await tx
       .update(pendaftar)
-      .set({ kodeVerifikasi: kode, kodeDikirimPada: sekarang })
+      .set({
+        kodeVerifikasi: kode,
+        kodeDikirimPada: sekarang,
+        jumlahSalahKode: 0,
+      })
       .where(eq(pendaftar.email, emailPendaftar));
     await kirimEmailKode(emailPendaftar, kode);
     return { hasil: "kode-terkirim" };
   });
+}
+
+type HasilMasukkanKode =
+  | { hasil: "aktif" }
+  | { hasil: "salah" }
+  | { hasil: "kedaluwarsa" }
+  | { hasil: "hangus" }
+  | { hasil: "bukan-pendaftar" }
+  | { hasil: "email-terdaftar" };
+
+/**
+ * Memasukkan Kode verifikasi untuk Pendaftar itu (PRD §7.3, §7.7). Hanya kode terakhir yang dicocokkan.
+ * - Kode yang sudah 10 menit sejak dikirim ditolak sebagai kedaluwarsa, apa pun isiannya, tanpa
+ *   menambah hitungan salah.
+ * - Kode yang salah menambah hitungan salah; setelah 5 kali salah kode itu hangus dan menolak semua
+ *   percobaan, sampai kode baru dikirim.
+ * - Kode yang benar mengaktifkan akun Member dengan password terakhir Pendaftar, menghapus Pendaftar,
+ *   lalu membuat sesi Member baru (PRD §7.3 ▶ Keputusan 2026-11-17). Cookie sesinya ditulis lewat plugin
+ *   nextCookies ke respons Server Action yang memanggilnya.
+ * Email yang sempat dipakai Admin selagi masih Pendaftar ditolak tanpa membuat Member (PRD §7.2).
+ */
+export async function masukkanKodeVerifikasi({
+  email,
+  kode,
+  kepala,
+}: {
+  email: string;
+  kode: string;
+  kepala: Headers;
+}): Promise<HasilMasukkanKode> {
+  const emailPendaftar = emailBaku(email);
+
+  const nilai = await db.transaction(
+    async (
+      tx,
+    ): Promise<HasilMasukkanKode | { hasil: "aktif"; idUser: string }> => {
+      const [baris] = await tx
+        .select()
+        .from(pendaftar)
+        .where(eq(pendaftar.email, emailPendaftar))
+        .for("update");
+      if (!baris) return { hasil: "bukan-pendaftar" };
+
+      const [pemilik] = await tx
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, emailPendaftar));
+      if (pemilik) return { hasil: "email-terdaftar" };
+
+      const masaBerlaku = kodeVerifikasiBerlaku({
+        dikirimPada: baris.kodeDikirimPada,
+        sekarang: new Date(),
+      });
+      if (!masaBerlaku.berlaku) return { hasil: "kedaluwarsa" };
+
+      const percobaan = percobaanKodeVerifikasi({
+        jumlahSalahSebelumnya: baris.jumlahSalahKode,
+        kodeCocok: kode === baris.kodeVerifikasi,
+      });
+      if (percobaan.hasil === "salah") {
+        await tx
+          .update(pendaftar)
+          .set({ jumlahSalahKode: percobaan.jumlahSalah })
+          .where(eq(pendaftar.email, emailPendaftar));
+      }
+      if (percobaan.hasil !== "diterima") return { hasil: percobaan.hasil };
+
+      const idUser = await tulisAkun(tx, {
+        email: emailPendaftar,
+        hash: baris.password,
+        peran: "Member",
+      });
+      await tx.delete(pendaftar).where(eq(pendaftar.email, emailPendaftar));
+      return { hasil: "aktif", idUser };
+    },
+  );
+  if (!("idUser" in nilai)) return nilai;
+
+  // Sesi dibuat setelah transaksi selesai, seperti login biasa (masuk.ts). Bila pembuatan sesi gagal,
+  // akun Member tetap aktif dan bisa login dengan password-nya.
+  await auth.api.buatSesiTanpaPassword({
+    body: { idUser: nilai.idUser },
+    headers: kepala,
+  });
+  return { hasil: "aktif" };
 }

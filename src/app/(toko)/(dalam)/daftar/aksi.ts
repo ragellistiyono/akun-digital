@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -11,13 +12,22 @@ import {
 import {
   daftarPendaftar,
   kirimUlangKodeVerifikasi,
+  masukkanKodeVerifikasi,
 } from "@/server/auth/pendaftaran";
 
-import { bacaEmailPendaftar, simpanEmailPendaftar } from "./email-pendaftar";
+import {
+  bacaEmailPendaftar,
+  hapusEmailPendaftar,
+  simpanEmailPendaftar,
+} from "./email-pendaftar";
 import {
   type KeadaanFormDaftar,
+  type KeadaanFormKode,
   type KeadaanKirimUlang,
   PESAN_EMAIL_TERDAFTAR,
+  PESAN_KODE_HANGUS,
+  PESAN_KODE_KEDALUWARSA,
+  PESAN_KODE_SALAH,
   pesanTungguKode,
 } from "./pesan-daftar";
 
@@ -99,4 +109,61 @@ export async function aksiKirimUlangKode(): Promise<KeadaanKirimUlang> {
       teks: `Kode verifikasi baru sudah kami kirim ke ${email}.`,
     },
   };
+}
+
+const MasukanKode = z.object({
+  kode: z
+    .string()
+    .trim()
+    .min(
+      1,
+      "Kode verifikasi belum diisi. Ketik kode 6 angka di email terakhir dari kami.",
+    )
+    .regex(
+      /^\d{6}$/,
+      "Kode verifikasi terdiri dari 6 angka. Periksa lagi kode di email terakhir dari kami.",
+    ),
+});
+
+const PESAN_PENOLAKAN_KODE = {
+  salah: PESAN_KODE_SALAH,
+  kedaluwarsa: PESAN_KODE_KEDALUWARSA,
+  hangus: PESAN_KODE_HANGUS,
+  "email-terdaftar": PESAN_EMAIL_TERDAFTAR,
+} as const;
+
+/**
+ * Isian Kode verifikasi di halaman verifikasi (PRD §7.3, §7.7): kode untuk Pendaftar di browser ini.
+ * Kode yang benar mengaktifkan akun Member, lalu Pendaftar langsung masuk dan dibawa ke Riwayat Pesanan
+ * (PRD §7.3 ▶ Keputusan 2026-11-17). Kode yang salah, kedaluwarsa, atau hangus ditolak dengan sebabnya.
+ * Browser tanpa Pendaftar dibawa kembali ke halaman Daftar.
+ */
+export async function aksiMasukkanKode(
+  _sebelumnya: KeadaanFormKode,
+  formData: FormData,
+): Promise<KeadaanFormKode> {
+  const email = await bacaEmailPendaftar();
+  if (!email) redirect("/daftar");
+
+  const masukan = MasukanKode.safeParse({
+    kode: String(formData.get("kode") ?? ""),
+  });
+  if (!masukan.success) {
+    return {
+      galat: { kode: z.flattenError(masukan.error).fieldErrors.kode?.[0] },
+    };
+  }
+
+  const masukkan = await masukkanKodeVerifikasi({
+    email,
+    kode: masukan.data.kode,
+    kepala: await headers(),
+  });
+  if (masukkan.hasil === "bukan-pendaftar") redirect("/daftar");
+  if (masukkan.hasil !== "aktif") {
+    return { galat: { umum: PESAN_PENOLAKAN_KODE[masukkan.hasil] } };
+  }
+
+  await hapusEmailPendaftar();
+  redirect("/riwayat");
 }

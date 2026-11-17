@@ -117,11 +117,14 @@ export const batasLogin = pgTable("batas_login", {
 // ia tidak bisa login dan tidak terhitung sebagai Member. Satu baris per email dalam bentuk bakunya
 // (PRD §7.4). Password disimpan sebagai hash dengan format Better Auth. Hanya Kode verifikasi terakhir
 // yang disimpan, jadi setiap kode baru membuat kode sebelumnya tidak berlaku (PRD §7.2, §7.3).
+// Jumlah salah kode menghitung kesalahan memasukkan kode terakhir itu, dan kembali ke 0 setiap kali kode
+// baru dikirim; kode hangus setelah 5 kali salah (PRD §7.7).
 export const pendaftar = pgTable("pendaftar", {
   email: text("email").primaryKey(),
   password: text("password").notNull(),
   kodeVerifikasi: text("kode_verifikasi").notNull(),
   kodeDikirimPada: instan("kode_dikirim_pada").notNull(),
+  jumlahSalahKode: integer("jumlah_salah_kode").default(0).notNull(),
 });
 
 // Kategori (PRD §3.1): satu tingkat, dengan nama dan gambar ikon. Kolom ikon berisi nama berkas

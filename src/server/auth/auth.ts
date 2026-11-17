@@ -6,11 +6,13 @@ import { LAMA_SESI_MEMBER_DETIK } from "@/domain/sesi-member";
 
 import { db } from "../db";
 import * as schema from "../db/schema";
+import { pluginSesiBaru } from "./plugin-sesi-baru";
 
 // Login Admin dan Member dengan email dan password (PRD §2.2, §7.5, ADR-0001). Rahasia dan alamat
 // toko dibaca Better Auth dari BETTER_AUTH_SECRET dan BETTER_AUTH_URL.
 // Handler HTTP Better Auth (/api/auth/*) sengaja tidak dipasang: login dan keluar berjalan lewat
-// Server Action, dan Admin hanya dibuat lewat `pnpm admin:buat` (PRD §2.2).
+// Server Action, dan Admin hanya dibuat lewat `pnpm admin:buat` (PRD §2.2). Pendaftar yang memasukkan
+// Kode verifikasi yang benar langsung mendapat sesi lewat pluginSesiBaru (PRD §7.3).
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: {
@@ -31,5 +33,5 @@ export const auth = betterAuth({
     disableSessionRefresh: true,
   },
   // nextCookies harus menjadi plugin terakhir: ia menulis cookie sesi dari Server Action.
-  plugins: [nextCookies()],
+  plugins: [pluginSesiBaru(), nextCookies()],
 });
