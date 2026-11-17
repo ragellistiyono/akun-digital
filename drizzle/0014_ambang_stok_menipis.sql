@@ -1,0 +1,1 @@
+ALTER TABLE "pengaturan_toko" ADD COLUMN "ambang_stok_menipis" integer DEFAULT 5 NOT NULL;

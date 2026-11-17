@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 // Bahan test katalog dan Pesanan. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk
 // dan Pesanan ini masuk ke database app_test.
@@ -292,23 +292,159 @@ test("nomor WhatsApp luar negeri ditolak dengan pesan bahwa nomor harus nomor In
   await expect(page.getByRole("status")).toHaveText("");
 });
 
-// PRD §13 ▶ Keputusan 2026-11-11: isian Ambang stok menipis pindah ke M2.
-test("halaman Pengaturan toko tidak punya isian Ambang stok menipis", async ({
+/** Menyimpan Ambang stok menipis lewat halaman Pengaturan toko. */
+async function simpanAmbang(page: Page, ambang: string) {
+  await page.goto("/admin/pengaturan");
+  await page.getByLabel("Ambang stok menipis").fill(ambang);
+  await simpan(page);
+}
+
+/** Membuka Ringkasan lewat menu admin, lalu mengambil kartu dan daftar Stok menipis. */
+async function bukaRingkasan(page: Page) {
+  await page
+    .getByRole("navigation", { name: "Menu admin" })
+    .getByRole("link", { name: "Ringkasan" })
+    .click();
+  await expect(page).toHaveURL("/admin/ringkasan");
+  return {
+    kartu: page.getByRole("article", { name: "Varian stok menipis" }),
+    daftar: page.getByRole("region", { name: "Stok menipis" }),
+  };
+}
+
+// UAT-I2 dan PRD §9.2, §9.4 (▶ Keputusan 2026-11-17). Katalog persiapan bersama docs/UAT.md [CONTOH], dengan
+// akhiran unik per run. Database test dipakai bersama oleh berkas test lain yang juga membuat Varian ber-stok
+// sedikit, jadi daftar hanya diperiksa untuk Produk test ini, dan kartu dibandingkan dengan jumlah baris
+// daftar di halaman yang sama. Hanya berkas ini yang mengubah Ambang stok menipis.
+test("daftar Stok menipis di Ringkasan urut dari Stok Varian terkecil, setiap barisnya membuka halaman Varian, dan daftar serta kartunya mengikuti Ambang stok menipis", async ({
   page,
 }) => {
+  const akhiran = randomUUID().slice(0, 8);
+  const netflix = await sisipkanProduk({
+    nama: `Netflix Premium ${akhiran}`,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 50000, Tersedia: 10 },
+      // Item stok Ditahan tidak dihitung (PRD §5.3): Stok Varian 4.
+      { nama: "3 Bulan", hargaJual: 135000, Tersedia: 4, Ditahan: 2 },
+    ],
+  });
+  await sisipkanProduk({
+    nama: `YouTube Premium ${akhiran}`,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 20000 },
+      { nama: "3 Bulan", hargaJual: 55000, Tersedia: 3 },
+      // Varian nonaktif tidak masuk daftar.
+      { nama: "1 Tahun", hargaJual: 199000, Tersedia: 1, aktif: false },
+    ],
+  });
+  await sisipkanProduk({
+    nama: `Spotify Premium ${akhiran}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 25000 }],
+  });
+  // Varian dari Produk nonaktif tidak masuk daftar.
+  await sisipkanProduk({
+    nama: `Game Lama ${akhiran}`,
+    aktif: false,
+    varian: [{ nama: "Paket", hargaJual: 30000, Tersedia: 1 }],
+  });
+  const [{ id: idNetflixTigaBulan }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(and(eq(varian.produkId, netflix), eq(varian.nama, "3 Bulan")));
+
   await masukSebagaiAdmin(page);
   await bukaPengaturanToko(page);
+  // Nilai awal Ambang stok menipis adalah 5 (PRD §9.4); test ini tetap menyimpannya sendiri.
+  await simpanAmbang(page, "5");
 
-  const form = page.locator("form").filter({
-    has: page.getByRole("button", { name: "Simpan" }),
-  });
-  await expect(form.getByRole("textbox")).toHaveCount(3);
-  await expect(form.getByLabel("Nomor WhatsApp")).toBeVisible();
-  await expect(form.getByLabel("Syarat & Ketentuan")).toBeVisible();
-  await expect(form.getByLabel("Kebijakan Privasi")).toBeVisible();
-  await expect(page.getByText(/ambang|stok menipis/i)).toHaveCount(0);
-  await expect(page.getByRole("spinbutton")).toHaveCount(0);
+  // Langkah 1: ambang 5.
+  let { kartu, daftar } = await bukaRingkasan(page);
+  const barisTestIni = daftar
+    .getByRole("listitem")
+    .filter({ hasText: akhiran });
+  await expect(barisTestIni).toHaveText([
+    `Spotify Premium ${akhiran}1 BulanStok 0`,
+    `YouTube Premium ${akhiran}1 BulanStok 0`,
+    `YouTube Premium ${akhiran}3 BulanStok 3`,
+    `Netflix Premium ${akhiran}3 BulanStok 4`,
+  ]);
+  // Daftar ada di bawah kartu angka.
+  const kotakKartu = await kartu.boundingBox();
+  const kotakDaftar = await daftar.boundingBox();
+  expect(kotakDaftar!.y).toBeGreaterThan(kotakKartu!.y + kotakKartu!.height);
+  // Kartu menghitung baris yang sama dengan daftar.
+  await expect(kartu).toContainText("Stok Varian 5 atau kurang");
+  await expect(
+    kartu.getByText(String(await daftar.getByRole("link").count()), {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await barisTestIni
+    .filter({ hasText: `Netflix Premium ${akhiran}` })
+    .getByRole("link")
+    .click();
+  await expect(page).toHaveURL(
+    `/admin/produk/${netflix}/varian/${idNetflixTigaBulan}`,
+  );
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Varian 3 Bulan" }),
+  ).toBeVisible();
+
+  // Langkah 2: ambang 3. Netflix Premium 3 Bulan keluar, YouTube Premium 3 Bulan tetap ada.
+  await simpanAmbang(page, "3");
+  ({ kartu, daftar } = await bukaRingkasan(page));
+  await expect(barisTestIni).toHaveText([
+    `Spotify Premium ${akhiran}1 BulanStok 0`,
+    `YouTube Premium ${akhiran}1 BulanStok 0`,
+    `YouTube Premium ${akhiran}3 BulanStok 3`,
+  ]);
+  await expect(kartu).toContainText("Stok Varian 3 atau kurang");
+  await expect(
+    kartu.getByText(String(await daftar.getByRole("link").count()), {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await simpanAmbang(page, "5");
 });
+
+// UAT-I2 langkah 3 dan PRD §9.4 ▶ Keputusan 2026-11-17: bilangan bulat 0 sampai 999.
+for (const { ambang, pesan } of [
+  {
+    ambang: "1000",
+    pesan:
+      "Ambang stok menipis hanya boleh 0 sampai 999. Tulis angka di rentang itu, lalu simpan lagi.",
+  },
+  {
+    ambang: "2,5",
+    pesan:
+      "Ambang stok menipis harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka 0 sampai 999, misalnya 5, lalu simpan lagi.",
+  },
+]) {
+  test(`Ambang stok menipis ${ambang} ditolak dengan pesan, dan nilai lama tetap tersimpan`, async ({
+    page,
+  }) => {
+    await masukSebagaiAdmin(page);
+    await bukaPengaturanToko(page);
+    await simpanAmbang(page, "7");
+
+    const isian = page.getByLabel("Ambang stok menipis");
+    await isian.fill(ambang);
+    await page.getByRole("button", { name: "Simpan" }).click();
+
+    await expect(isian).toHaveAttribute("aria-invalid", "true");
+    await expect(isian).toHaveAccessibleDescription(pesan);
+    // Isian tetap berisi ketikan Admin supaya mudah diperbaiki.
+    await expect(isian).toHaveValue(ambang);
+    await expect(page.getByRole("status")).toHaveText("");
+
+    await page.reload();
+    await expect(page.getByLabel("Ambang stok menipis")).toHaveValue("7");
+
+    await simpanAmbang(page, "5");
+  });
+}
 
 test("Tamu yang membuka /admin/pengaturan diarahkan ke halaman login /admin", async ({
   page,
