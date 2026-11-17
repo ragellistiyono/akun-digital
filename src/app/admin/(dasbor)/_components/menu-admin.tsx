@@ -9,6 +9,7 @@ import {
   ReceiptText,
   Settings,
   TriangleAlert,
+  Users,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/ringkasan", label: "Ringkasan", ikon: LayoutDashboard },
   { href: "/admin/pesanan", label: "Pesanan", ikon: ReceiptText },
+  { href: "/admin/member", label: "Member", ikon: Users },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
   { href: "/admin/produk", label: "Produk", ikon: Package },
   { href: "/admin/pengaturan", label: "Pengaturan toko", ikon: Settings },

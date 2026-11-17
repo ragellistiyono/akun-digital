@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   jamWibDibulatkanKeAtas,
   rentangTanggalWib,
+  tanggalWib,
   waktuWib,
 } from "./zona-waktu-toko";
 
@@ -86,5 +87,15 @@ describe("waktuWib", () => {
     expect(waktuWib(new Date("2026-11-11T23:59:59+07:00"))).toBe(
       "11 Nov 2026 23.59",
     );
+  });
+});
+
+describe("tanggalWib", () => {
+  it("menulis tanggal WIB dari instan UTC", () => {
+    expect(tanggalWib(new Date("2026-11-11T16:30:00Z"))).toBe("11 Nov 2026");
+  });
+
+  it("memakai tanggal WIB walaupun tanggal UTC-nya masih kemarin", () => {
+    expect(tanggalWib(new Date("2026-11-30T17:05:00Z"))).toBe("1 Des 2026");
   });
 });

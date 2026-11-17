@@ -71,3 +71,11 @@ export function waktuWib(instan: Date): string {
     bagian.find((b) => b.type === jenis)?.value;
   return `${ambil("day")} ${ambil("month")} ${ambil("year")} ${ambil("hour")}.${ambil("minute")}`;
 }
+
+/** Tanggal WIB sebuah instan, misalnya "11 Nov 2026", yaitu bagian tanggal dari waktuWib. */
+export function tanggalWib(instan: Date): string {
+  const bagian = formatWaktuWib.formatToParts(instan);
+  const ambil = (jenis: Intl.DateTimeFormatPartTypes) =>
+    bagian.find((b) => b.type === jenis)?.value;
+  return `${ambil("day")} ${ambil("month")} ${ambil("year")}`;
+}
