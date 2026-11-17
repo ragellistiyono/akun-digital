@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { eq, inArray } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
+import type { CakupanVoucher } from "@/domain/isian-voucher";
+
 import { db, koneksi } from "./db";
 import { itemStok, pesanan, produk, varian } from "./db/schema";
 import { unggahFotoProduk } from "./foto-produk";
@@ -13,6 +15,7 @@ import { qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
 import { checkoutTertahan, selesaiDalam, sisipkanPesanan } from "./uji-pesanan";
 import { adaBerkasBerisi, pngUnik } from "./uji-unggahan";
+import { bacaVoucher, buatVoucher, daftarVoucher } from "./voucher";
 
 // Test integrasi dengan database app_test dan folder unggahan dari .env.ci.
 afterAll(async () => {
@@ -65,6 +68,28 @@ async function sisa(produkId: string, semuaVarianId: string[]) {
     varian: varianAda.length,
     itemStok: itemAda.length,
   };
+}
+
+/** Voucher nominal Rp 5.000 dengan cakupan yang diberikan, dibuat seperti dari form Admin. Hasilnya id-nya. */
+async function voucherBercakupan(cakupan: CakupanVoucher) {
+  const kode = `V${randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+  await buatVoucher({
+    kode,
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan,
+    khususMember: false,
+    aktif: true,
+  });
+  const voucher = (await daftarVoucher()).find((v) => v.kode === kode);
+  if (!voucher) throw new Error("Voucher tidak tersimpan");
+  return voucher.id;
 }
 
 // Issue T29 (PRD §3.7): Produk yang sudah pernah dipesan, di Pesanan berstatus apa pun, tidak bisa dihapus.
@@ -195,6 +220,33 @@ describe("hapusProduk", () => {
       produk: 0,
       varian: 0,
       itemStok: 0,
+    });
+  });
+});
+
+// Issue T54 (PRD §8.4 ▶ Keputusan 2026-11-17): Produk yang dihapus ikut hilang dari Cakupan voucher.
+describe("hapusProduk dan Cakupan voucher", () => {
+  it("Produk yang ada di cakupan sebuah Voucher tetap terhapus, dan hilang dari cakupan itu", async () => {
+    const { produkId: netflix, satuBulan, tigaBulan } = await netflixPremium();
+    const spotify = await sisipkanProduk({
+      nama: namaUnik("Spotify Premium"),
+      varian: [{ nama: "1 Bulan", hargaJual: 30000 }],
+    });
+    const voucherId = await voucherBercakupan({
+      jenis: "produk",
+      daftar: [netflix, spotify],
+    });
+
+    expect(await hapusProduk(netflix)).toEqual({ hasil: "dihapus" });
+
+    expect(await sisa(netflix, [satuBulan, tigaBulan])).toEqual({
+      produk: 0,
+      varian: 0,
+      itemStok: 0,
+    });
+    expect((await bacaVoucher(voucherId))?.cakupan).toEqual({
+      jenis: "produk",
+      daftar: [spotify],
     });
   });
 });

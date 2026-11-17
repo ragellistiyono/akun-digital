@@ -148,6 +148,13 @@
       "when": 1794911224780,
       "tag": "0020_buat_ubah_voucher",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794912566318,
+      "tag": "0021_cakupan_voucher",
+      "breakpoints": true
     }
   ]
 }

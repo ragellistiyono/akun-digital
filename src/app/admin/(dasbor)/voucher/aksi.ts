@@ -6,9 +6,12 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import {
+  JENIS_CAKUPAN,
   JENIS_POTONGAN,
   periksaIsianVoucher,
+  type CakupanVoucher,
   type GalatIsianVoucher,
+  type JenisCakupan,
   type JenisPotongan,
 } from "@/domain/isian-voucher";
 import {
@@ -40,11 +43,18 @@ type IsianFormVoucher = {
   minimalHargaJual: string;
   khususMember: boolean;
   aktif: boolean;
+  /** Jenis Cakupan voucher yang dipilih, beserta id Produk dan id Kategori yang dicentang. */
+  cakupan: JenisCakupan;
+  produkId: string[];
+  kategoriId: string[];
 };
 
-type NamaIsianTeks = Exclude<keyof IsianFormVoucher, "khususMember" | "aktif">;
+type NamaIsianTeks = Exclude<
+  keyof IsianFormVoucher,
+  "khususMember" | "aktif" | "cakupan" | "produkId" | "kategoriId"
+>;
 
-type GalatFormVoucher = Partial<Record<NamaIsianTeks, string>>;
+type GalatFormVoucher = Partial<Record<NamaIsianTeks | "cakupan", string>>;
 
 /** Isian form Voucher beserta pesan galatnya, yang dikembalikan ke form bila Voucher tidak disimpan. */
 export type KeadaanFormVoucher = {
@@ -58,6 +68,14 @@ function bacaIsian(formData: FormData): IsianFormVoucher {
     return typeof nilai === "string" ? nilai : "";
   };
   const jenis = z.enum(JENIS_POTONGAN).safeParse(formData.get("jenisPotongan"));
+  const cakupan = z.enum(JENIS_CAKUPAN).safeParse(formData.get("cakupan"));
+  // Kotak centang Produk atau Kategori terkirim sekali untuk setiap pilihan. Id yang bukan uuid pasti bukan
+  // Produk atau Kategori, jadi dibuang.
+  const daftarId = (nama: string) =>
+    formData
+      .getAll(nama)
+      .filter((nilai) => z.uuid().safeParse(nilai).success)
+      .map(String);
   return {
     kode: teks("kode"),
     // Form selalu mengirim salah satu jenis, karena pilihan Nominal tetap sudah terpilih sejak awal.
@@ -72,7 +90,26 @@ function bacaIsian(formData: FormData): IsianFormVoucher {
     // Kotak centang hanya terkirim bila dicentang.
     khususMember: formData.get("khususMember") === "on",
     aktif: formData.get("aktif") === "on",
+    // Form selalu mengirim salah satu cakupan, karena pilihan Semua Produk sudah terpilih sejak awal.
+    cakupan: cakupan.success ? cakupan.data : "semua",
+    produkId: daftarId("produkId"),
+    kategoriId: daftarId("kategoriId"),
   };
+}
+
+/**
+ * Cakupan voucher dari isian form. Hanya daftar yang sesuai jenis cakupan terpilih yang dibaca, jadi Produk
+ * dan Kategori tidak pernah tersimpan bersamaan dalam satu cakupan (PRD §8.4 ▶ Keputusan 2026-11-17).
+ */
+function cakupanDariIsian(isian: IsianFormVoucher): CakupanVoucher {
+  switch (isian.cakupan) {
+    case "semua":
+      return { jenis: "semua" };
+    case "produk":
+      return { jenis: "produk", daftar: isian.produkId };
+    case "kategori":
+      return { jenis: "kategori", daftar: isian.kategoriId };
+  }
 }
 
 /** Id Voucher dari form. Voucher dengan id yang tidak sah pasti tidak ada. */
@@ -142,7 +179,7 @@ const PESAN_TANPA_BATAS = "atau kosongkan bila tanpa batas.";
 /** Isian dan pesan untuk setiap galat dari periksaIsianVoucher (PRD §8.2, §8.4 ▶ Keputusan 2026-11-17). */
 function galatIsian(
   galat: GalatIsianVoucher,
-  jenisPotongan: JenisPotongan,
+  { jenisPotongan, cakupan }: IsianFormVoucher,
 ): GalatFormVoucher {
   switch (galat) {
     case "nilai-bukan-bilangan-bulat":
@@ -188,8 +225,12 @@ function galatIsian(
           "Waktu berakhir harus setelah waktu mulai. Ubah waktu berakhirnya, atau kosongkan salah satu waktu.",
       };
     case "cakupan-kosong":
-      // Cakupan voucher untuk sementara selalu semua Produk (T53), jadi daftarnya tidak pernah kosong.
-      throw new Error("Cakupan voucher di form ini selalu semua Produk.");
+      return {
+        cakupan:
+          cakupan === "kategori"
+            ? "Belum ada Kategori yang dipilih. Centang satu Kategori atau lebih, atau pilih Semua Produk."
+            : "Belum ada Produk yang dipilih. Centang satu Produk atau lebih, atau pilih Semua Produk.",
+      };
   }
 }
 
@@ -237,21 +278,19 @@ function periksaSyarat(
     minimalHargaJual: angka("minimalHargaJual", "Minimal Harga jual"),
     mulai: waktu("mulai", "Waktu mulai"),
     berakhir: waktu("berakhir", "Waktu berakhir"),
+    cakupan: cakupanDariIsian(isian),
     khususMember: isian.khususMember,
     aktif: isian.aktif,
   };
   if (Object.keys(galat).length > 0) return { sah: false, galat };
 
-  const periksa = periksaIsianVoucher({
-    ...syarat,
-    cakupan: { jenis: "semua" },
-  });
+  const periksa = periksaIsianVoucher(syarat);
   if (!periksa.sah) {
     return {
       sah: false,
       galat: Object.assign(
         {},
-        ...periksa.galat.map((g) => galatIsian(g, isian.jenisPotongan)),
+        ...periksa.galat.map((g) => galatIsian(g, isian)),
       ),
     };
   }

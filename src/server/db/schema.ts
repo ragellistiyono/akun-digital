@@ -10,13 +10,14 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { JENIS_POTONGAN } from "../../domain/isian-voucher";
+import { JENIS_CAKUPAN, JENIS_POTONGAN } from "../../domain/isian-voucher";
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
 import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
@@ -327,13 +328,18 @@ export const riwayatStatusPesanan = pgTable(
 // Jenis potongan Voucher (PRD §8.2): nominal tetap atau persen.
 export const jenisPotongan = pgEnum("jenis_potongan", JENIS_POTONGAN);
 
+// Jenis Cakupan voucher (PRD §8.4 ▶ Keputusan 2026-11-17): semua Produk, Produk tertentu, atau Kategori tertentu.
+export const jenisCakupan = pgEnum("jenis_cakupan", JENIS_CAKUPAN);
+
 // Voucher (PRD §8.1, §8.2, §8.4). Kode disimpan dalam huruf besar tanpa spasi tepi, dan unik tanpa membedakan
 // huruf besar dan kecil (PRD §8.4 ▶ Keputusan 2026-11-17); aturannya diperiksa periksaKodeVoucher di domain,
 // dan indeks unik menjaganya juga bila dua Admin menyimpan bersamaan. Nilai berisi rupiah untuk nominal tetap
 // atau persen untuk jenis persen. Batas maksimum hanya untuk jenis persen. Null di Kuota voucher, Batas per
 // email, dan batas maksimum berarti tanpa batas; null di minimal Harga jual, mulai, dan berakhir berarti
-// syarat itu tidak diisi. Aturan isiannya diperiksa periksaIsianVoucher di domain. Cakupan voucher untuk
-// sementara selalu semua Produk (T53), jadi belum disimpan. Waktu dibuat menentukan urutan daftar Voucher.
+// syarat itu tidak diisi. Aturan isiannya diperiksa periksaIsianVoucher di domain. Kolom cakupan menyimpan
+// jenis Cakupan voucher; daftar Produk atau Kategori-nya ada di voucher_produk atau voucher_kategori. Voucher
+// yang dibuat sebelum cakupan disimpan (T53) berlaku untuk semua Produk. Waktu dibuat menentukan urutan
+// daftar Voucher.
 export const voucher = pgTable(
   "voucher",
   {
@@ -347,11 +353,48 @@ export const voucher = pgTable(
     minimalHargaJual: integer("minimal_harga_jual"),
     mulai: instan("mulai"),
     berakhir: instan("berakhir"),
+    cakupan: jenisCakupan("cakupan").default("semua").notNull(),
     khususMember: boolean("khusus_member").default(false).notNull(),
     aktif: boolean("aktif").default(true).notNull(),
     dibuatPada: instan("dibuat_pada").defaultNow().notNull(),
   },
   (tabel) => [
     uniqueIndex("voucher_kode_unik").on(sql`upper(btrim(${tabel.kode}))`),
+  ],
+);
+
+// Produk dalam Cakupan voucher berjenis produk (PRD §8.4). Produk yang dihapus ikut hilang dari cakupan
+// (T54), jadi rujukannya cascade.
+export const voucherProduk = pgTable(
+  "voucher_produk",
+  {
+    voucherId: uuid("voucher_id")
+      .notNull()
+      .references(() => voucher.id, { onDelete: "cascade" }),
+    produkId: uuid("produk_id")
+      .notNull()
+      .references(() => produk.id, { onDelete: "cascade" }),
+  },
+  (tabel) => [
+    primaryKey({ columns: [tabel.voucherId, tabel.produkId] }),
+    index("voucher_produk_produk_id_idx").on(tabel.produkId),
+  ],
+);
+
+// Kategori dalam Cakupan voucher berjenis kategori (PRD §8.4). Kategori yang dihapus ikut hilang dari
+// cakupan (T54), jadi rujukannya cascade.
+export const voucherKategori = pgTable(
+  "voucher_kategori",
+  {
+    voucherId: uuid("voucher_id")
+      .notNull()
+      .references(() => voucher.id, { onDelete: "cascade" }),
+    kategoriId: uuid("kategori_id")
+      .notNull()
+      .references(() => kategori.id, { onDelete: "cascade" }),
+  },
+  (tabel) => [
+    primaryKey({ columns: [tabel.voucherId, tabel.kategoriId] }),
+    index("voucher_kategori_kategori_id_idx").on(tabel.kategoriId),
   ],
 );

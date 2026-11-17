@@ -11,13 +11,17 @@ const RENTANG_PERSEN = { minimum: 1, maksimum: 100 } as const;
 /** Rupiah terkecil untuk nominal tetap, batas maksimum, dan minimal Harga jual. */
 const RUPIAH_MINIMUM_VOUCHER = 1;
 
+/** Jenis Cakupan voucher (PRD §8.4 ▶ Keputusan 2026-11-17): semua Produk, Produk tertentu, atau Kategori tertentu. */
+export const JENIS_CAKUPAN = ["semua", "produk", "kategori"] as const;
+export type JenisCakupan = (typeof JENIS_CAKUPAN)[number];
+
 /**
  * Cakupan voucher (GLOSSARY): semua Produk, atau daftar Produk atau Kategori tertentu. Bentuk ini membuat
  * Produk dan Kategori tidak bisa dicampur dalam satu Voucher.
  */
-type CakupanVoucher =
+export type CakupanVoucher =
   | { jenis: "semua" }
-  | { jenis: "produk" | "kategori"; daftar: readonly string[] };
+  | { jenis: Exclude<JenisCakupan, "semua">; daftar: readonly string[] };
 
 /**
  * Isian Voucher selain kode. `null` di Kuota voucher dan Batas per email berarti tanpa batas, di batas
