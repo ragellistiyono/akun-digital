@@ -166,7 +166,7 @@ describe("pnpm db:seed di database kosong", () => {
   // Login di /admin memanggil masukAdmin lewat Server Action (src/app/admin/aksi.ts).
   it("Admin admin@miwe.example bisa login di /admin dengan password dari berkas seed", async () => {
     const { ADMIN_SEED } = await import("./seed-uat");
-    const { masukAdmin } = await import("./auth/masuk-admin");
+    const { masukAdmin } = await import("./auth/masuk");
     expect(ADMIN_SEED.email).toBe("admin@miwe.example");
     expect(
       await masukAdmin({

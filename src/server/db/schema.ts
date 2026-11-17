@@ -24,10 +24,16 @@ import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
 const instan = (nama: string) => timestamp(nama, { withTimezone: true });
 
+// Peran akun login (PRD §2.1). Satu email hanya bisa menjadi Admin atau Member, tidak keduanya
+// (PRD §7.2 ▶ Keputusan 2026-11-17), jadi peran disimpan di baris user yang emailnya unik.
+export const PERAN_AKUN = ["Admin", "Member"] as const;
+export const peranAkun = pgEnum("peran_akun", PERAN_AKUN);
+
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  peran: peranAkun("peran").notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   createdAt: instan("created_at").defaultNow().notNull(),

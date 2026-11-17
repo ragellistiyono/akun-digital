@@ -3,7 +3,7 @@
 import { TriangleAlert } from "lucide-react";
 import { useActionState, type ComponentProps, type ReactNode } from "react";
 
-import { aksiMasukAdmin, type KeadaanFormMasuk } from "../aksi";
+import type { KeadaanFormMasuk } from "./pesan-masuk";
 
 const KEADAAN_AWAL: KeadaanFormMasuk = { email: "" };
 
@@ -59,9 +59,20 @@ function Isian({
   );
 }
 
-export function FormMasuk() {
+/**
+ * Form login dengan email dan password serta tombol "Masuk", dipakai login Admin (PRD §2.2) dan
+ * login Member (PRD §7.5). Server Action-nya ditentukan halaman yang memasangnya.
+ */
+export function FormMasuk({
+  aksiMasuk,
+}: {
+  aksiMasuk: (
+    sebelumnya: KeadaanFormMasuk,
+    formData: FormData,
+  ) => Promise<KeadaanFormMasuk>;
+}) {
   const [keadaan, aksi, sedangMengirim] = useActionState(
-    aksiMasukAdmin,
+    aksiMasuk,
     KEADAAN_AWAL,
   );
 

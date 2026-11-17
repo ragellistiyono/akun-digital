@@ -8,34 +8,53 @@ import { db } from "../db";
 import { account, batasLogin, user } from "../db/schema";
 import { auth } from "./auth";
 
-type HasilMasukAdmin =
+type HasilMasuk =
   | { hasil: "berhasil" }
   | { hasil: "ditolak" }
   | { hasil: "terkunci"; terkunciSampai: Date };
 
+type DataMasuk = { email: string; password: string; kepala: Headers };
+
 /**
- * Login Admin dengan email dan password, dengan batas salah password PRD §7.7. Bila berhasil,
- * cookie sesi ditulis lewat plugin nextCookies ke respons Server Action yang memanggilnya.
+ * Login Admin di `/admin` (PRD §2.2). Email Member diperlakukan seperti email yang tidak terdaftar,
+ * supaya Member tidak mendapat sesi dari halaman login Admin.
+ */
+export function masukAdmin(data: DataMasuk): Promise<HasilMasuk> {
+  return masuk({ ...data, peran: "Admin" });
+}
+
+/**
+ * Login Member di halaman Masuk (PRD §7.5 ▶ Keputusan 2026-11-17). Email Admin diperlakukan seperti
+ * email yang tidak terdaftar. Hitungan salah password sama dengan login Admin, per email (PRD §7.7).
+ */
+export function masukMember(data: DataMasuk): Promise<HasilMasuk> {
+  return masuk({ ...data, peran: "Member" });
+}
+
+/**
+ * Login dengan email dan password untuk satu peran, dengan batas salah password PRD §7.7. Bila
+ * berhasil, cookie sesi ditulis lewat plugin nextCookies ke respons Server Action yang memanggilnya.
  * Hasilnya "terkunci" sejak kesalahan kelima sampai kunci berakhir.
  */
-export async function masukAdmin({
+async function masuk({
   email,
   password,
   kepala,
-}: {
-  email: string;
-  password: string;
-  kepala: Headers;
-}): Promise<HasilMasukAdmin> {
-  const emailAdmin = emailBaku(email);
-  const { hasil, keadaanBaru } = await nilaiPercobaan(emailAdmin, password);
+  peran,
+}: DataMasuk & { peran: "Admin" | "Member" }): Promise<HasilMasuk> {
+  const emailBakunya = emailBaku(email);
+  const { hasil, keadaanBaru } = await nilaiPercobaan(
+    emailBakunya,
+    password,
+    peran,
+  );
 
   if (hasil === "berhasil") {
     // Sesi dibuat setelah transaksi batas login selesai, supaya koneksi transaksi tidak ikut
     // tertahan selama Better Auth memakai koneksi lain dari pool yang sama.
     try {
       await auth.api.signInEmail({
-        body: { email: emailAdmin, password },
+        body: { email: emailBakunya, password },
         headers: kepala,
       });
       return { hasil: "berhasil" };
@@ -58,7 +77,11 @@ export async function masukAdmin({
  * Memeriksa password lalu mencatat percobaan login untuk satu email. Baris email itu dikunci
  * sampai transaksi selesai, supaya percobaan yang datang bersamaan dihitung satu per satu.
  */
-async function nilaiPercobaan(email: string, password: string) {
+async function nilaiPercobaan(
+  email: string,
+  password: string,
+  peran: "Admin" | "Member",
+) {
   const konteks = await auth.$context;
 
   return db.transaction(async (tx) => {
@@ -72,7 +95,8 @@ async function nilaiPercobaan(email: string, password: string) {
       .where(eq(batasLogin.email, email))
       .for("update");
 
-    // Sama seperti Better Auth: akun password milik user dengan email itu.
+    // Sama seperti Better Auth: akun password milik user dengan email itu, hanya untuk peran yang
+    // boleh login di halaman ini. Email peran lain dinilai seperti email yang tidak terdaftar.
     const [akun] = await tx
       .select({ hash: account.password })
       .from(account)
@@ -80,6 +104,7 @@ async function nilaiPercobaan(email: string, password: string) {
       .where(
         and(
           eq(user.email, email),
+          eq(user.peran, peran),
           eq(account.providerId, "credential"),
           eq(account.accountId, user.id),
         ),
@@ -92,7 +117,7 @@ async function nilaiPercobaan(email: string, password: string) {
       });
     } else {
       // Email tidak terdaftar tetap menunggu satu hitungan hash, seperti Better Auth, supaya
-      // lama penolakannya tidak membocorkan email Admin.
+      // lama penolakannya tidak membocorkan email yang terdaftar.
       await konteks.password.hash(password);
     }
 

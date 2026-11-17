@@ -4,19 +4,15 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import {
-  BATAS_SALAH_PASSWORD,
-  LAMA_KUNCI_LOGIN_MENIT,
-} from "@/domain/batas-login";
 import { emailBaku } from "@/domain/kesamaan-email";
 import { auth } from "@/server/auth/auth";
-import { masukAdmin } from "@/server/auth/masuk-admin";
-import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
+import { masukAdmin } from "@/server/auth/masuk";
 
-export type KeadaanFormMasuk = {
-  email: string;
-  galat?: { email?: string; password?: string; umum?: string };
-};
+import {
+  type KeadaanFormMasuk,
+  PESAN_PASSWORD_SALAH,
+  pesanLoginTerkunci,
+} from "../_masuk/pesan-masuk";
 
 const MasukanMasuk = z.object({
   email: z
@@ -57,19 +53,13 @@ export async function aksiMasukAdmin(
   if (masuk.hasil === "ditolak") {
     return {
       email,
-      galat: {
-        umum: "Email atau password salah. Periksa keduanya, lalu coba masuk lagi.",
-      },
+      galat: { umum: PESAN_PASSWORD_SALAH },
     };
   }
   if (masuk.hasil === "terkunci") {
-    // PRD §7.7: pesan menyebut sebabnya dan jam login boleh dicoba lagi dalam WIB.
-    const jam = jamWibDibulatkanKeAtas(masuk.terkunciSampai);
     return {
       email,
-      galat: {
-        umum: `Password salah ${BATAS_SALAH_PASSWORD} kali berturut-turut, jadi login dengan email ini dikunci ${LAMA_KUNCI_LOGIN_MENIT} menit. Coba masuk lagi mulai pukul ${jam} WIB.`,
-      },
+      galat: { umum: pesanLoginTerkunci(masuk.terkunciSampai) },
     };
   }
 

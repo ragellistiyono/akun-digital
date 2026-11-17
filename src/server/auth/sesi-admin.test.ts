@@ -11,6 +11,7 @@ import {
 } from "vitest";
 
 import { koneksi } from "../db";
+import { sisipkanMember } from "../uji-member";
 import { auth } from "./auth";
 import { buatAdmin } from "./buat-admin";
 import { wajibSesiAdmin } from "./sesi-admin";
@@ -113,5 +114,17 @@ describe("sesi Admin (PRD §2.2 ▶ Keputusan 2026-11-11)", () => {
     await expect(wajibSesiAdmin(new Headers())).rejects.toSatisfy(
       arahKeLoginAdmin,
     );
+  });
+
+  // UAT-B1 langkah 2: Member yang login tidak bisa membuka dasbor admin.
+  it("sesi Member ditolak, dan Member diarahkan ke halaman login Admin", async () => {
+    const email = `member-${randomUUID()}@example.test`;
+    await sisipkanMember({ email, password: PASSWORD });
+
+    vi.setSystemTime(new Date("2026-11-11T08:00:00+07:00"));
+    const kepala = await loginAdmin(email);
+
+    vi.setSystemTime(new Date("2026-11-11T09:00:00+07:00"));
+    await expect(wajibSesiAdmin(kepala)).rejects.toSatisfy(arahKeLoginAdmin);
   });
 });
