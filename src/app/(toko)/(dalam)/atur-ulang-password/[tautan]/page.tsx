@@ -1,0 +1,59 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+
+import { bacaTautanAturUlangPassword } from "@/server/auth/atur-ulang-password";
+
+import { PesanGalat } from "../../../../_masuk/form-masuk";
+import { KELAS_TOMBOL_UTAMA } from "../../../_components/bilah-lekat";
+import { FormAturUlangPassword } from "./_components/form-atur-ulang-password";
+import {
+  PESAN_TAUTAN_TIDAK_BERLAKU,
+  TautanAturUlang,
+} from "./tautan-atur-ulang";
+
+// Tautan atur ulang password bersifat rahasia: alamatnya tidak dikirim ke situs lain lewat Referer, dan
+// halamannya tidak diindeks mesin pencari.
+export const metadata: Metadata = {
+  referrer: "no-referrer",
+  robots: { index: false, follow: false },
+};
+
+// Halaman di Tautan atur ulang password (PRD §7.5 ▶ Keputusan 2026-11-17). Tautan yang masih berlaku
+// menampilkan form password baru. Tautan yang tidak berlaku lagi ditolak dengan pesan menurut alasannya:
+// kedaluwarsa, sudah dipakai, atau diganti tautan yang lebih baru. Alamat yang tidak dikenal menampilkan
+// halaman tidak ditemukan.
+export default async function HalamanAturUlangPassword({
+  params,
+}: PageProps<"/atur-ulang-password/[tautan]">) {
+  // Keadaan tautan dibaca setiap kali halaman dibuka, bukan sekali saat build.
+  await connection();
+  const tautan = TautanAturUlang.safeParse((await params).tautan);
+  if (!tautan.success) notFound();
+  const keadaan = await bacaTautanAturUlangPassword(tautan.data);
+  if (keadaan.keadaan === "tidak-dikenal") notFound();
+
+  return (
+    <div className="max-w-[440px]">
+      <h1 className="mt-4">Atur ulang password</h1>
+      {keadaan.keadaan === "berlaku" ? (
+        <>
+          <p className="mt-2 text-tinta-redup">
+            Buat password baru untuk akun Member Anda.
+          </p>
+          <FormAturUlangPassword tautan={tautan.data} />
+        </>
+      ) : (
+        <section className="mt-6 flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang">
+          <PesanGalat id="tautan-galat" peran="alert">
+            {PESAN_TAUTAN_TIDAK_BERLAKU[keadaan.alasan]}
+          </PesanGalat>
+          <Link href="/lupa-password" className={KELAS_TOMBOL_UTAMA}>
+            Minta tautan baru
+          </Link>
+        </section>
+      )}
+    </div>
+  );
+}

@@ -130,6 +130,29 @@ export const pendaftar = pgTable("pendaftar", {
   jumlahSalahKode: integer("jumlah_salah_kode").default(0).notNull(),
 });
 
+// Tautan atur ulang password (PRD §7.5 ▶ Keputusan 2026-11-17): satu baris untuk setiap tautan yang
+// dikirim ke Member aktif. Yang disimpan hanya hash SHA-256 dari bagian acak tautannya, supaya isi
+// database saja tidak cukup untuk membuka tautan. Tautan lama tetap disimpan, supaya tautan yang sudah
+// diganti tautan lebih baru bisa ditolak dengan alasannya. Dipakai pada terisi setelah password baru
+// disimpan lewat tautan itu, karena tautan hanya sekali pakai.
+export const tautanAturUlangPassword = pgTable(
+  "tautan_atur_ulang_password",
+  {
+    hashTautan: text("hash_tautan").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    dikirimPada: instan("dikirim_pada").notNull(),
+    dipakaiPada: instan("dipakai_pada"),
+  },
+  (tabel) => [
+    index("tautan_atur_ulang_password_user_id_dikirim_pada_idx").on(
+      tabel.userId,
+      tabel.dikirimPada,
+    ),
+  ],
+);
+
 // Kategori (PRD §3.1): satu tingkat, dengan nama dan gambar ikon. Kolom ikon berisi nama berkas
 // gambar di folder unggahan (src/server/berkas-unggahan.ts). Nama Kategori unik (PRD §3.1 ▶ Keputusan
 // 2026-11-11); aturannya diperiksa namaKategoriDipakai di domain. Indeks unik atas nama tanpa huruf
