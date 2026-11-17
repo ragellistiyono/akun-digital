@@ -58,25 +58,6 @@ test("di lebar 1440 px navbar atas tampil dengan empat tautan tanpa navigasi baw
   }
 });
 
-test("tab Riwayat untuk Tamu menjelaskan Tautan Pesanan tanpa tombol login", async ({
-  page,
-}) => {
-  await page.goto("/riwayat");
-
-  const isi = page.getByRole("main");
-  await expect(
-    isi.getByRole("heading", { level: 1, name: "Riwayat Pesanan" }),
-  ).toBeVisible();
-  await expect(isi).toContainText(
-    'Setiap Pesanan Selesai punya Tautan Pesanan di email "Pesanan selesai".',
-  );
-
-  // PRD §11.1 ▶ Keputusan 2026-11-11: sebelum M2 tidak ada ajakan login.
-  const ajakanLogin = /masuk|login|daftar/i;
-  await expect(page.getByRole("button", { name: ajakanLogin })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: ajakanLogin })).toHaveCount(0);
-});
-
 for (const lebar of [390, 1440]) {
   test(`di lebar ${lebar} px hanya tab yang sedang dibuka yang punya aria-current="page"`, async ({
     page,
@@ -102,16 +83,28 @@ for (const lebar of [390, 1440]) {
     page,
   }) => {
     await page.setViewportSize({ width: lebar, height: 900 });
-    // Di ponsel navigasi bawah berada setelah isi halaman dalam urutan Tab. Beranda kini berisi kartu
-    // Produk yang juga tautan, jadi test ini memakai tab Riwayat, yang isinya tanpa tautan sebelum M2
-    // (PRD §11.1 ▶ Keputusan 2026-11-11). Tautan kerangkanya sama di semua halaman toko.
-    await page.goto("/riwayat");
-
-    for (const nama of ["MIWE Digital Store, beranda", ...TAB_TOKO]) {
-      await page.keyboard.press("Tab");
-      await expect(
-        page.getByRole("link", { name: nama, exact: true }),
-      ).toBeFocused();
+    // Tab Riwayat dipakai karena isinya sama di semua lebar. Tautan kerangkanya sama di semua halaman toko.
+    // Urutan Tab berbeda per lebar: di ponsel, tombol Masuk bilah atas dan tautan isi halaman berada
+    // sebelum navigasi bawah, jadi Tab ditekan sampai tautan yang dituju mendapat fokus.
+    const tautanKerangka = [
+      page.getByRole("link", {
+        name: "MIWE Digital Store, beranda",
+        exact: true,
+      }),
+      page
+        .getByRole("banner")
+        .getByRole("link", { name: "Masuk", exact: true }),
+      ...TAB_TOKO.map((nama) =>
+        navigasiUtama(page).getByRole("link", { name: nama, exact: true }),
+      ),
+    ];
+    for (const tautan of tautanKerangka) {
+      await page.goto("/riwayat");
+      for (let i = 0; i < 20; i++) {
+        await page.keyboard.press("Tab");
+        if (await tautan.evaluate((el) => el === document.activeElement)) break;
+      }
+      await expect(tautan).toBeFocused();
 
       const cincin = await page.evaluate(() => {
         const gaya = getComputedStyle(document.activeElement!);

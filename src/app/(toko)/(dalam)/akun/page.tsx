@@ -6,13 +6,14 @@ import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { TautanHalamanHukum } from "../../_components/tautan-halaman-hukum";
 import { TombolWhatsApp } from "../../_components/tombol-whatsapp";
+import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
 import { FormGantiPassword } from "./_components/form-ganti-password";
 import { aksiKeluarMember } from "./aksi";
 
 // Tab Akun (PRD §11.1). Member yang login melihat emailnya, form ganti password (T46, PRD §7.6), dan
 // tombol "Keluar" (T41), di atas tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan
-// Privasi. Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat isi sebelum M2:
-// tombol Masuk dan Daftar untuk Tamu baru dipasang di T51 (PRD §13 ▶ Keputusan 2026-11-17).
+// Privasi. Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat tombol "Masuk" dan
+// "Daftar" di atas tombol WhatsApp dan tautan yang sama (PRD §11.1 ▶ Keputusan 2026-11-17).
 export default async function HalamanAkun() {
   // Nomor WhatsApp dibaca setiap kali halaman dibuka, supaya perubahan Admin langsung tampil.
   await connection();
@@ -25,7 +26,7 @@ export default async function HalamanAkun() {
     <>
       <h1 className="mt-4">Akun</h1>
       <div className="mt-6 flex flex-col items-start gap-6">
-        {sesiMember && (
+        {sesiMember ? (
           <div className="flex w-full max-w-[440px] flex-col gap-4">
             <section
               aria-label="Member"
@@ -46,6 +47,8 @@ export default async function HalamanAkun() {
               </button>
             </form>
           </div>
+        ) : (
+          <TombolMasukDaftar className="w-full max-w-[440px]" />
         )}
         <TombolWhatsApp nomor={nomorWhatsapp}>
           Hubungi kami di WhatsApp

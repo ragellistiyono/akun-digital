@@ -8,20 +8,19 @@ import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { riwayatPesanan } from "@/server/riwayat-pesanan";
 import { waktuWib } from "@/server/zona-waktu-toko";
 
-// Tab Riwayat (PRD §11.1). Member yang login melihat Riwayat Pesanan-nya (PRD §7.4, T45). Tamu melihat isi
-// sebelum M2: hanya penjelasan Tautan Pesanan, tanpa ajakan login (PRD §11.1 ▶ Keputusan 2026-11-11). Ajakan
-// login untuk Tamu baru dipasang di T51.
+import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
+
+// Tab Riwayat (PRD §11.1). Member yang login melihat Riwayat Pesanan-nya (PRD §7.4, T45). Tamu melihat ajakan
+// login beserta penjelasan Tautan Pesanan (PRD §11.1 ▶ Keputusan 2026-11-17).
 export default async function HalamanRiwayat() {
   const sesiMember = await bacaSesiMember(await headers());
+
+  if (!sesiMember) return <RiwayatTamu />;
 
   return (
     <>
       <h1 className="mt-4">Riwayat Pesanan</h1>
-      {sesiMember ? (
-        <RiwayatPesananMember emailMember={sesiMember.user.email} />
-      ) : (
-        <PenjelasanTautanPesanan />
-      )}
+      <RiwayatPesananMember emailMember={sesiMember.user.email} />
     </>
   );
 }
@@ -75,11 +74,27 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
   );
 }
 
-/** Isi tab Riwayat untuk Tamu: penjelasan Tautan Pesanan di email "Pesanan selesai". */
-function PenjelasanTautanPesanan() {
+/**
+ * Tab Riwayat untuk Tamu (PRD §11.1 ▶ Keputusan 2026-11-17): judul, ajakan login, tombol "Masuk" dan
+ * "Daftar", lalu panel penjelasan Tautan Pesanan di email "Pesanan selesai". Di layar lebar, judul dan
+ * tombol di kolom kiri dan panel di kolom kanan, seperti prototipe (DESIGN.md Blok Item stok ▶ Keputusan
+ * 2026-11-11).
+ */
+function RiwayatTamu() {
   return (
-    <div className="mt-4 grid gap-6 lebar:grid-cols-2 lebar:gap-8">
-      <section className="flex items-start gap-3 rounded-[20px] bg-permukaan p-4 shadow-bayang">
+    <div className="grid gap-4 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
+      <div>
+        <h1 className="mt-4">Riwayat Pesanan</h1>
+        <p className="mt-2 text-tinta-redup">
+          Masuk sebagai Member untuk melihat semua Pesanan Anda, termasuk yang
+          dibuat sebelum mendaftar.
+        </p>
+        <TombolMasukDaftar className="mt-6" />
+      </div>
+      <section
+        aria-label="Tautan Pesanan"
+        className="flex items-start gap-3 rounded-[20px] bg-permukaan p-4 shadow-bayang lebar:mt-4"
+      >
         <Ticket
           aria-hidden="true"
           className="size-6 shrink-0 text-st-selesai"
