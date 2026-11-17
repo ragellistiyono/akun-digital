@@ -15,8 +15,8 @@ import { sisipkanPesanan } from "../src/server/uji-pesanan";
 
 // Pengaturan toko berlaku untuk seluruh toko, jadi test di berkas ini berjalan berurutan dan setiap
 // test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13), Halaman Pesanan
-// Bermasalah (T19), dan login Member nonaktif (T48) juga diuji di sini, karena hanya berkas ini yang mengubah
-// nomor WhatsApp.
+// Bermasalah (T19), login Member nonaktif (T48), dan checkout Member nonaktif (T48-b) juga diuji di sini,
+// karena hanya berkas ini yang mengubah nomor WhatsApp.
 test.describe.configure({ mode: "serial" });
 
 const PASSWORD = "sandi-uji-admin-123";
@@ -186,6 +186,104 @@ test("Member nonaktif yang login dengan password benar melihat pesan nonaktif da
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
 });
 
+/** Member nonaktif baru dengan email unik. Hasilnya email Member itu. */
+async function memberNonaktifBaru() {
+  const email = `member-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  await ubahStatusMember({ idMember: id, nonaktif: true });
+  return email;
+}
+
+const PESAN_CHECKOUT_NONAKTIF =
+  "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.";
+
+/** Membuka Checkout Varian itu sebagai Tamu, mengisi email, lalu menekan "Bayar dengan QRIS". */
+async function checkoutSebagaiTamu(
+  page: Page,
+  varianId: string,
+  email: string,
+) {
+  await page.goto(`/checkout?varianId=${varianId}`);
+  await page.getByRole("textbox", { name: "Email" }).fill(email);
+  await page.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+}
+
+// Issue T48-b, PRD §5.2 ▶ Keputusan 2026-11-17 (#174), UAT-B3 langkah 5.
+test("Tamu yang checkout dengan email Member nonaktif melihat pesan penolakan dan tombol WhatsApp yang membuka wa.me dengan nomor dari Pengaturan toko", async ({
+  page,
+  context,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  await context.clearCookies();
+  const email = await memberNonaktifBaru();
+
+  await checkoutSebagaiTamu(page, idVarianSatuBulan, email);
+
+  const isi = page.getByRole("main");
+  await expect(isi.getByRole("alert")).toHaveText(PESAN_CHECKOUT_NONAKTIF);
+  await expect(page).toHaveURL(/\/checkout\?varianId=/);
+  // wa.me milik pihak luar tidak dibuka sungguhan; cukup alamat yang dituju tombol itu.
+  await context.route("https://wa.me/**", (rute) =>
+    rute.fulfill({ status: 200, contentType: "text/plain", body: "wa.me" }),
+  );
+  const halamanWhatsapp = context.waitForEvent("page");
+  await isi.getByRole("link", { name: "Hubungi kami di WhatsApp" }).click();
+  await expect(await halamanWhatsapp).toHaveURL("https://wa.me/6281234567890");
+});
+
+// Issue T48-b: penolakan checkout lain tidak menampilkan tombol WhatsApp, walaupun nomornya sudah diisi.
+test("checkout Varian yang stoknya habis ditolak dengan pesan stok habis tanpa tombol WhatsApp", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  await page.context().clearCookies();
+  const produkId = await sisipkanProduk({
+    nama: `Stok Terakhir ${randomUUID().slice(0, 8)}`,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 1 }],
+  });
+  const [{ id: varianId }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  await page.goto(`/checkout?varianId=${varianId}`);
+  // Selagi form ini terbuka, Pembeli lain di browser lain checkout dan menahan Item stok terakhir.
+  const browserLain = await browser.newContext({ baseURL });
+  try {
+    await checkoutSebagaiTamu(
+      await browserLain.newPage(),
+      varianId,
+      `budi-${randomUUID()}@example.test`,
+    );
+    await browserLain.pages()[0].waitForURL(/\/pesanan\//);
+  } finally {
+    await browserLain.close();
+  }
+
+  await page
+    .getByRole("textbox", { name: "Email" })
+    .fill(`budi-${randomUUID()}@example.test`);
+  await page.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+
+  const isi = page.getByRole("main");
+  await expect(isi.getByRole("alert")).toHaveText(
+    "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
+  );
+  await expect(isi.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
+  await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
+});
+
 // Issue T19 dan PRD §5.9: Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp dari T05.
 test("Pesanan Bermasalah menampilkan kalimat keterangan dan tombol WhatsApp yang membuka wa.me dengan nomor dari Pengaturan toko", async ({
   page,
@@ -317,6 +415,20 @@ test("selama nomor WhatsApp belum diisi, tab Akun tidak menampilkan tombol Whats
   await expect(
     page.getByRole("region", { name: "Ketentuan garansi" }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
+  await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
+
+  // Penolakan checkout karena email milik Member nonaktif hanya menampilkan pesannya (issue T48-b, PRD §5.2 ▶
+  // Keputusan 2026-11-17).
+  await page.context().clearCookies();
+  await checkoutSebagaiTamu(
+    page,
+    idVarianSatuBulan,
+    await memberNonaktifBaru(),
+  );
+  await expect(page.getByRole("main").getByRole("alert")).toHaveText(
+    PESAN_CHECKOUT_NONAKTIF,
+  );
   await expect(page.getByRole("link", { name: /WhatsApp/ })).toHaveCount(0);
   await expect(page.locator('a[href^="https://wa.me/"]')).toHaveCount(0);
 });

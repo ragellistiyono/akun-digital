@@ -15,6 +15,7 @@ import {
 import { auth } from "@/server/auth/auth";
 import { db, koneksi } from "@/server/db";
 import { pesanan, user, varian, voucher } from "@/server/db/schema";
+import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { qrispyTiruan } from "@/server/qrispy-tiruan";
 import { ubahStatusMember } from "@/server/status-member";
 import { buatVoucher, type SyaratVoucher } from "@/server/voucher";
@@ -28,6 +29,24 @@ import { aksiCheckout, aksiPakaiVoucher } from "./aksi";
 // Cookie yang dibaca dan ditulis aksi lewat next/headers diganti dengan cookie satu browser tiruan, dan
 // header permintaannya diganti dengan cookie sesi milik pengunjung (tanpa sesi berarti Tamu).
 vi.mock("next/headers", () => ({ cookies: vi.fn(), headers: vi.fn() }));
+// Baris Pengaturan toko dipakai bersama test lain yang berjalan bersamaan (pengaturan/aksi.test.ts menimpanya), jadi
+// nomor WhatsApp diatur lewat bacaPengaturanToko tiruan.
+vi.mock("@/server/pengaturan-toko", async (asli) => ({
+  ...(await asli<typeof import("@/server/pengaturan-toko")>()),
+  bacaPengaturanToko: vi.fn(),
+}));
+
+const NOMOR_WHATSAPP = "6281234567890";
+
+/** Pengaturan toko tiruan dengan nomor WhatsApp itu. `null` berarti nomornya belum diisi. */
+function pakaiNomorWhatsapp(nomorWhatsapp: string | null) {
+  vi.mocked(bacaPengaturanToko).mockResolvedValue({
+    nomorWhatsapp,
+    syaratKetentuan: "",
+    kebijakanPrivasi: "",
+    ambangStokMenipis: 5,
+  });
+}
 
 type TokoCookie = Awaited<ReturnType<typeof cookies>>;
 type OpsiCookie = NonNullable<Parameters<TokoCookie["set"]>[2]>;
@@ -58,6 +77,7 @@ afterAll(async () => {
 beforeEach(() => {
   browserBaru().pakai();
   vi.mocked(headers).mockResolvedValue(new Headers());
+  pakaiNomorWhatsapp(NOMOR_WHATSAPP);
 });
 
 afterEach(() => {
@@ -238,9 +258,8 @@ describe("checkout (PRD §5.2)", () => {
     expect(await pesananDenganEmail(email)).toEqual([]);
   });
 
-  // PRD §5.2 ▶ Keputusan 2026-11-17, UAT-B3 langkah 5.
-  it("Tamu yang checkout dengan email Member nonaktif yang ditulis huruf besar ditolak dengan pesan Member nonaktif, tanpa QRIS maupun Pesanan", async () => {
-    const varianId = await netflixSatuBulan();
+  /** Member nonaktif baru. Hasilnya email Member itu. */
+  async function memberNonaktifBaru() {
     const email = emailUnik();
     await sisipkanMember({ email, password: "sandi-uji-member-123" });
     const [{ id }] = await db
@@ -248,6 +267,13 @@ describe("checkout (PRD §5.2)", () => {
       .from(user)
       .where(eq(user.email, email));
     await ubahStatusMember({ idMember: id, nonaktif: true });
+    return email;
+  }
+
+  // PRD §5.2 ▶ Keputusan 2026-11-17, UAT-B3 langkah 5.
+  it("Tamu yang checkout dengan email Member nonaktif yang ditulis huruf besar ditolak dengan pesan Member nonaktif beserta nomor WhatsApp untuk tombolnya, tanpa QRIS maupun Pesanan", async () => {
+    const varianId = await netflixSatuBulan();
+    const email = await memberNonaktifBaru();
     const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
 
     const keadaan = await aksiCheckout(
@@ -262,6 +288,7 @@ describe("checkout (PRD §5.2)", () => {
         checkout:
           "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.",
       },
+      nomorWhatsapp: NOMOR_WHATSAPP,
     });
     expect(buatQris).not.toHaveBeenCalled();
     expect(
@@ -270,6 +297,28 @@ describe("checkout (PRD §5.2)", () => {
         .from(pesanan)
         .where(inArray(pesanan.email, [email, email.toUpperCase()])),
     ).toEqual([]);
+  });
+
+  // PRD §5.2 ▶ Keputusan 2026-11-17 dan §9.8: tanpa nomor WhatsApp, hanya pesannya yang tampil.
+  it("selama nomor WhatsApp belum diisi, checkout dengan email Member nonaktif ditolak dengan pesan Member nonaktif tanpa nomor WhatsApp", async () => {
+    pakaiNomorWhatsapp(null);
+    const varianId = await netflixSatuBulan();
+    const email = await memberNonaktifBaru();
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email }),
+    );
+
+    expect(keadaan).toEqual({
+      email,
+      kodeVoucher: "",
+      galat: {
+        checkout:
+          "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.",
+      },
+      nomorWhatsapp: null,
+    });
   });
 
   it("Varian yang tidak sah ditolak dengan pesan yang sama", async () => {

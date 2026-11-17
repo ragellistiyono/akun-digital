@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { nominalTagihanQris } from "@/domain/total-bayar";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
+import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { nilaiVoucher } from "@/server/penilaian-voucher";
 import { buatPesanan, TautanPesanan } from "@/server/pesanan";
 import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
@@ -19,6 +20,11 @@ export type KeadaanFormCheckout = {
    * 2026-11-17).
    */
   voucherKhususMember?: true;
+  /**
+   * Diisi hanya bila checkout ditolak karena email milik Member nonaktif, supaya form menampilkan tombol WhatsApp di
+   * bawah pesannya (PRD §5.2 ▶ Keputusan 2026-11-17). `null` berarti nomor WhatsApp toko belum diisi (PRD §9.8).
+   */
+  nomorWhatsapp?: string | null;
 };
 
 const PESAN_EMAIL_KOSONG =
@@ -127,7 +133,12 @@ export async function aksiCheckout(
     return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
   }
   if (hasil.hasil === "member-nonaktif") {
-    return { ...isian, galat: { checkout: PESAN_MEMBER_NONAKTIF } };
+    const { nomorWhatsapp } = await bacaPengaturanToko();
+    return {
+      ...isian,
+      galat: { checkout: PESAN_MEMBER_NONAKTIF },
+      nomorWhatsapp,
+    };
   }
   if (hasil.hasil === "stok-habis") {
     return { ...isian, galat: { checkout: PESAN_STOK_HABIS } };
