@@ -1,18 +1,30 @@
-// Membuat, mengubah, menonaktifkan, dan mengaktifkan kembali Voucher (PRD §8.8). Pemeriksaan bahwa yang
-// mengubah adalah Admin, dan pemeriksaan isian selain kode (periksaIsianVoucher), dilakukan Server Action
-// pemanggilnya.
-import { asc, desc, DrizzleQueryError, eq, inArray } from "drizzle-orm";
+// Membuat, mengubah, menonaktifkan, mengaktifkan kembali, dan menghapus Voucher, serta menghitung pemakaiannya
+// (PRD §8.5, §8.8). Pemeriksaan bahwa yang mengubah adalah Admin, dan pemeriksaan isian selain kode
+// (periksaIsianVoucher), dilakukan Server Action pemanggilnya.
+import {
+  asc,
+  count,
+  desc,
+  DrizzleQueryError,
+  eq,
+  inArray,
+  isNotNull,
+} from "drizzle-orm";
 import postgres from "postgres";
 
+import { bolehHapusVoucher } from "@/domain/hapus-voucher";
 import type { CakupanVoucher, IsianVoucher } from "@/domain/isian-voucher";
 import {
   periksaKodeVoucher,
   type AlasanKodeVoucherDitolak,
 } from "@/domain/kode-voucher";
+import { pemakaianVoucher } from "@/domain/pemakaian-voucher";
+import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import { db } from "./db";
 import {
   kategori,
+  pesanan,
   produk,
   voucher,
   voucherKategori,
@@ -30,12 +42,38 @@ export type SyaratVoucher = IsianVoucher & {
 
 type Transaksi = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-/** Semua Voucher, terbaru di atas (PRD §8.8 ▶ Keputusan 2026-11-17). */
-export async function daftarVoucher(): Promise<Voucher[]> {
-  return db
-    .select()
-    .from(voucher)
-    .orderBy(desc(voucher.dibuatPada), desc(voucher.id));
+/**
+ * Semua Voucher, terbaru di atas, beserta pemakaiannya menurut pemakaianVoucher (PRD §8.5, §8.8 ▶ Keputusan
+ * 2026-11-17). Pemakaian dihitung dari email dan status semua Pesanan yang mencatat Voucher itu.
+ */
+export async function daftarVoucher(): Promise<
+  (Voucher & { pemakaian: number })[]
+> {
+  const [semuaVoucher, pesananDenganVoucher] = await Promise.all([
+    db
+      .select()
+      .from(voucher)
+      .orderBy(desc(voucher.dibuatPada), desc(voucher.id)),
+    db
+      .select({
+        voucherId: pesanan.voucherId,
+        email: pesanan.email,
+        status: pesanan.status,
+      })
+      .from(pesanan)
+      .where(isNotNull(pesanan.voucherId)),
+  ]);
+  const pesananPerVoucher = Map.groupBy(
+    pesananDenganVoucher,
+    (p) => p.voucherId,
+  );
+  return semuaVoucher.map((v) => ({
+    ...v,
+    pemakaian: pemakaianVoucher({
+      emailCheckout: null,
+      pesananDenganVoucher: pesananPerVoucher.get(v.id) ?? [],
+    }).total,
+  }));
 }
 
 /**
@@ -206,4 +244,52 @@ export async function ubahStatusVoucher({
     .where(eq(voucher.id, id))
     .returning({ id: voucher.id });
   return diubah.length === 0 ? { hasil: "tidak-ada" } : { hasil: "diubah" };
+}
+
+/**
+ * Menghapus Voucher yang belum pernah tercatat di Pesanan (PRD §8.8). Voucher yang tercatat di Pesanan
+ * berstatus apa pun, termasuk Kedaluwarsa dan Dibatalkan, tidak dihapus menurut bolehHapusVoucher, dan
+ * hasilnya membawa jumlah Pesanan itu. Daftar Produk atau Kategori di cakupannya ikut terhapus lewat foreign
+ * key-nya (ON DELETE CASCADE). Hasilnya "tidak-ada" bila tidak ada Voucher dengan id itu.
+ *
+ * Baris Voucher dikunci FOR UPDATE sebelum Pesanannya dihitung. Pesanan baru yang mencatat Voucher ini
+ * mengunci baris yang sama FOR KEY SHARE lewat foreign key-nya, jadi Pesanan yang tersimpan lebih dulu ikut
+ * terhitung, dan Pesanan yang datang belakangan menunggu transaksi ini lalu ditolak foreign key-nya bila
+ * Voucher-nya terhapus.
+ */
+export async function hapusVoucher(
+  id: string,
+): Promise<
+  | { hasil: "dihapus" }
+  | { hasil: "tidak-ada" }
+  | { hasil: "pernah-dipakai"; jumlahPesanan: number }
+> {
+  return db.transaction(async (tx) => {
+    const [terkunci] = await tx
+      .select({ id: voucher.id })
+      .from(voucher)
+      .where(eq(voucher.id, id))
+      .for("update");
+    if (!terkunci) return { hasil: "tidak-ada" } as const;
+
+    const jumlahPesananPerStatus: Partial<Record<StatusPesanan, number>> = {};
+    const semua = await tx
+      .select({ status: pesanan.status, jumlah: count() })
+      .from(pesanan)
+      .where(eq(pesanan.voucherId, id))
+      .groupBy(pesanan.status);
+    for (const baris of semua)
+      jumlahPesananPerStatus[baris.status] = baris.jumlah;
+
+    const boleh = bolehHapusVoucher({ jumlahPesananPerStatus });
+    if (!boleh.boleh) {
+      return {
+        hasil: "pernah-dipakai",
+        jumlahPesanan: boleh.jumlahPesanan,
+      } as const;
+    }
+
+    await tx.delete(voucher).where(eq(voucher.id, id));
+    return { hasil: "dihapus" } as const;
+  });
 }

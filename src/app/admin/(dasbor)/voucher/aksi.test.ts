@@ -1,18 +1,22 @@
 import { randomUUID } from "node:crypto";
 
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
 import { auth } from "@/server/auth/auth";
-import { koneksi } from "@/server/db";
+import { db, koneksi } from "@/server/db";
+import { varian } from "@/server/db/schema";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
 import { sisipkanKategori, sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
+import { sisipkanPesanan } from "@/server/uji-pesanan";
 import { bacaVoucher, daftarVoucher } from "@/server/voucher";
 
 import {
   aksiBuatVoucher,
+  aksiHapusVoucher,
   aksiUbahStatusVoucher,
   aksiUbahVoucher,
   type KeadaanFormVoucher,
@@ -427,12 +431,54 @@ describe("aksiUbahStatusVoucher", () => {
   });
 });
 
+describe("aksiHapusVoucher (PRD §8.8)", () => {
+  it("COBA yang tercatat di Pesanan Dibatalkan ditolak dengan pesan untuk menonaktifkannya, juga bila aksinya dipanggil langsung (UAT-H5 langkah 4)", async () => {
+    const coba = await buatSebagaiAdmin({ kode: kodeBaru(), nilai: "5000" });
+    const produkId = await produkBaru("Netflix Premium");
+    const [{ id: varianId }] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, produkId));
+    await sisipkanPesanan({
+      varianId,
+      status: "Dibatalkan",
+      voucher: { id: coba.id, kode: coba.kode },
+    });
+
+    expect(await aksiHapusVoucher({}, formulir({ id: coba.id }))).toEqual({
+      galat:
+        "Voucher ini tidak bisa dihapus, karena sudah tercatat di 1 Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Voucher ini saja: pilih Nonaktifkan di daftar Voucher, atau hapus centang Aktif di form ini lalu simpan. Voucher nonaktif tidak bisa dipakai di checkout, sedangkan Pesanan lamanya tetap utuh.",
+    });
+    expect(await bacaVoucher(coba.id)).not.toBeNull();
+  });
+
+  it("HAPUS yang belum pernah tercatat di Pesanan terhapus, lalu dasbor kembali ke daftar Voucher (UAT-H5 langkah 5)", async () => {
+    const hapus = await buatSebagaiAdmin({ kode: kodeBaru(), nilai: "5000" });
+
+    await expect(
+      aksiHapusVoucher({}, formulir({ id: hapus.id })),
+    ).rejects.toSatisfy(arahKe("/admin/voucher"));
+    expect(await bacaVoucher(hapus.id)).toBeNull();
+  });
+
+  it("Voucher yang tidak ada atau id yang tidak sah menampilkan halaman tidak ditemukan", async () => {
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      aksiHapusVoucher({}, formulir({ id: randomUUID() })),
+    ).rejects.toSatisfy(tidakDitemukan);
+    await expect(
+      aksiHapusVoucher({}, formulir({ id: "bukan-id" })),
+    ).rejects.toSatisfy(tidakDitemukan);
+  });
+});
+
 describe("kewenangan", () => {
   it.each([
     ["Tamu", async () => new Headers()],
     ["Member", cookieMemberBaru],
   ])(
-    "%s diarahkan ke halaman login /admin, dan tidak bisa membuat, mengubah, maupun menonaktifkan Voucher",
+    "%s diarahkan ke halaman login /admin, dan tidak bisa membuat, mengubah, menonaktifkan, maupun menghapus Voucher",
     async (_peran, kepala) => {
       const voucher = await buatSebagaiAdmin({
         kode: kodeBaru(),
@@ -452,6 +498,9 @@ describe("kewenangan", () => {
       ).rejects.toSatisfy(arahKe("/admin"));
       await expect(
         aksiUbahStatusVoucher(formulir({ id: voucher.id, status: "nonaktif" })),
+      ).rejects.toSatisfy(arahKe("/admin"));
+      await expect(
+        aksiHapusVoucher({}, formulir({ id: voucher.id })),
       ).rejects.toSatisfy(arahKe("/admin"));
 
       expect(await voucherDenganKode(kode)).toBeUndefined();

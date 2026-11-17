@@ -9,7 +9,9 @@ import { daftarProduk } from "@/server/produk";
 import { bacaVoucher } from "@/server/voucher";
 import { isianWib } from "@/server/zona-waktu-toko";
 
+import { PanelHapus } from "../../_components/penegasan-hapus";
 import { FormVoucher } from "../_components/form-voucher";
+import { aksiHapusVoucher } from "../aksi";
 
 /** Angka sebagai isian form, atau isian kosong untuk syarat tanpa batas atau yang tidak diisi. */
 const teksAngka = (nilai: number | null, rupiah = false) =>
@@ -17,7 +19,7 @@ const teksAngka = (nilai: number | null, rupiah = false) =>
 
 // Mengubah syarat sebuah Voucher (PRD §8.4 ▶ Keputusan 2026-11-17, §8.8). Kodenya hanya ditampilkan, karena
 // kode tidak bisa diubah setelah Voucher dibuat. Cakupan voucher yang tersimpan tampil sebagai pilihan
-// yang tercentang.
+// yang tercentang. Voucher yang belum pernah tercatat di Pesanan bisa dihapus dari sini (PRD §8.8).
 export default async function HalamanUbahVoucher({
   params,
 }: PageProps<"/admin/voucher/[id]">) {
@@ -58,6 +60,14 @@ export default async function HalamanUbahVoucher({
         }}
         pilihanProduk={semuaProduk}
         pilihanKategori={semuaKategori}
+      />
+      <PanelHapus
+        judul="Hapus Voucher"
+        keterangan="Voucher hanya bisa dihapus bila belum pernah tercatat di Pesanan berstatus apa pun, termasuk Kedaluwarsa dan Dibatalkan. Voucher yang sudah pernah dipakai bisa dinonaktifkan di form Voucher atau di daftar Voucher."
+        aksi={aksiHapusVoucher}
+        isian={{ id: voucher.id }}
+        nama={`Voucher ${voucher.kode}`}
+        akibat="Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan."
       />
     </>
   );
