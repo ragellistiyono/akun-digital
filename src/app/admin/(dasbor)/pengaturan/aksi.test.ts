@@ -18,6 +18,13 @@ const PENGATURAN_AWAL = {
   nomorWhatsapp: "6281200000001",
   syaratKetentuan: "Syarat lama.",
   kebijakanPrivasi: "Kebijakan lama.",
+  ambangStokMenipis: 5,
+};
+
+/** Isian form seperti yang dikirim browser: semua nilainya teks. */
+const ISIAN_AWAL = {
+  ...PENGATURAN_AWAL,
+  ambangStokMenipis: "5",
 };
 
 function sebagaiPengunjung(kepala: Headers) {
@@ -31,7 +38,7 @@ function formulir(isian: Record<string, string>) {
 }
 
 const keadaanAwal = () => ({
-  nilai: { ...PENGATURAN_AWAL },
+  nilai: { ...ISIAN_AWAL },
 });
 
 beforeEach(async () => {
@@ -53,6 +60,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
           nomorWhatsapp: "081299999999",
           syaratKetentuan: "Syarat dari Tamu.",
           kebijakanPrivasi: "Kebijakan dari Tamu.",
+          ambangStokMenipis: "3",
         }),
       ),
     ).rejects.toSatisfy(arahKe("/admin"));
@@ -71,6 +79,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
         nomorWhatsapp: "0812-3456-7890",
         syaratKetentuan: "Pasal satu.\r\nPasal dua.",
         kebijakanPrivasi: "Data dipakai untuk Pesanan.",
+        ambangStokMenipis: "3",
       }),
     );
 
@@ -79,8 +88,14 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
       syaratKetentuan: "Pasal satu.\nPasal dua.",
       kebijakanPrivasi: "Data dipakai untuk Pesanan.",
     };
-    expect(keadaan).toEqual({ nilai: tersimpan, tersimpan: true });
-    expect(await bacaPengaturanToko()).toEqual(tersimpan);
+    expect(keadaan).toEqual({
+      nilai: { ...tersimpan, ambangStokMenipis: "3" },
+      tersimpan: true,
+    });
+    expect(await bacaPengaturanToko()).toEqual({
+      ...tersimpan,
+      ambangStokMenipis: 3,
+    });
   });
 
   it("nomor WhatsApp yang dikosongkan tersimpan sebagai belum diisi", async () => {
@@ -88,7 +103,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
 
     const keadaan = await aksiSimpanPengaturanToko(
       keadaanAwal(),
-      formulir({ ...PENGATURAN_AWAL, nomorWhatsapp: "  " }),
+      formulir({ ...ISIAN_AWAL, nomorWhatsapp: "  " }),
     );
 
     expect(keadaan.nilai.nomorWhatsapp).toBe("");
@@ -122,6 +137,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
         nomorWhatsapp: nomor,
         syaratKetentuan: "Syarat baru.",
         kebijakanPrivasi: "Kebijakan baru.",
+        ambangStokMenipis: "3",
       };
 
       const keadaan = await aksiSimpanPengaturanToko(
@@ -136,4 +152,93 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
       expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
     });
   }
+
+  // PRD §9.4 ▶ Keputusan 2026-11-17 dan tests/golden/ambang-stok-menipis.json: Ambang stok menipis
+  // berupa bilangan bulat 0 sampai 999.
+  for (const ambang of ["0", "999"]) {
+    it(`Admin menyimpan Ambang stok menipis ${ambang}`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      const keadaan = await aksiSimpanPengaturanToko(
+        keadaanAwal(),
+        formulir({ ...ISIAN_AWAL, ambangStokMenipis: ` ${ambang} ` }),
+      );
+
+      expect(keadaan.tersimpan).toBe(true);
+      expect(keadaan.nilai.ambangStokMenipis).toBe(ambang);
+      expect((await bacaPengaturanToko()).ambangStokMenipis).toBe(
+        Number(ambang),
+      );
+    });
+  }
+
+  for (const { ambang, pesan } of [
+    {
+      ambang: "1000",
+      pesan:
+        "Ambang stok menipis hanya boleh 0 sampai 999. Tulis angka di rentang itu, lalu simpan lagi.",
+    },
+    {
+      ambang: "-1",
+      pesan:
+        "Ambang stok menipis hanya boleh 0 sampai 999. Tulis angka di rentang itu, lalu simpan lagi.",
+    },
+    {
+      ambang: "2,5",
+      pesan:
+        "Ambang stok menipis harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka 0 sampai 999, misalnya 5, lalu simpan lagi.",
+    },
+    {
+      ambang: "2.5",
+      pesan:
+        "Ambang stok menipis harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka 0 sampai 999, misalnya 5, lalu simpan lagi.",
+    },
+    {
+      ambang: "",
+      pesan:
+        "Ambang stok menipis harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka 0 sampai 999, misalnya 5, lalu simpan lagi.",
+    },
+  ]) {
+    it(`Ambang stok menipis "${ambang}" ditolak dengan pesan, dan pengaturan toko tidak berubah`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+      const isian = {
+        nomorWhatsapp: "0812-3456-7890",
+        syaratKetentuan: "Syarat baru.",
+        kebijakanPrivasi: "Kebijakan baru.",
+        ambangStokMenipis: ambang,
+      };
+
+      const keadaan = await aksiSimpanPengaturanToko(
+        keadaanAwal(),
+        formulir(isian),
+      );
+
+      expect(keadaan).toEqual({
+        nilai: isian,
+        galat: { ambangStokMenipis: pesan },
+      });
+      expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
+    });
+  }
+
+  it("nomor WhatsApp dan Ambang stok menipis yang sama-sama salah ditolak dengan pesan untuk keduanya", async () => {
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiSimpanPengaturanToko(
+      keadaanAwal(),
+      formulir({
+        ...ISIAN_AWAL,
+        nomorWhatsapp: "+1 555 0100",
+        ambangStokMenipis: "1000",
+      }),
+    );
+
+    expect(keadaan.galat).toEqual({
+      nomorWhatsapp:
+        "Nomor WhatsApp harus nomor Indonesia, yang diawali 0, 62, atau +62. Tulis nomornya misalnya 0812-3456-7890, lalu simpan lagi.",
+      ambangStokMenipis:
+        "Ambang stok menipis hanya boleh 0 sampai 999. Tulis angka di rentang itu, lalu simpan lagi.",
+    });
+    expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
+  });
 });

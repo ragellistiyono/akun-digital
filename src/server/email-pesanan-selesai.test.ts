@@ -45,6 +45,7 @@ beforeEach(() => {
     nomorWhatsapp: NOMOR_WHATSAPP,
     syaratKetentuan: "",
     kebijakanPrivasi: "",
+    ambangStokMenipis: 5,
   });
 });
 
@@ -217,6 +218,7 @@ describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
       nomorWhatsapp: null,
       syaratKetentuan: "",
       kebijakanPrivasi: "",
+      ambangStokMenipis: 5,
     });
     const dibayar = await pesananDibayar();
     await jalankanPekerjaanEmail(dibayar.id);

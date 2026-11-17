@@ -214,6 +214,8 @@ const PENGATURAN_TOKO = {
     "Toko menyimpan email Anda untuk mengirim detail Pesanan dan menampilkan Riwayat Pesanan.",
     "Toko tidak membagikan email Anda kepada pihak lain di luar layanan pengiriman email dan pembayaran.",
   ].join("\n"),
+  // Persiapan bersama docs/UAT.md: Ambang stok menipis 5.
+  ambangStokMenipis: 5,
 };
 
 type PesananSeed = {

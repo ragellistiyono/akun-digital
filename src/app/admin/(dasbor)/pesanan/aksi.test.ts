@@ -72,6 +72,7 @@ beforeAll(async () => {
     nomorWhatsapp: "6281234567890",
     syaratKetentuan: "",
     kebijakanPrivasi: "",
+    ambangStokMenipis: 5,
   });
   // Produk [CONTOH] dengan akhiran unik, karena database test dipakai bersama oleh semua test.
   const produkId = await sisipkanProduk({

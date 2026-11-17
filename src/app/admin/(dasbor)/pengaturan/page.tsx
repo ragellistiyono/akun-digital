@@ -5,7 +5,8 @@ import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { FormPengaturan } from "./_components/form-pengaturan";
 
-// Pengaturan toko (PRD §9.8). Isian Ambang stok menipis menyusul di M2 (PRD §13 ▶ Keputusan 2026-11-11).
+// Pengaturan toko (PRD §9.8): nomor WhatsApp, Ambang stok menipis (PRD §9.4), dan teks halaman Syarat &
+// Ketentuan serta Kebijakan Privasi.
 export default async function HalamanPengaturanToko() {
   await wajibSesiAdmin(await headers());
   const pengaturan = await bacaPengaturanToko();
@@ -18,6 +19,7 @@ export default async function HalamanPengaturanToko() {
           nilai: {
             ...pengaturan,
             nomorWhatsapp: pengaturan.nomorWhatsapp ?? "",
+            ambangStokMenipis: String(pengaturan.ambangStokMenipis),
           },
         }}
       />

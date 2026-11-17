@@ -18,6 +18,7 @@ import {
 
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
+import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
@@ -201,7 +202,8 @@ export const itemStok = pgTable(
 );
 
 // Pengaturan toko (PRD §9.8): tepat satu baris untuk seluruh toko, dengan id 1. Nomor WhatsApp null
-// berarti belum diisi. Ambang stok menipis menyusul di M2 (PRD §13 ▶ Keputusan 2026-11-11).
+// berarti belum diisi. Ambang stok menipis bernilai awal 5 (PRD §9.4); aturan rentangnya diperiksa
+// periksaAmbangStokMenipis di domain.
 export const pengaturanToko = pgTable(
   "pengaturan_toko",
   {
@@ -209,6 +211,9 @@ export const pengaturanToko = pgTable(
     nomorWhatsapp: text("nomor_whatsapp"),
     syaratKetentuan: text("syarat_ketentuan").default("").notNull(),
     kebijakanPrivasi: text("kebijakan_privasi").default("").notNull(),
+    ambangStokMenipis: integer("ambang_stok_menipis")
+      .default(AMBANG_STOK_MENIPIS_AWAL)
+      .notNull(),
   },
   (tabel) => [check("pengaturan_toko_satu_baris", sql`${tabel.id} = 1`)],
 );

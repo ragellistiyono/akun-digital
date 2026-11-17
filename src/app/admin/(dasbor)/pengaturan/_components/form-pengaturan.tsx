@@ -29,6 +29,14 @@ export function FormPengaturan({ awal }: { awal: KeadaanFormPengaturan }) {
         bantuan="Boleh ditulis 0812-3456-7890 atau +62 812 3456 7890; toko menyimpannya sebagai 6281234567890. Kosongkan bila tombol WhatsApp belum ingin ditampilkan."
       />
       <IsianTeks
+        nama="ambangStokMenipis"
+        label="Ambang stok menipis"
+        nilaiAwal={keadaan.nilai.ambangStokMenipis}
+        galat={keadaan.galat?.ambangStokMenipis}
+        bantuan="Varian aktif dengan Stok Varian sama dengan atau kurang dari angka ini masuk daftar Stok menipis di Ringkasan. Isi bilangan bulat 0 sampai 999."
+        inputMode="numeric"
+      />
+      <IsianTeks
         nama="syaratKetentuan"
         label="Syarat & Ketentuan"
         nilaiAwal={keadaan.nilai.syaratKetentuan}
