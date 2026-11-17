@@ -1,9 +1,10 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { buatPesanan, TautanPesanan } from "@/server/pesanan";
 import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
 
@@ -74,14 +75,15 @@ export async function aksiCheckout(
   _sebelumnya: KeadaanFormCheckout,
   formData: FormData,
 ): Promise<KeadaanFormCheckout> {
-  // Checkout terbuka untuk Tamu (PRD §2.1), dan login Member baru ada di M2, jadi tidak ada sesi yang
-  // dibaca. Yang dibaca hanya Tautan Pesanan yang dibuat di browser ini.
+  // Checkout terbuka untuk Tamu (PRD §2.1). Bila Member sedang login, email Pesanan diambil dari sesinya,
+  // bukan dari isian form, supaya email lain yang dikirim lewat alat browser tidak dipakai (PRD §5.2).
+  const sesiMember = await bacaSesiMember(await headers());
   const tokoCookie = await cookies();
   const tautanBrowserIni = tautanDiBrowser(
     tokoCookie.get(COOKIE_TAUTAN_PESANAN)?.value,
   );
-  const isianEmail = formData.get("email");
-  // Email yang diketik Pembeli dikembalikan apa adanya untuk mengisi ulang form.
+  const isianEmail = sesiMember ? sesiMember.user.email : formData.get("email");
+  // Email yang diketik Tamu dikembalikan apa adanya untuk mengisi ulang form.
   const email = typeof isianEmail === "string" ? isianEmail : "";
   const masukanEmail = Email.safeParse(isianEmail);
   if (!masukanEmail.success) {
