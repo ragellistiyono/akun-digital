@@ -22,8 +22,11 @@ const ditolak = (
   alasan,
 });
 
-/** Kode Voucher dalam bentuk simpannya: tanpa spasi di awal dan akhir, dalam huruf besar. */
-const kodeBaku = (kode: string) => kode.trim().toUpperCase();
+/**
+ * Kode Voucher dalam bentuk simpannya: tanpa spasi di awal dan akhir, dalam huruf besar. Dua kode dengan bentuk
+ * baku yang sama adalah kode yang sama, karena kode Voucher tidak membedakan huruf besar dan kecil (PRD §8.1).
+ */
+export const kodeBaku = (kode: string) => kode.trim().toUpperCase();
 
 /**
  * Memeriksa kode Voucher baru dan mengembalikan kode dalam bentuk simpannya. Spasi di awal dan akhir
