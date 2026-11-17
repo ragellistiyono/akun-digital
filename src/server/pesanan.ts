@@ -17,6 +17,7 @@ import {
   itemStokTampil,
   kolomItemStokTerkirim,
 } from "@/domain/item-stok-terkirim";
+import type { AlasanVoucherDitolak } from "@/domain/kelayakan-voucher";
 import { emailBaku } from "@/domain/kesamaan-email";
 import { emailMilikMemberNonaktif } from "@/domain/member-nonaktif";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
@@ -210,7 +211,7 @@ type HasilCheckoutDitolak =
   | { hasil: "tidak-dijual" }
   | { hasil: "member-nonaktif" }
   | { hasil: "stok-habis" }
-  | { hasil: "voucher-ditolak"; pesan: string }
+  | { hasil: "voucher-ditolak"; alasan: AlasanVoucherDitolak; pesan: string }
   | HasilPesananMenunggu;
 
 type PemeriksaanCheckout = Awaited<ReturnType<typeof periksaCheckout>>;

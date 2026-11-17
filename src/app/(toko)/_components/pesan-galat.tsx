@@ -1,15 +1,19 @@
 import { TriangleAlert } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Pesan galat 13 px tebal berwarna `st-masalah` dengan ikon TriangleAlert (DESIGN.md Inputs / Fields). */
+/**
+ * Pesan galat 13 px tebal berwarna `st-masalah` dengan ikon TriangleAlert (DESIGN.md Inputs / Fields). `pesan` boleh
+ * berisi tautan, misalnya tautan Masuk di pesan Voucher khusus Member.
+ */
 export function PesanGalat({
   id,
   pesan,
   className,
 }: {
   id?: string;
-  pesan: string;
+  pesan: ReactNode;
   className?: string;
 }) {
   return (
@@ -22,7 +26,7 @@ export function PesanGalat({
       )}
     >
       <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
-      {pesan}
+      <span>{pesan}</span>
     </p>
   );
 }

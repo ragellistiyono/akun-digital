@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,12 @@ import {
 } from "../../../_components/bilah-lekat";
 import { PesanGalat } from "../../../_components/pesan-galat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
-import { aksiCheckout, type KeadaanFormCheckout } from "../aksi";
+import {
+  aksiCheckout,
+  aksiPakaiVoucher,
+  type HasilPakaiVoucher,
+  type KeadaanFormCheckout,
+} from "../aksi";
 
 type IsiCheckout = NonNullable<Awaited<ReturnType<typeof bacaCheckout>>>;
 
@@ -26,15 +31,31 @@ const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
 const KELAS_ISIAN =
   "h-[52px] rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta placeholder:text-tinta-redup read-only:bg-permukaan-2 focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
 
+/** Tombol garis 52 px (DESIGN.md Buttons) untuk aksi kedua, di sini "Pakai" di isian gabung kode voucher. */
+const KELAS_TOMBOL_GARIS =
+  "inline-flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram disabled:cursor-wait disabled:text-tinta-redup";
+
+const KELAS_TAUTAN =
+  "text-aksi-teks underline decoration-[1.5px] underline-offset-[3px]";
+
+/**
+ * Hasil tombol "Pakai" beserta keadaan form saat tombol itu ditekan. Keadaan itu menentukan mana yang lebih baru:
+ * hasil "Pakai", atau hasil "Bayar dengan QRIS" sesudahnya.
+ */
+type PakaiVoucher = { hasil: HasilPakaiVoucher; keadaan: KeadaanFormCheckout };
+
 /**
  * Form checkout satu Varian (PRD §5.2, UAT-E7): isian email dengan pengingatnya dan isian kode voucher yang
  * opsional, rincian perkiraan dengan Kode unik yang belum diketahui (DESIGN.md "Rincian Total bayar"), kalimat
  * Syarat & Ketentuan bertaut tanpa kotak centang, lalu tombol "Bayar dengan QRIS" di bilah lekat. Di layar
  * lebar, isian dan rinciannya menjadi dua kolom sama lebar.
  *
- * Kode voucher tampil dalam huruf kapital (DESIGN.md Inputs, isian gabung) dan diperiksa saat Pesanan dibuat.
- * Bila Voucher ditolak, pesan penolakannya menggantikan teks bantuan isian itu, dan kodenya tetap berisi
- * (PRD §8.7 ▶ Keputusan 2026-11-17).
+ * Kode voucher tampil dalam huruf kapital dengan tombol garis "Pakai" di sebelahnya (DESIGN.md Inputs, isian
+ * gabung). "Pakai" langsung memeriksa kode itu (PRD §8.7 ▶ Keputusan 2026-11-17): bila diterima, tampil
+ * "<KODE> dipakai: potongan Rp X" berwarna `st-selesai`, dan rincian menampilkan "Potongan voucher (KODE)" beserta
+ * Perkiraan bayar yang baru; bila ditolak, tampil pesan penolakannya. Kode diperiksa sekali lagi saat Pesanan
+ * dibuat. Bila Voucher ditolak saat itu, pesan penolakannya tampil di isian kode, dan kodenya tetap berisi. Pesan
+ * Voucher khusus Member diberi tautan Masuk yang membawa Member kembali ke Checkout Varian ini setelah login.
  *
  * Bila Member sedang login (`emailMember`), isian email sudah berisi email Member dan tidak bisa diubah
  * (PRD §5.2). Server tetap memakai email dari sesi Member, bukan dari isian ini.
@@ -51,8 +72,53 @@ export function FormCheckout({
     FormData
   >(aksiCheckout, { email: emailMember ?? "", kodeVoucher: "" });
   const galatEmail = keadaan.galat?.email;
-  const galatKodeVoucher = keadaan.galat?.kodeVoucher;
   const galatCheckout = keadaan.galat?.checkout;
+
+  const isianEmail = useRef<HTMLInputElement>(null);
+  const isianKode = useRef<HTMLInputElement>(null);
+  const [pakai, setPakai] = useState<PakaiVoucher | null>(null);
+  const [sedangMemeriksa, mulaiMemeriksa] = useTransition();
+
+  // Penolakan Voucher dari "Bayar dengan QRIS" yang datang setelah "Pakai" menggantikan hasil "Pakai" itu.
+  // Galat checkout lain tidak, karena kode voucher-nya tidak berubah.
+  const pakaiLebihBaru = pakai !== null && pakai.keadaan === keadaan;
+  const hasilPakai =
+    pakai && (pakaiLebihBaru || !keadaan.galat?.kodeVoucher)
+      ? pakai.hasil
+      : null;
+  const voucherDipakai = hasilPakai?.diterima ? hasilPakai : null;
+  const penolakanVoucher =
+    !pakaiLebihBaru && keadaan.galat?.kodeVoucher
+      ? {
+          pesan: keadaan.galat.kodeVoucher,
+          khususMember: keadaan.voucherKhususMember === true,
+        }
+      : hasilPakai && !hasilPakai.diterima
+        ? hasilPakai
+        : null;
+  const alamatMasuk = `/masuk?kembali=${encodeURIComponent(`/checkout?varianId=${checkout.varianId}`)}`;
+
+  /**
+   * Tombol "Pakai" memeriksa kode di isian dengan email yang sedang diisi (PRD §8.7 ▶ Keputusan 2026-11-17). Isian
+   * kode yang kosong menghapus hasil "Pakai" sebelumnya tanpa pemeriksaan.
+   */
+  function pakaiVoucher() {
+    const kode = isianKode.current?.value.trim() ?? "";
+    if (kode === "") {
+      setPakai(null);
+      return;
+    }
+    const email = isianEmail.current?.value ?? "";
+    const keadaanSaatDitekan = keadaan;
+    mulaiMemeriksa(async () => {
+      const hasil = await aksiPakaiVoucher({
+        varianId: checkout.varianId,
+        kode,
+        email,
+      });
+      setPakai({ hasil, keadaan: keadaanSaatDitekan });
+    });
+  }
 
   return (
     <form
@@ -73,6 +139,7 @@ export function FormCheckout({
             Email
           </label>
           <input
+            ref={isianEmail}
             id="email"
             name="email"
             type="email"
@@ -98,23 +165,63 @@ export function FormCheckout({
           <label htmlFor="kodeVoucher" className="text-sm font-bold">
             Kode voucher (opsional)
           </label>
-          <input
-            id="kodeVoucher"
-            name="kodeVoucher"
-            type="text"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            defaultValue={keadaan.kodeVoucher}
-            aria-invalid={galatKodeVoucher ? true : undefined}
-            aria-describedby={
-              galatKodeVoucher ? "kode-voucher-keterangan" : undefined
-            }
-            className={cn(KELAS_ISIAN, "uppercase")}
-          />
-          {galatKodeVoucher && (
-            <PesanGalat id="kode-voucher-keterangan" pesan={galatKodeVoucher} />
+          <div className="flex gap-2">
+            <input
+              ref={isianKode}
+              id="kodeVoucher"
+              name="kodeVoucher"
+              type="text"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              defaultValue={keadaan.kodeVoucher}
+              // Hasil "Pakai" hanya berlaku untuk kode yang diperiksa, jadi hilang begitu kodenya diubah.
+              onChange={() => setPakai(null)}
+              aria-invalid={penolakanVoucher ? true : undefined}
+              aria-describedby={
+                penolakanVoucher || voucherDipakai
+                  ? "kode-voucher-keterangan"
+                  : undefined
+              }
+              className={cn(KELAS_ISIAN, "min-w-0 flex-1 uppercase")}
+            />
+            <button
+              type="button"
+              onClick={pakaiVoucher}
+              disabled={sedangMemeriksa}
+              className={KELAS_TOMBOL_GARIS}
+            >
+              Pakai
+            </button>
+          </div>
+          {penolakanVoucher && (
+            <PesanGalat
+              id="kode-voucher-keterangan"
+              pesan={
+                penolakanVoucher.khususMember ? (
+                  <>
+                    {penolakanVoucher.pesan}{" "}
+                    <Link href={alamatMasuk} className={KELAS_TAUTAN}>
+                      Masuk
+                    </Link>
+                  </>
+                ) : (
+                  penolakanVoucher.pesan
+                )
+              }
+            />
           )}
+          <div aria-live="polite">
+            {voucherDipakai && (
+              <p
+                id="kode-voucher-keterangan"
+                className="text-[13px] font-bold text-st-selesai"
+              >
+                {voucherDipakai.kodeVoucher} dipakai: potongan{" "}
+                {rupiah(voucherDipakai.potonganVoucher)}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -122,7 +229,16 @@ export function FormCheckout({
         <section aria-label="Rincian pembayaran" className={PANEL}>
           <RincianNominal
             baris={[
-              { label: "Harga jual", nilai: rupiah(checkout.hargaJual) },
+              {
+                label: "Harga jual",
+                nilai: rupiah(voucherDipakai?.hargaJual ?? checkout.hargaJual),
+              },
+              voucherDipakai
+                ? {
+                    label: `Potongan voucher (${voucherDipakai.kodeVoucher})`,
+                    nilai: `− ${rupiah(voucherDipakai.potonganVoucher)}`,
+                  }
+                : { label: "Potongan voucher", nilai: rupiah(0) },
               {
                 label: "Kode unik",
                 nilai: "Rp 1–499, dari Qrispy",
@@ -134,7 +250,9 @@ export function FormCheckout({
               nilai: (
                 <>
                   <span className="whitespace-nowrap">
-                    {rupiah(checkout.perkiraanBayar)}
+                    {rupiah(
+                      voucherDipakai?.perkiraanBayar ?? checkout.perkiraanBayar,
+                    )}
                   </span>{" "}
                   <span className="whitespace-nowrap">+ Kode unik</span>
                 </>

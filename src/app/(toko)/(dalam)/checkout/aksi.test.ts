@@ -21,7 +21,7 @@ import { buatVoucher, type SyaratVoucher } from "@/server/voucher";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 
-import { aksiCheckout } from "./aksi";
+import { aksiCheckout, aksiPakaiVoucher } from "./aksi";
 
 // Test integrasi Server Action checkout dengan database app_test dan Qrispy tiruan dari .env.ci
 // (QRISPY_MODE=tiruan). Data Produknya mengikuti persiapan bersama di docs/UAT.md, yang bertanda [CONTOH].
@@ -723,7 +723,7 @@ describe("checkout dengan kode voucher (PRD §8)", () => {
     expect(kedua).toBe(pertama);
   });
 
-  it("Voucher khusus Member ditolak untuk Tamu, dan diterima untuk Member yang login", async () => {
+  it("Voucher khusus Member ditolak untuk Tamu dengan tanda tautan Masuk, dan diterima untuk Member yang login", async () => {
     const member20 = await voucherBaru("MEMBER", {
       jenisPotongan: "persen",
       nilai: 20,
@@ -731,14 +731,18 @@ describe("checkout dengan kode voucher (PRD §8)", () => {
       khususMember: true,
     });
     const varianId = await netflixSatuBulan();
+    const emailTamu = emailUnik();
 
     expect(
       await aksiCheckout(
         keadaanAwal(),
-        formulir({ varianId, email: emailUnik(), kodeVoucher: member20.kode }),
+        formulir({ varianId, email: emailTamu, kodeVoucher: member20.kode }),
       ),
-    ).toMatchObject({
+    ).toEqual({
+      email: emailTamu,
+      kodeVoucher: member20.kode,
       galat: { kodeVoucher: "Voucher khusus Member, silakan login" },
+      voucherKhususMember: true,
     });
 
     const email = `member-${randomUUID()}@example.test`;
@@ -763,5 +767,149 @@ describe("checkout dengan kode voucher (PRD §8)", () => {
     expect(await pesananDenganVoucher(email)).toEqual([
       { potonganVoucher: 10000, kodeVoucher: member20.kode },
     ]);
+  });
+  // Tombol "Pakai" di samping isian kode voucher (PRD §8.7 ▶ Keputusan 2026-11-17, UAT-H1, UAT-H3, UAT-H4).
+  describe("aksiPakaiVoucher", () => {
+    it("HEMAT5 untuk Netflix Premium 1 Bulan diterima dengan potongan Rp 5.000, dan Perkiraan bayar menjadi Rp 45.000", async () => {
+      const hemat5 = await voucherBaru("HEMAT");
+
+      expect(
+        await aksiPakaiVoucher({
+          varianId: await netflixSatuBulan(),
+          kode: hemat5.kode.toLowerCase(),
+          email: "",
+        }),
+      ).toEqual({
+        diterima: true,
+        kodeVoucher: hemat5.kode,
+        hargaJual: 50000,
+        potonganVoucher: 5000,
+        perkiraanBayar: 45000,
+      });
+    });
+
+    it('LAMA yang sudah berakhir ditolak dengan "Voucher sudah berakhir"', async () => {
+      const lama = await voucherBaru("LAMA", {
+        berakhir: new Date("2026-11-10T10:00:00+07:00"),
+      });
+
+      expect(
+        await aksiPakaiVoucher({
+          varianId: await netflixSatuBulan(),
+          kode: lama.kode,
+          email: emailUnik(),
+        }),
+      ).toEqual({
+        diterima: false,
+        pesan: "Voucher sudah berakhir",
+        khususMember: false,
+      });
+    });
+
+    it("MEMBER20 ditolak untuk Tamu dengan tanda tautan Masuk, dan diterima dengan potongan Rp 10.000 setelah Member login", async () => {
+      const member20 = await voucherBaru("MEMBER", {
+        jenisPotongan: "persen",
+        nilai: 20,
+        khususMember: true,
+      });
+      const varianId = await netflixSatuBulan();
+
+      expect(
+        await aksiPakaiVoucher({ varianId, kode: member20.kode, email: "" }),
+      ).toEqual({
+        diterima: false,
+        pesan: "Voucher khusus Member, silakan login",
+        khususMember: true,
+      });
+
+      const email = `member-${randomUUID()}@example.test`;
+      await sisipkanMember({ email, password: "sandi-uji-member-123" });
+      const { headers: kepalaRespons } = await auth.api.signInEmail({
+        body: { email, password: "sandi-uji-member-123" },
+        returnHeaders: true,
+      });
+      vi.mocked(headers).mockResolvedValue(
+        new Headers({
+          cookie: kepalaRespons
+            .getSetCookie()
+            .map((baris) => baris.split(";")[0])
+            .join("; "),
+        }),
+      );
+
+      expect(
+        await aksiPakaiVoucher({ varianId, kode: member20.kode, email }),
+      ).toMatchObject({ diterima: true, potonganVoucher: 10000 });
+    });
+
+    it("Batas per email hanya diperiksa bila email sudah diisi", async () => {
+      const hemat5 = await voucherBaru("HEMAT");
+      const varianId = await netflixSatuBulan();
+      const email = emailUnik();
+      await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email, kodeVoucher: hemat5.kode }),
+      ).catch((galat: unknown) => alamatPengalihan(galat));
+
+      expect(
+        await aksiPakaiVoucher({ varianId, kode: hemat5.kode, email: "  " }),
+      ).toMatchObject({ diterima: true, potonganVoucher: 5000 });
+      expect(
+        await aksiPakaiVoucher({ varianId, kode: hemat5.kode, email }),
+      ).toEqual({
+        diterima: false,
+        pesan: "Anda sudah memakai voucher ini",
+        khususMember: false,
+      });
+    });
+
+    // UAT-H4 langkah 6.
+    it('SATUKALI yang diterima "Pakai" tetapi kuotanya habis sebelum Pesanan dibuat ditolak dengan "Kuota voucher habis", dan Pesanan tidak dibuat', async () => {
+      const satukali = await voucherBaru("SATUKALI", { kuotaVoucher: 1 });
+      const varianId = await netflixSatuBulan();
+      const emailA = emailUnik();
+
+      expect(
+        await aksiPakaiVoucher({
+          varianId,
+          kode: satukali.kode,
+          email: emailA,
+        }),
+      ).toMatchObject({ diterima: true, potonganVoucher: 5000 });
+
+      // Pembeli lain di browser lain memakai kuota terakhirnya lebih dulu.
+      browserBaru().pakai();
+      await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email: emailUnik(), kodeVoucher: satukali.kode }),
+      ).catch((galat: unknown) => alamatPengalihan(galat));
+
+      browserBaru().pakai();
+      expect(
+        await aksiCheckout(
+          keadaanAwal(),
+          formulir({ varianId, email: emailA, kodeVoucher: satukali.kode }),
+        ),
+      ).toEqual({
+        email: emailA,
+        kodeVoucher: satukali.kode,
+        galat: { kodeVoucher: "Kuota voucher habis" },
+      });
+      expect(await pesananDenganEmail(emailA)).toEqual([]);
+    });
+
+    it("Varian yang tidak ada ditolak dengan pesan tidak dijual", async () => {
+      expect(
+        await aksiPakaiVoucher({
+          varianId: randomUUID(),
+          kode: "HEMAT5",
+          email: "",
+        }),
+      ).toEqual({
+        diterima: false,
+        pesan: PESAN_TIDAK_DIJUAL,
+        khususMember: false,
+      });
+    });
   });
 });

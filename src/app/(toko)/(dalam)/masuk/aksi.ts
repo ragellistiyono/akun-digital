@@ -14,6 +14,11 @@ import {
   PESAN_PASSWORD_SALAH,
   pesanLoginTerkunci,
 } from "../../../_masuk/pesan-masuk";
+import {
+  alamatKembaliAman,
+  PARAMETER_ALAMAT_KEMBALI,
+  TUJUAN_SETELAH_MASUK,
+} from "./alamat-kembali";
 
 const MasukanMasuk = z.object({
   email: z
@@ -31,7 +36,9 @@ const MasukanMasuk = z.object({
 /**
  * Login Member (PRD §7.5 ▶ Keputusan 2026-11-17). Pesan password salah dan pesan kunci sama dengan
  * login Admin. Member nonaktif dengan password benar melihat pesan nonaktif beserta tombol WhatsApp dari
- * Pengaturan toko (PRD §9.8). Setelah berhasil, Member dibawa ke Riwayat Pesanan.
+ * Pengaturan toko (PRD §9.8). Setelah berhasil, Member dibawa ke alamat kembali yang dikirim form, misalnya
+ * Checkout Varian tempat ia menekan tautan Masuk (PRD §8.7 ▶ Keputusan 2026-11-17). Alamat kembali yang tidak ada
+ * atau menunjuk ke luar toko diabaikan, dan Member dibawa ke Riwayat Pesanan.
  */
 export async function aksiMasukMember(
   _sebelumnya: KeadaanFormMasuk,
@@ -68,5 +75,8 @@ export async function aksiMasukMember(
     };
   }
 
-  redirect("/riwayat");
+  redirect(
+    alamatKembaliAman(formData.get(PARAMETER_ALAMAT_KEMBALI)) ??
+      TUJUAN_SETELAH_MASUK,
+  );
 }

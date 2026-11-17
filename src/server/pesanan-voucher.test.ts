@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { AlasanVoucherDitolak } from "@/domain/kelayakan-voucher";
+
 import { db, koneksi } from "./db";
 import { pesanan, varian, voucher } from "./db/schema";
 import { prosesKabarPembayaran } from "./kabar-pembayaran";
@@ -257,11 +259,13 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
     string,
     () => Promise<{ kode: string; varianId: string }>,
     string,
+    AlasanVoucherDitolak,
   ][] = [
     [
       "kode yang tidak ada",
       async () => ({ kode: kodeBaru("ASAL"), varianId: netflix1Bulan }),
       "Kode voucher tidak ditemukan",
+      "kode-tidak-ditemukan",
     ],
     [
       "Voucher yang sudah berakhir",
@@ -274,6 +278,7 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
         varianId: netflix1Bulan,
       }),
       "Voucher sudah berakhir",
+      "sudah-berakhir",
     ],
     [
       "HEMAT10 untuk Uji Bayar Rp 1.000",
@@ -289,6 +294,7 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
         varianId: ujiBayar,
       }),
       "Minimal pembelian Rp 50.000",
+      "di-bawah-minimal-harga-jual",
     ],
     [
       "HEMAT5 untuk Uji Bayar Rp 1.000",
@@ -297,6 +303,7 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
         varianId: ujiBayar,
       }),
       "Voucher tidak memberi potongan untuk produk ini",
+      "tanpa-potongan",
     ],
     [
       "Voucher khusus Member oleh Tamu",
@@ -305,9 +312,10 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
         varianId: netflix1Bulan,
       }),
       "Voucher khusus Member, silakan login",
+      "khusus-member",
     ],
   ];
-  for (const [nama, siapkan, pesan] of kasus) {
+  for (const [nama, siapkan, pesan, alasan] of kasus) {
     it(`${nama} ditolak dengan "${pesan}", tanpa QRIS maupun Pesanan`, async () => {
       const { kode, varianId } = await siapkan();
       const email = emailUnik();
@@ -318,7 +326,7 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
         { qrispy },
       );
 
-      expect(hasil).toEqual({ hasil: "voucher-ditolak", pesan });
+      expect(hasil).toEqual({ hasil: "voucher-ditolak", alasan, pesan });
       expect(qrispy.buatQris).not.toHaveBeenCalled();
       expect(await pesananDenganEmail(email)).toEqual([]);
     });
@@ -380,6 +388,7 @@ describe("buatPesanan dengan Voucher yang ditolak (PRD §8.7 ▶ Keputusan 2026-
 
     expect(hasil).toEqual({
       hasil: "voucher-ditolak",
+      alasan: "sudah-dipakai-email-ini",
       pesan: "Anda sudah memakai voucher ini",
     });
   });
@@ -405,6 +414,7 @@ describe("buatPesanan dengan Kuota voucher (PRD §8.5, UAT-H4)", () => {
     ]);
     expect(hasil).toContainEqual({
       hasil: "voucher-ditolak",
+      alasan: "kuota-habis",
       pesan: "Kuota voucher habis",
     });
     const dipakai = await db
@@ -438,7 +448,11 @@ describe("buatPesanan dengan Kuota voucher (PRD §8.5, UAT-H4)", () => {
         { varianId: netflix1Bulan, email: emailB, kodeVoucher: satukali.kode },
         { qrispy: qrispyKodeUnik(123) },
       ),
-    ).toEqual({ hasil: "voucher-ditolak", pesan: "Kuota voucher habis" });
+    ).toEqual({
+      hasil: "voucher-ditolak",
+      alasan: "kuota-habis",
+      pesan: "Kuota voucher habis",
+    });
 
     await batalkanPesanan(pertama.tautan, { qrispy: qrispyKodeUnik(123) });
     const hasil = await buatPesanan(
