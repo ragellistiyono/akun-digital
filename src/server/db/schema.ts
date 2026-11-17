@@ -117,6 +117,16 @@ export const batasLogin = pgTable("batas_login", {
   terkunciSampai: instan("terkunci_sampai"),
 });
 
+// Batas salah password lama di form ganti password (PRD §7.6 ▶ Keputusan 2026-11-17), satu baris
+// per Member. Hitungannya terpisah dari batas_login, jadi kunci ganti password tidak memengaruhi login.
+export const batasGantiPassword = pgTable("batas_ganti_password", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  jumlahSalah: integer("jumlah_salah").default(0).notNull(),
+  terkunciSampai: instan("terkunci_sampai"),
+});
+
 // Pendaftar (PRD §7.2 ▶ Keputusan 2026-11-17): orang yang sudah membuat password tetapi belum memasukkan
 // Kode verifikasi yang benar. Pendaftar belum menjadi Member, jadi disimpan terpisah dari tabel user:
 // ia tidak bisa login dan tidak terhitung sebagai Member. Satu baris per email dalam bentuk bakunya

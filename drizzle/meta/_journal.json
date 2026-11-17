@@ -162,6 +162,13 @@
       "when": 1794917851489,
       "tag": "0022_voucher_di_pesanan",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794930029856,
+      "tag": "0023_batas_ganti_password",
+      "breakpoints": true
     }
   ]
 }
