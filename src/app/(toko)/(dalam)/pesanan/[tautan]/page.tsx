@@ -1,5 +1,6 @@
 import { Download } from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,7 +8,10 @@ import { connection } from "next/server";
 import { z } from "zod";
 
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
+import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
 import { rupiah } from "@/lib/rupiah";
+import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
+import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { bacaPesananLewatTautan, TautanPesanan } from "@/server/pesanan";
@@ -22,10 +26,15 @@ import { BlokItemStok } from "./_components/blok-item-stok";
 import { FormBatalkan } from "./_components/form-batalkan";
 import { HapusTandaSudahDibayar } from "./_components/hapus-tanda-sudah-dibayar";
 import { KartuSenja } from "./_components/kartu-senja";
+import { PanelBuatAkun } from "./_components/panel-buat-akun";
 import { PantauStatusPesanan } from "./_components/pantau-status";
 import { TANDA_SUDAH_DIBAYAR } from "./_components/tanda-sudah-dibayar";
 
 const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
+
+// Tombol garis (DESIGN.md Buttons) untuk aksi kedua.
+const KELAS_TOMBOL_GARIS =
+  "inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram";
 
 // Tautan Pesanan bersifat rahasia (PRD §6.2): alamatnya tidak dikirim ke situs lain lewat Referer, dan
 // halamannya tidak diindeks mesin pencari.
@@ -71,6 +80,40 @@ function ProdukDanVarian({ pesanan }: { pesanan: PesananDibaca }) {
       <span className="text-tinta-redup">· {pesanan.namaVarian}</span>
     </p>
   );
+}
+
+/**
+ * Yang tampil di bawah Item stok Halaman Pesanan Selesai menurut ajakannya (PRD §7.1 ▶ Keputusan
+ * 2026-11-17): panel ajakan buat akun, tautan "Login untuk melihat riwayat" ke halaman Masuk, tautan
+ * "Lihat Riwayat Pesanan" ke tab Riwayat, atau tidak ada apa pun.
+ */
+function AjakanDiBawahItemStok({
+  ajakan,
+  emailPesanan,
+  tautan,
+}: {
+  ajakan: AjakanHalamanPesanan;
+  emailPesanan: string;
+  tautan: string;
+}) {
+  if (ajakan === "buat-akun") {
+    return <PanelBuatAkun tautan={tautan} emailPesanan={emailPesanan} />;
+  }
+  if (ajakan === "login") {
+    return (
+      <Link href="/masuk" className={KELAS_TOMBOL_GARIS}>
+        Login untuk melihat riwayat
+      </Link>
+    );
+  }
+  if (ajakan === "lihat-riwayat") {
+    return (
+      <Link href="/riwayat" className={KELAS_TOMBOL_GARIS}>
+        Lihat Riwayat Pesanan
+      </Link>
+    );
+  }
+  return null;
 }
 
 // Halaman bayar (PRD §5.6) selama Pesanan Menunggu Pembayaran: kartu senja dengan hitung mundur QRIS dan
@@ -151,13 +194,17 @@ function HalamanBayar({
 // Tidak ada tombol kirim ulang email (PRD §6.4). Tepat setelah pembatalan yang diproses sebagai sudah
 // dibayar, atau yang mendapati Pesanan sudah Selesai, Halaman Pesanan Selesai menjelaskan kenapa Pesanan
 // tidak dibatalkan (PRD §5.8, ▶ Keputusan 2026-11-12 #87 dan #99), di panel tepat di bawah Produk dan
-// Varian.
+// Varian. Di bawah Item stok Pesanan Selesai tampil ajakan menurut siapa yang membukanya (PRD §7.1).
 function HalamanPesanan({
   pesanan,
+  tautan,
+  ajakan,
   nomorWhatsapp,
   setelahPembatalanSudahDibayar,
 }: {
   pesanan: PesananDibaca;
+  tautan: string;
+  ajakan: { ajakan: AjakanHalamanPesanan; emailPesanan: string } | null;
   nomorWhatsapp: string | null;
   setelahPembatalanSudahDibayar: boolean;
 }) {
@@ -185,6 +232,13 @@ function HalamanPesanan({
             </div>
           )}
           {pesanan.itemStok && <BlokItemStok kolom={pesanan.itemStok} />}
+          {ajakan && (
+            <AjakanDiBawahItemStok
+              ajakan={ajakan.ajakan}
+              emailPesanan={ajakan.emailPesanan}
+              tautan={tautan}
+            />
+          )}
           {status === "Bermasalah" && (
             <div className={`flex flex-col items-start gap-4 ${PANEL}`}>
               <p className="max-w-[65ch]">
@@ -244,6 +298,15 @@ export default async function HalamanTautanPesanan({
     pesanan.status === "Bermasalah"
       ? (await bacaPengaturanToko()).nomorWhatsapp
       : null;
+  // Ajakan buat akun atau login hanya dibaca untuk Halaman Pesanan (PRD §7.1), bukan Halaman bayar.
+  const ajakan =
+    pesanan.status === "Menunggu Pembayaran"
+      ? null
+      : await bacaAjakanHalamanPesanan({
+          tautan: tautan.data,
+          emailMemberLogin:
+            (await bacaSesiMember(await headers()))?.user.email ?? null,
+        });
   return (
     <>
       {setelahPembatalanSudahDibayar && <HapusTandaSudahDibayar />}
@@ -252,6 +315,8 @@ export default async function HalamanTautanPesanan({
       ) : (
         <HalamanPesanan
           pesanan={pesanan}
+          tautan={tautan.data}
+          ajakan={ajakan}
           nomorWhatsapp={nomorWhatsapp}
           setelahPembatalanSudahDibayar={setelahPembatalanSudahDibayar}
         />

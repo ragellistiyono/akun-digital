@@ -6,6 +6,11 @@ export type KeadaanFormDaftar = {
   galat?: { email?: string; password?: string; umum?: string };
 };
 
+/** Keadaan ajakan buat akun di Halaman Pesanan: pesan galat isian password atau penolakan pendaftaran. */
+export type KeadaanFormAjakan = {
+  galat?: { password?: string; umum?: string };
+};
+
 /** Hasil tombol "Kirim ulang kode" terakhir, atau null sebelum tombol itu ditekan. */
 export type KeadaanKirimUlang = {
   pesan: { jenis: "terkirim" | "galat"; teks: string } | null;

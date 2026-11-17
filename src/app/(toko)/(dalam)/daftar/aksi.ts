@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 
 import { emailBaku } from "@/domain/kesamaan-email";
@@ -9,11 +9,14 @@ import {
   PANJANG_PASSWORD_MINIMUM,
   periksaPanjangPassword,
 } from "@/domain/panjang-password";
+import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
 import {
   daftarPendaftar,
   kirimUlangKodeVerifikasi,
   masukkanKodeVerifikasi,
 } from "@/server/auth/pendaftaran";
+import { bacaSesiMember } from "@/server/auth/sesi-member";
+import { TautanPesanan } from "@/server/pesanan";
 
 import {
   bacaEmailPendaftar,
@@ -21,6 +24,7 @@ import {
   simpanEmailPendaftar,
 } from "./email-pendaftar";
 import {
+  type KeadaanFormAjakan,
   type KeadaanFormDaftar,
   type KeadaanFormKode,
   type KeadaanKirimUlang,
@@ -30,6 +34,18 @@ import {
   PESAN_KODE_SALAH,
   pesanTungguKode,
 } from "./pesan-daftar";
+
+// Password disimpan persis seperti diketik, jadi tidak dipangkas (PRD §7.5).
+const PasswordBaru = z
+  .string()
+  .min(
+    1,
+    `Password belum diisi. Buat password dengan minimal ${PANJANG_PASSWORD_MINIMUM} karakter.`,
+  )
+  .refine(
+    (password) => periksaPanjangPassword(password).valid,
+    `Password kurang dari ${PANJANG_PASSWORD_MINIMUM} karakter. Buat password dengan minimal ${PANJANG_PASSWORD_MINIMUM} karakter.`,
+  );
 
 const MasukanDaftar = z.object({
   email: z
@@ -41,17 +57,7 @@ const MasukanDaftar = z.object({
         "Penulisan email tidak sah. Periksa lagi, misalnya nama@domain.com.",
       ),
     ),
-  // Password disimpan persis seperti diketik, jadi tidak dipangkas (PRD §7.5).
-  password: z
-    .string()
-    .min(
-      1,
-      `Password belum diisi. Buat password dengan minimal ${PANJANG_PASSWORD_MINIMUM} karakter.`,
-    )
-    .refine(
-      (password) => periksaPanjangPassword(password).valid,
-      `Password kurang dari ${PANJANG_PASSWORD_MINIMUM} karakter. Buat password dengan minimal ${PANJANG_PASSWORD_MINIMUM} karakter.`,
-    ),
+  password: PasswordBaru,
 });
 
 /**
@@ -85,6 +91,49 @@ export async function aksiDaftar(
   }
 
   await simpanEmailPendaftar(masukan.data.email);
+  redirect("/daftar/verifikasi");
+}
+
+/**
+ * Ajakan "Buat akun untuk menyimpan riwayat" di Halaman Pesanan Selesai (PRD §7.1, §7.2 ▶ Keputusan
+ * 2026-11-17): pemegang Tautan Pesanan membuat password, lalu email Pesanan itu menjadi Pendaftar dan
+ * Kode verifikasi dikirim ke email itu. Alur dan penolakannya sama dengan form Daftar. Email diambil dari
+ * Pesanan, bukan dari form. Bila Halaman Pesanan itu tidak mendapat ajakan buat akun, misalnya Member sedang
+ * login atau email Pesanan sudah milik Member, Pembeli dibawa kembali ke Halaman Pesanan itu.
+ */
+export async function aksiDaftarLewatPesanan(
+  _sebelumnya: KeadaanFormAjakan,
+  formData: FormData,
+): Promise<KeadaanFormAjakan> {
+  const sesiMember = await bacaSesiMember(await headers());
+  const tautan = TautanPesanan.safeParse(formData.get("tautan"));
+  if (!tautan.success) notFound();
+  const password = PasswordBaru.safeParse(
+    String(formData.get("password") ?? ""),
+  );
+
+  // Kewenangannya adalah memegang Tautan Pesanan yang Halaman Pesanan-nya mendapat ajakan buat akun.
+  const ajakan = await bacaAjakanHalamanPesanan({
+    tautan: tautan.data,
+    emailMemberLogin: sesiMember?.user.email ?? null,
+  });
+  if (!ajakan) notFound();
+  if (ajakan.ajakan !== "buat-akun") redirect(`/pesanan/${tautan.data}`);
+
+  if (!password.success) {
+    return { galat: { password: password.error.issues[0].message } };
+  }
+
+  const email = emailBaku(ajakan.emailPesanan);
+  const daftar = await daftarPendaftar({ email, password: password.data });
+  if (daftar.hasil === "email-terdaftar") {
+    return { galat: { umum: PESAN_EMAIL_TERDAFTAR } };
+  }
+  if (daftar.hasil === "tunggu") {
+    return { galat: { umum: pesanTungguKode(daftar.tungguDetik) } };
+  }
+
+  await simpanEmailPendaftar(email);
   redirect("/daftar/verifikasi");
 }
 
