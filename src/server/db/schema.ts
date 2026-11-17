@@ -16,6 +16,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { JENIS_POTONGAN } from "../../domain/isian-voucher";
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
 import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
@@ -320,5 +321,37 @@ export const riwayatStatusPesanan = pgTable(
   },
   (tabel) => [
     index("riwayat_status_pesanan_pesanan_id_idx").on(tabel.pesananId),
+  ],
+);
+
+// Jenis potongan Voucher (PRD §8.2): nominal tetap atau persen.
+export const jenisPotongan = pgEnum("jenis_potongan", JENIS_POTONGAN);
+
+// Voucher (PRD §8.1, §8.2, §8.4). Kode disimpan dalam huruf besar tanpa spasi tepi, dan unik tanpa membedakan
+// huruf besar dan kecil (PRD §8.4 ▶ Keputusan 2026-11-17); aturannya diperiksa periksaKodeVoucher di domain,
+// dan indeks unik menjaganya juga bila dua Admin menyimpan bersamaan. Nilai berisi rupiah untuk nominal tetap
+// atau persen untuk jenis persen. Batas maksimum hanya untuk jenis persen. Null di Kuota voucher, Batas per
+// email, dan batas maksimum berarti tanpa batas; null di minimal Harga jual, mulai, dan berakhir berarti
+// syarat itu tidak diisi. Aturan isiannya diperiksa periksaIsianVoucher di domain. Cakupan voucher untuk
+// sementara selalu semua Produk (T53), jadi belum disimpan. Waktu dibuat menentukan urutan daftar Voucher.
+export const voucher = pgTable(
+  "voucher",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kode: text("kode").notNull(),
+    jenisPotongan: jenisPotongan("jenis_potongan").notNull(),
+    nilai: integer("nilai").notNull(),
+    batasMaksimum: integer("batas_maksimum"),
+    kuotaVoucher: integer("kuota_voucher"),
+    batasPerEmail: integer("batas_per_email"),
+    minimalHargaJual: integer("minimal_harga_jual"),
+    mulai: instan("mulai"),
+    berakhir: instan("berakhir"),
+    khususMember: boolean("khusus_member").default(false).notNull(),
+    aktif: boolean("aktif").default(true).notNull(),
+    dibuatPada: instan("dibuat_pada").defaultNow().notNull(),
+  },
+  (tabel) => [
+    uniqueIndex("voucher_kode_unik").on(sql`upper(btrim(${tabel.kode}))`),
   ],
 );

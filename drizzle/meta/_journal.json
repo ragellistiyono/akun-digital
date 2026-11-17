@@ -141,6 +141,13 @@
       "when": 1794906322069,
       "tag": "0019_tautan_atur_ulang_password",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794911224780,
+      "tag": "0020_buat_ubah_voucher",
+      "breakpoints": true
     }
   ]
 }

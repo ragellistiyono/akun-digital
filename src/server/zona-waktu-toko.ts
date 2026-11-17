@@ -79,3 +79,25 @@ export function tanggalWib(instan: Date): string {
     bagian.find((b) => b.type === jenis)?.value;
   return `${ambil("day")} ${ambil("month")} ${ambil("year")}`;
 }
+
+const POLA_ISIAN_WIB = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+/**
+ * Instan dari isian tanggal-dan-jam browser "YYYY-MM-DDTHH:MM" yang dibaca sebagai WIB, misalnya masa
+ * berlaku Voucher (PRD §8.4). Null bila teksnya bukan tanggal dan jam sampai menit yang ada.
+ */
+export function instanDariIsianWib(teks: string): Date | null {
+  const cocok = POLA_ISIAN_WIB.exec(teks);
+  if (!cocok) return null;
+  const instan = new Date(`${teks}:00${OFFSET_WIB}`);
+  if (Number.isNaN(instan.getTime())) return null;
+  // Tanggal yang tidak ada, misalnya 30 Februari, digeser Date ke bulan berikutnya, jadi ditolak di sini.
+  return isianWib(instan) === teks ? instan : null;
+}
+
+const OFFSET_WIB_MS = 7 * 60 * 60 * 1000;
+
+/** Isian tanggal-dan-jam browser "YYYY-MM-DDTHH:MM" untuk sebuah instan, dalam WIB. Detiknya dibuang. */
+export function isianWib(instan: Date): string {
+  return new Date(instan.getTime() + OFFSET_WIB_MS).toISOString().slice(0, 16);
+}
