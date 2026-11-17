@@ -19,11 +19,19 @@ type ItemStokPesananUji = {
   formatSaatTerkirim?: string[];
 };
 
+/** Rincian nominal contoh PRD §5.5. */
+const RINCIAN_CONTOH_PRD = {
+  hargaJual: 50000,
+  potonganVoucher: 5000,
+  kodeUnik: 123,
+  totalBayar: 45123,
+};
+
 /**
  * Menyisipkan Pesanan sebuah Varian dengan status itu, dan bila diminta satu Item stok yang tertaut ke
  * Pesanan itu. Rinciannya contoh PRD §5.5: Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik
- * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, serta email dan Nomor Pesanan-nya
- * acak, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
+ * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, email dan Nomor Pesanan-nya acak,
+ * dan waktu bayarnya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
  * seperti saat checkout, yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Hasilnya id, Tautan Pesanan,
  * dan Nomor Pesanan-nya.
  */
@@ -36,6 +44,8 @@ export async function sisipkanPesanan({
   nomorPesanan: nomor = nomorPesanan(randomBytes(6)),
   dibuatPada,
   emailGagal = false,
+  rincian = RINCIAN_CONTOH_PRD,
+  waktuBayar = null,
 }: {
   varianId: string;
   status: StatusPesanan;
@@ -45,6 +55,8 @@ export async function sisipkanPesanan({
   nomorPesanan?: string;
   dibuatPada?: Date;
   emailGagal?: boolean;
+  rincian?: typeof RINCIAN_CONTOH_PRD;
+  waktuBayar?: Date | null;
 }) {
   const tautan = randomBytes(32).toString("base64url");
   const [{ id }] = await db
@@ -54,14 +66,12 @@ export async function sisipkanPesanan({
       tautan,
       email,
       varianId,
-      hargaJual: 50000,
-      potonganVoucher: 5000,
-      kodeUnik: 123,
-      totalBayar: 45123,
+      ...rincian,
       qrisId: randomUUID(),
       kedaluwarsaPada,
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
       status,
+      waktuBayar,
       emailGagal,
     })
     .returning({ id: pesanan.id });
