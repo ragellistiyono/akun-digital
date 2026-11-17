@@ -17,7 +17,7 @@ import { bacaItemStokTerkirim } from "./pesanan";
 /**
  * Detail Pesanan dengan Nomor Pesanan itu untuk dasbor admin (PRD §9.5): id, Nomor Pesanan, status, tanda
  * "Email gagal" (PRD §6.4), email, nama Produk dan Varian, rincian nominal yang dicatat di Pesanan
- * (PRD §5.5), kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
+ * (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
  * (waktu, status, dan pelakunya) dari yang paling lama. Hasilnya null bila tidak ada Pesanan dengan Nomor
  * Pesanan itu.
  */
@@ -33,6 +33,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
       namaVarian: varian.nama,
       hargaJual: pesanan.hargaJual,
       potonganVoucher: pesanan.potonganVoucher,
+      kodeVoucher: pesanan.kodeVoucher,
       kodeUnik: pesanan.kodeUnik,
       totalBayar: pesanan.totalBayar,
     })
@@ -52,11 +53,17 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
     .where(eq(riwayatStatusPesanan.pesananId, baris.id))
     .orderBy(asc(riwayatStatusPesanan.waktu), asc(riwayatStatusPesanan.id));
 
-  const { hargaJual, potonganVoucher, kodeUnik, totalBayar, ...lainnya } =
-    baris;
+  const {
+    hargaJual,
+    potonganVoucher,
+    kodeVoucher,
+    kodeUnik,
+    totalBayar,
+    ...lainnya
+  } = baris;
   return {
     ...lainnya,
-    rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
+    rincian: { hargaJual, potonganVoucher, kodeVoucher, kodeUnik, totalBayar },
     itemStok: await bacaItemStokTerkirim(baris.id),
     riwayat,
   };

@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { daftarPesanan } from "@/server/daftar-pesanan";
 import { db, koneksi } from "@/server/db";
-import { varian } from "@/server/db/schema";
+import { varian, voucher } from "@/server/db/schema";
 import { bacaDetailPesanan } from "@/server/detail-pesanan";
 import { kirimEmailPesananSelesai } from "@/server/email-pesanan-selesai";
 import { emailTiruanKe } from "@/server/email-tiruan";
@@ -20,6 +20,7 @@ import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanPesanan } from "@/server/uji-pesanan";
+import { buatVoucher } from "@/server/voucher";
 
 import {
   aksiKirimUlangEmail,
@@ -92,18 +93,54 @@ afterAll(async () => {
 
 const emailUnik = () => `budi-${randomUUID()}@example.test`;
 
-/** Pesanan Selesai dengan Item stok Terkirim, berincian contoh PRD §5.5. */
-function pesananSelesai(email = emailUnik()) {
+/**
+ * Pesanan Selesai dengan Item stok Terkirim, berincian contoh PRD §5.5. Bila `voucher` diberikan, Pesanan itu
+ * mencatat Voucher dan kodenya.
+ */
+function pesananSelesai(
+  email = emailUnik(),
+  voucher?: { id: string; kode: string },
+) {
   return sisipkanPesanan({
     varianId,
     status: "Selesai",
     email,
+    voucher,
     itemStok: {
       status: "Terkirim",
       nilai: isiItemStokUnik(),
       formatSaatTerkirim: FORMAT,
     },
   });
+}
+
+/**
+ * Voucher HEMAT5 dari persiapan bersama docs/UAT.md (nominal Rp 5.000), dengan akhiran unik karena database test
+ * dipakai bersama oleh semua test. Hasilnya id dan kodenya.
+ */
+async function voucherHemat5() {
+  const kode = `HEMAT5${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+  const hasil = await buatVoucher({
+    kode,
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan: { jenis: "semua" },
+    khususMember: false,
+    aktif: true,
+  });
+  if (hasil.hasil !== "dibuat")
+    throw new Error(`Voucher ${kode} tidak dibuat.`);
+  const [{ id }] = await db
+    .select({ id: voucher.id })
+    .from(voucher)
+    .where(eq(voucher.kode, kode));
+  return { id, kode };
 }
 
 /** Menjalankan setiap pekerjaan email "Pesanan selesai" yang dijadwalkan untuk Pesanan itu, satu kali. */
@@ -149,6 +186,27 @@ describe('kirim ulang email "Pesanan selesai" (PRD §6.4)', () => {
     expect(terkirim[1].subjek).toBe(`Pesanan selesai: ${dipesan.nomorPesanan}`);
     expect(terkirim[1].teks).toBe(terkirim[0].teks);
     expect(await pekerjaanEmailPesananSelesai(dipesan.id)).toHaveLength(1);
+  });
+
+  // PRD §8.8 ▶ Keputusan 2026-11-17: email kirim ulang juga menyebut kode Voucher Pesanan itu.
+  it('email kirim ulang Pesanan yang memakai HEMAT5 memuat "Potongan voucher (HEMAT5)"', async () => {
+    const email = emailUnik();
+    const hemat5 = await voucherHemat5();
+    const dipesan = await pesananSelesai(email, hemat5);
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiKirimUlangEmail(
+      {},
+      formulir({ pesananId: dipesan.id }),
+    );
+    await jalankanPekerjaanEmail(dipesan.id);
+
+    expect(keadaan.galat).toBeUndefined();
+    const [terkirim] = emailTiruanKe(email);
+    expect(terkirim.teks.split("\n")).toContain(
+      `Potongan voucher (${hemat5.kode}): − Rp 5.000`,
+    );
+    expect(terkirim.html).toContain(`Potongan voucher (${hemat5.kode})`);
   });
 
   // Issue T25: kirim ulang tidak tersedia untuk Pesanan selain Selesai.

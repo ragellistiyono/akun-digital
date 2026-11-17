@@ -12,7 +12,7 @@ import {
 } from "vitest";
 
 import { db, koneksi } from "./db";
-import { pesanan, varian } from "./db/schema";
+import { pesanan, varian, voucher } from "./db/schema";
 import type { PengirimEmail } from "./email";
 import { emailTiruanKe } from "./email-tiruan";
 import { cekStatusPembayaran, prosesKabarPembayaran } from "./kabar-pembayaran";
@@ -25,6 +25,7 @@ import { bacaPesananLewatTautan } from "./pesanan";
 import { bayarQrisTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanPesanan } from "./uji-pesanan";
+import { buatVoucher } from "./voucher";
 
 // Test integrasi dengan database app_test, Qrispy tiruan, dan email tiruan dari .env.ci (EMAIL_MODE=tiruan,
 // EMAIL_FROM dan APP_URL bernilai contoh OD-1). Pekerja pg-boss tidak berjalan di proses test, jadi setiap
@@ -64,9 +65,16 @@ const ISI_ITEM_STOK = ["miwe.akun07@contoh.id", "Senja-7419", "Profil 3"];
 /**
  * Pesanan Netflix Premium 1 Bulan [CONTOH] yang Menunggu Pembayaran dengan rincian contoh PRD §5.5
  * (Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik Rp 123, Total bayar Rp 45.123) dan satu Item
- * stok Ditahan berisi isi itu, lalu dibayar lewat Qrispy tiruan dan diproses lewat jalur cek status.
+ * stok Ditahan berisi isi itu, lalu dibayar lewat Qrispy tiruan dan diproses lewat jalur cek status. Bila
+ * `voucher` diberikan, Pesanan itu mencatat Voucher dan kodenya.
  */
-async function pesananDibayar(isiItemStok = ISI_ITEM_STOK) {
+async function pesananDibayar({
+  isiItemStok = ISI_ITEM_STOK,
+  voucher,
+}: {
+  isiItemStok?: string[];
+  voucher?: { id: string; kode: string };
+} = {}) {
   const produkId = await sisipkanProduk({
     nama: `Netflix Premium ${randomUUID().slice(0, 8)}`,
     formatItemStok: FORMAT,
@@ -80,6 +88,7 @@ async function pesananDibayar(isiItemStok = ISI_ITEM_STOK) {
     varianId,
     status: "Menunggu Pembayaran",
     itemStok: { status: "Ditahan", nilai: isiItemStok },
+    voucher,
   });
   const [{ email, qrisId }] = await db
     .select({ email: pesanan.email, qrisId: pesanan.qrisId })
@@ -89,6 +98,35 @@ async function pesananDibayar(isiItemStok = ISI_ITEM_STOK) {
   bayarQrisTiruan({ qrisId, amount: 45123 });
   await cekStatusPembayaran(dipesan.tautan);
   return { ...dipesan, email, qrisId };
+}
+
+/**
+ * Voucher HEMAT5 dari persiapan bersama docs/UAT.md (nominal Rp 5.000), dengan akhiran unik karena database test
+ * dipakai bersama oleh semua test. Hasilnya id dan kodenya.
+ */
+async function voucherHemat5() {
+  const kode = `HEMAT5${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+  const hasil = await buatVoucher({
+    kode,
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan: { jenis: "semua" },
+    khususMember: false,
+    aktif: true,
+  });
+  if (hasil.hasil !== "dibuat")
+    throw new Error(`Voucher ${kode} tidak dibuat.`);
+  const [{ id }] = await db
+    .select({ id: voucher.id })
+    .from(voucher)
+    .where(eq(voucher.kode, kode));
+  return { id, kode };
 }
 
 /** Status dan tanda "Email gagal" Pesanan itu langsung dari database. */
@@ -195,6 +233,21 @@ describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
     });
   });
 
+  // PRD §8.8 ▶ Keputusan 2026-11-17: baris potongan Pesanan yang memakai Voucher menyebut kode Voucher-nya.
+  // Pesanan tanpa Voucher tetap menulis "Potongan voucher" (test pertama di atas).
+  it('Pesanan yang memakai HEMAT5 menulis "Potongan voucher (HEMAT5)" di Rincian pembayaran', async () => {
+    const hemat5 = await voucherHemat5();
+    const dibayar = await pesananDibayar({ voucher: hemat5 });
+    await jalankanPekerjaanEmail(dibayar.id);
+
+    const [email] = emailTiruanKe(dibayar.email);
+    expect(email.teks.split("\n")).toContain(
+      `Potongan voucher (${hemat5.kode}): − Rp 5.000`,
+    );
+    expect(email.html).toContain(`Potongan voucher (${hemat5.kode})`);
+    expect(email.teks).not.toMatch(/^Potongan voucher:/m);
+  });
+
   // PRD §10.2: setiap email punya footer "Butuh bantuan? Hubungi kami di WhatsApp" dengan nomor dari
   // Pengaturan toko, yang membuka https://wa.me/<nomor> seperti tombol WhatsApp di web (PRD §9.8).
   it("footer email memuat nomor WhatsApp dari Pengaturan toko", async () => {
@@ -290,7 +343,7 @@ describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
   // Isi Item stok berupa teks bebas yang diisi Admin (PRD §4.2), jadi bisa memuat tanda HTML.
   it("isi Item stok yang memuat tanda HTML tampil apa adanya di email, tanpa menjadi HTML", async () => {
     const isi = ["budi@contoh.id", '<b>Senja&"7419"</b>', "Profil <3>"];
-    const dibayar = await pesananDibayar(isi);
+    const dibayar = await pesananDibayar({ isiItemStok: isi });
     await jalankanPekerjaanEmail(dibayar.id);
 
     const [email] = emailTiruanKe(dibayar.email);

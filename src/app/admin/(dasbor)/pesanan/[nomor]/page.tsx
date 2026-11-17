@@ -10,6 +10,7 @@ import {
   kirimUlangEmailTersedia,
   koreksiEmailTersedia,
 } from "@/domain/kirim-ulang-email";
+import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { nomorPesananSah } from "@/domain/nomor-pesanan";
 import { penyelesaianBermasalahTersedia } from "@/domain/penyelesaian-bermasalah";
 import { rupiah } from "@/lib/rupiah";
@@ -57,7 +58,10 @@ function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
   );
 }
 
-/** Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. */
+/**
+ * Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris
+ * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17).
+ */
 function PanelRincian({ rincian }: { rincian: DetailPesanan["rincian"] }) {
   return (
     <section aria-label="Rincian pembayaran" className={PANEL}>
@@ -65,7 +69,7 @@ function PanelRincian({ rincian }: { rincian: DetailPesanan["rincian"] }) {
         baris={[
           { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
           {
-            label: "Potongan voucher",
+            label: labelPotonganVoucher(rincian.kodeVoucher),
             nilai:
               rincian.potonganVoucher === 0
                 ? rupiah(0)
