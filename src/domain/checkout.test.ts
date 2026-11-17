@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { batasPesananMenunggu } from "./batas-pesanan-menunggu";
 import { hasilCheckout } from "./checkout";
 
-// PRD §3.7, §5.2 ▶ Keputusan 2026-11-17 langkah 1–4, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
+// PRD §3.7, §5.2 ▶ Keputusan 2026-11-17 langkah 1–5, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
 // ekspektasinya diambil dari contoh PRD §5.4: Item stok terakhir Netflix Premium 1 Bulan sedang ditahan
 // Pesanan Andi, sehingga Stok Varian-nya 0. Data Produk dan Pesanan ini sintetis.
 const netflixSatuBulan = { produk: "Netflix Premium", varian: "1 Bulan" };
@@ -24,6 +24,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 0,
         memberNonaktif: false,
+        voucher: null,
       }),
     ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
   });
@@ -38,6 +39,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 0,
         memberNonaktif: false,
+        voucher: null,
       }),
     ).toEqual({ hasil: "stok-habis" });
   });
@@ -52,6 +54,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 0,
         memberNonaktif: false,
+        voucher: null,
       }),
     ).toEqual({ hasil: "tidak-dijual" });
   });
@@ -67,6 +70,7 @@ describe("hasilCheckout", () => {
         // Contoh PRD §5.3: 10 Item stok belum terkirim, 2 di antaranya Ditahan.
         stokVarian: 8,
         memberNonaktif: false,
+        voucher: null,
       }),
     ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
   });
@@ -81,6 +85,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 8,
         memberNonaktif: false,
+        voucher: null,
       }),
     ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
   });
@@ -102,6 +107,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 8,
         memberNonaktif: true,
+        voucher: null,
       }),
     ).toEqual({ hasil: "member-nonaktif" });
   });
@@ -116,6 +122,7 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 0,
         memberNonaktif: true,
+        voucher: null,
       }),
     ).toEqual({ hasil: "member-nonaktif" });
   });
@@ -130,7 +137,85 @@ describe("hasilCheckout", () => {
         }),
         stokVarian: 0,
         memberNonaktif: true,
+        voucher: null,
       }),
     ).toEqual({ hasil: "tidak-dijual" });
+  });
+
+  // PRD §5.2 ▶ Keputusan 2026-11-17 langkah 5: Voucher (§8.7) diperiksa paling akhir. Hasil penilaiannya
+  // adalah penerapanVoucher; Voucher yang tidak diisi berarti null.
+  const sudahBerakhir = {
+    dipakai: false,
+    alasan: "sudah-berakhir",
+    pesan: "Voucher sudah berakhir",
+  } as const;
+  const hemat5Dipakai = {
+    dipakai: true,
+    hargaJual: 50000,
+    potonganVoucher: 5000,
+    hargaSetelahPotongan: 45000,
+  } as const;
+
+  it("contoh PRD §5.2: Andi yang masih punya Pesanan menunggu checkout lagi dengan Voucher yang sudah berakhir diarahkan ke Pesanannya", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "andi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: sudahBerakhir,
+      }),
+    ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
+  });
+
+  it("Varian dengan Stok Varian 0 ditolak karena stok habis walaupun Voucher-nya juga ditolak", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 0,
+        memberNonaktif: false,
+        voucher: sudahBerakhir,
+      }),
+    ).toEqual({ hasil: "stok-habis" });
+  });
+
+  it("bila langkah 1–4 lolos, Voucher yang ditolak menolak checkout dengan pesan penolakannya", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: sudahBerakhir,
+      }),
+    ).toEqual({
+      hasil: "voucher-ditolak",
+      pesan: "Voucher sudah berakhir",
+    });
+  });
+
+  it("Voucher yang dipakai tidak menghalangi checkout", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: hemat5Dipakai,
+      }),
+    ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
   });
 });

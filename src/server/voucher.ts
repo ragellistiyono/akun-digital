@@ -78,24 +78,29 @@ export async function daftarVoucher(): Promise<
 
 /**
  * Satu Voucher menurut id-nya beserta Cakupan voucher-nya, atau null bila tidak ada. Daftar Produk atau
- * Kategori di cakupan berisi id, urut menurut id.
+ * Kategori di cakupan berisi id, urut menurut id. Bacaannya lewat `penghubung`, bawaannya database, supaya
+ * bisa dibaca di dalam transaksi checkout.
  */
 export async function bacaVoucher(
   id: string,
+  penghubung: Pick<typeof db, "select"> = db,
 ): Promise<(Omit<Voucher, "cakupan"> & { cakupan: CakupanVoucher }) | null> {
-  const [baris] = await db.select().from(voucher).where(eq(voucher.id, id));
+  const [baris] = await penghubung
+    .select()
+    .from(voucher)
+    .where(eq(voucher.id, id));
   if (!baris) return null;
   if (baris.cakupan === "semua") {
     return { ...baris, cakupan: { jenis: "semua" } };
   }
   const daftar =
     baris.cakupan === "produk"
-      ? await db
+      ? await penghubung
           .select({ id: voucherProduk.produkId })
           .from(voucherProduk)
           .where(eq(voucherProduk.voucherId, id))
           .orderBy(asc(voucherProduk.produkId))
-      : await db
+      : await penghubung
           .select({ id: voucherKategori.kategoriId })
           .from(voucherKategori)
           .where(eq(voucherKategori.voucherId, id))

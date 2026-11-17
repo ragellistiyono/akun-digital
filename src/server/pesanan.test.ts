@@ -224,6 +224,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
       rincian: {
         hargaJual: 50000,
         potonganVoucher: 0,
+        kodeVoucher: null,
         kodeUnik: 123,
         totalBayar: 50123,
       },

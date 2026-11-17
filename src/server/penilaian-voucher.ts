@@ -1,5 +1,5 @@
 // Menilai satu kode Voucher untuk satu checkout (PRD §8.1–§8.5, §8.7): diterima dengan potongan voucher berapa,
-// atau ditolak dengan pesan apa. Dipakai tombol "Pakai" dan pembuatan Pesanan di Checkout.
+// atau ditolak dengan pesan apa. Dipakai tombol "Pakai" dan pembuatan Pesanan di Checkout (src/server/pesanan.ts).
 import { eq, sql } from "drizzle-orm";
 
 import { kelayakanVoucher } from "@/domain/kelayakan-voucher";
@@ -27,16 +27,23 @@ async function bacaVarianCheckout(varianId: string) {
   return baris;
 }
 
+type Penghubung = Pick<typeof db, "select">;
+
 /**
  * Voucher dengan kode itu tanpa membedakan huruf besar dan kecil (PRD §8.1), beserta Cakupan voucher-nya, atau
- * null bila tidak ada.
+ * null bila tidak ada. Bila `kunci`, baris Voucher itu dikunci FOR UPDATE sampai transaksi `penghubung` selesai.
  */
-async function bacaVoucherLewatKode(kode: string) {
-  const [baris] = await db
+async function bacaVoucherLewatKode(
+  penghubung: Penghubung,
+  kode: string,
+  kunci: boolean,
+) {
+  const cari = penghubung
     .select({ id: voucher.id })
     .from(voucher)
     .where(sql`upper(btrim(${voucher.kode})) = ${kodeBaku(kode)}`);
-  return baris ? bacaVoucher(baris.id) : null;
+  const [baris] = kunci ? await cari.for("update") : await cari;
+  return baris ? bacaVoucher(baris.id, penghubung) : null;
 }
 
 /**
@@ -53,10 +60,71 @@ const POTONGAN_KODE_TIDAK_DITEMUKAN: PotonganVoucherDiatur = {
 const emailAtauNull = (email: string | null) =>
   email === null || email.trim() === "" ? null : email;
 
+/** Varian checkout yang dinilai: Produk, Kategori Produk, dan Harga jual-nya. */
+type VarianDinilai = { produk: string; kategori: string; hargaJual: number };
+
 /**
- * Menilai kode Voucher yang diketik Pembeli untuk checkout Varian itu, pada saat ini. Hasilnya penerapanVoucher:
- * Voucher dipakai dengan potongan vouchernya, beserta id dan kode Voucher untuk dicatat di Pesanan, atau
- * ditolak dengan pesan penolakan PRD §8.7. Hasilnya null bila tidak ada Varian dengan id itu.
+ * Menilai kode Voucher untuk satu checkout Varian itu, pada saat ini, dengan bacaan lewat `penghubung`. Hasilnya
+ * penerapanVoucher: Voucher dipakai dengan potongan vouchernya, beserta id dan kode Voucher untuk dicatat di
+ * Pesanan, atau ditolak dengan pesan penolakan PRD §8.7.
+ *
+ * - `emailCheckout` adalah email yang dipakai Batas per email, atau null bila belum diketahui (PRD §8.7 ▶
+ *   Keputusan 2026-11-17). `member` menyatakan apakah Pembeli login sebagai Member.
+ * - Bila `kunci`, baris Voucher dikunci FOR UPDATE sebelum pemakaiannya dihitung, sehingga checkout lain yang
+ *   menilai Voucher yang sama di dalam transaksinya menunggu sampai transaksi `penghubung` selesai, lalu
+ *   menghitung Pesanan yang baru disimpannya (PRD §8.5). Penguncian ini hanya berarti di dalam transaksi.
+ */
+export async function nilaiVoucherCheckout(
+  penghubung: Penghubung,
+  {
+    kode,
+    varian: checkout,
+    emailCheckout,
+    member,
+    kunci,
+  }: {
+    kode: string;
+    varian: VarianDinilai;
+    emailCheckout: string | null;
+    member: boolean;
+    kunci: boolean;
+  },
+) {
+  const voucherDinilai = await bacaVoucherLewatKode(penghubung, kode, kunci);
+  const pesananDenganVoucher = voucherDinilai
+    ? await penghubung
+        .select({ email: pesanan.email, status: pesanan.status })
+        .from(pesanan)
+        .where(eq(pesanan.voucherId, voucherDinilai.id))
+    : [];
+  const pemakaian = pemakaianVoucher({ emailCheckout, pesananDenganVoucher });
+
+  const kelayakan = kelayakanVoucher({
+    voucher: voucherDinilai,
+    checkout: { ...checkout, kodeDiketik: kode, waktu: new Date(), member },
+    pemakaian,
+  });
+  const hasil = penerapanVoucher({
+    hargaJual: checkout.hargaJual,
+    voucher: voucherDinilai ?? POTONGAN_KODE_TIDAK_DITEMUKAN,
+    kelayakan,
+  });
+  if (!hasil.dipakai) return hasil;
+  if (!voucherDinilai) {
+    throw new Error(
+      `Kode voucher "${kode}" diterima padahal tidak ada Voucher dengan kode itu. kelayakanVoucher seharusnya menolak kode yang tidak ada dengan "Kode voucher tidak ditemukan"; periksa src/domain/kelayakan-voucher.ts.`,
+    );
+  }
+  return {
+    ...hasil,
+    voucherId: voucherDinilai.id,
+    kodeVoucher: voucherDinilai.kode,
+  };
+}
+
+/**
+ * Menilai kode Voucher yang diketik Pembeli untuk checkout Varian itu, pada saat ini, menurut
+ * nilaiVoucherCheckout. Hasilnya null bila tidak ada Varian dengan id itu.
  *
  * - Kode dicocokkan tanpa membedakan huruf besar dan kecil (PRD §8.1).
  * - Produk dan Kategori Produk dibaca pada saat penilaian, jadi Produk yang dipindah ke Kategori lain dinilai
@@ -78,43 +146,16 @@ export async function nilaiVoucher({
   email: string | null;
   kepala: Headers;
 }) {
-  const [checkout, voucherDinilai, sesiMember] = await Promise.all([
+  const [checkout, sesiMember] = await Promise.all([
     bacaVarianCheckout(varianId),
-    bacaVoucherLewatKode(kode),
     bacaSesiMember(kepala),
   ]);
   if (!checkout) return null;
-
-  const pesananDenganVoucher = voucherDinilai
-    ? await db
-        .select({ email: pesanan.email, status: pesanan.status })
-        .from(pesanan)
-        .where(eq(pesanan.voucherId, voucherDinilai.id))
-    : [];
-  const pemakaian = pemakaianVoucher({
+  return nilaiVoucherCheckout(db, {
+    kode,
+    varian: checkout,
     emailCheckout: sesiMember ? sesiMember.user.email : emailAtauNull(email),
-    pesananDenganVoucher,
+    member: sesiMember !== null,
+    kunci: false,
   });
-
-  const kelayakan = kelayakanVoucher({
-    voucher: voucherDinilai,
-    checkout: {
-      ...checkout,
-      kodeDiketik: kode,
-      waktu: new Date(),
-      member: sesiMember !== null,
-    },
-    pemakaian,
-  });
-  const hasil = penerapanVoucher({
-    hargaJual: checkout.hargaJual,
-    voucher: voucherDinilai ?? POTONGAN_KODE_TIDAK_DITEMUKAN,
-    kelayakan,
-  });
-  if (!hasil.dipakai || !voucherDinilai) return hasil;
-  return {
-    ...hasil,
-    voucherId: voucherDinilai.id,
-    kodeVoucher: voucherDinilai.kode,
-  };
 }

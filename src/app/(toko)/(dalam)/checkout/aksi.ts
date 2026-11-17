@@ -10,7 +10,8 @@ import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
 
 export type KeadaanFormCheckout = {
   email: string;
-  galat?: { email?: string; checkout?: string };
+  kodeVoucher: string;
+  galat?: { email?: string; kodeVoucher?: string; checkout?: string };
 };
 
 const PESAN_EMAIL_KOSONG =
@@ -74,6 +75,10 @@ function tautanDiBrowser(isiCookie: string | undefined) {
  *
  * Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), Pembeli diarahkan ke Pesanan itu bila
  * Pesanan itu dibuat di browser ini, dan ditolak dengan pesan berisi jam kedaluwarsanya bila tidak.
+ *
+ * Kode voucher yang diisi diperiksa saat Pesanan dibuat. Bila Voucher ditolak, Pesanan tidak dibuat, dan pesan
+ * penolakannya tampil di isian kode voucher (PRD §8.7 ▶ Keputusan 2026-11-17). Isian kode selalu dikembalikan
+ * apa adanya, supaya tetap berisi setelah checkout ditolak.
  */
 export async function aksiCheckout(
   _sebelumnya: KeadaanFormCheckout,
@@ -87,37 +92,48 @@ export async function aksiCheckout(
     tokoCookie.get(COOKIE_TAUTAN_PESANAN)?.value,
   );
   const isianEmail = sesiMember ? sesiMember.user.email : formData.get("email");
-  // Email yang diketik Tamu dikembalikan apa adanya untuk mengisi ulang form.
+  // Email yang diketik Tamu dan kode voucher dikembalikan apa adanya untuk mengisi ulang form.
   const email = typeof isianEmail === "string" ? isianEmail : "";
+  const isianKode = formData.get("kodeVoucher");
+  const kodeVoucher = typeof isianKode === "string" ? isianKode : "";
+  const isian = { email, kodeVoucher };
   const masukanEmail = Email.safeParse(isianEmail);
   if (!masukanEmail.success) {
-    return { email, galat: { email: masukanEmail.error.issues[0].message } };
+    return {
+      ...isian,
+      galat: { email: masukanEmail.error.issues[0].message },
+    };
   }
   const varianId = z.uuid().safeParse(formData.get("varianId"));
   if (!varianId.success) {
-    return { email, galat: { checkout: PESAN_TIDAK_DIJUAL } };
+    return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
   }
 
   const hasil = await buatPesanan({
     varianId: varianId.data,
     email: masukanEmail.data,
     tautanDiBrowser: tautanBrowserIni,
+    kodeVoucher,
+    member: sesiMember !== null,
   });
   if (hasil.hasil === "tidak-dijual") {
-    return { email, galat: { checkout: PESAN_TIDAK_DIJUAL } };
+    return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
   }
   if (hasil.hasil === "member-nonaktif") {
-    return { email, galat: { checkout: PESAN_MEMBER_NONAKTIF } };
+    return { ...isian, galat: { checkout: PESAN_MEMBER_NONAKTIF } };
   }
   if (hasil.hasil === "stok-habis") {
-    return { email, galat: { checkout: PESAN_STOK_HABIS } };
+    return { ...isian, galat: { checkout: PESAN_STOK_HABIS } };
+  }
+  if (hasil.hasil === "voucher-ditolak") {
+    return { ...isian, galat: { kodeVoucher: hasil.pesan } };
   }
   if (hasil.hasil === "qris-gagal") {
-    return { email, galat: { checkout: PESAN_QRIS_GAGAL } };
+    return { ...isian, galat: { checkout: PESAN_QRIS_GAGAL } };
   }
   if (hasil.hasil === "pesanan-menunggu-di-browser-lain") {
     return {
-      email,
+      ...isian,
       galat: { checkout: pesanPesananMenunggu(hasil.kedaluwarsaPada) },
     };
   }

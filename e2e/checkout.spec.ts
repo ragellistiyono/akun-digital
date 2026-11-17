@@ -265,21 +265,23 @@ test("mengubah Harga jual setelah checkout tidak mengubah rincian Pesanan itu", 
   await expect(nilaiRincian(page, "Total bayar")).toHaveText(totalAwal ?? "");
 });
 
-// UAT-E7 dan PRD §5.2, tanpa isian voucher di M1.
-test("form checkout hanya berisi isian email, dengan kalimat Syarat & Ketentuan bertaut dan tanpa kotak centang", async ({
+// UAT-E7 dan PRD §5.2: isian email dan isian kode voucher yang opsional (T57).
+test("form checkout berisi isian email dan kode voucher, dengan kalimat Syarat & Ketentuan bertaut dan tanpa kotak centang", async ({
   page,
 }) => {
   await bukaCheckout(page, produk.ujiBayar);
   const isi = page.getByRole("main");
 
-  await expect(isi.getByRole("textbox")).toHaveCount(1);
+  await expect(isi.getByRole("textbox")).toHaveCount(2);
   const email = isi.getByRole("textbox", { name: "Email" });
   await expect(email).toHaveAttribute("type", "email");
   await expect(email).toHaveAccessibleDescription(
     "Pastikan email benar, detail pesanan dikirim ke sini.",
   );
+  await expect(
+    isi.getByRole("textbox", { name: "Kode voucher (opsional)" }),
+  ).toBeEmpty();
   await expect(isi.getByRole("checkbox")).toHaveCount(0);
-  await expect(isi.getByText(/voucher/i)).toHaveCount(0);
   await expect(isi.getByText(/WhatsApp/)).toHaveCount(0);
 
   await expect(
