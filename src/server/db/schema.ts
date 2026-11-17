@@ -35,6 +35,9 @@ export const user = pgTable("user", {
   email: text("email").notNull().unique(),
   peran: peranAkun("peran").notNull(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  // Member nonaktif (PRD §2.3): dinonaktifkan Admin, sehingga tidak bisa login maupun checkout dengan
+  // emailnya. Hanya Member yang bisa dinonaktifkan; Admin selalu false.
+  nonaktif: boolean("nonaktif").default(false).notNull(),
   image: text("image"),
   createdAt: instan("created_at").defaultNow().notNull(),
   updatedAt: instan("updated_at")

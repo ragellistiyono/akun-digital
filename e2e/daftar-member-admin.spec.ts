@@ -69,9 +69,9 @@ async function cari(page: Page, kata: string) {
   await form.getByRole("button", { name: "Cari" }).click();
 }
 
-// UAT-B3, PRD §2.3 ▶ Keputusan 2026-11-17: kolom daftar Member. Total belanja dihitung seperti Pendapatan
+// UAT-B3, PRD §2.3 ▶ Keputusan 2026-11-17: kolom daftar Member, termasuk status Aktif atau Nonaktif. Total belanja dihitung seperti Pendapatan
 // (§9.3): Rp 45.123 + Rp 50.010 = Rp 95.133, tanpa Pesanan Bermasalah Rp 50.200.
-test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, dan melihat email, tanggal daftar, jumlah Pesanan Selesai, dan total belanja", async ({
+test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, dan melihat email, tanggal daftar, jumlah Pesanan Selesai, total belanja, dan status", async ({
   page,
 }) => {
   const akhiran = randomUUID();
@@ -130,6 +130,8 @@ test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, d
     "Tanggal daftar (WIB)",
     "Pesanan Selesai",
     "Total belanja",
+    "Status",
+    "Aksi",
   ]);
   const baris = tabel(page).getByRole("row", { name: new RegExp(akhiran) });
   await expect(baris).toHaveCount(1);
@@ -138,6 +140,8 @@ test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, d
     "11 Nov 2026",
     "2",
     "Rp 95.133",
+    "Aktif",
+    `Nonaktifkan ${email}`,
   ]);
   // Admin tidak bisa melihat password Member (PRD §2.3).
   await expect(isi(page)).not.toContainText(PASSWORD_MEMBER);

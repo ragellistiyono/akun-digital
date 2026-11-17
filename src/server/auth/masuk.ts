@@ -10,6 +10,7 @@ import { auth } from "./auth";
 
 type HasilMasuk =
   | { hasil: "berhasil" }
+  | { hasil: "nonaktif" }
   | { hasil: "ditolak" }
   | { hasil: "terkunci"; terkunciSampai: Date };
 
@@ -19,13 +20,23 @@ type DataMasuk = { email: string; password: string; kepala: Headers };
  * Login Admin di `/admin` (PRD §2.2). Email Member diperlakukan seperti email yang tidak terdaftar,
  * supaya Member tidak mendapat sesi dari halaman login Admin.
  */
-export function masukAdmin(data: DataMasuk): Promise<HasilMasuk> {
-  return masuk({ ...data, peran: "Admin" });
+export async function masukAdmin(
+  data: DataMasuk,
+): Promise<Exclude<HasilMasuk, { hasil: "nonaktif" }>> {
+  const hasil = await masuk({ ...data, peran: "Admin" });
+  if (hasil.hasil === "nonaktif") {
+    throw new Error(
+      `Admin ${data.email} tercatat nonaktif, padahal hanya Member yang bisa dinonaktifkan (PRD §2.3). Periksa kolom nonaktif baris user Admin itu di database.`,
+    );
+  }
+  return hasil;
 }
 
 /**
  * Login Member di halaman Masuk (PRD §7.5 ▶ Keputusan 2026-11-17). Email Admin diperlakukan seperti
  * email yang tidak terdaftar. Hitungan salah password sama dengan login Admin, per email (PRD §7.7).
+ * Member nonaktif dengan password benar mendapat hasil "nonaktif" tanpa sesi; password salahnya
+ * dihitung seperti biasa.
  */
 export function masukMember(data: DataMasuk): Promise<HasilMasuk> {
   return masuk({ ...data, peran: "Member" });
@@ -49,6 +60,7 @@ async function masuk({
     peran,
   );
 
+  if (hasil === "nonaktif") return { hasil: "nonaktif" };
   if (hasil === "berhasil") {
     // Sesi dibuat setelah transaksi batas login selesai, supaya koneksi transaksi tidak ikut
     // tertahan selama Better Auth memakai koneksi lain dari pool yang sama.
@@ -98,7 +110,7 @@ async function nilaiPercobaan(
     // Sama seperti Better Auth: akun password milik user dengan email itu, hanya untuk peran yang
     // boleh login di halaman ini. Email peran lain dinilai seperti email yang tidak terdaftar.
     const [akun] = await tx
-      .select({ hash: account.password })
+      .select({ hash: account.password, nonaktif: user.nonaktif })
       .from(account)
       .innerJoin(user, eq(account.userId, user.id))
       .where(
@@ -125,6 +137,7 @@ async function nilaiPercobaan(
       keadaan,
       sekarang: new Date(),
       passwordBenar,
+      memberNonaktif: akun?.nonaktif ?? false,
     });
     await tx
       .update(batasLogin)

@@ -6,9 +6,11 @@ import { z } from "zod";
 
 import { emailBaku } from "@/domain/kesamaan-email";
 import { masukMember } from "@/server/auth/masuk";
+import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import {
   type KeadaanFormMasuk,
+  PESAN_MEMBER_NONAKTIF,
   PESAN_PASSWORD_SALAH,
   pesanLoginTerkunci,
 } from "../../../_masuk/pesan-masuk";
@@ -28,7 +30,8 @@ const MasukanMasuk = z.object({
 
 /**
  * Login Member (PRD §7.5 ▶ Keputusan 2026-11-17). Pesan password salah dan pesan kunci sama dengan
- * login Admin. Setelah berhasil, Member dibawa ke Riwayat Pesanan.
+ * login Admin. Member nonaktif dengan password benar melihat pesan nonaktif beserta tombol WhatsApp dari
+ * Pengaturan toko (PRD §9.8). Setelah berhasil, Member dibawa ke Riwayat Pesanan.
  */
 export async function aksiMasukMember(
   _sebelumnya: KeadaanFormMasuk,
@@ -53,6 +56,10 @@ export async function aksiMasukMember(
   });
   if (masuk.hasil === "ditolak") {
     return { email, galat: { umum: PESAN_PASSWORD_SALAH } };
+  }
+  if (masuk.hasil === "nonaktif") {
+    const { nomorWhatsapp } = await bacaPengaturanToko();
+    return { email, galat: { umum: PESAN_MEMBER_NONAKTIF }, nomorWhatsapp };
   }
   if (masuk.hasil === "terkunci") {
     return {

@@ -127,6 +127,13 @@
       "when": 1794898799154,
       "tag": "0017_jumlah_salah_kode",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794904563871,
+      "tag": "0018_member_nonaktif",
+      "breakpoints": true
     }
   ]
 }

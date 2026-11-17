@@ -9,6 +9,8 @@ import { daftarMember } from "@/server/daftar-member";
 import { tanggalWib } from "@/server/zona-waktu-toko";
 
 import { KELAS_ISIAN } from "../_components/isian-form";
+import { PilAktif } from "../_components/pil";
+import { aksiUbahStatusMember } from "./aksi";
 
 const ALAMAT = "/admin/member";
 
@@ -60,8 +62,38 @@ function FormCari({ cari }: { cari: string | undefined }) {
   );
 }
 
+/** Tombol kecil 36 px bergaris (DESIGN.md Buttons). */
+const KELAS_TOMBOL_KECIL =
+  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold whitespace-nowrap text-tinta hover:border-monogram";
+
 /**
- * Tabel Member dengan kolom PRD §2.3. Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar
+ * Tombol "Nonaktifkan" atau "Aktifkan kembali" untuk satu Member (PRD §2.3). Aksi ini bisa dibalik, jadi
+ * langsung dijalankan tanpa penegasan (DESIGN.md Navigation). Kewenangannya diperiksa di Server Action.
+ */
+function TombolStatusMember({
+  member,
+}: {
+  member: { id: string; email: string; nonaktif: boolean };
+}) {
+  return (
+    <form action={aksiUbahStatusMember}>
+      <input type="hidden" name="idMember" value={member.id} />
+      <input
+        type="hidden"
+        name="status"
+        value={member.nonaktif ? "aktif" : "nonaktif"}
+      />
+      <button type="submit" className={KELAS_TOMBOL_KECIL}>
+        {member.nonaktif ? "Aktifkan kembali" : "Nonaktifkan"}
+        <span className="sr-only"> {member.email}</span>
+      </button>
+    </form>
+  );
+}
+
+/**
+ * Tabel Member dengan kolom PRD §2.3, termasuk status Aktif atau Nonaktif beserta tombol untuk mengubahnya.
+ * Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar
  * sempit, supaya halaman tidak ikut bergulir ke samping (PRD §11.1).
  */
 function TabelMember({
@@ -71,7 +103,7 @@ function TabelMember({
 }) {
   return (
     <div className="mt-4 max-w-[1120px] overflow-x-auto rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
-      <table className="w-full min-w-[640px] text-left">
+      <table className="w-full min-w-[880px] text-left">
         <caption className="sr-only">Daftar Member</caption>
         <thead className="text-[13px] font-bold text-tinta-redup">
           <tr className="border-b border-garis">
@@ -84,8 +116,14 @@ function TabelMember({
             <th scope="col" className="py-2 pr-4 text-right">
               Pesanan Selesai
             </th>
-            <th scope="col" className="py-2 text-right">
+            <th scope="col" className="py-2 pr-4 text-right">
               Total belanja
+            </th>
+            <th scope="col" className="py-2 pr-4">
+              Status
+            </th>
+            <th scope="col" className="py-2">
+              <span className="sr-only">Aksi</span>
             </th>
           </tr>
         </thead>
@@ -107,8 +145,14 @@ function TabelMember({
               <td className="py-3 pr-4 text-right tabular-nums">
                 {member.belanja.jumlahPesananSelesai.toLocaleString("id-ID")}
               </td>
-              <td className="py-3 text-right font-bold whitespace-nowrap tabular-nums">
+              <td className="py-3 pr-4 text-right font-bold whitespace-nowrap tabular-nums">
                 {rupiah(member.belanja.totalBelanja)}
+              </td>
+              <td className="py-3 pr-4">
+                <PilAktif aktif={!member.nonaktif} />
+              </td>
+              <td className="py-2 text-right">
+                <TombolStatusMember member={member} />
               </td>
             </tr>
           ))}
@@ -121,8 +165,9 @@ function TabelMember({
 const PESAN = "mt-6 max-w-[65ch] text-tinta-redup";
 
 // Daftar Member di dasbor admin (PRD §2.3 ▶ Keputusan 2026-11-17): Member terverifikasi, terbaru di atas,
-// dengan email, tanggal daftar dalam WIB (PRD §9.1), jumlah Pesanan Selesai, dan total belanja, serta
-// pencarian menurut sebagian email. Password Member tidak dibaca maupun ditampilkan.
+// dengan email, tanggal daftar dalam WIB (PRD §9.1), jumlah Pesanan Selesai, total belanja, dan status Aktif
+// atau Nonaktif beserta tombol untuk menonaktifkan atau mengaktifkannya kembali, serta pencarian menurut
+// sebagian email. Password Member tidak dibaca maupun ditampilkan.
 export default async function HalamanDaftarMember({
   searchParams,
 }: PageProps<"/admin/member">) {

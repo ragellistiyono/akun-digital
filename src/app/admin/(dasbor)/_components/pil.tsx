@@ -36,7 +36,7 @@ export function Pil({
   );
 }
 
-/** Pil Aktif atau Nonaktif untuk Produk dan Varian (PRD §3.7). */
+/** Pil Aktif atau Nonaktif untuk Produk dan Varian (PRD §3.7), juga untuk status Member (PRD §2.3). */
 export function PilAktif({ aktif }: { aktif: boolean }) {
   return aktif ? (
     <Pil

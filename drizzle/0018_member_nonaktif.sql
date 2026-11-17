@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "nonaktif" boolean DEFAULT false NOT NULL;

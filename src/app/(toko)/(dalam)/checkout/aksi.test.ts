@@ -14,8 +14,9 @@ import {
 
 import { auth } from "@/server/auth/auth";
 import { db, koneksi } from "@/server/db";
-import { pesanan, varian } from "@/server/db/schema";
+import { pesanan, user, varian } from "@/server/db/schema";
 import { qrispyTiruan } from "@/server/qrispy-tiruan";
+import { ubahStatusMember } from "@/server/status-member";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 
@@ -227,6 +228,39 @@ describe("checkout (PRD §5.2)", () => {
     });
     expect(buatQris).not.toHaveBeenCalled();
     expect(await pesananDenganEmail(email)).toEqual([]);
+  });
+
+  // PRD §5.2 ▶ Keputusan 2026-11-17, UAT-B3 langkah 5.
+  it("Tamu yang checkout dengan email Member nonaktif yang ditulis huruf besar ditolak dengan pesan Member nonaktif, tanpa QRIS maupun Pesanan", async () => {
+    const varianId = await netflixSatuBulan();
+    const email = emailUnik();
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    await ubahStatusMember({ idMember: id, nonaktif: true });
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email: email.toUpperCase() }),
+    );
+
+    expect(keadaan).toEqual({
+      email: email.toUpperCase(),
+      galat: {
+        checkout:
+          "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.",
+      },
+    });
+    expect(buatQris).not.toHaveBeenCalled();
+    expect(
+      await db
+        .select({ id: pesanan.id })
+        .from(pesanan)
+        .where(inArray(pesanan.email, [email, email.toUpperCase()])),
+    ).toEqual([]);
   });
 
   it("Varian yang tidak sah ditolak dengan pesan yang sama", async () => {

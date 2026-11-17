@@ -3,6 +3,7 @@
 import { TriangleAlert } from "lucide-react";
 import { useActionState, type ComponentProps, type ReactNode } from "react";
 
+import { TombolWhatsApp } from "../(toko)/_components/tombol-whatsapp";
 import type { KeadaanFormMasuk } from "./pesan-masuk";
 
 const KEADAAN_AWAL: KeadaanFormMasuk = { email: "" };
@@ -77,7 +78,9 @@ export function Isian({
 
 /**
  * Form login dengan email dan password serta tombol "Masuk", dipakai login Admin (PRD §2.2) dan
- * login Member (PRD §7.5). Server Action-nya ditentukan halaman yang memasangnya.
+ * login Member (PRD §7.5). Server Action-nya ditentukan halaman yang memasangnya. Bila Server Action
+ * mengembalikan nomor WhatsApp (Member nonaktif), tombol WhatsApp tampil di bawah pesannya; tanpa nomor,
+ * TombolWhatsApp tidak tampil.
  */
 export function FormMasuk({
   aksiMasuk,
@@ -118,6 +121,9 @@ export function FormMasuk({
           {keadaan.galat.umum}
         </PesanGalat>
       )}
+      <TombolWhatsApp nomor={keadaan.nomorWhatsapp ?? null}>
+        Hubungi kami di WhatsApp
+      </TombolWhatsApp>
       <button
         type="submit"
         disabled={sedangMengirim}

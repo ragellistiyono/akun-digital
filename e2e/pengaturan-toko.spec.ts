@@ -7,13 +7,16 @@ import { and, eq } from "drizzle-orm";
 // Bahan test katalog dan Pesanan. DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi Produk
 // dan Pesanan ini masuk ke database app_test.
 import { db } from "../src/server/db";
-import { varian } from "../src/server/db/schema";
+import { user, varian } from "../src/server/db/schema";
+import { ubahStatusMember } from "../src/server/status-member";
 import { sisipkanProduk } from "../src/server/uji-katalog";
+import { sisipkanMember } from "../src/server/uji-member";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
 
 // Pengaturan toko berlaku untuk seluruh toko, jadi test di berkas ini berjalan berurutan dan setiap
-// test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13) dan Halaman Pesanan
-// Bermasalah (T19) juga diuji di sini, karena hanya berkas ini yang mengubah nomor WhatsApp.
+// test menyimpan sendiri nilai yang ia periksa. Tombol WhatsApp Halaman Produk (T13), Halaman Pesanan
+// Bermasalah (T19), dan login Member nonaktif (T48) juga diuji di sini, karena hanya berkas ini yang mengubah
+// nomor WhatsApp.
 test.describe.configure({ mode: "serial" });
 
 const PASSWORD = "sandi-uji-admin-123";
@@ -134,6 +137,38 @@ test("setelah Admin mengisi nomor WhatsApp, Halaman Produk menampilkan tombol Wh
   const garansi = page.getByRole("region", { name: "Ketentuan garansi" });
   await expect(
     garansi.getByRole("link", { name: "Tanya lewat WhatsApp" }),
+  ).toHaveAttribute("href", "https://wa.me/6281234567890");
+});
+
+// Issue T48 dan PRD §7.5 ▶ Keputusan 2026-11-17, UAT-B3 langkah 4.
+test("Member nonaktif yang login dengan password benar melihat pesan nonaktif dan tombol WhatsApp yang membuka wa.me dengan nomor dari Pengaturan toko", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  await page.context().clearCookies();
+  const email = `member-${randomUUID()}@example.test`;
+  const passwordMember = "sandi-uji-member-123";
+  await sisipkanMember({ email, password: passwordMember });
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  await ubahStatusMember({ idMember: id, nonaktif: true });
+
+  await page.goto("/masuk");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(passwordMember);
+  await page.getByRole("button", { name: "Masuk" }).click();
+
+  const isi = page.getByRole("main");
+  await expect(isi.getByRole("alert")).toHaveText(
+    "Akun Member ini dinonaktifkan, jadi tidak bisa masuk. Hubungi kami di WhatsApp.",
+  );
+  await expect(
+    isi.getByRole("link", { name: "Hubungi kami di WhatsApp" }),
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
 });
 

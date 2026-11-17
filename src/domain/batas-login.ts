@@ -1,6 +1,7 @@
 // PRD §7.7: bila password salah 5 kali berturut-turut untuk satu email, email itu tidak bisa login
 // selama 15 menit sejak kesalahan kelima. Login yang berhasil mengembalikan hitungan kesalahan ke 0,
 // dan setelah 15 menit itu lewat hitungan juga mulai lagi dari 0. Berlaku untuk Member dan Admin.
+// Member nonaktif tidak bisa login (PRD §7.5 ▶ Keputusan 2026-11-17), tetapi batas ini tetap berlaku untuknya.
 export const BATAS_SALAH_PASSWORD = 5;
 export const LAMA_KUNCI_LOGIN_MENIT = 15;
 
@@ -10,22 +11,29 @@ type KeadaanBatasLogin = {
 };
 
 type HasilPercobaanLogin = {
-  hasil: "berhasil" | "salah" | "terkunci";
+  hasil: "berhasil" | "nonaktif" | "salah" | "terkunci";
   keadaanBaru: KeadaanBatasLogin;
 };
 
 /**
  * Menilai satu percobaan login untuk satu email. Selama kunci berlaku, login ditolak walaupun
  * password-nya benar, dan keadaannya tidak berubah. Tepat saat kunci berakhir, login sudah boleh.
+ *
+ * Untuk Member nonaktif (`memberNonaktif`), password benar menghasilkan "nonaktif" tanpa login, dan
+ * keadaannya tidak berubah: hitungan kesalahan tidak naik dan tidak kembali ke 0, karena hanya login yang
+ * berhasil atau berakhirnya kunci yang mengembalikan hitungan ke 0 (PRD §7.7). Password salah dihitung
+ * seperti biasa (PRD §7.5 ▶ Keputusan 2026-11-17).
  */
 export function percobaanLogin({
   keadaan,
   sekarang,
   passwordBenar,
+  memberNonaktif = false,
 }: {
   keadaan: KeadaanBatasLogin;
   sekarang: Date;
   passwordBenar: boolean;
+  memberNonaktif?: boolean;
 }): HasilPercobaanLogin {
   const { terkunciSampai } = keadaan;
   if (
@@ -33,6 +41,10 @@ export function percobaanLogin({
     sekarang.getTime() < terkunciSampai.getTime()
   ) {
     return { hasil: "terkunci", keadaanBaru: keadaan };
+  }
+
+  if (passwordBenar && memberNonaktif) {
+    return { hasil: "nonaktif", keadaanBaru: keadaan };
   }
 
   if (passwordBenar) {
