@@ -1,0 +1,27 @@
+{
+  "aturan": "Label Member di bilah atas",
+  "prd": "§11.1 (▶ Keputusan 2026-11-17)",
+  "keterangan": "Label adalah bagian email sebelum @. Bila lebih dari 12 karakter, yang tampil adalah 12 karakter pertamanya diikuti satu karakter elipsis (…, U+2026). Email Member tersimpan dalam bentuk bakunya (§7.4).",
+  "kasus": [
+    {
+      "nama": "Pendek",
+      "input": { "email": "budi@mail.com" },
+      "output": { "label": "budi" }
+    },
+    {
+      "nama": "Tepat 12 karakter",
+      "input": { "email": "budi.santoso@mail.com" },
+      "output": { "label": "budi.santoso" }
+    },
+    {
+      "nama": "13 karakter",
+      "input": { "email": "budisantoso20@mail.com" },
+      "output": { "label": "budisantoso2…" }
+    },
+    {
+      "nama": "Jauh lebih panjang",
+      "input": { "email": "budisantoso2026@mail.com" },
+      "output": { "label": "budisantoso2…" }
+    }
+  ]
+}

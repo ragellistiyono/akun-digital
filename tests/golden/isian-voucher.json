@@ -1,0 +1,331 @@
+{
+  "aturan": "Isian Voucher selain kode di form dasbor admin",
+  "prd": "§8.2, §8.4 (▶ Keputusan 2026-11-17)",
+  "keterangan": "Kode diperiksa terpisah di kode-voucher.json. Nominal tetap, batas maksimum, dan minimal Harga jual berupa rupiah bulat minimal Rp 1. Persen bilangan bulat 1–100. Kuota voucher dan Batas per email bilangan bulat minimal 1, dan null berarti tanpa batas. batasMaksimum hanya untuk jenis persen dan null berarti tanpa batas. Waktu mulai dan berakhir diisi sampai menit; bila keduanya diisi, berakhir harus setelah mulai. Cakupan berjenis produk atau kategori wajib memuat setidaknya satu isi daftar; bentuk {jenis, daftar} membuat Produk dan Kategori tidak bisa dicampur. galat berisi semua isian yang tidak sah, berurutan menurut isian.",
+  "kasus": [
+    {
+      "nama": "Nominal tanpa syarat",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 5000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Nominal Rp 1",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 1,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": null,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Nominal Rp 0",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 0,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["nilai-kurang-dari-minimum"] }
+    },
+    {
+      "nama": "Nominal bersen",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 1500.5,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["nilai-bukan-bilangan-bulat"] }
+    },
+    {
+      "nama": "Persen 1",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 1,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Persen 100 dengan batas maksimum",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 100,
+        "batasMaksimum": 10000,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Persen 0",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 0,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["persen-di-luar-rentang"] }
+    },
+    {
+      "nama": "Persen 101",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 101,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["persen-di-luar-rentang"] }
+    },
+    {
+      "nama": "Persen pecahan",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 12.5,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["nilai-bukan-bilangan-bulat"] }
+    },
+    {
+      "nama": "Batas maksimum Rp 0",
+      "input": {
+        "jenisPotongan": "persen",
+        "nilai": 10,
+        "batasMaksimum": 0,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": {
+        "sah": false,
+        "galat": ["batas-maksimum-kurang-dari-minimum"]
+      }
+    },
+    {
+      "nama": "Kuota voucher 0",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": 0,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["kuota-voucher-kurang-dari-1"] }
+    },
+    {
+      "nama": "Kuota voucher 1",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": 1,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Batas per email 0",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 0,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["batas-per-email-kurang-dari-1"] }
+    },
+    {
+      "nama": "Minimal Harga jual Rp 0",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": 0,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": {
+        "sah": false,
+        "galat": ["minimal-harga-jual-kurang-dari-minimum"]
+      }
+    },
+    {
+      "nama": "Hanya waktu berakhir",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": "2026-11-30T23:59:00+07:00",
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Berakhir satu menit setelah mulai",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": "2026-11-30T10:00:00+07:00",
+        "berakhir": "2026-11-30T10:01:00+07:00",
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Berakhir sama dengan mulai",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": "2026-11-30T10:00:00+07:00",
+        "berakhir": "2026-11-30T10:00:00+07:00",
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["berakhir-tidak-setelah-mulai"] }
+    },
+    {
+      "nama": "Berakhir sebelum mulai",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": "2026-12-01T00:00:00+07:00",
+        "berakhir": "2026-11-30T23:59:00+07:00",
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": { "sah": false, "galat": ["berakhir-tidak-setelah-mulai"] }
+    },
+    {
+      "nama": "Cakupan beberapa Kategori",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "kategori", "daftar": ["streaming", "musik"] }
+      },
+      "output": { "sah": true, "galat": [] }
+    },
+    {
+      "nama": "Cakupan Produk kosong",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 2000,
+        "batasMaksimum": null,
+        "kuotaVoucher": null,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "produk", "daftar": [] }
+      },
+      "output": { "sah": false, "galat": ["cakupan-kosong"] }
+    },
+    {
+      "nama": "Beberapa isian tidak sah",
+      "input": {
+        "jenisPotongan": "nominal",
+        "nilai": 0,
+        "batasMaksimum": null,
+        "kuotaVoucher": 0,
+        "batasPerEmail": 1,
+        "minimalHargaJual": null,
+        "mulai": null,
+        "berakhir": null,
+        "cakupan": { "jenis": "semua" }
+      },
+      "output": {
+        "sah": false,
+        "galat": ["nilai-kurang-dari-minimum", "kuota-voucher-kurang-dari-1"]
+      }
+    }
+  ]
+}

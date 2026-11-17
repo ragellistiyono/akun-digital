@@ -1,0 +1,133 @@
+{
+  "aturan": "Jumlah Pesanan Selesai di Ringkasan",
+  "prd": "§9.1, §9.2 (▶ Keputusan 2026-11-17)",
+  "keterangan": "Jumlah Pesanan berstatus Selesai yang dibayar dalam rentang [mulai, sebelum), sama seperti pendapatan.json. Waktu Pesanan dibuat dan waktu Admin menyelesaikan Pesanan Bermasalah tidak dipakai.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-11T08:58:00+07:00",
+            "dibayarPada": "2026-11-11T09:00:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-11T13:28:00+07:00",
+            "dibayarPada": "2026-11-11T13:30:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-11T20:43:00+07:00",
+            "dibayarPada": "2026-11-11T20:45:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Bermasalah",
+            "dibuatPada": "2026-11-11T20:55:00+07:00",
+            "dibayarPada": "2026-11-11T21:00:00+07:00",
+            "diselesaikanAdminPada": null
+          }
+        ]
+      },
+      "output": { "jumlah": 3 }
+    },
+    {
+      "nama": "Menurut waktu bayar, bukan waktu dibuat",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-10T23:58:00+07:00",
+            "dibayarPada": "2026-11-11T00:01:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-11T23:59:00+07:00",
+            "dibayarPada": "2026-11-12T00:00:30+07:00",
+            "diselesaikanAdminPada": null
+          }
+        ]
+      },
+      "output": { "jumlah": 1 }
+    },
+    {
+      "nama": "Bermasalah yang diselesaikan Admin",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-11T07:55:00+07:00",
+            "dibayarPada": "2026-11-11T08:00:00+07:00",
+            "diselesaikanAdminPada": "2026-11-12T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-10T21:55:00+07:00",
+            "dibayarPada": "2026-11-10T22:00:00+07:00",
+            "diselesaikanAdminPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Dana Dikembalikan",
+            "dibuatPada": "2026-11-11T09:55:00+07:00",
+            "dibayarPada": "2026-11-11T10:00:00+07:00",
+            "diselesaikanAdminPada": "2026-11-11T11:00:00+07:00"
+          }
+        ]
+      },
+      "output": { "jumlah": 1 }
+    },
+    {
+      "nama": "Bulan ini",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-01T00:00:00+07:00",
+          "sebelum": "2026-12-01T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-10-31T23:58:00+07:00",
+            "dibayarPada": "2026-10-31T23:59:59+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-01T00:00:00+07:00",
+            "dibayarPada": "2026-11-01T00:01:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Selesai",
+            "dibuatPada": "2026-11-17T12:00:00+07:00",
+            "dibayarPada": "2026-11-17T12:03:00+07:00",
+            "diselesaikanAdminPada": null
+          },
+          {
+            "status": "Kedaluwarsa",
+            "dibuatPada": "2026-11-17T13:00:00+07:00",
+            "dibayarPada": null,
+            "diselesaikanAdminPada": null
+          }
+        ]
+      },
+      "output": { "jumlah": 2 }
+    }
+  ]
+}

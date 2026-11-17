@@ -1,0 +1,147 @@
+{
+  "aturan": "Hasil akhir Voucher di checkout: syarat, lalu potongan voucher",
+  "prd": "§8.3, §8.7 (▶ Keputusan 2026-11-17)",
+  "keterangan": "kelayakan adalah hasil kelayakan-voucher.json, dan potongan dihitung seperti potongan-voucher.json. Voucher yang potongannya Rp 0 ditolak dan tidak tercatat di Pesanan (sebelumnya OD-3). Pesan potongan Rp 0 paling bawah dalam urutan §8.7, jadi syarat lain yang gagal didahulukan. Bila Voucher ditolak, potonganVoucher 0.",
+  "kasus": [
+    {
+      "nama": "Diterima dengan potongan",
+      "input": {
+        "hargaJual": 50000,
+        "voucher": {
+          "jenisPotongan": "nominal",
+          "nilai": 5000,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": true,
+          "pesan": null
+        }
+      },
+      "output": {
+        "dipakai": true,
+        "potonganVoucher": 5000,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Potongan dipangkas tetap dipakai",
+      "input": {
+        "hargaJual": 3000,
+        "voucher": {
+          "jenisPotongan": "nominal",
+          "nilai": 5000,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": true,
+          "pesan": null
+        }
+      },
+      "output": {
+        "dipakai": true,
+        "potonganVoucher": 2000,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Harga jual Rp 1.001 masih dapat potongan Rp 1",
+      "input": {
+        "hargaJual": 1001,
+        "voucher": {
+          "jenisPotongan": "nominal",
+          "nilai": 5000,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": true,
+          "pesan": null
+        }
+      },
+      "output": {
+        "dipakai": true,
+        "potonganVoucher": 1,
+        "pesan": null
+      }
+    },
+    {
+      "nama": "Nominal pada Harga jual Rp 1.000",
+      "input": {
+        "hargaJual": 1000,
+        "voucher": {
+          "jenisPotongan": "nominal",
+          "nilai": 5000,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": true,
+          "pesan": null
+        }
+      },
+      "output": {
+        "dipakai": false,
+        "potonganVoucher": 0,
+        "pesan": "Voucher tidak memberi potongan untuk produk ini"
+      }
+    },
+    {
+      "nama": "Persen pada Harga jual Rp 1.000",
+      "input": {
+        "hargaJual": 1000,
+        "voucher": {
+          "jenisPotongan": "persen",
+          "nilai": 20,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": true,
+          "pesan": null
+        }
+      },
+      "output": {
+        "dipakai": false,
+        "potonganVoucher": 0,
+        "pesan": "Voucher tidak memberi potongan untuk produk ini"
+      }
+    },
+    {
+      "nama": "Syarat lain didahulukan",
+      "input": {
+        "hargaJual": 1000,
+        "voucher": {
+          "jenisPotongan": "persen",
+          "nilai": 10,
+          "batasMaksimum": 10000
+        },
+        "kelayakan": {
+          "diterima": false,
+          "pesan": "Minimal pembelian Rp 50.000"
+        }
+      },
+      "output": {
+        "dipakai": false,
+        "potonganVoucher": 0,
+        "pesan": "Minimal pembelian Rp 50.000"
+      }
+    },
+    {
+      "nama": "Syarat lain gagal walaupun ada potongan",
+      "input": {
+        "hargaJual": 50000,
+        "voucher": {
+          "jenisPotongan": "nominal",
+          "nilai": 2000,
+          "batasMaksimum": null
+        },
+        "kelayakan": {
+          "diterima": false,
+          "pesan": "Kuota voucher habis"
+        }
+      },
+      "output": {
+        "dipakai": false,
+        "potonganVoucher": 0,
+        "pesan": "Kuota voucher habis"
+      }
+    }
+  ]
+}
