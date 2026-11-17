@@ -21,7 +21,7 @@ const cocokPencarian = (cari: string) =>
  * (PRD §7.3), jadi Pendaftar (tabel pendaftar) dan Admin tidak ikut. Bila `cari` diberikan, hanya Member yang
  * emailnya memuat kata cari itu yang dimuat.
  *
- * Setiap baris membawa email, waktu terdaftar, serta total belanja dan jumlah Pesanan Selesai beserta Pesanan
+ * Setiap baris membawa email, waktu terdaftar, status nonaktif, serta total belanja dan jumlah Pesanan Selesai beserta Pesanan
  * yang dihitung (PRD §2.3), tanpa password Member. Saringan di database hanya mempersempit bacaan ke Pesanan
  * Selesai yang emailnya memuat email salah satu Member itu; yang memutuskan Pesanan mana milik Member dan mana
  * yang dihitung adalah totalBelanja di domain (ADR-0002).
@@ -33,7 +33,12 @@ export async function daftarMember({ cari }: { cari?: string }) {
   );
 
   const semuaMember = await db
-    .select({ id: user.id, email: user.email, terdaftarPada: user.createdAt })
+    .select({
+      id: user.id,
+      email: user.email,
+      terdaftarPada: user.createdAt,
+      nonaktif: user.nonaktif,
+    })
     .from(user)
     .where(syaratMember)
     .orderBy(desc(user.createdAt), desc(user.id));

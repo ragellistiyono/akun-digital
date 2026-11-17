@@ -10,7 +10,11 @@ import {
   vi,
 } from "vitest";
 
-import { koneksi } from "../db";
+import { eq } from "drizzle-orm";
+
+import { db, koneksi } from "../db";
+import { user } from "../db/schema";
+import { ubahStatusMember } from "../status-member";
 import { sisipkanMember } from "../uji-member";
 import { buatAdmin } from "./buat-admin";
 import { masukAdmin, masukMember } from "./masuk";
@@ -248,6 +252,68 @@ describe("login Member (PRD §7.5 ▶ Keputusan 2026-11-17)", () => {
     expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
       hasil: "terkunci",
       terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+  });
+});
+
+/** Member baru yang langsung dinonaktifkan Admin (PRD §2.3). */
+async function memberNonaktifBaru() {
+  const email = await memberBaru();
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  await ubahStatusMember({ idMember: id, nonaktif: true });
+  return email;
+}
+
+describe("login Member nonaktif (PRD §7.5 ▶ Keputusan 2026-11-17, UAT-B3 langkah 4)", () => {
+  it("password benar ditolak sebagai Member nonaktif, juga bila email diketik dengan huruf besar, tanpa sesi", async () => {
+    const email = await memberNonaktifBaru();
+    pada("10:00:00");
+
+    expect(
+      await masukSebagaiMember(email.toUpperCase(), PASSWORD_MEMBER),
+    ).toEqual({ hasil: "nonaktif" });
+  });
+
+  it("password salah ditolak dengan pesan password salah biasa, dan kesalahannya dihitung sampai kunci 15 menit", async () => {
+    const email = await memberNonaktifBaru();
+    for (const jam of ["09:56:00", "09:57:00", "09:58:00", "09:59:00"]) {
+      pada(jam);
+      expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+        hasil: "ditolak",
+      });
+    }
+
+    pada("10:00:00");
+    expect(await masukSebagaiMember(email, PASSWORD_SALAH)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+
+    pada("10:14:00");
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "terkunci",
+      terkunciSampai: new Date("2026-11-11T10:15:00+07:00"),
+    });
+  });
+
+  it("setelah diaktifkan kembali, Member itu login dengan password benar (UAT-B3 langkah 6)", async () => {
+    const email = await memberNonaktifBaru();
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    pada("10:00:00");
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "nonaktif",
+    });
+
+    await ubahStatusMember({ idMember: id, nonaktif: false });
+
+    expect(await masukSebagaiMember(email, PASSWORD_MEMBER)).toEqual({
+      hasil: "berhasil",
     });
   });
 });

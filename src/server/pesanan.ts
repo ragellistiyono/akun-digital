@@ -3,7 +3,8 @@
 // ada di src/domain/total-bayar.ts; bentuk Nomor Pesanan ada di src/domain/nomor-pesanan.ts; Stok Varian
 // ada di src/domain/stok-varian.ts; kapan dan bagaimana Item stok Terkirim tampil ada di
 // src/domain/item-stok-terkirim.ts; batas Pesanan Menunggu Pembayaran per email ada di
-// src/domain/batas-pesanan-menunggu.ts; urutan pemeriksaan checkout ada di src/domain/checkout.ts.
+// src/domain/batas-pesanan-menunggu.ts; email Member nonaktif ada di src/domain/member-nonaktif.ts; urutan
+// pemeriksaan checkout ada di src/domain/checkout.ts.
 import { randomBytes } from "node:crypto";
 
 import { and, DrizzleQueryError, eq, sql } from "drizzle-orm";
@@ -17,6 +18,7 @@ import {
   kolomItemStokTerkirim,
 } from "@/domain/item-stok-terkirim";
 import { emailBaku } from "@/domain/kesamaan-email";
+import { emailMilikMemberNonaktif } from "@/domain/member-nonaktif";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import { nominalTagihanQris, periksaTagihanQris } from "@/domain/total-bayar";
 
@@ -26,6 +28,7 @@ import {
   pesanan,
   produk,
   riwayatStatusPesanan,
+  user,
   varian,
 } from "./db/schema";
 import { bukaItemStok } from "./enkripsi-item-stok";
@@ -114,8 +117,8 @@ type Penghubung = Pick<typeof db, "select">;
 
 /**
  * Hasil checkout Varian itu menurut hasilCheckout (PRD §3.7, §5.2, §5.4). `varianDijual` adalah Varian yang
- * dijual menurut varianDijual, atau undefined bila tidak dijual. Pesanan Menunggu Pembayaran dan Stok
- * Varian dibaca lewat `penghubung`, supaya pemeriksaan ini bisa diulang di dalam transaksi checkout.
+ * dijual menurut varianDijual, atau undefined bila tidak dijual. Member nonaktif, Pesanan Menunggu Pembayaran,
+ * dan Stok Varian dibaca lewat `penghubung`, supaya pemeriksaan ini bisa diulang di dalam transaksi checkout.
  */
 async function periksaCheckout<V>(
   penghubung: Penghubung,
@@ -125,7 +128,12 @@ async function periksaCheckout<V>(
     email,
   }: { varianDijual: V | undefined; varianId: string; email: string },
 ) {
-  // Saringan status hanya mempersempit bacaan; batasPesananMenunggu yang memutuskan.
+  // Saringan Member nonaktif dan status Pesanan hanya mempersempit bacaan; emailMilikMemberNonaktif dan
+  // batasPesananMenunggu yang memutuskan.
+  const memberNonaktif = await penghubung
+    .select({ email: user.email })
+    .from(user)
+    .where(and(eq(user.peran, "Member"), eq(user.nonaktif, true)));
   const pesananLain = await penghubung
     .select({
       email: pesanan.email,
@@ -138,6 +146,7 @@ async function periksaCheckout<V>(
   const { stokVarian } = await bacaStokVarian(varianId, penghubung);
   return hasilCheckout({
     varianDijual,
+    memberNonaktif: emailMilikMemberNonaktif({ email, memberNonaktif }),
     batasPesananMenunggu: batasPesananMenunggu({ email, pesananLain }),
     stokVarian,
   });
@@ -148,7 +157,10 @@ type HasilPesananMenunggu =
   | { hasil: "pesanan-menunggu-di-browser-lain"; kedaluwarsaPada: Date };
 
 type HasilCheckoutDitolak =
-  { hasil: "tidak-dijual" } | { hasil: "stok-habis" } | HasilPesananMenunggu;
+  | { hasil: "tidak-dijual" }
+  | { hasil: "member-nonaktif" }
+  | { hasil: "stok-habis" }
+  | HasilPesananMenunggu;
 
 /**
  * Hasil buatPesanan untuk checkout yang ditolak hasilCheckout. Bila email itu masih punya Pesanan Menunggu
@@ -181,10 +193,12 @@ const STOK_HABIS = { hasil: "stok-habis" } as const;
 /**
  * Checkout satu Varian: membuat Pesanan Menunggu Pembayaran beserta QRIS-nya (PRD §5.1, ADR-0004).
  *
- * Urutan pemeriksaannya ditentukan hasilCheckout: Produk dan Varian yang dijual, lalu batas Pesanan
- * menunggu, lalu Stok Varian (PRD §5.2, §5.4 ▶ Keputusan 2026-11-12).
+ * Urutan pemeriksaannya ditentukan hasilCheckout: Produk dan Varian yang dijual, lalu Member nonaktif, lalu
+ * batas Pesanan menunggu, lalu Stok Varian (PRD §5.2 ▶ Keputusan 2026-11-17, §5.4 ▶ Keputusan 2026-11-12).
  *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
+ * - Email milik Member nonaktif ditolak (PRD §2.3), tanpa QRIS maupun Pesanan, walaupun email itu masih punya
+ *   Pesanan Menunggu Pembayaran. Pesanan yang sudah ada tetap berjalan seperti biasa.
  * - Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), tidak ada QRIS maupun Pesanan baru,
  *   walaupun Stok Varian-nya 0. Hasilnya Tautan Pesanan itu bila `tautanDiBrowser`, yaitu Tautan Pesanan
  *   yang dibuat di browser Pembeli, memuatnya; bila tidak, hasilnya hanya waktu kedaluwarsa Pesanan itu.

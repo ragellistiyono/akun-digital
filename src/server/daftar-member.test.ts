@@ -11,7 +11,8 @@ import pendapatanGolden from "../../tests/golden/pendapatan.json";
 import { buatAdmin } from "./auth/buat-admin";
 import { daftarMember } from "./daftar-member";
 import { db, koneksi } from "./db";
-import { pendaftar, varian } from "./db/schema";
+import { pendaftar, user, varian } from "./db/schema";
+import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
@@ -204,6 +205,31 @@ describe("daftarMember: isi dan urutan (PRD §2.3 ▶ Keputusan 2026-11-17)", ()
     ]);
   });
 
+  // PRD §2.3 ▶ Keputusan 2026-11-17: setiap baris menampilkan status Aktif atau Nonaktif.
+  it("membawa status setiap Member: Member yang dinonaktifkan Admin nonaktif, yang lain aktif", async () => {
+    const akhiran = randomUUID();
+    const aktif = denganAkhiran("sinta@mail.com", akhiran);
+    const nonaktif = denganAkhiran("budi@mail.com", akhiran);
+    await sisipkanMember({ email: aktif, password: PASSWORD });
+    await sisipkanMember({ email: nonaktif, password: PASSWORD });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, nonaktif));
+    await ubahStatusMember({ idMember: id, nonaktif: true });
+
+    const daftar = await daftarMember({ cari: akhiran });
+
+    expect(
+      daftar.map((m) => ({ email: m.email, nonaktif: m.nonaktif })),
+    ).toEqual(
+      expect.arrayContaining([
+        { email: aktif, nonaktif: false },
+        { email: nonaktif, nonaktif: true },
+      ]),
+    );
+  });
+
   it("tidak membawa password Member", async () => {
     const email = `budi-${randomUUID()}@mail.com`;
     await sisipkanMember({ email, password: PASSWORD });
@@ -211,7 +237,7 @@ describe("daftarMember: isi dan urutan (PRD §2.3 ▶ Keputusan 2026-11-17)", ()
     const baris = await barisMember(email);
 
     expect(Object.keys(baris).sort()).toEqual(
-      ["belanja", "email", "id", "terdaftarPada"].sort(),
+      ["belanja", "email", "id", "nonaktif", "terdaftarPada"].sort(),
     );
     expect(JSON.stringify(baris)).not.toContain(PASSWORD);
   });

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { batasPesananMenunggu } from "./batas-pesanan-menunggu";
 import { hasilCheckout } from "./checkout";
 
-// PRD §3.7, §5.2, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
+// PRD §3.7, §5.2 ▶ Keputusan 2026-11-17 langkah 1–4, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
 // ekspektasinya diambil dari contoh PRD §5.4: Item stok terakhir Netflix Premium 1 Bulan sedang ditahan
 // Pesanan Andi, sehingga Stok Varian-nya 0. Data Produk dan Pesanan ini sintetis.
 const netflixSatuBulan = { produk: "Netflix Premium", varian: "1 Bulan" };
@@ -23,6 +23,7 @@ describe("hasilCheckout", () => {
           pesananLain,
         }),
         stokVarian: 0,
+        memberNonaktif: false,
       }),
     ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
   });
@@ -36,6 +37,7 @@ describe("hasilCheckout", () => {
           pesananLain,
         }),
         stokVarian: 0,
+        memberNonaktif: false,
       }),
     ).toEqual({ hasil: "stok-habis" });
   });
@@ -49,6 +51,7 @@ describe("hasilCheckout", () => {
           pesananLain,
         }),
         stokVarian: 0,
+        memberNonaktif: false,
       }),
     ).toEqual({ hasil: "tidak-dijual" });
   });
@@ -63,6 +66,7 @@ describe("hasilCheckout", () => {
         }),
         // Contoh PRD §5.3: 10 Item stok belum terkirim, 2 di antaranya Ditahan.
         stokVarian: 8,
+        memberNonaktif: false,
       }),
     ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
   });
@@ -76,7 +80,57 @@ describe("hasilCheckout", () => {
           pesananLain,
         }),
         stokVarian: 8,
+        memberNonaktif: false,
       }),
     ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
+  });
+
+  // PRD §5.2 ▶ Keputusan 2026-11-17: Admin menonaktifkan Member Budi saat Budi masih punya Pesanan
+  // Menunggu Pembayaran. Checkout baru dengan email Budi ditolak dengan pesan Member nonaktif.
+  const pesananBudi = {
+    email: "budi@example.test",
+    status: "Menunggu Pembayaran",
+  } as const;
+
+  it("Member nonaktif Budi yang masih punya Pesanan menunggu ditolak karena Member nonaktif, tidak diarahkan ke Pesanannya", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain: [pesananBudi],
+        }),
+        stokVarian: 8,
+        memberNonaktif: true,
+      }),
+    ).toEqual({ hasil: "member-nonaktif" });
+  });
+
+  it("Member nonaktif ditolak karena Member nonaktif walaupun Stok Varian-nya 0", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain: [],
+        }),
+        stokVarian: 0,
+        memberNonaktif: true,
+      }),
+    ).toEqual({ hasil: "member-nonaktif" });
+  });
+
+  it("Varian yang tidak dijual tetap didahulukan sebelum Member nonaktif", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: undefined,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain: [pesananBudi],
+        }),
+        stokVarian: 0,
+        memberNonaktif: true,
+      }),
+    ).toEqual({ hasil: "tidak-dijual" });
   });
 });

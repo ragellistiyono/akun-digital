@@ -12,6 +12,7 @@ import {
   pesanan,
   produk,
   riwayatStatusPesanan,
+  user,
   varian,
 } from "./db/schema";
 import { prosesKabarPembayaran } from "./kabar-pembayaran";
@@ -19,11 +20,18 @@ import { bacaStokVarian, tambahItemStok } from "./item-stok";
 import { prosesKedaluwarsaPesanan } from "./kedaluwarsa-pesanan";
 import { jadwalKedaluwarsaPesanan } from "./pekerjaan-latar";
 import { batalkanPesanan } from "./pembatalan-pesanan";
-import { bacaCheckout, bacaPesananLewatTautan, buatPesanan } from "./pesanan";
+import {
+  bacaCheckout,
+  bacaPesananLewatTautan,
+  bacaStatusPesanan,
+  buatPesanan,
+} from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { qrispySungguhan } from "./qrispy-sungguhan";
 import { qrispyTiruan } from "./qrispy-tiruan";
+import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
+import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci. Database ini dipakai bersama test lain dan run
@@ -922,6 +930,86 @@ describe("buatPesanan dengan email yang masih punya Pesanan Menunggu Pembayaran 
 
 // PRD §5.2 dan docs/DESIGN.md "Rincian Total bayar": form checkout menampilkan Produk dan Varian yang
 // dipilih, Harga jual, dan Perkiraan bayar sebelum Kode unik diketahui.
+// PRD §2.3 dan §5.2 ▶ Keputusan 2026-11-17, UAT-B3 langkah 5. Member Budi sintetis.
+describe("buatPesanan dengan email Member nonaktif", () => {
+  /** Member Budi dengan email unik, beserta id-nya untuk menonaktifkannya. */
+  async function memberBudi() {
+    const email = emailUnik();
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    return { email, id };
+  }
+
+  it("Tamu yang checkout dengan email Member nonaktif yang ditulis huruf besar ditolak, tanpa QRIS maupun Pesanan", async () => {
+    const netflix = await netflixPremium();
+    const budi = await memberBudi();
+    await ubahStatusMember({ idMember: budi.id, nonaktif: true });
+    const qrispy = qrispyKodeUnik123();
+
+    const hasil = await buatPesanan(
+      { varianId: netflix.satuBulan, email: ` ${budi.email.toUpperCase()} ` },
+      { qrispy },
+    );
+
+    expect(hasil).toEqual({ hasil: "member-nonaktif" });
+    expect(qrispy.buatQris).not.toHaveBeenCalled();
+    expect(
+      await db
+        .select({ id: pesanan.id })
+        .from(pesanan)
+        .where(
+          inArray(pesanan.email, [budi.email, ` ${budi.email.toUpperCase()} `]),
+        ),
+    ).toEqual([]);
+  });
+
+  it("Budi yang dinonaktifkan saat masih punya Pesanan menunggu, lalu checkout lagi dari browser yang sama, ditolak karena Member nonaktif, tidak diarahkan ke Pesanannya", async () => {
+    const netflix = await netflixPremium();
+    const budi = await memberBudi();
+    const pertama = await buatPesanan(
+      { varianId: netflix.satuBulan, email: budi.email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+    if (pertama.hasil !== "dibuat") throw new Error(pertama.hasil);
+    await ubahStatusMember({ idMember: budi.id, nonaktif: true });
+
+    expect(
+      await buatPesanan(
+        {
+          varianId: netflix.tigaBulan,
+          email: budi.email,
+          tautanDiBrowser: [pertama.tautan],
+        },
+        { qrispy: qrispyKodeUnik123() },
+      ),
+    ).toEqual({ hasil: "member-nonaktif" });
+  });
+
+  it("Pesanan Menunggu Pembayaran yang dibuat sebelum Budi dinonaktifkan tetap bisa dibayar dan menjadi Selesai", async () => {
+    const netflix = await netflixPremium();
+    const budi = await memberBudi();
+    const hasil = await buatPesanan(
+      { varianId: netflix.satuBulan, email: budi.email },
+      { qrispy: qrispyKodeUnik123() },
+    );
+    if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+    await ubahStatusMember({ idMember: budi.id, nonaktif: true });
+    const [{ qrisId }] = await pesananDenganEmail(budi.email);
+
+    await prosesKabarPembayaran({
+      qrisId,
+      // Harga jual Rp 50.000 + Kode unik Rp 123 dari Qrispy tiruan di atas.
+      nominalDiterima: 50123,
+      waktuBayar: new Date("2026-11-11T10:05:00+07:00"),
+    });
+
+    expect(await bacaStatusPesanan(hasil.tautan)).toBe("Selesai");
+  });
+});
+
 describe("bacaPesananLewatTautan (PRD §6.1, §6.2)", () => {
   // Contoh baris Item stok dari PRD §4.2 dan penggantian nama kolom dari UAT-D2.
   it("Pesanan Selesai membaca Item stok-nya dengan nama kolom yang dicatat saat Terkirim, walaupun nama kolom Format Item stok sudah diganti", async () => {

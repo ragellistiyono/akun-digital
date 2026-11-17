@@ -30,6 +30,10 @@ const Email = z
 const PESAN_TIDAK_DIJUAL =
   "Produk atau Varian ini sedang tidak dijual, jadi Pesanan tidak dibuat. Pilih Produk lain di Beranda.";
 
+/** Pesan PRD §5.2 ▶ Keputusan 2026-11-17 untuk email milik Member nonaktif. */
+const PESAN_MEMBER_NONAKTIF =
+  "Email ini milik Member yang dinonaktifkan, jadi Pesanan tidak dibuat. Hubungi kami di WhatsApp.";
+
 const PESAN_STOK_HABIS =
   "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.";
 
@@ -101,6 +105,9 @@ export async function aksiCheckout(
   });
   if (hasil.hasil === "tidak-dijual") {
     return { email, galat: { checkout: PESAN_TIDAK_DIJUAL } };
+  }
+  if (hasil.hasil === "member-nonaktif") {
+    return { email, galat: { checkout: PESAN_MEMBER_NONAKTIF } };
   }
   if (hasil.hasil === "stok-habis") {
     return { email, galat: { checkout: PESAN_STOK_HABIS } };
