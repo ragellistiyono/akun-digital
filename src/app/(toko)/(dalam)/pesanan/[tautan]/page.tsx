@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
+import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { rupiah } from "@/lib/rupiah";
 import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
@@ -59,10 +60,7 @@ function PanelRincian({ rincian }: { rincian: PesananDibaca["rincian"] }) {
         baris={[
           { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
           {
-            label:
-              rincian.kodeVoucher === null
-                ? "Potongan voucher"
-                : `Potongan voucher (${rincian.kodeVoucher})`,
+            label: labelPotonganVoucher(rincian.kodeVoucher),
             nilai:
               rincian.potonganVoucher === 0
                 ? rupiah(0)

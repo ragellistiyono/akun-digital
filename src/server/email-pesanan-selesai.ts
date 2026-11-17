@@ -4,6 +4,7 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { rupiah } from "@/lib/rupiah";
 
 import { aman, footerWhatsapp } from "./bagian-email";
@@ -31,17 +32,21 @@ type BahanEmailPesananSelesai = Pick<
   nomorWhatsapp: string | null;
 };
 
-/** Baris rincian nominal (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. */
+/**
+ * Baris rincian nominal (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris potongannya
+ * menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17).
+ */
 function barisRincian({
   hargaJual,
   potonganVoucher,
+  kodeVoucher,
   kodeUnik,
   totalBayar,
 }: PesananSelesai["rincian"]) {
   return [
     { label: "Harga jual", nilai: rupiah(hargaJual) },
     {
-      label: "Potongan voucher",
+      label: labelPotonganVoucher(kodeVoucher),
       nilai: potonganVoucher === 0 ? rupiah(0) : `− ${rupiah(potonganVoucher)}`,
     },
     { label: "Kode unik", nilai: rupiah(kodeUnik) },

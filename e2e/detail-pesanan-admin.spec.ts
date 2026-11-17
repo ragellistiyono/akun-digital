@@ -11,10 +11,11 @@ import { eq } from "drizzle-orm";
 // src/app/admin/(dasbor)/pesanan/aksi.test.ts; di sini yang diuji adalah halaman detail Pesanan beserta
 // pekerjaan email yang dijalankan pekerja server.
 import { db } from "../src/server/db";
-import { riwayatStatusPesanan, varian } from "../src/server/db/schema";
+import { riwayatStatusPesanan, varian, voucher } from "../src/server/db/schema";
 import { pekerjaanEmailPesananSelesai } from "../src/server/pekerjaan-latar";
 import { sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
+import { buatVoucher } from "../src/server/voucher";
 
 const PASSWORD = "sandi-uji-admin-123";
 
@@ -75,9 +76,13 @@ const teksSel = (baris: Locator) =>
  * Pesanan Selesai dengan Item stok Terkirim dan riwayat perubahan status seperti checkout yang dibayar:
  * dibuat oleh Pembeli pukul 23.30 WIB 11 Nov 2026, lalu Selesai lewat kabar pembayaran Qrispy semenit
  * kemudian. Rinciannya contoh PRD §5.5. Isi Item stok seperti di prototipe [CONTOH], dengan kolom Email yang
- * unik, karena Item stok yang sama persis ditolak di Varian yang sama (PRD §4.2).
+ * unik, karena Item stok yang sama persis ditolak di Varian yang sama (PRD §4.2). Bila `voucher` diberikan,
+ * Pesanan itu mencatat Voucher dan kodenya.
  */
-async function pesananSelesai(email = emailUnik()) {
+async function pesananSelesai(
+  email = emailUnik(),
+  voucher?: { id: string; kode: string },
+) {
   const isiItemStok = [
     `miwe.akun-${randomUUID().slice(0, 8)}@contoh.id`,
     "Senja-7419",
@@ -88,6 +93,7 @@ async function pesananSelesai(email = emailUnik()) {
     status: "Selesai",
     email,
     dibuatPada: new Date("2026-11-11T16:30:00Z"),
+    voucher,
     itemStok: {
       status: "Terkirim",
       nilai: isiItemStok,
@@ -102,6 +108,42 @@ async function pesananSelesai(email = emailUnik()) {
   });
   return { ...dipesan, email, isiItemStok };
 }
+
+/**
+ * Voucher HEMAT5 dari persiapan bersama docs/UAT.md (nominal Rp 5.000), dengan akhiran unik per run karena
+ * database test dipakai bersama. Hasilnya id dan kodenya.
+ */
+async function voucherHemat5() {
+  const kode = `HEMAT5${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+  const hasil = await buatVoucher({
+    kode,
+    jenisPotongan: "nominal",
+    nilai: 5000,
+    batasMaksimum: null,
+    kuotaVoucher: null,
+    batasPerEmail: 1,
+    minimalHargaJual: null,
+    mulai: null,
+    berakhir: null,
+    cakupan: { jenis: "semua" },
+    khususMember: false,
+    aktif: true,
+  });
+  expect(hasil.hasil).toBe("dibuat");
+  const [{ id }] = await db
+    .select({ id: voucher.id })
+    .from(voucher)
+    .where(eq(voucher.kode, kode));
+  return { id, kode };
+}
+
+/** Nilai satu baris rincian di detail Pesanan, misalnya "Rp 50.000" untuk baris Harga jual. */
+const nilaiRincian = (page: Page, label: string) =>
+  isi(page)
+    .getByRole("region", { name: "Rincian pembayaran" })
+    .getByRole("row")
+    .filter({ has: page.getByRole("rowheader", { name: label, exact: true }) })
+    .getByRole("cell");
 
 /** Status setiap pekerjaan email "Pesanan selesai" Pesanan itu, setelah semuanya dijalankan pekerja server. */
 async function harapkanPekerjaanEmailSelesai(
@@ -174,6 +216,28 @@ test("dari daftar Pesanan, Admin membuka detail Pesanan yang menampilkan rincian
     "Selesai",
     "Qrispy",
   ]);
+});
+
+// PRD §8.8 ▶ Keputusan 2026-11-17: baris potongan di detail Pesanan menyebut kode Voucher Pesanan itu, dan
+// Pesanan tanpa Voucher tetap menulis "Potongan voucher".
+test('detail Pesanan yang memakai HEMAT5 menulis "Potongan voucher (HEMAT5)", dan Pesanan tanpa Voucher menulis "Potongan voucher"', async ({
+  page,
+}) => {
+  const hemat5 = await voucherHemat5();
+  const denganVoucher = await pesananSelesai(emailUnik(), hemat5);
+  const tanpaVoucher = await pesananSelesai();
+  await masukSebagaiAdmin(page);
+
+  await page.goto(`/admin/pesanan/${denganVoucher.nomorPesanan}`);
+  await expect(
+    nilaiRincian(page, `Potongan voucher (${hemat5.kode})`),
+  ).toHaveText("− Rp 5.000");
+
+  await page.goto(`/admin/pesanan/${tanpaVoucher.nomorPesanan}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: tanpaVoucher.nomorPesanan }),
+  ).toBeVisible();
+  await expect(nilaiRincian(page, "Potongan voucher")).toHaveText("− Rp 5.000");
 });
 
 // UAT-F2, PRD §6.4: kirim ulang, lalu koreksi email menjadi Email B dan kirim ulang. Email yang dikirim pekerja
