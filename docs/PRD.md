@@ -647,6 +647,10 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - **Tempat cadangan.** Cadangan disimpan di server. Pemilik menyalinnya ke komputer sendiri sesekali, misalnya seminggu sekali, mengikuti `docs/DEPLOY.md`. Penyalinan otomatis ke luar server belum dibuat.
 - **Password database.** Password PostgreSQL di server adalah nilai acak dari `openssl rand -hex 32`. Nilai itu disimpan di berkas env produksi sebagai `POSTGRES_PASSWORD`, dan tidak pernah diganti setelah deploy pertama.
 
+▶ Keputusan 2026-11-17 (#126):
+- **Arsip unggahan rusak.** Bila arsip unggahan yang dipakai restore rusak, misalnya terpotong saat disalin, restore ditolak sebelum ada yang diubah. Database dan folder unggahan tetap seperti sebelumnya. Pemilik memakai cadangan tanggal lain atau mengganti arsipnya.
+- **Arsip unggahan tidak ada.** Bila cadangan database tidak punya arsip unggahan bertanggal sama, database tetap dipulihkan dan folder unggahan tidak disentuh. Pesan restore menyarankan memeriksa ikon dan foto di toko, mengunggah ulang yang hilang lewat dasbor admin, atau memasukkan arsip dari komputer lalu mengulang restore.
+
 ## 13. Milestone
 
 | Milestone | Nama | Isi | Bagian PRD |
