@@ -48,7 +48,7 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
   }
 
   return (
-    <ul aria-label="Riwayat Pesanan" className="mt-6 grid max-w-[720px] gap-3">
+    <ul aria-label="Riwayat Pesanan" className="mt-6 grid max-w-[720px] gap-4">
       {riwayat.map((satu) => (
         <li key={satu.nomorPesanan}>
           <Link
@@ -66,12 +66,7 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
             </span>
             <span className="col-span-full text-[13px] font-bold text-tinta-redup">
               <span className="font-mono">{satu.nomorPesanan}</span>
-              {satu.waktuDibuat && (
-                <span className="font-semibold">
-                  {" "}
-                  · {waktuWib(satu.waktuDibuat)} WIB
-                </span>
-              )}
+              {satu.waktuDibuat && <> · {waktuWib(satu.waktuDibuat)} WIB</>}
             </span>
           </Link>
         </li>

@@ -140,6 +140,12 @@ test("Member melihat Pesanan semua status miliknya, termasuk Pesanan Tamu dengan
   expect(
     await nomorPesanan.evaluate((el) => getComputedStyle(el).fontFamily),
   ).toMatch(/JetBrains Mono/i);
+  // DESIGN.md Hierarchy: tanggal di baris meta memakai Label kecil (700, 13 px). DESIGN.md Layout: jarak
+  // antarkartu kelipatan 8 px.
+  const meta = pertama.getByText(/· 11 Nov 2026 20\.14 WIB$/);
+  await expect(meta).toHaveCSS("font-weight", "700");
+  await expect(meta).toHaveCSS("font-size", "13px");
+  await expect(daftarRiwayat(page)).toHaveCSS("row-gap", "16px");
 });
 
 // PRD §7.4 ▶ Keputusan 2026-11-17, UAT-G7 langkah 2.
