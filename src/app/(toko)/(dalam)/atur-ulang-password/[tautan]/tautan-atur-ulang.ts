@@ -21,4 +21,6 @@ export const PESAN_TAUTAN_TIDAK_BERLAKU: Record<
     "Tautan ini sudah dipakai. Minta tautan baru di halaman Lupa password bila perlu mengganti password lagi.",
   diganti:
     "Tautan ini sudah diganti tautan yang lebih baru. Pakai tautan di email terakhir dari kami, atau minta tautan baru.",
+  "member-nonaktif":
+    "Akun Member ini dinonaktifkan, jadi password tidak bisa diganti. Hubungi kami di WhatsApp.",
 };

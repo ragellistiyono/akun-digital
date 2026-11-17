@@ -95,8 +95,9 @@ type KeadaanTautan =
   | { keadaan: "tidak-dikenal" };
 
 /**
- * Menilai Tautan atur ulang password dengan bagian acak itu pada saat ini, beserta barisnya. Tautan yang
- * tidak pernah dikirim, atau milik user yang bukan Member, tidak dikenal: hasilnya null. Bila `kunci`, baris tautan dan baris Member-nya
+ * Menilai Tautan atur ulang password dengan bagian acak itu pada saat ini, beserta barisnya, termasuk
+ * apakah Member pemiliknya sedang nonaktif (PRD §2.3). Tautan yang tidak pernah dikirim, atau milik user
+ * yang bukan Member, tidak dikenal: hasilnya null. Bila `kunci`, baris tautan dan baris Member-nya
  * dikunci sampai transaksi selesai, supaya satu tautan tidak bisa dipakai dua kali bersamaan.
  */
 async function nilaiTautan(tx: Transaksi, tautan: string, kunci: boolean) {
@@ -107,6 +108,7 @@ async function nilaiTautan(tx: Transaksi, tautan: string, kunci: boolean) {
       email: user.email,
       dikirimPada: tautanAturUlangPassword.dikirimPada,
       dipakaiPada: tautanAturUlangPassword.dipakaiPada,
+      nonaktif: user.nonaktif,
     })
     .from(tautanAturUlangPassword)
     .innerJoin(user, eq(tautanAturUlangPassword.userId, user.id))
@@ -135,6 +137,7 @@ async function nilaiTautan(tx: Transaksi, tautan: string, kunci: boolean) {
     sekarang: new Date(),
     sudahDipakai: baris.dipakaiPada !== null,
     diganti: !!lebihBaru,
+    memberNonaktif: baris.nonaktif,
   });
   return { nilai, baris };
 }
@@ -163,7 +166,8 @@ type HasilAturUlangPassword =
 
 /**
  * Menyimpan password baru lewat Tautan atur ulang password (PRD §7.5 ▶ Keputusan 2026-11-17). Tautan yang
- * tidak berlaku ditolak dengan alasannya tanpa mengubah apa pun. Bila berlaku, dalam satu transaksi:
+ * tidak berlaku ditolak dengan alasannya tanpa mengubah apa pun. Tautan milik Member nonaktif juga tidak
+ * ditandai sudah dipakai, supaya bisa dipakai lagi bila Member diaktifkan kembali dalam 30 menitnya. Bila berlaku, dalam satu transaksi:
  * password baru disimpan, tautan ditandai sudah dipakai, semua sesi Member itu dihapus sehingga ia keluar
  * dari semua perangkat, dan kunci login 15 menit untuk emailnya dicabut dengan hitungan salah kembali ke 0
  * (PRD §7.7). Panjang password baru sudah diperiksa pemanggil.

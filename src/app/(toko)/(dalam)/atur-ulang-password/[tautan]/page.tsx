@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { bacaTautanAturUlangPassword } from "@/server/auth/atur-ulang-password";
+import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { PesanGalat } from "../../../../_masuk/form-masuk";
 import { KELAS_TOMBOL_UTAMA } from "../../../_components/bilah-lekat";
+import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { FormAturUlangPassword } from "./_components/form-atur-ulang-password";
 import {
   PESAN_TAUTAN_TIDAK_BERLAKU,
@@ -22,8 +24,9 @@ export const metadata: Metadata = {
 
 // Halaman di Tautan atur ulang password (PRD §7.5 ▶ Keputusan 2026-11-17). Tautan yang masih berlaku
 // menampilkan form password baru. Tautan yang tidak berlaku lagi ditolak dengan pesan menurut alasannya:
-// kedaluwarsa, sudah dipakai, atau diganti tautan yang lebih baru. Alamat yang tidak dikenal menampilkan
-// halaman tidak ditemukan.
+// kedaluwarsa, sudah dipakai, atau diganti tautan yang lebih baru. Tautan milik Member nonaktif menampilkan
+// pesan nonaktif beserta tombol WhatsApp dari Pengaturan toko; tanpa nomor WhatsApp, hanya pesannya yang
+// tampil. Alamat yang tidak dikenal menampilkan halaman tidak ditemukan.
 export default async function HalamanAturUlangPassword({
   params,
 }: PageProps<"/atur-ulang-password/[tautan]">) {
@@ -33,6 +36,11 @@ export default async function HalamanAturUlangPassword({
   if (!tautan.success) notFound();
   const keadaan = await bacaTautanAturUlangPassword(tautan.data);
   if (keadaan.keadaan === "tidak-dikenal") notFound();
+  const memberNonaktif =
+    keadaan.keadaan === "tidak-berlaku" && keadaan.alasan === "member-nonaktif";
+  const nomorWhatsapp = memberNonaktif
+    ? (await bacaPengaturanToko()).nomorWhatsapp
+    : null;
 
   return (
     <div className="max-w-[440px]">
@@ -49,9 +57,15 @@ export default async function HalamanAturUlangPassword({
           <PesanGalat id="tautan-galat" peran="alert">
             {PESAN_TAUTAN_TIDAK_BERLAKU[keadaan.alasan]}
           </PesanGalat>
-          <Link href="/lupa-password" className={KELAS_TOMBOL_UTAMA}>
-            Minta tautan baru
-          </Link>
+          {memberNonaktif ? (
+            <TombolWhatsApp nomor={nomorWhatsapp}>
+              Hubungi kami di WhatsApp
+            </TombolWhatsApp>
+          ) : (
+            <Link href="/lupa-password" className={KELAS_TOMBOL_UTAMA}>
+              Minta tautan baru
+            </Link>
+          )}
         </section>
       )}
     </div>
