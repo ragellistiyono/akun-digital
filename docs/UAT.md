@@ -648,12 +648,23 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Langkah 2: toko tetap terang setelah dibuka lagi.
 - PRD: §11.3
 
+▶ Keputusan 2026-11-18 (#188): Pilihan mode ada di bagian "Tampilan" tab Akun, sebelum tombol WhatsApp, untuk Tamu dan Member.
+- Langkah tambahan: pilih "Perangkat", lalu ubah ponsel ke mode gelap. Hasil: toko kembali mengikuti ponsel dan tampil gelap.
+- Langkah tambahan: pilih "Gelap" di tab Akun, lalu buka dasbor admin di browser yang sama. Hasil: dasbor admin juga tampil gelap.
+
 **UAT-K4 — Pasang seperti aplikasi (M3)**
 - Langkah: di ponsel, pilih "Tambahkan ke layar utama", lalu buka dari ikonnya.
 - Hasil:
   - Toko terbuka dengan ikon dan layar pembuka sendiri, tanpa bilah alamat.
   - Dalam mode pesawat, toko tidak bisa dipakai.
 - PRD: §11.4
+
+▶ Keputusan 2026-11-18 (#188): Hasil UAT-K4 dipertegas.
+- Di bawah ikon tertulis "MIWE Digital", dan ikonnya logo MIWE dengan foto senja.
+- Layar pembuka berlatar ungu langit dengan logo di tengah dan nama "MIWE Digital Store", di Android dan iPhone.
+- Bilah status ponsel berwarna ungu langit.
+- Dalam mode pesawat, yang tampil adalah halaman galat bawaan browser.
+- Toko tidak punya tombol "Pasang aplikasi".
 
 **UAT-K5 — Sesuai sistem desain**
 - Langkah: bandingkan beberapa halaman dengan `docs/DESIGN.md`.

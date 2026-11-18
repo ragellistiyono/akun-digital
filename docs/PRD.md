@@ -810,10 +810,22 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - Tampilan mengikuti mode terang atau gelap di perangkat.
 - Tab Akun punya tombol untuk mengganti mode. Pilihan itu diingat di perangkat tersebut dan mengalahkan pengaturan perangkat.
 
+▶ Keputusan 2026-11-18 (#188): Pilihan mode
+- Tab Akun punya bagian "Tampilan" berisi tiga pilihan: Perangkat, Terang, dan Gelap. Di bawahnya tertulis "Pilihan ini hanya diingat di perangkat ini." Pilihan awalnya Perangkat.
+- Bagian itu terletak setelah tombol "Masuk" dan "Daftar" untuk Tamu, atau setelah tombol "Keluar" untuk Member, dan sebelum tombol WhatsApp. Tamu dan Member sama-sama melihatnya.
+- Pilihan itu juga berlaku di dasbor admin bila dibuka di browser yang sama. Dasbor admin tidak punya tombol mode sendiri.
+
 ### 11.4 Pasang seperti aplikasi
 
 - Pembeli bisa memasang toko lewat "Tambahkan ke layar utama". Setelah dipasang, toko terbuka dengan ikon dan layar pembuka sendiri, tanpa bilah alamat browser.
 - Toko tidak bisa dipakai saat offline dan tidak mengirim notifikasi push.
+
+▶ Keputusan 2026-11-18 (#188): Pasang seperti aplikasi
+- **Nama.** Di bawah ikon di layar utama tertulis "MIWE Digital". Nama lengkap "MIWE Digital Store" tampil di layar pembuka.
+- **Ikon.** Ikon memakai logo asli `docs/input/logo.png` utuh, termasuk foto senja dan tulisan kecilnya. Di ponsel yang memotong ikon menjadi bulat, logo diperkecil di atas warna `langit` (#2A1F4D) supaya huruf MDS tidak terpotong.
+- **Layar pembuka.** Latarnya `langit` (#2A1F4D), dengan logo di tengah dan nama "MIWE Digital Store", sama di mode terang dan gelap, di Android dan iPhone. Bilah status ponsel ikut berwarna `langit`.
+- **Tanpa internet.** Yang tampil adalah halaman galat bawaan browser. Toko tidak punya halaman offline sendiri.
+- **Tidak ada tombol pasang.** Toko tidak punya tombol "Pasang aplikasi". Pembeli memakai menu "Tambahkan ke layar utama" di browser.
 
 ### 11.5 Sistem desain
 
