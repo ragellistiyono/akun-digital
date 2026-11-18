@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -39,14 +39,48 @@ function indeksTabAktif(pathname: string) {
 const KELAS_PENANDA =
   "pointer-events-none absolute transition-transform duration-450 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
+// Navigasi bawah bersembunyi saat digulir ke bawah melewati 120 px, dan muncul lagi saat digulir ke atas
+// (DESIGN.md Layout "Gerak responsif"). Gerakan 6 px atau kurang diabaikan supaya navigasi tidak berkedip.
+const AMBANG_SEMBUNYI_PX = 120;
+const GERAK_DIABAIKAN_PX = 6;
+
+// Bersembunyi atau tidaknya navigasi bawah setelah halaman digulir dari `yLalu` ke `y`, atau `null` bila
+// gerakannya terlalu kecil untuk mengubah apa pun.
+function sembunyiSetelahGulir(y: number, yLalu: number): boolean | null {
+  if (y <= AMBANG_SEMBUNYI_PX) return false;
+  if (Math.abs(y - yLalu) <= GERAK_DIABAIKAN_PX) return null;
+  return y > yLalu;
+}
+
 export function NavigasiBawah() {
   const pathname = usePathname();
   const indeksAktif = indeksTabAktif(pathname);
+  const [sembunyi, setSembunyi] = useState(false);
 
+  useEffect(() => {
+    let yLalu = window.scrollY;
+    const perbarui = () => {
+      const y = window.scrollY;
+      const hasil = sembunyiSetelahGulir(y, yLalu);
+      if (hasil === null) return;
+      setSembunyi(hasil);
+      yLalu = y;
+    };
+    window.addEventListener("scroll", perbarui, { passive: true });
+    return () => window.removeEventListener("scroll", perbarui);
+  }, []);
+
+  // `data-sembunyi` menggeser navigasi ke bawah layar, dan bilah lekat ikut turun lewat selektor
+  // `body:has([data-navigasi-bawah][data-sembunyi])`. Geserannya 40 px lebih jauh dari tinggi navigasi,
+  // supaya matahari penanda dan pendarnya, yang naik di atas garis navigasi, ikut keluar dari layar. Tab
+  // yang mendapat fokus, misalnya lewat Tab di papan ketik, memunculkan navigasi lagi supaya terlihat.
   return (
     <nav
       aria-label="Navigasi utama"
-      className="fixed inset-x-0 bottom-0 z-40 h-[calc(76px+env(safe-area-inset-bottom))] border-t border-garis bg-permukaan pb-[env(safe-area-inset-bottom)] lebar:hidden"
+      data-navigasi-bawah=""
+      data-sembunyi={sembunyi ? "" : undefined}
+      onFocus={() => setSembunyi(false)}
+      className="fixed inset-x-0 bottom-0 z-40 h-[calc(76px+env(safe-area-inset-bottom))] border-t border-garis bg-permukaan pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-[cubic-bezier(.16,1,.3,1)] data-sembunyi:translate-y-[calc(100%+40px)] motion-reduce:transition-none motion-reduce:duration-0 lebar:hidden"
     >
       <ul className="grid h-full grid-cols-4">
         {TAB_TOKO.map(({ href, label, ikon: Ikon }) => {
