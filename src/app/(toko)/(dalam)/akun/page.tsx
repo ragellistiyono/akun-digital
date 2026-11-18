@@ -8,12 +8,15 @@ import { TautanHalamanHukum } from "../../_components/tautan-halaman-hukum";
 import { TombolWhatsApp } from "../../_components/tombol-whatsapp";
 import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
 import { FormGantiPassword } from "./_components/form-ganti-password";
+import { KontrolMode } from "./_components/kontrol-mode";
 import { aksiKeluarMember } from "./aksi";
 
 // Tab Akun (PRD §11.1). Member yang login melihat emailnya, form ganti password (T46, PRD §7.6), dan
 // tombol "Keluar" (T41), di atas tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan
 // Privasi. Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat tombol "Masuk" dan
-// "Daftar" di atas tombol WhatsApp dan tautan yang sama (PRD §11.1 ▶ Keputusan 2026-11-17).
+// "Daftar" di atas tombol WhatsApp dan tautan yang sama (PRD §11.1 ▶ Keputusan 2026-11-17). Di antara
+// keduanya ada bagian "Tampilan" dengan pilihan mode, untuk Tamu dan Member (PRD §11.3 ▶ Keputusan
+// 2026-11-18).
 export default async function HalamanAkun() {
   // Nomor WhatsApp dibaca setiap kali halaman dibuka, supaya perubahan Admin langsung tampil.
   await connection();
@@ -50,6 +53,7 @@ export default async function HalamanAkun() {
         ) : (
           <TombolMasukDaftar className="w-full max-w-[440px]" />
         )}
+        <KontrolMode className="w-full max-w-[440px]" />
         <TombolWhatsApp nomor={nomorWhatsapp}>
           Hubungi kami di WhatsApp
         </TombolWhatsApp>
