@@ -52,7 +52,8 @@ function JumlahBermasalah({ jumlah }: { jumlah: number }) {
 
 // Kerangka menu dasbor admin (PRD §11.1, DESIGN.md Navigation): menu lipat di bawah 900 px,
 // menu samping mulai 900 px. Dasbor admin tidak memakai navigasi bawah toko. Menu Pesanan menampilkan
-// jumlah Pesanan Bermasalah bila ada (PRD §5.9).
+// jumlah Pesanan Bermasalah bila ada (PRD §5.9). Ruang env(safe-area-inset-top) menjaga isinya dari jam dan
+// poni iPhone saat bilah status tembus (layar-pembuka-iphone.ts).
 export function MenuAdmin({
   jumlahPesananBermasalah,
 }: {
@@ -62,7 +63,7 @@ export function MenuAdmin({
   const [terbuka, setTerbuka] = useState(false);
 
   return (
-    <div className="sticky top-0 z-30 bg-langit text-langit-teks lebar:flex lebar:h-dvh lebar:w-60 lebar:shrink-0 lebar:flex-col">
+    <div className="sticky top-0 z-30 bg-langit pt-[env(safe-area-inset-top)] text-langit-teks lebar:flex lebar:h-dvh lebar:w-60 lebar:shrink-0 lebar:flex-col">
       <div className="flex h-16 items-center justify-between gap-4 px-4">
         <MerekAdmin />
         <button

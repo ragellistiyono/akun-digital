@@ -14,7 +14,8 @@ export default async function HalamanLoginAdmin() {
 
   return (
     <>
-      <header className="bg-langit text-langit-teks">
+      {/* Ruang env(safe-area-inset-top) menjaga merek dari jam dan poni iPhone saat bilah status tembus. */}
+      <header className="bg-langit pt-[env(safe-area-inset-top)] text-langit-teks">
         <div className="mx-auto flex h-16 max-w-[1120px] items-center px-4">
           <MerekAdmin />
         </div>

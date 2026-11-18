@@ -13,6 +13,10 @@ const AMBANG_CIUT_PX = 24;
 // perubahan tinggi bilah tidak menggeser isi halaman: browser tidak menyesuaikan posisi gulir, sehingga
 // bilah tidak berkedip bolak-balik di sekitar ambang, dan isi yang tergulir tampil di 12 px yang dilepas
 // bilah.
+//
+// Di iPhone yang membuka toko dari layar utama, bilah status tembus (layar-pembuka-iphone.ts), jadi bilah
+// dan pengganjalnya ditambah env(safe-area-inset-top) supaya isinya tidak tertutup jam dan poni. Di browser
+// tanpa poni nilainya 0.
 export function KerangkaBilahAtas({ children }: { children: ReactNode }) {
   const [ciut, setCiut] = useState(false);
 
@@ -27,11 +31,14 @@ export function KerangkaBilahAtas({ children }: { children: ReactNode }) {
     <>
       <header
         data-ciut={ciut ? "" : undefined}
-        className="group fixed inset-x-0 top-0 z-30 bg-langit text-langit-teks transition-shadow duration-250 ease-[cubic-bezier(.16,1,.3,1)] data-ciut:[box-shadow:var(--bayang-bilah)] motion-reduce:transition-none motion-reduce:duration-0"
+        className="group fixed inset-x-0 top-0 z-30 bg-langit pt-[env(safe-area-inset-top)] text-langit-teks transition-shadow duration-250 ease-[cubic-bezier(.16,1,.3,1)] data-ciut:[box-shadow:var(--bayang-bilah)] motion-reduce:transition-none motion-reduce:duration-0"
       >
         {children}
       </header>
-      <div aria-hidden="true" className="h-16" />
+      <div
+        aria-hidden="true"
+        className="h-[calc(4rem+env(safe-area-inset-top))]"
+      />
     </>
   );
 }
