@@ -1,0 +1,20 @@
+{
+  "name": "MIWE Digital Store",
+  "short_name": "MIWE Digital",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#2A1F4D",
+  "theme_color": "#2A1F4D",
+  "lang": "id",
+  "icons": [
+    { "src": "/ikon/ikon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/ikon/ikon-512.png", "sizes": "512x512", "type": "image/png" },
+    {
+      "src": "/ikon/ikon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
