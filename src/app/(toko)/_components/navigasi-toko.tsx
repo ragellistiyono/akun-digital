@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLayoutEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -27,21 +28,20 @@ function isTabAktif(href: string, pathname: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Penanda tab aktif berbentuk matahari terbit (DESIGN.md). Masih diam; pergeserannya milik M3.
-function PenandaMatahari({ className }: { className: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-t-full bg-matahari",
-        className,
-      )}
-    />
-  );
+// Urutan tab aktif di TAB_TOKO, atau -1 di halaman di luar keempat tab (misalnya Halaman Produk).
+function indeksTabAktif(pathname: string) {
+  return TAB_TOKO.findIndex(({ href }) => isTabAktif(href, pathname));
 }
+
+// Penanda tab aktif berbentuk matahari terbit (DESIGN.md "Penanda tab aktif: matahari terbit"). Satu
+// elemen per navigasi yang bergeser ke tab baru dalam 0,45 dtk dengan easing standar (PRD §11.2), dan
+// langsung melompat saat gerak dikurangi. Elemennya `aria-hidden`; tab aktif ditandai `aria-current`.
+const KELAS_PENANDA =
+  "pointer-events-none absolute transition-transform duration-450 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 export function NavigasiBawah() {
   const pathname = usePathname();
+  const indeksAktif = indeksTabAktif(pathname);
 
   return (
     <nav
@@ -57,13 +57,10 @@ export function NavigasiBawah() {
                 href={href}
                 aria-current={aktif ? "page" : undefined}
                 className={cn(
-                  "relative flex h-full flex-col items-center justify-center gap-1 text-xs font-extrabold",
+                  "flex h-full flex-col items-center justify-center gap-1 text-xs font-extrabold",
                   aktif ? "text-tinta" : "text-tinta-redup",
                 )}
               >
-                {aktif && (
-                  <PenandaMatahari className="-top-3.5 h-3.5 w-7 shadow-[0_-2px_14px_3px_color-mix(in_srgb,var(--matahari)_55%,transparent)]" />
-                )}
                 <Ikon aria-hidden="true" className="size-6" />
                 {label}
               </Link>
@@ -71,16 +68,61 @@ export function NavigasiBawah() {
           );
         })}
       </ul>
+      {/* Penanda selebar satu tab, digeser satu lebar tab per langkah. Matahari 28×14 px duduk di garis
+          atas navigasi, di tengah tab aktif. */}
+      {indeksAktif >= 0 && (
+        <span
+          data-penanda-tab=""
+          aria-hidden="true"
+          className={cn(KELAS_PENANDA, "top-0 left-0 w-1/4")}
+          style={{ transform: `translateX(${indeksAktif * 100}%)` }}
+        >
+          <span className="absolute -top-3.5 left-1/2 h-3.5 w-7 -translate-x-1/2 rounded-t-full bg-matahari shadow-[0_-2px_14px_3px_color-mix(in_srgb,var(--matahari)_55%,transparent)]" />
+        </span>
+      )}
     </nav>
   );
 }
 
+// Posisi penanda navbar atas dalam piksel, relatif terhadap <nav>: titik tengah tautan aktif dan tepi
+// atas penanda, 2 px di bawah tautan.
+type PosisiPenanda = { pusat: number; atas: number };
+
 export function NavbarAtas() {
   const pathname = usePathname();
+  const indeksAktif = indeksTabAktif(pathname);
+  const daftarRef = useRef<HTMLUListElement>(null);
+  const [posisi, setPosisi] = useState<PosisiPenanda | null>(null);
+
+  // Lebar tautan berbeda-beda, jadi posisi penanda diukur dari tautan aktif. Ukuran tautan bisa berubah
+  // setelah huruf termuat atau saat layar melebar melewati 900 px, jadi pengukuran diulang lewat
+  // ResizeObserver. Pengukuran berjalan sebelum browser melukis, sehingga penanda langsung bergeser dari
+  // posisi lama ke posisi baru.
+  useLayoutEffect(() => {
+    const daftar = daftarRef.current;
+    if (!daftar || indeksAktif < 0) {
+      setPosisi(null);
+      return;
+    }
+    const semuaTautan = Array.from(daftar.querySelectorAll("a"));
+    const tautan = semuaTautan[indeksAktif];
+    const ukur = () =>
+      setPosisi({
+        pusat: tautan.offsetLeft + tautan.offsetWidth / 2,
+        atas: tautan.offsetTop + tautan.offsetHeight + 2,
+      });
+    ukur();
+    const pengamat = new ResizeObserver(ukur);
+    for (const el of semuaTautan) pengamat.observe(el);
+    return () => pengamat.disconnect();
+  }, [indeksAktif]);
 
   return (
-    <nav aria-label="Navigasi utama" className="ml-6 hidden lebar:block">
-      <ul className="flex gap-1">
+    <nav
+      aria-label="Navigasi utama"
+      className="relative ml-6 hidden lebar:block"
+    >
+      <ul ref={daftarRef} className="flex gap-1">
         {TAB_TOKO.map(({ href, label }) => {
           const aktif = isTabAktif(href, pathname);
           return (
@@ -89,21 +131,33 @@ export function NavbarAtas() {
                 href={href}
                 aria-current={aktif ? "page" : undefined}
                 className={cn(
-                  "relative inline-flex h-10 items-center rounded-md px-4 text-[15px] font-bold hover:bg-langit-2",
+                  "inline-flex h-10 items-center rounded-md px-4 text-[15px] font-bold hover:bg-langit-2",
                   aktif
                     ? "text-teks-di-aksi"
                     : "text-langit-redup hover:text-langit-teks",
                 )}
               >
                 {label}
-                {aktif && (
-                  <PenandaMatahari className="-bottom-3 h-2.5 w-5 shadow-[0_-2px_12px_2px_color-mix(in_srgb,var(--matahari)_60%,transparent)]" />
-                )}
               </Link>
             </li>
           );
         })}
       </ul>
+      {/* Matahari 20×10 px di tepi bawah bilah langit, di bawah tautan aktif. */}
+      {indeksAktif >= 0 && posisi && (
+        <span
+          data-penanda-tab=""
+          aria-hidden="true"
+          className={cn(
+            KELAS_PENANDA,
+            "left-0 -ml-2.5 h-2.5 w-5 rounded-t-full bg-matahari shadow-[0_-2px_12px_2px_color-mix(in_srgb,var(--matahari)_60%,transparent)]",
+          )}
+          style={{
+            top: posisi.atas,
+            transform: `translateX(${posisi.pusat}px)`,
+          }}
+        />
+      )}
     </nav>
   );
 }
