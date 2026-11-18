@@ -476,6 +476,8 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 - Selama Member nonaktif (§2.3), tautan atur ulang password miliknya tidak bisa dipakai, walaupun dikirim saat Member masih aktif dan 30 menitnya belum habis. Membuka tautan itu menampilkan "Akun Member ini dinonaktifkan, jadi password tidak bisa diganti. Hubungi kami di WhatsApp." beserta tombol WhatsApp, dan password tidak berubah.
 - Contoh: tautan dikirim ke Budi pukul 10.00. Pukul 10.05 Admin menonaktifkan Budi. Pukul 10.10 Budi membuka tautan itu dan melihat pesan nonaktif. Password Budi tetap yang lama.
 
+▶ Keputusan 2026-11-18 (#186): Alasan nonaktif berada paling atas dalam urutan alasan tautan tidak berlaku. Tautan milik Member nonaktif yang juga sudah dipakai, sudah diganti tautan baru, atau kedaluwarsa tetap menampilkan pesan Member nonaktif beserta tombol WhatsApp, bukan pesan alasan lain dengan tombol "Minta tautan baru". Lupa password tidak mengirim tautan ke Member nonaktif, jadi tombol itu tidak berguna baginya.
+
 ### 7.6 Dasbor Member
 
 - Dasbor Member berisi Riwayat Pesanan, dengan Item stok yang bisa dibuka dan disalin; profil untuk mengganti password; dan tombol keluar.
@@ -497,6 +499,8 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
   - ganti password yang berhasil mengembalikan hitungan ke 0, dan setelah 15 menit hitungan juga mulai lagi dari 0;
   - kunci ini tidak memengaruhi login. Member tetap bisa login dan tetap masuk di perangkat yang sedang dipakai.
 - Contoh: Member salah memasukkan password lama untuk kelima kalinya pukul 10.00. Pukul 10.14 ganti password ditolak dengan pesan kunci walaupun password lamanya benar. Pukul 10.15 ganti password dengan password lama yang benar berhasil. Contoh lengkapnya ada di `tests/golden/batas-ganti-password.json`.
+
+▶ Keputusan 2026-11-18 (#186): Kesalahan password lama yang kelima langsung menampilkan pesan kunci 15 menit, bukan "Password lama salah, jadi password tidak diganti.", sama seperti pesan kunci login yang tampil sejak kesalahan kelima (§7.7).
 
 ### 7.7 Keamanan Kode verifikasi dan login
 
@@ -620,6 +624,8 @@ Bila lebih dari satu syarat tidak terpenuhi, yang tampil adalah pesan yang palin
 - Hasil "Pakai" hanya berlaku untuk kode yang diperiksa. Begitu isian kode diubah, hasil itu hilang, dan rincian kembali tanpa potongan sampai "Pakai" ditekan lagi.
 - Setelah login lewat tautan Masuk dari pesan "Voucher khusus Member, silakan login", Member kembali ke Checkout Varian yang sama dengan isian kode voucher sudah berisi kode yang tadi diketik. Member lalu menekan "Pakai" atau langsung membayar.
 - Contoh: Tamu mengetik `member20` di Checkout Netflix Premium 1 Bulan dan menekan "Pakai". Ia mengetuk tautan Masuk, lalu login. Ia kembali ke Checkout Netflix Premium 1 Bulan dengan isian kode berisi `MEMBER20`.
+
+▶ Keputusan 2026-11-18 (#186): Kode yang terisi setelah login ditulis dalam huruf kapital tanpa spasi di awal atau akhir (kode tidak membedakan huruf besar dan kecil, §8.1), bukan persis seperti yang diketik. Contoh: `member20` terisi sebagai `MEMBER20`.
 
 ### 8.8 Kelola voucher
 
