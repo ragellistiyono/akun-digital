@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { SKRIP_MODE_AWAL } from "./_mode/mode-tampilan";
 import "./globals.css";
+import { pengaturanIphone } from "./layar-pembuka-iphone";
 import manifest from "./manifest.json";
 
 // Manrope dimuat sebagai font variabel, jadi satu berkas mencakup tebal 400–800.
@@ -25,6 +26,8 @@ export const metadata: Metadata = {
   icons: {
     apple: { url: "/ikon/apple-touch-icon.png", sizes: "180x180" },
   },
+  // Judul di bawah ikon layar utama iPhone sama dengan nama pendek di manifest (PRD §11.4).
+  ...pengaturanIphone(manifest.short_name),
 };
 
 // viewport-fit=cover membuat env(safe-area-inset-bottom) terisi di ponsel berponi.
