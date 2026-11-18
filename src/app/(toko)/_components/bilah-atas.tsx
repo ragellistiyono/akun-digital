@@ -5,7 +5,13 @@ import Link from "next/link";
 import { labelMember } from "@/domain/label-member";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 
+import { KerangkaBilahAtas } from "./kerangka-bilah-atas";
 import { NavbarAtas } from "./navigasi-toko";
+
+// Gerak bilah ciut (DESIGN.md Layout "Gerak responsif"): easing standar, tanpa transisi di bawah
+// prefers-reduced-motion.
+const KELAS_GERAK =
+  "duration-250 ease-[cubic-bezier(.16,1,.3,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 // Tombol langit (DESIGN.md Buttons): pil 40 px dengan garis langit-garis di atas langit, hover langit-2.
 const KELAS_TOMBOL_LANGIT =
@@ -15,12 +21,14 @@ export async function BilahAtas() {
   const sesiMember = await bacaSesiMember(await headers());
 
   return (
-    <header className="sticky top-0 z-30 bg-langit text-langit-teks">
-      <div className="mx-auto flex h-16 max-w-[1120px] items-center gap-4 px-4">
+    <KerangkaBilahAtas>
+      <div
+        className={`mx-auto flex h-16 max-w-[1120px] items-center gap-4 px-4 transition-[height] group-data-ciut:h-[52px] ${KELAS_GERAK}`}
+      >
         <Link
           href="/"
           aria-label="MIWE Digital Store, beranda"
-          className="text-[28px] leading-none font-extrabold tracking-[-0.045em] text-monogram"
+          className={`text-[28px] leading-none font-extrabold tracking-[-0.045em] text-monogram transition-[font-size] group-data-ciut:text-[24px] ${KELAS_GERAK}`}
         >
           MDS
           <span className="ml-2 hidden text-[13px] font-bold tracking-normal text-langit-redup lebar:inline">
@@ -45,6 +53,6 @@ export async function BilahAtas() {
           </Link>
         )}
       </div>
-    </header>
+    </KerangkaBilahAtas>
   );
 }
