@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { SKRIP_MODE_AWAL } from "./_mode/mode-tampilan";
 import "./globals.css";
+import manifest from "./manifest.json";
 
 // Manrope dimuat sebagai font variabel, jadi satu berkas mencakup tebal 400–800.
 const manrope = Manrope({
@@ -21,11 +22,21 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "MIWE Digital Store",
+  icons: {
+    apple: { url: "/ikon/apple-touch-icon.png", sizes: "180x180" },
+  },
 };
 
 // viewport-fit=cover membuat env(safe-area-inset-bottom) terisi di ponsel berponi.
+//
+// Pasang seperti aplikasi (PRD §11.4 ▶ Keputusan 2026-11-18): manifest.json di folder ini ditautkan Next.js
+// ke semua halaman. Browser dan sistem ponsel tidak bisa membaca token CSS, jadi warna `langit` ditulis
+// sebagai nilai di manifest itu, dan bilah status ponsel mengambil warna yang sama dari sana, di mode terang
+// maupun gelap. Ikon di public/ikon/ dibuat sekali dari docs/input/logo.png; ikon maskable memuat logo
+// selebar 80% di tengah latar `langit`, supaya huruf MDS tidak terpotong di ponsel yang memotong ikon bulat.
 export const viewport: Viewport = {
   viewportFit: "cover",
+  themeColor: manifest.theme_color,
 };
 
 // Script mode tampilan berjalan di <head> sebelum isi halaman dilukis, jadi halaman langsung tampil dengan
