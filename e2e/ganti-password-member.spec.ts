@@ -181,10 +181,13 @@ test("tab Akun Member tidak punya isian ganti email maupun tombol hapus akun", a
   await expect(
     isi(page).getByRole("button", { name: "Ganti password" }),
   ).toBeVisible();
-  // Isian di tab Akun hanya password lama dan password baru; email tampil sebagai teks.
+  // Isian di tab Akun hanya password lama dan password baru; email tampil sebagai teks. Radio pilihan mode
+  // tampilan (T64, PRD §11.3) bukan isian data akun.
   await expect(isi(page).getByRole("textbox")).toHaveCount(2);
   await expect(
-    isi(page).locator("input:not([type=password]):not([type=hidden])"),
+    isi(page).locator(
+      "input:not([type=password]):not([type=hidden]):not([type=radio])",
+    ),
   ).toHaveCount(0);
   await expect(isi(page).getByLabel(/email/i)).toHaveCount(0);
   await expect(isi(page).getByText(/hapus akun/i)).toHaveCount(0);

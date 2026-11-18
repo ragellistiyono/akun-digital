@@ -192,6 +192,47 @@ test("Member nonaktif yang login dengan password benar melihat pesan nonaktif da
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
 });
 
+// Issue T64 dan PRD §11.3 ▶ Keputusan 2026-11-18: bagian "Tampilan" terletak setelah tombol "Masuk" dan
+// "Daftar" (Tamu) atau "Keluar" (Member), dan sebelum tombol WhatsApp.
+test("bagian Tampilan di tab Akun berada sebelum tombol WhatsApp, untuk Tamu dan Member", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+  await page.getByLabel("Nomor WhatsApp").fill("0812-3456-7890");
+  await simpan(page);
+  await page.context().clearCookies();
+
+  const isi = page.getByRole("main");
+  const atas = async (elemen: ReturnType<Page["locator"]>) => {
+    await expect(elemen).toBeVisible();
+    return (await elemen.boundingBox())!.y;
+  };
+  const modeTampilan = isi.getByRole("radiogroup", { name: "Mode tampilan" });
+  const whatsapp = isi.getByRole("link", { name: "Hubungi kami di WhatsApp" });
+
+  await page.goto("/akun");
+  expect(
+    await atas(isi.getByRole("link", { name: "Daftar", exact: true })),
+  ).toBeLessThan(await atas(modeTampilan));
+  expect(await atas(modeTampilan)).toBeLessThan(await atas(whatsapp));
+
+  const email = `member-${randomUUID()}@example.test`;
+  const passwordMember = "sandi-uji-member-123";
+  await sisipkanMember({ email, password: passwordMember });
+  await page.goto("/masuk");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(passwordMember);
+  await page.getByRole("button", { name: "Masuk" }).click();
+  await expect(page).toHaveURL("/riwayat");
+
+  await page.goto("/akun");
+  expect(await atas(isi.getByRole("button", { name: "Keluar" }))).toBeLessThan(
+    await atas(modeTampilan),
+  );
+  expect(await atas(modeTampilan)).toBeLessThan(await atas(whatsapp));
+});
+
 /** Member nonaktif baru dengan email unik. Hasilnya email Member itu. */
 async function memberNonaktifBaru() {
   const email = `member-${randomUUID()}@example.test`;

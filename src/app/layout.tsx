@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+import { SKRIP_MODE_AWAL } from "./_mode/mode-tampilan";
 import "./globals.css";
 
 // Manrope dimuat sebagai font variabel, jadi satu berkas mencakup tebal 400–800.
@@ -27,9 +28,19 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Script mode tampilan berjalan di <head> sebelum isi halaman dilukis, jadi halaman langsung tampil dengan
+// mode pilihan (PRD §11.3). Script itu memasang data-mode pada <html> sebelum hidrasi, sehingga peringatan
+// hidrasi untuk atribut <html> dimatikan.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="id" className={cn(manrope.variable, jetbrainsMono.variable)}>
+    <html
+      lang="id"
+      className={cn(manrope.variable, jetbrainsMono.variable)}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SKRIP_MODE_AWAL }} />
+      </head>
       <body className="min-h-dvh antialiased">{children}</body>
     </html>
   );
