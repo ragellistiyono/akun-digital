@@ -26,8 +26,8 @@ for (const ukuran of UKURAN) {
     // Pemandangan dilukis di klien setelah wadahnya diukur.
     await expect(pita.locator("svg")).toBeVisible();
     expect((await pita.boundingBox())?.height).toBe(ukuran.pita);
-    // Lima lapis punggung gunung.
-    await expect(pita.locator("svg path")).toHaveCount(5);
+    // Tiga lapis punggung gunung coretan.
+    await expect(pita.locator("svg [data-lapis]")).toHaveCount(3);
     await expect(pemandangan(page, "tepi")).toHaveCount(0);
   });
 
@@ -42,11 +42,13 @@ for (const ukuran of UKURAN) {
       const tepi = pemandangan(page, "tepi");
       await expect(tepi.locator("svg")).toBeVisible();
       expect((await tepi.boundingBox())?.height).toBe(ukuran.tepi);
-      // Tiga lapis punggung gunung, tanpa matahari, bintang, dan awan.
-      await expect(tepi.locator("svg path")).toHaveCount(3);
-      await expect(tepi.locator("svg circle, svg ellipse[filter]")).toHaveCount(
-        0,
-      );
+      // Dua lapis punggung gunung, tanpa matahari, bulan, bintang, awan, dan burung.
+      await expect(tepi.locator("svg [data-lapis]")).toHaveCount(2);
+      await expect(
+        tepi.locator(
+          "[data-matahari], [data-bulan], [data-bintang], [data-awan], [data-burung]",
+        ),
+      ).toHaveCount(0);
       await expect(pemandangan(page, "pita")).toHaveCount(0);
     }
   });
@@ -91,23 +93,34 @@ test("pemandangan dilukis ulang saat mode berubah", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
 
-  // Mode terang (t ≈ 0,16): hanya pendar dan cakram matahari, belum ada bintang.
-  const lingkaran = pemandangan(page, "pita").locator("svg circle");
-  await expect(lingkaran).toHaveCount(2);
+  // Mode terang: matahari coretan, tanpa bulan dan bintang.
+  const pita = pemandangan(page, "pita");
+  const harapkanSiang = async () => {
+    await expect(pita.locator("[data-matahari]")).toHaveCount(1);
+    await expect(pita.locator("[data-bulan]")).toHaveCount(0);
+    await expect(pita.locator("[data-bintang]")).toHaveCount(0);
+  };
+  // Mode gelap (buku sketsa malam): bulan sabit dan 10 bintang coretan (DESIGN.md), baik lewat pilihan
+  // mode maupun skema perangkat.
+  const harapkanMalam = async () => {
+    await expect(pita.locator("[data-bulan]")).toHaveCount(1);
+    await expect(pita.locator("[data-matahari]")).toHaveCount(0);
+    await expect(pita.locator("[data-bintang]")).toHaveCount(10);
+  };
+  await harapkanSiang();
 
-  // Mode gelap (t ≈ 0,82): 46 bintang muncul (DESIGN.md), baik lewat pilihan mode maupun skema perangkat.
   await page.evaluate(() => {
     document.documentElement.dataset.mode = "gelap";
   });
-  await expect(lingkaran).toHaveCount(2 + 46);
+  await harapkanMalam();
 
   await page.evaluate(() => {
     delete document.documentElement.dataset.mode;
   });
-  await expect(lingkaran).toHaveCount(2);
+  await harapkanSiang();
 
   await page.emulateMedia({ colorScheme: "dark" });
-  await expect(lingkaran).toHaveCount(2 + 46);
+  await harapkanMalam();
 });
 
 test("pemandangan tidak memakai foto atau berkas gambar", async ({ page }) => {

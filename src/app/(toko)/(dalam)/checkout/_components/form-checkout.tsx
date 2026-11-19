@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
 
@@ -8,10 +9,7 @@ import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import type { bacaCheckout } from "@/server/pesanan";
 
-import {
-  BilahLekat,
-  KELAS_TOMBOL_UTAMA,
-} from "../../../_components/bilah-lekat";
+import { BilahLekat } from "../../../_components/bilah-lekat";
 import { PesanGalat } from "../../../_components/pesan-galat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
@@ -24,21 +22,17 @@ import {
 
 type IsiCheckout = NonNullable<Awaited<ReturnType<typeof bacaCheckout>>>;
 
-const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
+/** Panel (DESIGN.md "Cards / Containers"): padding 16 px, dan 24 px di layar lebar yang kolomnya lebih lapang. */
+const PANEL = "kartu p-4 lebar:p-6";
+
+/** Label 17 px di atas isian (DESIGN.md Inputs / Fields). */
+const KELAS_LABEL = "text-[17px] leading-tight";
 
 /**
- * Isian 52 px (DESIGN.md Inputs / Fields): garis `garis`, fokus `aksi` dengan halo, galat `st-masalah`.
- * Isian yang tidak bisa diubah berlatar Permukaan Lembut (`permukaan-2`).
+ * Tautan di dalam teks: pulpen biru yang digarisbawahi. Tautan ini hanya dipasang di atas `kertas` atau
+ * `permukaan`, supaya kontrasnya cukup.
  */
-const KELAS_ISIAN =
-  "h-[52px] rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta placeholder:text-tinta-redup read-only:bg-permukaan-2 focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
-
-/** Tombol garis 52 px (DESIGN.md Buttons) untuk aksi kedua, di sini "Pakai" di isian gabung kode voucher. */
-const KELAS_TOMBOL_GARIS =
-  "inline-flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram disabled:cursor-wait disabled:text-tinta-redup";
-
-const KELAS_TAUTAN =
-  "text-aksi-teks underline decoration-[1.5px] underline-offset-[3px]";
+const KELAS_TAUTAN = "text-pulpen underline decoration-2 underline-offset-4";
 
 /**
  * Hasil tombol "Pakai" beserta keadaan form saat tombol itu ditekan. Keadaan itu menentukan mana yang lebih baru:
@@ -55,9 +49,10 @@ type PakaiVoucher = {
  * Form checkout satu Varian (PRD §5.2, UAT-E7): isian email dengan pengingatnya dan isian kode voucher yang
  * opsional, rincian perkiraan dengan Kode unik yang belum diketahui (DESIGN.md "Rincian Total bayar"), kalimat
  * Syarat & Ketentuan bertaut tanpa kotak centang, lalu tombol "Bayar dengan QRIS" di bilah lekat. Di layar
- * lebar, isian dan rinciannya menjadi dua kolom sama lebar.
+ * lebar, isian dan rinciannya menjadi dua kolom sama lebar (DESIGN.md "Tata letak halaman", pola Dua kolom),
+ * dan kolom rincian lekat di bawah bilah atas.
  *
- * Kode voucher tampil dalam huruf kapital dengan tombol garis "Pakai" di sebelahnya (DESIGN.md Inputs, isian
+ * Kode voucher tampil dalam huruf kapital dengan tombol kedua "Pakai" di sebelahnya (DESIGN.md Inputs, isian
  * gabung). "Pakai" langsung memeriksa kode itu (PRD §8.7 ▶ Keputusan 2026-11-17): bila diterima, tampil
  * "<KODE> dipakai: potongan Rp X" berwarna `st-selesai`, dan rincian menampilkan "Potongan voucher (KODE)" beserta
  * Perkiraan bayar yang baru; bila ditolak, tampil pesan penolakannya. Kode diperiksa sekali lagi saat Pesanan
@@ -143,21 +138,19 @@ export function FormCheckout({
   }
 
   return (
-    <form
-      action={aksi}
-      noValidate
-      className="mt-6 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8"
-    >
+    <form action={aksi} noValidate className="tata-dua-kolom mt-6">
       <input type="hidden" name="varianId" value={checkout.varianId} />
 
       <div className="flex min-w-0 flex-col gap-6">
-        <p className={cn(PANEL, "[overflow-wrap:anywhere]")}>
-          <span className="font-extrabold">{checkout.namaProduk}</span>{" "}
-          <span className="text-tinta-redup">· {checkout.namaVarian}</span>
+        <p className={cn(PANEL, "-rotate-[0.6deg] [overflow-wrap:anywhere]")}>
+          <span className="font-spidol text-[20px] font-bold">
+            {checkout.namaProduk}
+          </span>{" "}
+          <span className="text-pensil-redup">· {checkout.namaVarian}</span>
         </p>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="email" className="text-sm font-bold">
+          <label htmlFor="email" className={KELAS_LABEL}>
             Email
           </label>
           <input
@@ -172,19 +165,19 @@ export function FormCheckout({
             readOnly={emailMember !== null}
             aria-invalid={galatEmail ? true : undefined}
             aria-describedby="email-keterangan"
-            className={KELAS_ISIAN}
+            className="isian"
           />
           {galatEmail ? (
             <PesanGalat id="email-keterangan" pesan={galatEmail} />
           ) : (
-            <p id="email-keterangan" className="text-[13px] text-tinta-redup">
+            <p id="email-keterangan" className="text-[15px] text-pensil-redup">
               Pastikan email benar, detail pesanan dikirim ke sini.
             </p>
           )}
         </div>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="kodeVoucher" className="text-sm font-bold">
+          <label htmlFor="kodeVoucher" className={KELAS_LABEL}>
             Kode voucher (opsional)
           </label>
           <div className="flex gap-2">
@@ -205,13 +198,14 @@ export function FormCheckout({
                   ? "kode-voucher-keterangan"
                   : undefined
               }
-              className={cn(KELAS_ISIAN, "min-w-0 flex-1 uppercase")}
+              className="isian min-w-0 flex-1 uppercase"
             />
             <button
               type="button"
               onClick={pakaiVoucher}
               disabled={sedangMemeriksa}
-              className={KELAS_TOMBOL_GARIS}
+              // Setinggi isian di sebelahnya (52 px), dengan bingkai 2 px yang sama tebalnya.
+              className="tombol tombol-kedua tombol-kecil min-h-[52px] shrink-0 px-5 disabled:cursor-wait"
             >
               Pakai
             </button>
@@ -237,8 +231,13 @@ export function FormCheckout({
             {voucherDipakai && (
               <p
                 id="kode-voucher-keterangan"
-                className="text-[13px] font-bold text-st-selesai"
+                className="flex items-start gap-2 text-[16px] leading-snug text-st-selesai"
               >
+                <Check
+                  aria-hidden="true"
+                  strokeWidth={2.5}
+                  className="mt-px size-5 shrink-0"
+                />
                 {voucherDipakai.kodeVoucher} dipakai: potongan{" "}
                 {rupiah(voucherDipakai.potonganVoucher)}
               </p>
@@ -247,7 +246,7 @@ export function FormCheckout({
         </div>
       </div>
 
-      <div className="min-w-0">
+      <div className="min-w-0 lebar:sticky lebar:top-24">
         <section aria-label="Rincian pembayaran" className={PANEL}>
           <RincianNominal
             baris={[
@@ -269,25 +268,23 @@ export function FormCheckout({
             ]}
             total={{
               label: "Perkiraan bayar",
+              // Nilai ini boleh patah baris di antara kedua bagiannya di layar sempit.
               nilai: (
-                <>
+                <span className="whitespace-normal">
                   <span className="whitespace-nowrap">
                     {rupiah(
                       voucherDipakai?.perkiraanBayar ?? checkout.perkiraanBayar,
                     )}
                   </span>{" "}
                   <span className="whitespace-nowrap">+ Kode unik</span>
-                </>
+                </span>
               ),
             }}
           />
         </section>
-        <p className="mt-4 text-[13px] text-tinta-redup">
+        <p className="mt-4 text-[15px] text-pensil-redup">
           Dengan membayar, Anda menyetujui{" "}
-          <Link
-            href="/syarat-ketentuan"
-            className="font-bold text-aksi-teks underline decoration-[1.5px] underline-offset-[3px]"
-          >
+          <Link href="/syarat-ketentuan" className={KELAS_TAUTAN}>
             Syarat &amp; Ketentuan
           </Link>
           .
@@ -301,11 +298,7 @@ export function FormCheckout({
           </div>
         )}
         <BilahLekat>
-          <button
-            type="submit"
-            disabled={sedangMemproses}
-            className={KELAS_TOMBOL_UTAMA}
-          >
+          <button type="submit" disabled={sedangMemproses} className="tombol">
             {sedangMemproses ? "Membuat QRIS…" : "Bayar dengan QRIS"}
           </button>
         </BilahLekat>

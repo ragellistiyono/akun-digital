@@ -81,8 +81,8 @@ test("dengan skema warna terang, token memakai nilai DESIGN.md", async ({
   const terang = harapan("terang");
   expect(await warnaToken(page)).toEqual(terang);
   expect(await warnaLatar(page)).toEqual({
-    halaman: terang.tanah,
-    bilahAtas: terang.langit,
+    halaman: terang.kertas,
+    bilahAtas: terang.kertas,
     navigasiBawah: terang.permukaan,
   });
 });
@@ -96,8 +96,8 @@ test("dengan skema warna gelap di perangkat, token berganti ke pasangan -gelap",
   const gelap = harapan("gelap");
   expect(await warnaToken(page)).toEqual(gelap);
   expect(await warnaLatar(page)).toEqual({
-    halaman: gelap.tanah,
-    bilahAtas: gelap.langit,
+    halaman: gelap.kertas,
+    bilahAtas: gelap.kertas,
     navigasiBawah: gelap.permukaan,
   });
 });
@@ -114,11 +114,10 @@ test('data-mode="gelap" mengganti token ke pasangan -gelap walau perangkat teran
   expect(await warnaToken(page)).toEqual(harapan("gelap"));
 });
 
-// DESIGN.md: kode memakai token, tidak pernah hex. Satu-satunya pengecualian adalah pelukis
-// pemandangan senja, karena warnanya hasil interpolasi kunci langit, bukan warna antarmuka.
-test("nilai hex mentah di kode src/ hanya ada di modul pelukis pemandangan", () => {
+// DESIGN.md: kode memakai token, tidak pernah hex. Pemandangan gunung coretan juga mewarnai lewat CSS
+// variable, jadi tidak ada pengecualian.
+test("tidak ada nilai hex mentah di kode src/", () => {
   const akar = path.resolve(__dirname, "../src");
-  const PELUKIS = "app/(toko)/_components/pelukis-pemandangan.ts";
   const HEX = /#[0-9A-Fa-f]{3,8}\b/;
   const adaHex = (berkas: string) =>
     HEX.test(readFileSync(path.join(akar, berkas), "utf8"));
@@ -127,10 +126,6 @@ test("nilai hex mentah di kode src/ hanya ada di modul pelukis pemandangan", () 
     .filter((berkas) => /\.tsx?$/.test(berkas))
     .map((berkas) => berkas.split(path.sep).join("/"));
 
-  // Pengecualian tetap menunjuk berkas yang ada dan memang memegang hex.
-  expect(berkasKode).toContain(PELUKIS);
-  expect(adaHex(PELUKIS)).toBe(true);
-  expect(
-    berkasKode.filter((berkas) => berkas !== PELUKIS && adaHex(berkas)),
-  ).toEqual([]);
+  expect(berkasKode.length).toBeGreaterThan(0);
+  expect(berkasKode.filter(adaHex)).toEqual([]);
 });

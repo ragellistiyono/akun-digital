@@ -22,7 +22,7 @@ export function FormLupaPassword() {
     <form
       action={aksi}
       noValidate
-      className="mt-6 flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu paku relative mt-6 flex flex-col gap-4 p-5"
     >
       <Isian
         nama="email"
@@ -33,14 +33,14 @@ export function FormLupaPassword() {
         galat={keadaan.galat}
       />
       {keadaan.pesan && (
-        <p role="status" className="text-[13px] font-bold text-st-selesai">
+        <p role="status" className="text-[16px] leading-snug text-st-selesai">
           {keadaan.pesan}
         </p>
       )}
       <button
         type="submit"
         disabled={sedangMengirim}
-        className="mt-2 inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup"
+        className="tombol mt-2 w-full"
       >
         {sedangMengirim ? "Mengirim…" : "Kirim tautan"}
       </button>

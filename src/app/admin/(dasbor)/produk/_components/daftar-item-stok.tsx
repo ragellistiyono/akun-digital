@@ -6,14 +6,6 @@ import type { daftarItemStokVarian } from "@/server/item-stok";
 import { BarisItemStok } from "./baris-item-stok";
 
 /**
- * Chip saringan 40 px (DESIGN.md Chips). Chip yang terpilih berlatar `langit` dengan teks putih, dan bergaris
- * `langit-garis` supaya tetap terlihat di atas panel pada mode gelap, tempat `langit` hampir sama dengan
- * `permukaan`.
- */
-const KELAS_CHIP =
-  "inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-garis bg-permukaan px-4 text-sm font-bold whitespace-nowrap text-tinta hover:border-monogram aria-[current=true]:border-langit-garis aria-[current=true]:bg-langit aria-[current=true]:text-teks-di-aksi";
-
-/**
  * Daftar Item stok sebuah Varian di halaman Varian dasbor admin (PRD §9.7): saringan menurut status lewat
  * `?status=` di alamat, lalu setiap Item stok beserta statusnya, Nomor Pesanan-nya, dan isi lengkapnya. Item
  * stok Tersedia bisa diubah atau dihapus (PRD §4.4). Jumlah Item stok per status di setiap chip adalah bahan
@@ -49,12 +41,9 @@ export function DaftarItemStok({
   return (
     <section
       aria-labelledby="daftar-item-stok-judul"
-      className="mt-4 flex max-w-[560px] flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 p-4 sm:p-6"
     >
-      <h2
-        id="daftar-item-stok-judul"
-        className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-      >
+      <h2 id="daftar-item-stok-judul" className="text-[26px]">
         Daftar Item stok
       </h2>
 
@@ -62,14 +51,15 @@ export function DaftarItemStok({
         <ul className="flex flex-wrap gap-2">
           {pilihan.map(({ label, status, jumlah }) => (
             <li key={label}>
-              {/* Alamat berganti tanpa menggulir halaman ke atas, karena daftar ini ada di bawah form. */}
+              {/* Alamat berganti tanpa menggulir halaman ke atas, karena daftar ini ada di bawah form. Chip
+                  yang terpilih (aria-current) menjadi catatan post-it lewat kelas `chip` di globals.css. */}
               <Link
                 href={
                   status === undefined ? alamat : `${alamat}?status=${status}`
                 }
                 scroll={false}
                 aria-current={status === saringan ? "true" : undefined}
-                className={KELAS_CHIP}
+                className="chip"
               >
                 {label} ({jumlah})
               </Link>
@@ -79,7 +69,7 @@ export function DaftarItemStok({
       </nav>
 
       {itemStok.length === 0 ? (
-        <p className="text-tinta-redup">
+        <p className="text-pensil-redup">
           {saringan === undefined
             ? "Belum ada Item stok. Isi Item stok lewat form di atas."
             : `Tidak ada Item stok berstatus ${saringan}. Pilih Semua untuk melihat Item stok lainnya.`}
@@ -87,7 +77,7 @@ export function DaftarItemStok({
       ) : (
         <ul
           aria-labelledby="daftar-item-stok-judul"
-          className="flex flex-col divide-y divide-garis"
+          className="flex flex-col divide-y-2 divide-dashed divide-pensil"
         >
           {itemStok.map((satu, indeks) => (
             <BarisItemStok

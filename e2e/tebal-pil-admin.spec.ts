@@ -88,8 +88,8 @@ async function huruf(label: Locator) {
 }
 
 // Token label-kecil (DESIGN.md frontmatter) dan Mikro (DESIGN.md Typography).
-const LABEL_KECIL = { tebal: "700", ukuran: "13px" };
-const MIKRO = { tebal: "800", ukuran: "12px" };
+const LABEL_KECIL = { tebal: "700", ukuran: "15px" };
+const MIKRO = { tebal: "700", ukuran: "15px" };
 
 test("pil Aktif, Nonaktif, dan Unggulan di daftar Produk dan panel Varian bertebal 700 seperti pil Sampul (DESIGN.md Status Pesanan, keputusan #53)", async ({
   page,
@@ -136,7 +136,7 @@ test("pil Aktif, Nonaktif, dan Unggulan di daftar Produk dan panel Varian berteb
   ).toEqual(LABEL_KECIL);
 });
 
-test("label Hemat dan Habis di Beranda tetap memakai Mikro (800, 12 px)", async ({
+test("label Hemat dan Habis di Beranda tetap memakai Mikro (Kalam 700, 15 px)", async ({
   page,
 }) => {
   await page.goto("/");

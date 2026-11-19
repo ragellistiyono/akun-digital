@@ -3,11 +3,8 @@
 import { Check } from "lucide-react";
 import { useActionState, useState } from "react";
 
-import { KELAS_TOMBOL_GARIS } from "../../_components/isian-form";
 import { aksiUbahFormatItemStok, type KeadaanFormatItemStok } from "../aksi";
 import { EditorFormatItemStok } from "./form-produk";
-
-const KELAS_TOMBOL_SIMPAN = `${KELAS_TOMBOL_GARIS} disabled:bg-permukaan-2 disabled:text-tinta-redup`;
 
 /**
  * Form ubah Format Item stok (PRD §4.1). Setiap kolom lama membawa nomor kolom lamanya, supaya server bisa
@@ -60,17 +57,13 @@ function FormFormatItemStok({
         bantuan="Nama kolom bisa diganti kapan saja. Kolom hanya bisa ditambah atau dihapus bila Produk ini tidak punya Item stok Tersedia atau Ditahan."
       />
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          disabled={sedangMenyimpan}
-          className={KELAS_TOMBOL_SIMPAN}
-        >
+        <button type="submit" disabled={sedangMenyimpan} className="tombol">
           {sedangMenyimpan ? "Menyimpan…" : "Simpan Format Item stok"}
         </button>
         <button
           type="button"
           onClick={() => onSelesai(false)}
-          className={KELAS_TOMBOL_GARIS}
+          className="tombol tombol-kedua"
         >
           Batal
         </button>
@@ -97,16 +90,13 @@ export function FormatItemStokProduk({
   return (
     <section
       aria-labelledby="format-judul"
-      className="mt-4 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-6 p-4 sm:p-6"
     >
       <div className="flex flex-col gap-2">
-        <h2
-          id="format-judul"
-          className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-        >
+        <h2 id="format-judul" className="text-[26px]">
           Format Item stok
         </h2>
-        <p className="text-[13px] text-tinta-redup">
+        <p className="text-base text-pensil-redup">
           Nama kolom untuk mengisi Item stok semua Varian Produk ini. Item stok
           Terkirim tetap tampil dengan nama kolom saat dikirim. Format Item stok
           tersimpan saat Simpan Format Item stok dipilih, terpisah dari tombol
@@ -129,7 +119,7 @@ export function FormatItemStokProduk({
             {kolom.map((nama, i) => (
               <li
                 key={`${i}-${nama}`}
-                className="inline-flex h-9 items-center rounded-[10px] bg-permukaan-2 px-3 text-sm font-bold break-all"
+                className="inline-flex min-h-10 items-center rounded-coret border-2 border-dashed border-pensil bg-kertas-lama px-3 text-[17px] break-all"
               >
                 {nama}
               </li>
@@ -138,9 +128,13 @@ export function FormatItemStokProduk({
           {tersimpan && (
             <p
               role="status"
-              className="flex items-start gap-2 text-[13px] font-bold text-st-selesai"
+              className="flex items-start gap-2 text-base text-st-selesai"
             >
-              <Check aria-hidden="true" className="size-6 shrink-0" />
+              <Check
+                aria-hidden="true"
+                className="mt-0.5 size-5 shrink-0"
+                strokeWidth={2.5}
+              />
               Format Item stok tersimpan.
             </p>
           )}
@@ -151,7 +145,7 @@ export function FormatItemStokProduk({
                 setTersimpan(false);
                 setMengubah(true);
               }}
-              className={KELAS_TOMBOL_GARIS}
+              className="tombol tombol-kedua"
             >
               Ubah Format Item stok
             </button>

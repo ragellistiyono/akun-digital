@@ -8,7 +8,7 @@ const KEDALUWARSA = Date.parse("2026-11-11T10:15:00+07:00");
 const pukul = (jam: string) => Date.parse(`2026-11-11T${jam}+07:00`);
 
 describe("hitungMundur", () => {
-  // Issue T18 dan DESIGN.md "Pemandangan senja": t bergerak dari 0 saat sisa waktu 15:00 sampai 1 saat
+  // Issue T18 dan DESIGN.md "Pemandangan gunung coretan": t bergerak dari 0 saat sisa waktu 15:00 sampai 1 saat
   // sisa waktu 00:00, dan matahari menyentuh punggung gunung (t = 0,5) sekitar 07:30.
   it("saat QRIS terbit, sisa waktunya 15:00 dan waktu senjanya 0", () => {
     expect(

@@ -21,7 +21,9 @@ export default async function HalamanUbahKategori({
   if (!kategori) notFound();
 
   return (
-    <>
+    // Satu form di kolom 720 px di tengah, dengan panel Hapus Kategori di akhir kolom. Jaraknya memakai margin
+    // (space-y), jadi margin bawaan PanelHapus menyatu dengan jarak antarpanel, dan PanelHapus selebar form.
+    <div className="tata-baca space-y-6">
       <h1>Ubah Kategori</h1>
       <FormKategori
         kategori={kategori}
@@ -35,6 +37,6 @@ export default async function HalamanUbahKategori({
         nama={`Kategori ${kategori.nama}`}
         akibat="Kategori dan gambar ikonnya tidak bisa dikembalikan."
       />
-    </>
+    </div>
   );
 }

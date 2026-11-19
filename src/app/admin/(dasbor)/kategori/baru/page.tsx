@@ -10,9 +10,9 @@ export default async function HalamanTambahKategori() {
   await wajibSesiAdmin(await headers());
 
   return (
-    <>
-      <h1>Tambah Kategori</h1>
+    <div className="tata-baca">
+      <h1 className="mb-6">Tambah Kategori</h1>
       <FormKategori batasUkuranMb={BATAS_UKURAN_GAMBAR_MB} />
-    </>
+    </div>
   );
 }

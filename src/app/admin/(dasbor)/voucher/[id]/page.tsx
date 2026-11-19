@@ -36,7 +36,9 @@ export default async function HalamanUbahVoucher({
 
   const nominal = voucher.jenisPotongan === "nominal";
   return (
-    <>
+    // Satu form di kolom 720 px di tengah, dengan panel Hapus Voucher di akhir kolom. Jaraknya memakai margin
+    // (space-y), jadi margin bawaan PanelHapus menyatu dengan jarak antarpanel, dan PanelHapus selebar form.
+    <div className="tata-baca space-y-6">
       <h1>Ubah Voucher</h1>
       <FormVoucher
         idVoucher={voucher.id}
@@ -69,6 +71,6 @@ export default async function HalamanUbahVoucher({
         nama={`Voucher ${voucher.kode}`}
         akibat="Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan."
       />
-    </>
+    </div>
   );
 }

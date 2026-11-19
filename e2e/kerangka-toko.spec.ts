@@ -77,9 +77,9 @@ for (const lebar of [390, 1440]) {
   });
 }
 
-// DESIGN.md, Cincin fokus: outline 3px solid monogram (#8F61FF), outline-offset 2px.
+// DESIGN.md, Cincin fokus: outline 3px dashed pulpen (#2D5DA1), outline-offset 3px.
 for (const lebar of [390, 1440]) {
-  test(`di lebar ${lebar} px setiap tautan kerangka memakai cincin fokus monogram saat difokus dengan keyboard`, async ({
+  test(`di lebar ${lebar} px setiap tautan kerangka memakai cincin fokus pulpen saat difokus dengan keyboard`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: lebar, height: 900 });
@@ -116,10 +116,10 @@ for (const lebar of [390, 1440]) {
         };
       });
       expect(cincin).toEqual({
-        style: "solid",
+        style: "dashed",
         width: "3px",
-        color: "rgb(143, 97, 255)",
-        offset: "2px",
+        color: "rgb(45, 93, 161)",
+        offset: "3px",
       });
     }
   });

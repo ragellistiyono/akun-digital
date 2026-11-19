@@ -13,27 +13,24 @@ export default async function HalamanDaftarKategori() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="kepala-halaman">
         <h1>Kategori</h1>
-        <Link
-          href="/admin/kategori/baru"
-          className="inline-flex h-10 items-center gap-2 rounded-[12px] bg-aksi px-4 text-sm font-bold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98]"
-        >
-          <Plus aria-hidden="true" className="size-6" />
+        <Link href="/admin/kategori/baru" className="tombol tombol-kecil">
+          <Plus aria-hidden="true" className="size-6" strokeWidth={2.5} />
           Tambah Kategori
         </Link>
       </div>
 
       {semuaKategori.length === 0 ? (
-        <p className="mt-6 max-w-[65ch] text-tinta-redup">
+        <p className="max-w-[65ch] text-pensil-redup">
           Belum ada Kategori. Pilih Tambah Kategori untuk membuat Kategori
           pertama beserta gambar ikonnya.
         </p>
       ) : (
-        <div className="mt-6 max-w-[720px] rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
+        <div className="kartu relative overflow-x-auto px-4 py-2 sm:px-6">
           <table className="w-full text-left">
-            <thead className="text-[13px] font-bold text-tinta-redup">
-              <tr className="border-b border-garis">
+            <thead className="font-spidol text-[16px] font-bold text-pensil-redup">
+              <tr className="border-b-2 border-dashed border-pensil">
                 <th scope="col" className="w-16 py-2">
                   Ikon
                 </th>
@@ -49,7 +46,7 @@ export default async function HalamanDaftarKategori() {
               {semuaKategori.map((kategori) => (
                 <tr
                   key={kategori.id}
-                  className="border-b border-garis last:border-b-0"
+                  className="border-b-2 border-dashed border-pensil last:border-b-0"
                 >
                   <td className="py-2">
                     <Image
@@ -58,16 +55,14 @@ export default async function HalamanDaftarKategori() {
                       alt=""
                       width={40}
                       height={40}
-                      className="size-10 rounded-[10px] bg-permukaan-2 object-contain"
+                      className="size-10 rounded-coret-bulat border-2 border-pensil bg-kertas-lama p-1.5 object-contain"
                     />
                   </td>
-                  <td className="py-2 font-bold break-words">
-                    {kategori.nama}
-                  </td>
+                  <td className="py-2 break-words">{kategori.nama}</td>
                   <td className="py-2 text-right">
                     <Link
                       href={`/admin/kategori/${kategori.id}`}
-                      className="inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold hover:border-monogram"
+                      className="tombol tombol-kecil tombol-kedua"
                     >
                       Ubah<span className="sr-only"> {kategori.nama}</span>
                     </Link>

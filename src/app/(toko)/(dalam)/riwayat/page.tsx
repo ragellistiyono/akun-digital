@@ -11,25 +11,29 @@ import { waktuWib } from "@/server/zona-waktu-toko";
 import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
 
 // Tab Riwayat (PRD §11.1). Member yang login melihat Riwayat Pesanan-nya (PRD §7.4, T45). Tamu melihat ajakan
-// login beserta penjelasan Tautan Pesanan (PRD §11.1 ▶ Keputusan 2026-11-17).
+// login beserta penjelasan Tautan Pesanan (PRD §11.1 ▶ Keputusan 2026-11-17). Tata letaknya (DESIGN.md Tata
+// letak halaman): daftar Riwayat Pesanan Member memakai pola Baca, kolom 720 px di tengah; Tamu memakai pola
+// Fokus, kolom 560 px di tengah.
 export default async function HalamanRiwayat() {
   const sesiMember = await bacaSesiMember(await headers());
 
   if (!sesiMember) return <RiwayatTamu />;
 
   return (
-    <>
+    <div className="tata-baca">
       <h1 className="mt-4">Riwayat Pesanan</h1>
       <RiwayatPesananMember emailMember={sesiMember.user.email} />
-    </>
+    </div>
   );
 }
 
-// Kartu Baris Riwayat (DESIGN.md Status Pesanan) yang terangkat 2 px dengan Bayang naik saat di-hover, sama
-// seperti kartu Produk. Varian hover Tailwind 4 hanya berlaku di perangkat hover:hover, dan transisinya
-// dimatikan saat gerak dikurangi (DESIGN.md Elevation & Depth).
+// Kartu Baris Riwayat (DESIGN.md Status Pesanan) yang terangkat 2 px dengan bayangan tegas 4 px saat di-hover.
+// Varian hover Tailwind 4 hanya berlaku di perangkat hover:hover, dan transisinya dimatikan saat gerak
+// dikurangi (DESIGN.md Elevation & Depth). Pil status dan Total bayar berbagi baris pertama; bila keduanya
+// tidak muat, misalnya "Menunggu Pembayaran" dengan Total bayar jutaan di lebar 360 px, Total bayar turun ke
+// baris berikutnya dan tetap rata kanan.
 const KELAS_BARIS_RIWAYAT =
-  "grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 rounded-[20px] bg-permukaan p-4 shadow-bayang transition-[translate,box-shadow] duration-200 ease-[cubic-bezier(.16,1,.3,1)] hover:-translate-y-0.5 hover:shadow-bayang-naik motion-reduce:transition-none";
+  "kartu flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-4 transition-[translate,box-shadow] duration-100 ease-out hover:-translate-y-0.5 hover:shadow-coret motion-reduce:transition-none";
 
 /**
  * Riwayat Pesanan Member (PRD §7.4), terbaru di atas. Setiap baris adalah kartu Baris Riwayat (DESIGN.md
@@ -40,31 +44,32 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
 
   if (riwayat.length === 0) {
     return (
-      <p className="mt-4 text-[15px] leading-[1.6] text-tinta-redup">
+      <p className="mt-6 text-pensil-redup">
         Belum ada Pesanan dengan email ini.
       </p>
     );
   }
 
   return (
-    <ul aria-label="Riwayat Pesanan" className="mt-6 grid max-w-[720px] gap-4">
+    <ul aria-label="Riwayat Pesanan" className="mt-6 grid gap-4">
       {riwayat.map((satu) => (
+        // Baris Riwayat selalu tegak (DESIGN.md Layout, Rotasi), jadi tepinya sejajar dengan judul.
         <li key={satu.nomorPesanan}>
           <Link
             href={`/pesanan/${satu.tautan}`}
             className={KELAS_BARIS_RIWAYAT}
           >
-            <span className="justify-self-start">
+            <span>
               <PilStatusPesanan status={satu.status} />
             </span>
-            <span className="text-right font-extrabold tabular-nums">
+            <span className="ml-auto text-right font-spidol text-[20px] font-bold tabular-nums">
               {rupiah(satu.totalBayar)}
             </span>
-            <span className="col-span-full font-extrabold [overflow-wrap:anywhere]">
+            <span className="min-w-0 basis-full leading-snug [overflow-wrap:anywhere]">
               {satu.namaProduk} · {satu.namaVarian}
             </span>
-            <span className="col-span-full text-[13px] font-bold text-tinta-redup">
-              <span className="font-mono">{satu.nomorPesanan}</span>
+            <span className="min-w-0 basis-full text-[15px] font-bold text-pensil-redup">
+              <span className="font-mono text-[13px]">{satu.nomorPesanan}</span>
               {satu.waktuDibuat && <> · {waktuWib(satu.waktuDibuat)} WIB</>}
             </span>
           </Link>
@@ -76,30 +81,31 @@ async function RiwayatPesananMember({ emailMember }: { emailMember: string }) {
 
 /**
  * Tab Riwayat untuk Tamu (PRD §11.1 ▶ Keputusan 2026-11-17): judul, ajakan login, tombol "Masuk" dan
- * "Daftar", lalu panel penjelasan Tautan Pesanan di email "Pesanan selesai". Di layar lebar, judul dan
- * tombol di kolom kiri dan panel di kolom kanan, seperti prototipe (DESIGN.md Blok Item stok ▶ Keputusan
- * 2026-11-11).
+ * "Daftar", lalu panel penjelasan Tautan Pesanan di email "Pesanan selesai". Semuanya satu kolom Fokus di
+ * tengah, juga di layar lebar (DESIGN.md Tata letak halaman ▶ Keputusan 2026-11-20, yang menggantikan susunan
+ * dua kolom ▶ Keputusan 2026-11-11).
  */
 function RiwayatTamu() {
   return (
-    <div className="grid gap-4 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
-      <div>
-        <h1 className="mt-4">Riwayat Pesanan</h1>
-        <p className="mt-2 text-tinta-redup">
-          Masuk sebagai Member untuk melihat semua Pesanan Anda, termasuk yang
-          dibuat sebelum mendaftar.
-        </p>
-        <TombolMasukDaftar className="mt-6" />
-      </div>
+    <div className="tata-fokus">
+      <h1 className="mt-4">Riwayat Pesanan</h1>
+      <p className="mt-2 text-pensil-redup">
+        Masuk sebagai Member untuk melihat semua Pesanan Anda, termasuk yang
+        dibuat sebelum mendaftar.
+      </p>
+      <TombolMasukDaftar className="mt-6" />
       <section
         aria-label="Tautan Pesanan"
-        className="flex items-start gap-3 rounded-[20px] bg-permukaan p-4 shadow-bayang lebar:mt-4"
+        className="kartu mt-6 flex items-start gap-4 p-5"
       >
-        <Ticket
+        {/* Ikon dalam lingkaran coretan (DESIGN.md Iconography). */}
+        <span
           aria-hidden="true"
-          className="size-6 shrink-0 text-st-selesai"
-        />
-        <p className="max-w-[65ch] text-[15px] leading-[1.6]">
+          className="inline-flex size-12 shrink-0 items-center justify-center rounded-coret-bulat border-2 border-pensil"
+        >
+          <Ticket strokeWidth={2.5} className="size-6 text-st-selesai" />
+        </span>
+        <p className="max-w-[65ch] text-[17px] leading-normal">
           Setiap Pesanan Selesai punya Tautan Pesanan di email &quot;Pesanan
           selesai&quot;. Buka tautan itu untuk melihat dan menyalin Item stok
           tanpa login.

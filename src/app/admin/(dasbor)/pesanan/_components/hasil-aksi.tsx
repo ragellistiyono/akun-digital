@@ -1,17 +1,15 @@
 import { Check, TriangleAlert } from "lucide-react";
 
-/** Tombol 40 px dengan kepadatan Operate dasbor admin (DESIGN.md Navigation). */
-const KELAS_TOMBOL =
-  "inline-flex h-10 w-fit items-center gap-2 rounded-[12px] px-4 text-sm font-bold disabled:bg-permukaan-2 disabled:text-tinta-redup";
+/** Tombol utama di panel aksi detail Pesanan (kelas `tombol` di globals.css), selebar isinya. */
+export const KELAS_TOMBOL_UTAMA = "tombol w-fit";
 
-export const KELAS_TOMBOL_UTAMA = `${KELAS_TOMBOL} bg-aksi text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98]`;
-
-export const KELAS_TOMBOL_GARIS = `${KELAS_TOMBOL} border-[1.5px] border-garis bg-permukaan text-tinta hover:border-monogram`;
+/** Tombol garis untuk aksi kedua di panel aksi detail Pesanan (kelas `tombol-kedua`), selebar isinya. */
+export const KELAS_TOMBOL_GARIS = "tombol tombol-kedua w-fit";
 
 /**
  * Hasil aksi di detail Pesanan: pesan berhasil berwarna `st-selesai` dengan ikon `Check`, atau pesan galat
- * berwarna `st-masalah` dengan ikon `TriangleAlert`. Wadahnya selalu ada supaya pembaca layar mengumumkan
- * isinya saat berubah.
+ * berwarna `aksi` dengan ikon `TriangleAlert`. Wadahnya selalu ada supaya pembaca layar mengumumkan isinya
+ * saat berubah.
  */
 export function HasilAksi({
   keadaan,
@@ -19,16 +17,24 @@ export function HasilAksi({
   keadaan: { pesan?: string; galat?: string };
 }) {
   return (
-    <p role="status" className="text-[13px] font-bold">
+    <p role="status" className="text-base">
       {keadaan.galat ? (
-        <span className="flex items-start gap-2 text-st-masalah">
-          <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
+        <span className="flex items-start gap-2 text-aksi">
+          <TriangleAlert
+            aria-hidden="true"
+            className="mt-0.5 size-5 shrink-0"
+            strokeWidth={2.5}
+          />
           {keadaan.galat}
         </span>
       ) : (
         keadaan.pesan && (
           <span className="flex items-start gap-2 text-st-selesai">
-            <Check aria-hidden="true" className="size-6 shrink-0" />
+            <Check
+              aria-hidden="true"
+              className="mt-0.5 size-5 shrink-0"
+              strokeWidth={2.5}
+            />
             {keadaan.pesan}
           </span>
         )

@@ -7,16 +7,15 @@ import { PemandanganSenja } from "../../../../_components/pemandangan-senja";
 import { hitungMundur } from "./hitung-mundur";
 
 /**
- * Kartu senja Halaman bayar (PRD §5.6, DESIGN.md "Pemandangan senja"): pemandangan senja 136 px (280 px
- * mulai 900 px) dengan radius 24 px, yang waktu senjanya digerakkan hitung mundur QRIS. Angka waktu dan
- * Total bayar ditulis di atas langit. Kotak kedua blok teks itu diukur dan dikirim ke pemandangan, yang
- * menjauhkan matahari, cahaya ufuk, awan, dan bintang dari teks, lalu memilih warna teks gelap atau
- * putih terhadap latar di belakangnya. Pembaca layar mendapat sisa menit lewat aria-live, yang isinya
- * hanya berganti sekali per menit. Saat waktu habis, labelnya menjadi "QRIS kedaluwarsa".
+ * Kartu senja Halaman bayar (PRD §5.6): kartu coretan 136 px (280 px mulai 900 px) berisi pemandangan
+ * gunung yang waktu senjanya digerakkan hitung mundur QRIS. Matahari turun dari atas sampai tenggelam di
+ * balik punggung gunung saat waktu habis, arsiran langit bertambah, lalu bintang muncul. Angka waktu dan
+ * Total bayar ditulis dengan pensil di atas kertas kartu. Kotak kedua blok teks itu diukur dan dikirim ke
+ * pemandangan, yang menjauhkan matahari, bintang, awan, dan arsiran langit dari teks. Pembaca layar
+ * mendapat sisa menit lewat aria-live, yang isinya hanya berganti sekali per menit. Saat waktu habis,
+ * labelnya menjadi "QRIS kedaluwarsa".
  *
- * Teks dimulai 8 px dari tepi atas, dan label ditulis di atas angka waktu karena angka tidak punya kaki
- * huruf. Dengan begitu semua teks tetap di bagian langit yang cukup gelap untuk kontras 4,5:1 sejak awal
- * hitung mundur, saat langit di bawah 42% tinggi kartu masih terang.
+ * Angka waktu selebar paling sedikit lima karakter, supaya kotaknya tidak berubah setiap detik.
  *
  * Hitung mundur dihitung dari waktu kedaluwarsa yang tersimpan di Pesanan terhadap jam browser. Tampilan
  * pertama memakai jam server saat halaman dibuat, supaya hasil SSR dan hidrasi sama; sesudahnya jam
@@ -51,18 +50,21 @@ export function KartuSenja({
   }, [habis]);
 
   // Kotak blok teks diukur ulang saat ukuran kartu atau isi blok berubah, misalnya label menjadi "QRIS
-  // kedaluwarsa" atau huruf Manrope selesai dimuat.
+  // kedaluwarsa" atau huruf tulisan tangan selesai dimuat. Kotaknya diukur dari tepi dalam garis kartu,
+  // tempat pemandangan dilukis.
   useEffect(() => {
     const semua = [kartu.current, blokWaktu.current, blokTotal.current];
     const [wadah, ...blok] = semua;
     if (!wadah || blok.some((b) => !b)) return;
     const ukur = () => {
       const dasar = wadah.getBoundingClientRect();
+      const kiri = dasar.left + wadah.clientLeft;
+      const atas = dasar.top + wadah.clientTop;
       const kotak = blok.map((b) => {
         const k = b!.getBoundingClientRect();
         return {
-          x: k.left - dasar.left,
-          y: k.top - dasar.top,
+          x: k.left - kiri,
+          y: k.top - atas,
           lebar: k.width,
           tinggi: k.height,
         };
@@ -80,30 +82,30 @@ export function KartuSenja({
     <div>
       <div
         ref={kartu}
-        className="relative isolate h-[136px] overflow-hidden rounded-[24px] bg-langit shadow-bayang lebar:h-[280px]"
+        className="kartu kartu-tegas relative isolate h-[136px] overflow-hidden lebar:h-[280px]"
       >
         <PemandanganSenja jenis="bayar" t={t} teks={kotakTeks}>
           {(warnaTeks) => (
             <div
-              className="absolute inset-x-4 top-2 flex items-start justify-between gap-3"
+              className="absolute inset-x-4 top-2.5 flex items-start justify-between gap-3"
               style={{ color: warnaTeks }}
             >
               <div ref={blokWaktu} className="min-w-0">
-                <p className="text-[13px] leading-none font-bold">
+                <p className="text-[15px] leading-none lebar:text-base">
                   {habis ? "QRIS kedaluwarsa" : "sisa waktu bayar"}
                 </p>
                 <p
                   aria-hidden="true"
-                  className="text-4xl leading-none font-extrabold tracking-[-0.03em] lebar:text-5xl"
+                  className="mt-1 min-w-[5ch] font-spidol text-[40px] leading-none font-bold tabular-nums lebar:text-[56px]"
                 >
                   {teks}
                 </p>
               </div>
               <div ref={blokTotal} className="min-w-0 text-right">
-                <p className="text-[13px] leading-none font-bold">
+                <p className="text-[15px] leading-none lebar:text-base">
                   Total bayar
                 </p>
-                <p className="text-xl leading-none font-extrabold tracking-[-0.02em]">
+                <p className="mt-1 font-spidol text-[22px] leading-none font-bold tabular-nums">
                   {totalBayar}
                 </p>
               </div>

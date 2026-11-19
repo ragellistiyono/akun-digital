@@ -36,7 +36,11 @@ function FormKirimUlang({ pesananId }: { pesananId: string }) {
         disabled={sedangMengirim}
         className={KELAS_TOMBOL_UTAMA}
       >
-        <Send aria-hidden="true" className="size-6 shrink-0" />
+        <Send
+          aria-hidden="true"
+          className="size-6 shrink-0"
+          strokeWidth={2.5}
+        />
         {sedangMengirim ? "Mengirim…" : "Kirim ulang email"}
       </button>
       <HasilAksi keadaan={sedangMengirim ? {} : keadaan} />
@@ -113,12 +117,9 @@ export function AksiEmailPesanan({
   return (
     <section
       aria-labelledby="judul-email-pesanan"
-      className="flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 p-4"
     >
-      <h2
-        id="judul-email-pesanan"
-        className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-      >
+      <h2 id="judul-email-pesanan" className="text-[26px]">
         Email &quot;Pesanan selesai&quot;
       </h2>
       {/* Dipasang ulang setelah email dikoreksi, supaya pesan kirim ulang ke email lama tidak tertinggal. */}
@@ -129,7 +130,7 @@ export function AksiEmailPesanan({
         aksi={aksiKoreksiEmail}
         tombol="Simpan dan kirim ulang"
         bantuan='Ganti email yang salah ketik, misalnya atas permintaan Pembeli lewat WhatsApp. Pesanan ini pindah ke email baru, lalu email "Pesanan selesai" dikirim ulang ke sana.'
-        className="border-t border-garis pt-4"
+        className="border-t-2 border-dashed border-pensil pt-4"
       />
     </section>
   );
@@ -151,12 +152,9 @@ export function KoreksiEmailBermasalah({
   return (
     <section
       aria-labelledby="judul-koreksi-email"
-      className="flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 p-4"
     >
-      <h2
-        id="judul-koreksi-email"
-        className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-      >
+      <h2 id="judul-koreksi-email" className="text-[26px]">
         Koreksi email
       </h2>
       <FormKoreksiEmail

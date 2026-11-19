@@ -42,8 +42,8 @@ const TAUTAN_MENU: TautanMenu[] = [
  */
 function JumlahBermasalah({ jumlah }: { jumlah: number }) {
   return (
-    <span className="ml-auto inline-flex h-7 items-center gap-1 rounded-full bg-st-masalah-bg pr-3 pl-2 text-[13px] font-bold text-st-masalah">
-      <TriangleAlert aria-hidden="true" className="size-4" strokeWidth={2.4} />
+    <span className="ml-auto inline-flex h-7 items-center gap-1 rounded-coret border-2 border-current bg-st-masalah-bg pr-2.5 pl-2 font-spidol text-[15px] leading-none font-bold text-st-masalah">
+      <TriangleAlert aria-hidden="true" className="size-4" strokeWidth={2.5} />
       {jumlah}
       <span className="sr-only"> Pesanan Bermasalah</span>
     </span>
@@ -53,7 +53,10 @@ function JumlahBermasalah({ jumlah }: { jumlah: number }) {
 // Kerangka menu dasbor admin (PRD §11.1, DESIGN.md Navigation): menu lipat di bawah 900 px,
 // menu samping mulai 900 px. Dasbor admin tidak memakai navigasi bawah toko. Menu Pesanan menampilkan
 // jumlah Pesanan Bermasalah bila ada (PRD §5.9). Ruang env(safe-area-inset-top) menjaga isinya dari jam dan
-// poni iPhone saat bilah status tembus (layar-pembuka-iphone.ts).
+// poni iPhone; bilah status iPhone memakai gaya bawaan (PRD §11.4 ▶ Keputusan 2026-11-20), jadi ruang itu ikut
+// berwarna `kertas` seperti bilah dan menu sampingnya. Di layar lebar menu samping setinggi layar: daftar
+// tautannya bergulir sendiri bila layar pendek, dan Keluar dipisah garis putus-putus di dasar menu supaya tidak
+// menempel pada tautan terakhir.
 export function MenuAdmin({
   jumlahPesananBermasalah,
 }: {
@@ -63,20 +66,20 @@ export function MenuAdmin({
   const [terbuka, setTerbuka] = useState(false);
 
   return (
-    <div className="sticky top-0 z-30 bg-langit pt-[env(safe-area-inset-top)] text-langit-teks lebar:flex lebar:h-dvh lebar:w-60 lebar:shrink-0 lebar:flex-col">
-      <div className="flex h-16 items-center justify-between gap-4 px-4">
+    <div className="sticky top-0 z-30 bg-kertas pt-[env(safe-area-inset-top)] lebar:flex lebar:h-dvh lebar:w-60 lebar:shrink-0 lebar:flex-col lebar:border-r-2 lebar:border-dashed lebar:border-pensil">
+      <div className="flex h-16 items-center justify-between gap-4 border-b-2 border-dashed border-pensil px-4 lebar:border-b-0">
         <MerekAdmin />
         <button
           type="button"
           aria-expanded={terbuka}
           aria-controls="menu-admin"
           onClick={() => setTerbuka((sebelumnya) => !sebelumnya)}
-          className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-langit-garis px-4 text-sm font-bold hover:bg-langit-2 lebar:hidden"
+          className="tombol tombol-kecil tombol-kedua lebar:hidden"
         >
           {terbuka ? (
-            <X aria-hidden="true" className="size-6" />
+            <X aria-hidden="true" className="size-6" strokeWidth={2.5} />
           ) : (
-            <Menu aria-hidden="true" className="size-6" />
+            <Menu aria-hidden="true" className="size-6" strokeWidth={2.5} />
           )}
           Menu
         </button>
@@ -86,7 +89,7 @@ export function MenuAdmin({
         id="menu-admin"
         aria-label="Menu admin"
         className={cn(
-          "flex-col gap-4 border-t border-langit-garis px-4 pt-4 pb-6 lebar:flex lebar:flex-1 lebar:border-t-0 lebar:pt-2",
+          "flex-col gap-4 border-b-2 border-dashed border-pensil px-4 pt-4 pb-6 lebar:flex lebar:min-h-0 lebar:flex-1 lebar:overflow-y-auto lebar:border-b-0 lebar:pt-2",
           terbuka ? "flex" : "hidden",
         )}
       >
@@ -100,13 +103,17 @@ export function MenuAdmin({
                   aria-current={aktif ? "page" : undefined}
                   onClick={() => setTerbuka(false)}
                   className={cn(
-                    "flex h-10 items-center gap-2 rounded-md px-3 text-[15px] font-bold",
+                    "flex h-10 items-center gap-2 rounded-coret border-2 px-3 text-[18px] leading-none",
                     aktif
-                      ? "bg-langit-2 text-teks-di-aksi"
-                      : "text-langit-redup hover:bg-langit-2 hover:text-langit-teks",
+                      ? "border-pensil bg-postit text-teks-postit shadow-coret-kecil"
+                      : "border-transparent text-pensil hover:border-dashed hover:border-pensil",
                   )}
                 >
-                  <Ikon aria-hidden="true" className="size-6" />
+                  <Ikon
+                    aria-hidden="true"
+                    className="size-6"
+                    strokeWidth={2.5}
+                  />
                   {label}
                   {href === "/admin/pesanan" && jumlahPesananBermasalah > 0 && (
                     <JumlahBermasalah jumlah={jumlahPesananBermasalah} />
@@ -117,12 +124,12 @@ export function MenuAdmin({
           })}
         </ul>
 
-        <form action={aksiKeluarAdmin} className="lebar:mt-auto">
-          <button
-            type="submit"
-            className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-langit-garis px-4 text-sm font-bold hover:bg-langit-2"
-          >
-            <LogOut aria-hidden="true" className="size-6" />
+        <form
+          action={aksiKeluarAdmin}
+          className="border-t-2 border-dashed border-pensil pt-4 lebar:mt-auto"
+        >
+          <button type="submit" className="tombol tombol-kecil tombol-kedua">
+            <LogOut aria-hidden="true" className="size-6" strokeWidth={2.5} />
             Keluar
           </button>
         </form>

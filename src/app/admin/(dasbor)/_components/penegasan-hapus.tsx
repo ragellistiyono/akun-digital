@@ -8,9 +8,11 @@ import { Keterangan } from "./keterangan-isian";
 
 type KeadaanHapus = { galat?: string };
 
-/** Tombol kecil 36 px (DESIGN.md Buttons). */
-const KELAS_TOMBOL_KECIL =
-  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold text-tinta hover:border-monogram disabled:bg-permukaan-2 disabled:text-tinta-redup";
+/** Tombol kecil 40 px (DESIGN.md Buttons). Hover-nya terisi merah `aksi`, jadi cocok untuk tombol hapus. */
+const KELAS_TOMBOL_KECIL = "tombol tombol-kecil";
+
+/** Tombol kecil 40 px untuk aksi kedua, seperti Batal. */
+const KELAS_TOMBOL_KECIL_KEDUA = "tombol tombol-kecil tombol-kedua";
 
 /**
  * Tombol hapus yang meminta penegasan di tempat, tanpa dialog, seperti hapus Item stok di halaman Varian.
@@ -51,21 +53,24 @@ export function PenegasanHapus({
               value={nilai}
             />
           ))}
-          <p className="text-sm font-bold [overflow-wrap:anywhere]">
+          <p className="text-[17px] [overflow-wrap:anywhere]">
             Hapus {nama}? {akibat}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="submit"
               disabled={sedangMenghapus}
-              className={cn(KELAS_TOMBOL_KECIL, "text-st-masalah")}
+              className={cn(
+                KELAS_TOMBOL_KECIL,
+                "text-aksi hover:text-teks-di-aksi disabled:text-pensil-redup",
+              )}
             >
               {sedangMenghapus ? "Menghapus…" : `Ya, hapus ${nama}`}
             </button>
             <button
               type="button"
               onClick={() => setMenegaskan(false)}
-              className={KELAS_TOMBOL_KECIL}
+              className={KELAS_TOMBOL_KECIL_KEDUA}
             >
               Batal
             </button>
@@ -92,8 +97,10 @@ export function PenegasanHapus({
 }
 
 /**
- * Panel "Hapus …" di bawah halaman ubah Kategori atau Produk: judul, keterangan kapan penghapusan diterima
- * beserta akibatnya, dan PenegasanHapus dengan tombol berlabel sama dengan judulnya.
+ * Panel "Hapus …" di bawah halaman ubah Kategori, Produk, atau Voucher: judul, keterangan kapan penghapusan
+ * diterima beserta akibatnya, dan PenegasanHapus dengan tombol berlabel sama dengan judulnya. Panel ini tidak
+ * membawa lebar maupun margin luar sendiri: ia selebar kolom pemakainya, dan jaraknya diatur halaman pemakainya
+ * (DESIGN.md Tata letak halaman, Dasbor admin).
  */
 export function PanelHapus({
   judul,
@@ -106,16 +113,13 @@ export function PanelHapus({
   return (
     <section
       aria-labelledby="hapus-judul"
-      className="mt-4 flex max-w-[560px] flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 border-aksi p-4 sm:p-6"
     >
       <div className="flex flex-col gap-2">
-        <h2
-          id="hapus-judul"
-          className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-        >
+        <h2 id="hapus-judul" className="text-[26px]">
           {judul}
         </h2>
-        <p className="text-[13px] text-tinta-redup">{keterangan}</p>
+        <p className="text-[15px] text-pensil-redup">{keterangan}</p>
       </div>
       <PenegasanHapus {...penegasan} tombol={judul} idGalat="hapus-galat" />
     </section>

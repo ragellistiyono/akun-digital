@@ -11,16 +11,14 @@ import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { rupiah } from "@/lib/rupiah";
+import { cn } from "@/lib/utils";
 import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { bacaPesananLewatTautan, TautanPesanan } from "@/server/pesanan";
 
-import {
-  BilahLekat,
-  KELAS_TOMBOL_UTAMA,
-} from "../../../_components/bilah-lekat";
+import { BilahLekat } from "../../../_components/bilah-lekat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { BlokItemStok } from "./_components/blok-item-stok";
@@ -31,11 +29,11 @@ import { PanelBuatAkun } from "./_components/panel-buat-akun";
 import { PantauStatusPesanan } from "./_components/pantau-status";
 import { TANDA_SUDAH_DIBAYAR } from "./_components/tanda-sudah-dibayar";
 
-const PANEL = "rounded-[20px] bg-permukaan p-4 shadow-bayang";
+/** Panel (DESIGN.md "Cards / Containers"): padding 16 px, dan 24 px di layar lebar yang kolomnya lebih lapang. */
+const PANEL = "kartu p-4 lebar:p-6";
 
-// Tombol garis (DESIGN.md Buttons) untuk aksi kedua.
-const KELAS_TOMBOL_GARIS =
-  "inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram";
+/** Label kecil di atas Nomor Pesanan. */
+const KELAS_LABEL_NOMOR = "text-[16px] text-pensil-redup";
 
 // Tautan Pesanan bersifat rahasia (PRD §6.2): alamatnya tidak dikirim ke situs lain lewat Referer, dan
 // halamannya tidak diindeks mesin pencari.
@@ -53,9 +51,15 @@ type PesananDibaca = NonNullable<
  * baris potongan, misalnya "Potongan voucher (HEMAT5)"; Pesanan tanpa Voucher menulis "Potongan voucher"
  * (PRD §8.8 ▶ Keputusan 2026-11-17).
  */
-function PanelRincian({ rincian }: { rincian: PesananDibaca["rincian"] }) {
+function PanelRincian({
+  rincian,
+  className,
+}: {
+  rincian: PesananDibaca["rincian"];
+  className?: string;
+}) {
   return (
-    <section aria-label="Rincian pembayaran" className={PANEL}>
+    <section aria-label="Rincian pembayaran" className={cn(PANEL, className)}>
       <RincianNominal
         baris={[
           { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
@@ -81,8 +85,10 @@ function PanelRincian({ rincian }: { rincian: PesananDibaca["rincian"] }) {
 function ProdukDanVarian({ pesanan }: { pesanan: PesananDibaca }) {
   return (
     <p className="mt-2 [overflow-wrap:anywhere]">
-      <span className="font-extrabold">{pesanan.namaProduk}</span>{" "}
-      <span className="text-tinta-redup">· {pesanan.namaVarian}</span>
+      <span className="font-spidol text-[20px] font-bold">
+        {pesanan.namaProduk}
+      </span>{" "}
+      <span className="text-pensil-redup">· {pesanan.namaVarian}</span>
     </p>
   );
 }
@@ -106,14 +112,14 @@ function AjakanDiBawahItemStok({
   }
   if (ajakan === "login") {
     return (
-      <Link href="/masuk" className={KELAS_TOMBOL_GARIS}>
+      <Link href="/masuk" className="tombol tombol-kedua">
         Login untuk melihat riwayat
       </Link>
     );
   }
   if (ajakan === "lihat-riwayat") {
     return (
-      <Link href="/riwayat" className={KELAS_TOMBOL_GARIS}>
+      <Link href="/riwayat" className="tombol tombol-kedua">
         Lihat Riwayat Pesanan
       </Link>
     );
@@ -124,9 +130,12 @@ function AjakanDiBawahItemStok({
 // Halaman bayar (PRD §5.6) selama Pesanan Menunggu Pembayaran: kartu senja dengan hitung mundur QRIS dan
 // Total bayar, gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, rincian nominal yang
 // dicatat di Pesanan (PRD §5.5), dan tombol "Batalkan" (PRD §5.8) serta "Simpan gambar QR" di bilah lekat.
-// Di layar lebar keduanya menjadi dua kolom sama lebar (DESIGN.md Layout). Halaman bayar menanyakan status
-// ke server toko secara berkala, dan begitu statusnya berubah, halaman dibuat ulang tanpa dimuat ulang
-// menjadi Halaman Pesanan.
+// Gambar QR adalah benda utama halaman ini, jadi ia tampil besar di tengah kartunya (DESIGN.md "Tata letak
+// halaman", Halaman bayar): 240 px di ponsel dan 288 px di layar lebar. Di layar lebar halaman menjadi dua
+// kolom: kartu QR lekat di kiri, lalu kartu senja dan ringkasan Pesanan bertumpuk di kanan. Urutan
+// isinya di halaman tetap kartu senja, QR, lalu ringkasan, jadi di ponsel dan bagi pembaca layar urutannya
+// sama. Halaman bayar menanyakan status ke server toko secara berkala, dan begitu statusnya berubah,
+// halaman dibuat ulang tanpa dimuat ulang menjadi Halaman Pesanan.
 function HalamanBayar({
   pesanan,
   tautan,
@@ -137,33 +146,43 @@ function HalamanBayar({
   return (
     <>
       <h1 className="mt-4">Pembayaran</h1>
-      <div className="mt-6 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="mt-6 grid items-start gap-8 lebar:grid-cols-2 lebar:gap-x-12 lebar:gap-y-6 lebar:[grid-template-areas:'qr_senja'_'qr_ringkasan']">
+        <div className="min-w-0 lebar:[grid-area:senja]">
           <KartuSenja
             kedaluwarsaPada={pesanan.kedaluwarsaPada.getTime()}
             sekarang={pesanan.dibacaPada.getTime()}
             totalBayar={rupiah(pesanan.rincian.totalBayar)}
           />
-          <div className="w-fit rounded-[16px] bg-permukaan p-3 shadow-bayang">
-            <Image
-              unoptimized
-              src={pesanan.gambarQr}
-              alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
-              width={128}
-              height={128}
-              className="block size-32"
-            />
+        </div>
+
+        {/* Kartu QR berselotip, selebar kolom, dengan QR di tengahnya. Gambar QR-nya sendiri tidak diberi tepi
+            coretan maupun diputar, dan selalu duduk di alas putih, juga di mode gelap, supaya pola dan zona
+            tenangnya tetap terbaca pemindai. Jarak 32 px di ponsel memberi ruang bagi selotip yang menonjol
+            12 px di atas kartu. Di layar lebar kartu ini lekat di bawah bilah atas, sejajar dengan kartu senja,
+            jadi QR tetap terlihat saat ringkasan di kanan digulir. */}
+        <div className="min-w-0 lebar:sticky lebar:top-24 lebar:[grid-area:qr]">
+          <div className="kartu kartu-tegas selotip relative flex items-center justify-center p-6 lebar:p-8">
+            <div className="bg-white p-3">
+              <Image
+                unoptimized
+                src={pesanan.gambarQr}
+                alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
+                width={288}
+                height={288}
+                className="block aspect-square w-60 max-w-full [image-rendering:pixelated] lebar:w-72"
+              />
+            </div>
           </div>
           <PantauStatusPesanan tautan={tautan} status={pesanan.status} />
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
+        {/* Ringkasan Pesanan: antarpanel 16 px, dan tombolnya 24 px di bawah rincian (bilah lekat menjadi blok
+            biasa dengan jarak atas 24 px di layar lebar). */}
+        <div className="min-w-0 lebar:[grid-area:ringkasan]">
           <section aria-label="Pesanan" className={PANEL}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="text-[13px] font-bold text-tinta-redup">
-                  Nomor Pesanan
-                </p>
+                <p className={KELAS_LABEL_NOMOR}>Nomor Pesanan</p>
                 <p className="font-mono text-xl font-bold tracking-[0.01em]">
                   {pesanan.nomorPesanan}
                 </p>
@@ -172,16 +191,22 @@ function HalamanBayar({
             </div>
             <ProdukDanVarian pesanan={pesanan} />
           </section>
-          <PanelRincian rincian={pesanan.rincian} />
+          <PanelRincian rincian={pesanan.rincian} className="mt-4" />
           <FormBatalkan tautan={tautan}>
             {/* Gambar QR Pesanan ini diunduh sebagai PNG, supaya Pembeli di ponsel bisa membukanya dari
                 aplikasi e-wallet (PRD §5.6). */}
             <a
               href={pesanan.gambarQr}
               download={`QRIS-${pesanan.nomorPesanan}.png`}
-              className={`${KELAS_TOMBOL_UTAMA} whitespace-nowrap`}
+              // Padding samping 16 px dan, di layar sempit, huruf 18 px, supaya "Batalkan" dan tombol ini muat
+              // berdampingan di lebar 360 px tanpa terpotong.
+              className="tombol px-4 whitespace-nowrap max-[399px]:text-lg"
             >
-              <Download aria-hidden="true" className="size-6 shrink-0" />
+              <Download
+                aria-hidden="true"
+                strokeWidth={2.5}
+                className="size-5 shrink-0"
+              />
               Simpan gambar QR
             </a>
           </FormBatalkan>
@@ -200,6 +225,12 @@ function HalamanBayar({
 // dibayar, atau yang mendapati Pesanan sudah Selesai, Halaman Pesanan Selesai menjelaskan kenapa Pesanan
 // tidak dibatalkan (PRD §5.8, ▶ Keputusan 2026-11-12 #87 dan #99), di panel tepat di bawah Produk dan
 // Varian. Di bawah Item stok Pesanan Selesai tampil ajakan menurut siapa yang membukanya (PRD §7.1).
+//
+// Tata letak (DESIGN.md "Tata letak halaman", pola Dua kolom). Bila Pesanan punya isi sendiri, yaitu Item
+// stok, ajakan, atau panel keterangan, kepala Pesanan berada di atas kedua kolom, sehingga isi itu di kolom
+// kiri dan rincian di kolom kanan mulai sejajar. Bila tidak, misalnya Pesanan Kedaluwarsa, kepala Pesanan
+// sendiri menjadi kolom kiri di samping rinciannya. Urutan isinya di halaman tetap sama, dan di ponsel
+// semuanya satu kolom. Di layar lebar kolom rincian lekat di bawah bilah atas.
 function HalamanPesanan({
   pesanan,
   tautan,
@@ -214,57 +245,73 @@ function HalamanPesanan({
   setelahPembatalanSudahDibayar: boolean;
 }) {
   const { status } = pesanan;
+  const panelSudahDibayar =
+    status === "Selesai" && setelahPembatalanSudahDibayar;
+  const adaIsiPesanan =
+    panelSudahDibayar ||
+    Boolean(pesanan.itemStok) ||
+    (ajakan !== null && ajakan.ajakan !== "tidak-ada") ||
+    status === "Bermasalah";
+
+  // Di layar lebar pil status berada di samping Nomor Pesanan, supaya kepalanya ringkas.
+  const kepala = (
+    <div className="min-w-0">
+      <p className={KELAS_LABEL_NOMOR}>Nomor Pesanan</p>
+      <div className="mt-2 lebar:flex lebar:flex-wrap lebar:items-center lebar:gap-x-4 lebar:gap-y-3">
+        <p className="min-w-0 font-mono text-[30px] leading-[1.1] font-bold tracking-[0.01em] [overflow-wrap:anywhere]">
+          {pesanan.nomorPesanan}
+        </p>
+        <div className="mt-3 lebar:mt-0">
+          <PilStatusPesanan status={status} />
+        </div>
+      </div>
+      <ProdukDanVarian pesanan={pesanan} />
+    </div>
+  );
+
+  const isiPesanan = (
+    <div className="flex min-w-0 flex-col gap-6">
+      {panelSudahDibayar && (
+        <div role="status" className={PANEL}>
+          <p className="max-w-[65ch]">
+            Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan.
+          </p>
+        </div>
+      )}
+      {pesanan.itemStok && <BlokItemStok kolom={pesanan.itemStok} />}
+      {ajakan && (
+        <AjakanDiBawahItemStok
+          ajakan={ajakan.ajakan}
+          emailPesanan={ajakan.emailPesanan}
+          tautan={tautan}
+        />
+      )}
+      {status === "Bermasalah" && (
+        <div className={`flex flex-col items-start gap-4 ${PANEL}`}>
+          <p className="max-w-[65ch]">
+            Pembayaran Anda sudah kami terima, tetapi Item stok belum bisa
+            dikirim. Hubungi kami lewat WhatsApp.
+          </p>
+          <TombolWhatsApp nomor={nomorWhatsapp}>
+            Hubungi kami di WhatsApp
+          </TombolWhatsApp>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       <h1 className="mt-4">Pesanan</h1>
-      <div className="mt-6 grid gap-6 lebar:grid-cols-2 lebar:items-start lebar:gap-8">
-        <div className="flex min-w-0 flex-col gap-6">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-tinta-redup">Nomor Pesanan</p>
-            <p className="mt-2 font-mono text-[30px] leading-[1.1] font-bold tracking-[0.01em] [overflow-wrap:anywhere]">
-              {pesanan.nomorPesanan}
-            </p>
-            <div className="mt-3">
-              <PilStatusPesanan status={status} />
-            </div>
-            <ProdukDanVarian pesanan={pesanan} />
-          </div>
-          {status === "Selesai" && setelahPembatalanSudahDibayar && (
-            <div role="status" className={PANEL}>
-              <p className="max-w-[65ch]">
-                Pembayaran Anda sudah masuk, jadi Pesanan tidak dibatalkan.
-              </p>
-            </div>
-          )}
-          {pesanan.itemStok && <BlokItemStok kolom={pesanan.itemStok} />}
-          {ajakan && (
-            <AjakanDiBawahItemStok
-              ajakan={ajakan.ajakan}
-              emailPesanan={ajakan.emailPesanan}
-              tautan={tautan}
-            />
-          )}
-          {status === "Bermasalah" && (
-            <div className={`flex flex-col items-start gap-4 ${PANEL}`}>
-              <p className="max-w-[65ch]">
-                Pembayaran Anda sudah kami terima, tetapi Item stok belum bisa
-                dikirim. Hubungi kami lewat WhatsApp.
-              </p>
-              <TombolWhatsApp nomor={nomorWhatsapp}>
-                Hubungi kami di WhatsApp
-              </TombolWhatsApp>
-            </div>
-          )}
-        </div>
+      {adaIsiPesanan && <div className="mt-6">{kepala}</div>}
+      <div className={cn("tata-dua-kolom mt-6", adaIsiPesanan && "lebar:mt-8")}>
+        {adaIsiPesanan ? isiPesanan : kepala}
 
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="min-w-0 lebar:sticky lebar:top-24">
           <PanelRincian rincian={pesanan.rincian} />
           {(status === "Kedaluwarsa" || status === "Dibatalkan") && (
             <BilahLekat>
-              <Link
-                href={`/produk/${pesanan.produkId}`}
-                className={KELAS_TOMBOL_UTAMA}
-              >
+              <Link href={`/produk/${pesanan.produkId}`} className="tombol">
                 Checkout lagi
               </Link>
             </BilahLekat>

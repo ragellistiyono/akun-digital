@@ -65,7 +65,7 @@ for (const lebar of [360, 1440]) {
       exact: true,
     });
     await expect(masuk).toBeVisible();
-    // Tombol langit (DESIGN.md Buttons): pil 40 px bergaris.
+    // Tombol kecil (DESIGN.md Buttons): 40 px bergaris pensil.
     await expect(masuk).toHaveCSS("height", "40px");
     await expect(masuk).toHaveCSS("border-top-style", "solid");
 
@@ -136,7 +136,7 @@ test("setelah Member keluar, bilah atas kembali menampilkan tombol Masuk", async
 });
 
 // UAT-K1: tab Akun untuk Tamu.
-test('tab Akun untuk Tamu menampilkan tombol "Masuk" dan "Daftar" di atas tautan halaman hukum', async ({
+test('tab Akun untuk Tamu menampilkan tombol "Masuk" dan "Daftar" di atas tautan halaman hukum di footer', async ({
   page,
 }) => {
   await page.goto("/akun");
@@ -145,14 +145,18 @@ test('tab Akun untuk Tamu menampilkan tombol "Masuk" dan "Daftar" di atas tautan
   const daftar = isi(page).getByRole("link", { name: "Daftar", exact: true });
   await expect(masuk).toHaveAttribute("href", "/masuk");
   await expect(daftar).toHaveAttribute("href", "/daftar");
-  // Masuk tombol utama dan Daftar tombol garis (DESIGN.md Buttons).
+  // Masuk tombol utama dan Daftar tombol kedua (DESIGN.md Buttons).
   await expect(masuk).toHaveCSS("height", "52px");
   await expect(daftar).toHaveCSS("height", "52px");
   await expect(daftar).toHaveCSS("border-top-style", "solid");
 
   const yMasuk = (await atas(page, "Masuk")).y;
   const yDaftar = (await atas(page, "Daftar")).y;
-  const yHukum = (await atas(page, "Syarat & Ketentuan")).y;
+  // Tautan halaman hukum datang dari footer toko (PRD §11.1 ▶ Keputusan 2026-11-20).
+  const yHukum = (await page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Syarat & Ketentuan" })
+    .boundingBox())!.y;
   expect(yMasuk).toBeLessThan(yDaftar);
   expect(yDaftar).toBeLessThan(yHukum);
 
@@ -185,7 +189,7 @@ test('tab Riwayat untuk Tamu menampilkan ajakan login dengan tombol "Masuk" dan 
   );
   await expect(penjelasan).toBeVisible();
 
-  // Di ponsel, panel penjelasan berada di bawah tombol.
+  // Panel penjelasan berada di bawah tombol.
   const kotakDaftar = (await daftar.boundingBox())!;
   const kotakPenjelasan = (await penjelasan.boundingBox())!;
   expect(kotakPenjelasan.y).toBeGreaterThan(kotakDaftar.y + kotakDaftar.height);
@@ -194,9 +198,9 @@ test('tab Riwayat untuk Tamu menampilkan ajakan login dengan tombol "Masuk" dan 
   await expect(page).toHaveURL("/masuk");
 });
 
-// DESIGN.md Blok Item stok ▶ Keputusan 2026-11-11 dan Layout: di layar lebar, judul dan tombol di kolom
-// kiri, dan panel penjelasan di kolom kanan.
-test("di lebar 1440 px tab Riwayat untuk Tamu menaruh judul dan tombol di kolom kiri, dan panel penjelasan di kolom kanan", async ({
+// DESIGN.md Layout "Tata letak halaman" ▶ Keputusan 2026-11-20: Riwayat untuk Tamu memakai pola Fokus, yaitu
+// satu kolom 560 px di tengah layar berisi judul, tombol, lalu panel penjelasan di bawahnya.
+test("di lebar 1440 px tab Riwayat untuk Tamu menaruh judul, tombol, dan panel penjelasan dalam satu kolom di tengah", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -212,10 +216,14 @@ test("di lebar 1440 px tab Riwayat untuk Tamu menaruh judul dan tombol di kolom 
     .getByRole("region", { name: "Tautan Pesanan" })
     .boundingBox())!;
 
-  expect(panel.x).toBeGreaterThanOrEqual(daftar.x + daftar.width);
-  expect(panel.x).toBeGreaterThan(judul.x);
-  // Panel sejajar dengan kolom kiri, tidak di bawah tombol.
-  expect(panel.y).toBeLessThan(daftar.y + daftar.height);
+  // Satu kolom: judul, tombol, dan panel berawal di tepi kiri yang sama, dan panel di bawah tombol.
+  expect(daftar.x).toBeCloseTo(judul.x, 0);
+  expect(panel.x).toBeCloseTo(judul.x, 0);
+  expect(panel.width).toBeCloseTo(daftar.width, 0);
+  expect(panel.width).toBeLessThanOrEqual(560);
+  expect(panel.y).toBeGreaterThanOrEqual(daftar.y + daftar.height);
+  // Kolomnya di tengah layar.
+  expect(panel.x + panel.width / 2).toBeCloseTo(1440 / 2, 0);
 });
 
 test("halaman Masuk menaut ke Daftar dan Lupa password, dan halaman Daftar menaut ke Masuk", async ({

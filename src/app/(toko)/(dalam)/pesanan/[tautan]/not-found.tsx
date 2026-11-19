@@ -1,20 +1,19 @@
 import Link from "next/link";
 
-import { KELAS_TOMBOL_UTAMA } from "../../../_components/bilah-lekat";
-
 // Halaman tidak ditemukan untuk Tautan Pesanan yang tidak dikenal (PRD §6.2). Pesannya menyebut sebabnya
-// dan langkah berikutnya.
+// dan langkah berikutnya. Pola Fokus (DESIGN.md "Tata letak halaman"): kolom 560 px di tengah, dengan
+// tombol utama selebar kolom.
 export default function PesananTidakDitemukan() {
   return (
-    <>
-      <h1 className="mt-4">Pesanan tidak ditemukan</h1>
-      <p className="mt-4 max-w-[65ch] text-tinta-redup">
+    <div className="tata-fokus mt-4">
+      <h1>Pesanan tidak ditemukan</h1>
+      <p className="mt-4 text-pensil-redup">
         Tautan Pesanan ini tidak dikenal. Periksa lagi alamatnya, atau lihat
         Produk di Beranda.
       </p>
-      <Link href="/" className={`mt-6 ${KELAS_TOMBOL_UTAMA}`}>
+      <Link href="/" className="tombol mt-6 flex w-full">
         Lihat Beranda
       </Link>
-    </>
+    </div>
   );
 }

@@ -6,7 +6,7 @@ const RENTANG_SENJA_MS = 15 * 60 * 1000;
 const duaAngka = (n: number) => String(n).padStart(2, "0");
 
 /**
- * Hitung mundur QRIS di kartu senja Halaman bayar (PRD §5.6, DESIGN.md "Pemandangan senja"), dari waktu
+ * Hitung mundur QRIS di kartu senja Halaman bayar (PRD §5.6, DESIGN.md "Pemandangan gunung coretan"), dari waktu
  * kedaluwarsa yang tersimpan di Pesanan dan waktu "sekarang", keduanya dalam milidetik.
  *
  * - `teks`: sisa waktu "mm:ss". Detik yang tidak bulat dibulatkan ke atas, jadi "00:00" hanya tampil saat

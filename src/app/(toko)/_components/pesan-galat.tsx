@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Pesan galat 13 px tebal berwarna `st-masalah` dengan ikon TriangleAlert (DESIGN.md Inputs / Fields). `pesan` boleh
- * berisi tautan, misalnya tautan Masuk di pesan Voucher khusus Member.
+ * Pesan galat 16 px berwarna `aksi` dengan ikon TriangleAlert (DESIGN.md Inputs / Fields). Warna `aksi`
+ * dipakai, bukan `spidol`, karena teks ini harus terbaca. `pesan` boleh berisi tautan, misalnya tautan
+ * Masuk di pesan Voucher khusus Member.
  */
 export function PesanGalat({
   id,
@@ -21,11 +22,15 @@ export function PesanGalat({
       id={id}
       role="alert"
       className={cn(
-        "flex items-start gap-2 text-[13px] font-bold text-st-masalah",
+        "flex items-start gap-2 text-[16px] leading-snug text-aksi",
         className,
       )}
     >
-      <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
+      <TriangleAlert
+        aria-hidden="true"
+        strokeWidth={2.5}
+        className="size-5 shrink-0"
+      />
       <span>{pesan}</span>
     </p>
   );

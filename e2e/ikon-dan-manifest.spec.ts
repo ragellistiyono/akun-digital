@@ -10,9 +10,11 @@ import {
 import { sisipkanProduk } from "../src/server/uji-katalog";
 
 // Ikon dan manifest aplikasi (T65, PRD §11.4 ▶ Keputusan 2026-11-18, UAT-K4). Nilai yang diharapkan
-// diambil dari issue #194; warna `langit` #2A1F4D dari docs/DESIGN.md.
-const LANGIT = "#2A1F4D";
-const LANGIT_RGB = [0x2a, 0x1f, 0x4d];
+// diambil dari issue #194. Warnanya mengikuti PRD §11.4 ▶ Keputusan 2026-11-20: `kertas` #FDFBF7 dan
+// `kertas-gelap` #1E1C19 dari docs/DESIGN.md.
+const KERTAS = "#FDFBF7";
+const KERTAS_RGB = [0xfd, 0xfb, 0xf7];
+const KERTAS_GELAP = "#1E1C19";
 
 type IkonManifest = {
   src: string;
@@ -57,8 +59,8 @@ test("Beranda menautkan manifest berisi nama, alamat awal, tampilan, warna, dan 
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: LANGIT,
-    theme_color: LANGIT,
+    background_color: KERTAS,
+    theme_color: KERTAS,
     lang: "id",
   });
 });
@@ -90,7 +92,7 @@ test("ikon manifest berukuran 192 dan 512 px, ikon maskable 512 px, dan apple-to
   ).toBe("180x180");
 });
 
-test("ikon maskable berwarna langit di keempat sudutnya", async ({ page }) => {
+test("ikon maskable berwarna kertas di keempat sudutnya", async ({ page }) => {
   const manifest = await bacaManifest(page);
   const maskable = manifest.icons.find((i) => i.purpose === "maskable");
   expect(maskable).toBeDefined();
@@ -114,11 +116,24 @@ test("ikon maskable berwarna langit di keempat sudutnya", async ({ page }) => {
   }, maskable!.src);
 
   for (const piksel of sudut) {
-    expect(piksel).toEqual([...LANGIT_RGB, 255]);
+    expect(piksel).toEqual([...KERTAS_RGB, 255]);
   }
 });
 
-test("Beranda, Halaman Produk, dan halaman login admin mewarnai bilah status dengan langit", async ({
+/**
+ * Warna bilah status yang dipakai browser: isi meta theme-color pertama yang atribut media-nya cocok
+ * dengan mode perangkat, atau yang tanpa media.
+ */
+function warnaBilahStatus(page: Page) {
+  return page.evaluate(() => {
+    const cocok = Array.from(
+      document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'),
+    ).find((m) => !m.media || window.matchMedia(m.media).matches);
+    return cocok?.content ?? null;
+  });
+}
+
+test("Beranda, Halaman Produk, dan halaman login admin mewarnai bilah status Android kertas di mode terang dan kertas-gelap di mode gelap", async ({
   page,
 }) => {
   const idProduk = await sisipkanProduk({
@@ -127,10 +142,26 @@ test("Beranda, Halaman Produk, dan halaman login admin mewarnai bilah status den
   });
 
   for (const alamat of ["/", `/produk/${idProduk}`, "/admin"]) {
+    await page.emulateMedia({ colorScheme: "light" });
     await page.goto(alamat);
     const warna = page.locator('meta[name="theme-color"]');
-    await expect(warna, alamat).toHaveCount(1);
-    await expect(warna, alamat).toHaveAttribute("content", LANGIT);
+    await expect(warna, alamat).toHaveCount(2);
+    await expect(
+      page.locator(
+        'meta[name="theme-color"][media="(prefers-color-scheme: light)"]',
+      ),
+      alamat,
+    ).toHaveAttribute("content", KERTAS);
+    await expect(
+      page.locator(
+        'meta[name="theme-color"][media="(prefers-color-scheme: dark)"]',
+      ),
+      alamat,
+    ).toHaveAttribute("content", KERTAS_GELAP);
+    expect(await warnaBilahStatus(page), alamat).toBe(KERTAS);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    expect(await warnaBilahStatus(page), alamat).toBe(KERTAS_GELAP);
   }
 });
 

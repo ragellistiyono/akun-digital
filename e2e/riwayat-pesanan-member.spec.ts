@@ -140,11 +140,11 @@ test("Member melihat Pesanan semua status miliknya, termasuk Pesanan Tamu dengan
   expect(
     await nomorPesanan.evaluate((el) => getComputedStyle(el).fontFamily),
   ).toMatch(/JetBrains Mono/i);
-  // DESIGN.md Hierarchy: tanggal di baris meta memakai Label kecil (700, 13 px). DESIGN.md Layout: jarak
+  // DESIGN.md Hierarchy: tanggal di baris meta memakai Label kecil (700, 15 px). DESIGN.md Layout: jarak
   // antarkartu kelipatan 8 px.
   const meta = pertama.getByText(/· 11 Nov 2026 20\.14 WIB$/);
   await expect(meta).toHaveCSS("font-weight", "700");
-  await expect(meta).toHaveCSS("font-size", "13px");
+  await expect(meta).toHaveCSS("font-size", "15px");
   await expect(daftarRiwayat(page)).toHaveCSS("row-gap", "16px");
 });
 
@@ -207,7 +207,7 @@ test('Riwayat Pesanan Member tanpa Pesanan berbunyi "Belum ada Pesanan dengan em
   await expect(daftarRiwayat(page)).toHaveCount(0);
 });
 
-// DESIGN.md Elevation & Depth: kartu yang di-hover terangkat 2 px dengan Bayang naik.
+// DESIGN.md Elevation & Depth: kartu yang di-hover terangkat 2 px dengan bayangan tegas 4 px.
 test("baris Riwayat terangkat 2 px saat di-hover", async ({ page }) => {
   const email = await masukSebagaiMemberBaru(page);
   await pesananPada(email, "Selesai", "2026-11-11T20:14:00+07:00");

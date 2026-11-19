@@ -798,6 +798,8 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - **Tab Akun untuk Member:** email Member, form ganti password (§7.6), tombol "Keluar", lalu tombol WhatsApp serta tautan yang sama.
 - **Tab Riwayat:** Tamu melihat ajakan login beserta penjelasan Tautan Pesanan. Member melihat Riwayat Pesanan (§7.4). Riwayat Pesanan hanya ada di tab Riwayat dan tidak diulang di tab Akun.
 
+▶ Keputusan 2026-11-20: Tautan hukum di tab Akun. Isi tab Akun tidak lagi memuat tautan Syarat & Ketentuan dan Kebijakan Privasi sendiri, karena footer toko sudah menampilkan kedua tautan itu tepat di bawahnya (§9.8), sehingga sebelumnya keduanya tampil dua kali. Tab Akun untuk Tamu berisi tombol "Masuk" dan "Daftar", bagian "Tampilan", lalu tombol WhatsApp. Tab Akun untuk Member berisi email Member, form ganti password, tombol "Keluar", bagian "Tampilan", lalu tombol WhatsApp. Kedua tautan hukum tetap terlihat di tab Akun lewat footer.
+
 ### 11.2 Animasi navbar
 
 - Navbar atas mengecil dan mendapat bayangan saat halaman digulir.
@@ -827,9 +829,17 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - **Tanpa internet.** Yang tampil adalah halaman galat bawaan browser. Toko tidak punya halaman offline sendiri.
 - **Tidak ada tombol pasang.** Toko tidak punya tombol "Pasang aplikasi". Pembeli memakai menu "Tambahkan ke layar utama" di browser.
 
+▶ Keputusan 2026-11-20: Warna aplikasi terpasang mengikuti tema coretan tangan (`docs/DESIGN.md`). Keputusan ini menggantikan butir Ikon, Layar pembuka, dan warna bilah status di atas. Nama, tanpa internet, dan tanpa tombol pasang tidak berubah.
+- **Ikon.** Ikon tetap memakai logo asli `docs/input/logo.png` utuh. Di ponsel yang memotong ikon menjadi bulat, logo diperkecil di atas warna `kertas` (#FDFBF7), bukan lagi `langit` ungu.
+- **Layar pembuka.** Latarnya `kertas` (#FDFBF7), dengan logo di tengah dan nama "MIWE Digital Store" bertulisan Kalam tebal berwarna `pensil` (#2D2D2D). Tampilannya sama di mode terang dan gelap, di Android dan iPhone.
+- **Bilah status ponsel.** Di Android, bilah status mengikuti mode perangkat: `kertas` (#FDFBF7) di mode terang dan `kertas-gelap` (#1E1C19) di mode gelap. Di iPhone, bilah status memakai gaya bawaan, yaitu latar terang dengan teks gelap, dan tidak lagi tembus di atas bilah atas toko.
+- Logo MDS sendiri belum diganti. Logo bergaya coretan tangan, bila dibuat, menjadi keputusan pemilik tersendiri.
+
 ### 11.5 Sistem desain
 
 - Warna, logo, huruf, dan gaya komponen ditetapkan di `docs/DESIGN.md`, yang disusun lewat `/impeccable`.
+
+▶ Keputusan 2026-11-19: Tema tampilan diganti ke gaya coretan tangan dengan acuan `docs/design/acuan-coretan-tangan.md`. Acuan itu wajib dibaca untuk setiap perubahan yang menyentuh tampilan, bersama `docs/DESIGN.md`. Mode gelap (§11.3) tetap ada sebagai versi malam dari gaya yang sama.
 - `docs/DESIGN.md` wajib selaras dengan PRD ini dan wajib terisi sebelum tiket tampilan pertama dikerjakan.
 
 ## 12. Server dan data

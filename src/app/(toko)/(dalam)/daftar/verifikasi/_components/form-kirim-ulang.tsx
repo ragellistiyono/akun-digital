@@ -9,7 +9,7 @@ import type { KeadaanKirimUlang } from "../../pesan-daftar";
 const KEADAAN_AWAL: KeadaanKirimUlang = { pesan: null };
 
 /**
- * Tombol garis "Kirim ulang kode" (PRD §7.7), dengan hasilnya di bawah tombol: pesan untuk menunggu
+ * Tombol kedua "Kirim ulang kode" (PRD §7.7), dengan hasilnya di bawah tombol: pesan untuk menunggu
  * bila jeda 60 detik belum habis, atau kabar bahwa kode baru sudah dikirim. `onTerkirim` dipanggil
  * setiap kali kode baru berhasil dikirim.
  */
@@ -25,7 +25,7 @@ export function FormKirimUlang({ onTerkirim }: { onTerkirim: () => void }) {
       <button
         type="submit"
         disabled={sedangMengirim}
-        className="inline-flex h-[52px] items-center justify-center rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram disabled:bg-permukaan-2 disabled:text-tinta-redup"
+        className="tombol tombol-kedua w-full"
       >
         {sedangMengirim ? "Mengirim…" : "Kirim ulang kode"}
       </button>
@@ -35,7 +35,7 @@ export function FormKirimUlang({ onTerkirim }: { onTerkirim: () => void }) {
         </PesanGalat>
       )}
       {keadaan.pesan?.jenis === "terkirim" && (
-        <p role="status" className="text-[13px] font-bold text-st-selesai">
+        <p role="status" className="text-[16px] leading-snug text-st-selesai">
           {keadaan.pesan.teks}
         </p>
       )}

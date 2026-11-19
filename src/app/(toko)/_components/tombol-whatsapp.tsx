@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 /**
  * Tombol kontak WhatsApp (PRD §9.8) yang membuka https://wa.me/<nomor> dari Pengaturan toko. Selama
- * nomor belum diisi, tombol tidak tampil. Gayanya tombol garis (DESIGN.md Buttons), dan labelnya
+ * nomor belum diisi, tombol tidak tampil. Gayanya tombol kedua (DESIGN.md Buttons), dan labelnya
  * ditentukan halaman yang memasangnya.
  */
 export function TombolWhatsApp({
@@ -20,9 +20,13 @@ export function TombolWhatsApp({
       href={`https://wa.me/${nomor}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram"
+      className="tombol tombol-kedua"
     >
-      <MessageCircle aria-hidden="true" className="size-6 shrink-0" />
+      <MessageCircle
+        aria-hidden="true"
+        strokeWidth={2.5}
+        className="size-6 shrink-0"
+      />
       {children}
     </a>
   );

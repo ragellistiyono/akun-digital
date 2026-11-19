@@ -7,15 +7,15 @@ import { PesanGalat } from "../../../../_components/pesan-galat";
 import { aksiBatalkanPesanan, type KeadaanPembatalan } from "../aksi";
 
 /**
- * Tombol garis (DESIGN.md Buttons): latar `permukaan`, garis 1,5 px `garis` yang menjadi `monogram` saat
- * hover, dan mengecil ke 0,98 saat ditekan. Di bilah lekat lebarnya mengikuti isinya dengan padding
- * samping 16 px, seperti prototipe Halaman bayar, sehingga tombol utama di sampingnya mengisi sisa bilah.
+ * Tombol kedua (DESIGN.md Buttons, `tombol tombol-kedua`). Di bilah lekat lebarnya mengikuti isinya dengan
+ * padding samping 16 px, seperti prototipe Halaman bayar, sehingga tombol utama di sampingnya mengisi sisa
+ * bilah. Di layar sempit hurufnya 18 px, sama dengan tombol di sampingnya, supaya keduanya muat di lebar 360 px.
  */
 const KELAS_TOMBOL_BATALKAN =
-  "inline-flex h-[52px] flex-none! items-center justify-center rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base font-extrabold text-tinta transition-[border-color,scale] duration-150 hover:border-monogram active:scale-[0.98] disabled:cursor-wait disabled:text-tinta-redup disabled:hover:border-garis disabled:active:scale-100 motion-reduce:transition-none";
+  "tombol tombol-kedua flex-none! px-4 disabled:cursor-wait max-[399px]:text-lg";
 
 /**
- * Bilah lekat Halaman bayar (PRD §5.6, §5.8): tombol garis "Batalkan" di samping aksi utama yang diberikan
+ * Bilah lekat Halaman bayar (PRD §5.6, §5.8): tombol kedua "Batalkan" di samping aksi utama yang diberikan
  * halaman, yaitu "Simpan gambar QR". Menekan "Batalkan" membatalkan Pesanan di Tautan Pesanan itu; selama
  * diproses tombolnya nonaktif. Bila pembatalannya gagal, pesan galatnya tampil di bilah lekat, tepat di
  * atas tombolnya.

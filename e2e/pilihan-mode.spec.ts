@@ -6,12 +6,12 @@ import { sisipkanMember } from "../src/server/uji-member";
 
 // Pilihan mode di tab Akun (T64, PRD §11.3 ▶ Keputusan 2026-11-18, UAT-K3). Letak bagian "Tampilan"
 // terhadap tombol WhatsApp diuji di pengaturan-toko.spec.ts, karena hanya berkas itu yang mengubah nomor
-// WhatsApp. Di sini letaknya diperiksa terhadap tautan halaman hukum, yang selalu tampil setelah tombol
-// WhatsApp.
+// WhatsApp. Di sini letaknya diperiksa terhadap tautan halaman hukum di footer toko, yang selalu tampil
+// setelah isi tab Akun (PRD §11.1 ▶ Keputusan 2026-11-20).
 const KETERANGAN = "Pilihan ini hanya diingat di perangkat ini.";
-// Warna latar halaman dari DESIGN.md: `tanah` #F7F3FC dan `tanah-gelap` #15112A.
-const TANAH = "rgb(247, 243, 252)";
-const TANAH_GELAP = "rgb(21, 17, 42)";
+// Warna latar halaman dari DESIGN.md: `kertas` #FDFBF7 dan `kertas-gelap` #1E1C19.
+const TANAH = "rgb(253, 251, 247)";
+const TANAH_GELAP = "rgb(30, 28, 25)";
 const PASSWORD_MEMBER = "sandi-uji-member-123";
 
 test.use({ viewport: { width: 390, height: 800 } });
@@ -41,11 +41,13 @@ async function periksaBagianTampilan(page: Page) {
     await expect(radio.nth(i)).toHaveAccessibleName(nama);
   }
   await expect(bagian.getByText(KETERANGAN, { exact: true })).toBeVisible();
-  // Tautan halaman hukum selalu tampil setelah tombol WhatsApp, jadi bagian ini ada di atasnya.
+  // Footer toko dengan tautan halaman hukum selalu tampil setelah isi tab Akun, jadi bagian ini ada di atasnya.
   expect(await atas(page, modeTampilan(page))).toBeLessThan(
     await atas(
       page,
-      isi(page).getByRole("link", { name: "Syarat & Ketentuan" }),
+      page
+        .getByRole("contentinfo")
+        .getByRole("link", { name: "Syarat & Ketentuan" }),
     ),
   );
   return bagian;

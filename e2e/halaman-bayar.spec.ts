@@ -205,8 +205,9 @@ test("hitung mundur di kartu senja menunjukkan sisa waktu sampai waktu kedaluwar
   await expect(angkaWaktu(page)).toHaveText("07:30");
   await page.clock.runFor(1_000);
   await expect(angkaWaktu(page)).toHaveText("07:29");
-  // Di tengah masa berlaku, langitnya masih senja tanpa bintang: hanya pendar dan cakram matahari.
-  await expect(kartuSenja(page).locator("svg circle")).toHaveCount(2);
+  // Di tengah masa berlaku, matahari menyentuh punggung gunung dan belum ada bintang.
+  await expect(kartuSenja(page).locator("[data-matahari]")).toHaveCount(1);
+  await expect(kartuSenja(page).locator("[data-bintang]")).toHaveCount(0);
 
   expect(galat).toEqual([]);
 });
@@ -229,8 +230,9 @@ test('saat sisa waktu habis, label kartu senja menjadi "QRIS kedaluwarsa" dan la
   ).toBeVisible();
   await expect(kartuSenja(page).getByText("sisa waktu bayar")).toHaveCount(0);
   await expect(pengumumanSisa(page)).toHaveText("QRIS kedaluwarsa");
-  // Malam tiba saat waktu habis: 46 bintang muncul di samping pendar dan cakram matahari (DESIGN.md).
-  await expect(kartuSenja(page).locator("svg circle")).toHaveCount(2 + 46);
+  // Malam tiba saat waktu habis: matahari sudah tenggelam dan bintang coretan muncul (DESIGN.md).
+  await expect(kartuSenja(page).locator("[data-matahari]")).toHaveCount(0);
+  await expect(kartuSenja(page).locator("[data-bintang]")).toHaveCount(8);
 });
 
 // DESIGN.md: pembaca layar mendapat sisa menit lewat aria-live sekali per menit, bukan setiap detik.
@@ -368,8 +370,8 @@ test("di layar lebar, bilah lekat Halaman bayar menjadi blok biasa di kolomnya",
   );
 });
 
-// DESIGN.md "Pemandangan senja": warna angka waktu dan Total bayar berganti antara #2A1F4D dan putih
-// mengikuti luminans langit, supaya kontrasnya selalu minimal 4,5:1.
+// DESIGN.md "Pemandangan gunung coretan": angka waktu dan Total bayar selalu pensil di atas kertas kartu,
+// dan hiasan langit dijauhkan dari teks, supaya kontrasnya selalu minimal 4,5:1.
 test("di lebar 360 px, teks kartu senja kontrasnya minimal 4,5:1 terhadap pemandangan di belakangnya sepanjang hitung mundur", async ({
   page,
 }) => {

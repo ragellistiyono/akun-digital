@@ -12,8 +12,8 @@ export default async function HalamanPengaturanToko() {
   const pengaturan = await bacaPengaturanToko();
 
   return (
-    <>
-      <h1>Pengaturan toko</h1>
+    <div className="tata-baca">
+      <h1 className="mb-6">Pengaturan toko</h1>
       <FormPengaturan
         awal={{
           nilai: {
@@ -23,6 +23,6 @@ export default async function HalamanPengaturanToko() {
           },
         }}
       />
-    </>
+    </div>
   );
 }

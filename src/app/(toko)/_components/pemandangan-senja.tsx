@@ -4,9 +4,6 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   lukisPemandangan,
-  WARNA_TEKS_LANGIT,
-  warnaTeksLangit,
-  type Henti as HentiGradien,
   type JenisPemandangan,
   type Kotak,
 } from "./pelukis-pemandangan";
@@ -14,44 +11,29 @@ import {
 /** Waktu senja: satu angka, atau satu angka per mode tampilan. */
 type WaktuSenja = number | { terang: number; gelap: number };
 
-type Wadah = {
-  lebar: number;
-  tinggi: number;
-  gelap: boolean;
-  langit: string;
-  tanah: string;
-  permukaan: string;
-  butir: string;
-};
+type Wadah = { lebar: number; tinggi: number; gelap: boolean };
 
-let teksturButir: string | null = null;
+/** Teks di atas pemandangan selalu pensil di atas kertas (kontras 13:1 terang, 12:1 gelap). */
+const WARNA_TEKS = "var(--pensil)";
 
-// Tekstur derau 96 px. Dibuat di klien supaya hasil SSR dan hidrasi tetap cocok (DESIGN.md).
-function buatTeksturButir() {
-  if (teksturButir) return teksturButir;
-  const kanvas = document.createElement("canvas");
-  kanvas.width = kanvas.height = 96;
-  const konteks = kanvas.getContext("2d");
-  if (!konteks) return "";
-  const gambar = konteks.createImageData(96, 96);
-  for (let i = 0; i < gambar.data.length; i += 4) {
-    const v = 110 + Math.random() * 145;
-    gambar.data[i] = gambar.data[i + 1] = gambar.data[i + 2] = v;
-    gambar.data[i + 3] = 255;
-  }
-  konteks.putImageData(gambar, 0, 0);
-  return (teksturButir = kanvas.toDataURL());
-}
+/** Garis pensil tidak ikut melar bila viewBox sempat diskalakan sebelum dilukis ulang. */
+const GARIS = {
+  vectorEffect: "non-scaling-stroke",
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
 
 /**
- * Pemandangan senja yang dilukis dengan kode sebagai SVG (DESIGN.md, "Pemandangan senja").
- * Mengisi wadah induknya, yang harus `relative` dan menentukan tingginya sendiri.
- * Dilukis ulang saat ukuran wadah atau mode tampilan berubah.
+ * Pemandangan gunung coretan tangan yang dilukis dengan kode sebagai SVG
+ * (docs/design/acuan-coretan-tangan.md): punggung gunung bergaris pensil dengan arsiran, matahari atau
+ * bulan sabit, awan, burung, dan bintang di atas kertas. Mengisi wadah induknya, yang harus `relative`
+ * dan menentukan tingginya sendiri. Langitnya transparan, jadi titik kertas halaman tetap terlihat.
+ * Semua warna berasal dari token, sehingga mode gelap ikut otomatis. Dilukis ulang saat ukuran wadah
+ * atau mode tampilan berubah; mode menentukan waktu senja bila `t` diberikan per mode.
  *
  * Teks yang ditulis di atas langit dikirim sebagai `teks`, yaitu kotak-kotaknya di dalam wadah. Matahari,
- * cahaya ufuk, awan, dan bintang dijauhkan dari kotak itu, lalu `children` dipanggil dengan warna teks
- * yang dipilih terhadap latar di belakangnya. Selama `teks` masih null (belum diukur), pemandangan belum
- * dilukis dan warna teksnya putih.
+ * bintang, awan, dan arsiran langit dijauhkan dari kotak itu, lalu `children` dipanggil dengan warna
+ * teksnya. Selama `teks` masih null (belum diukur), pemandangan belum dilukis.
  */
 export function PemandanganSenja({
   jenis,
@@ -71,18 +53,13 @@ export function PemandanganSenja({
   useEffect(() => {
     const el = elemen.current;
     if (!el) return;
-    const ukur = () => {
-      const gaya = getComputedStyle(document.documentElement);
+    const ukur = () =>
       setWadah({
         lebar: el.clientWidth,
         tinggi: el.clientHeight,
-        gelap: gaya.colorScheme === "dark",
-        langit: gaya.getPropertyValue("--langit").trim(),
-        tanah: gaya.getPropertyValue("--tanah").trim(),
-        permukaan: gaya.getPropertyValue("--permukaan").trim(),
-        butir: buatTeksturButir(),
+        gelap:
+          getComputedStyle(document.documentElement).colorScheme === "dark",
       });
-    };
 
     // ResizeObserver juga memanggil ukur() sekali begitu wadah mulai diamati.
     const pengamatUkuran = new ResizeObserver(ukur);
@@ -102,24 +79,15 @@ export function PemandanganSenja({
     };
   }, []);
 
-  // Pita dan strip tepi memakai token `langit` sebagai kunci atas dan kabutnya larut ke `tanah`. Kartu senja
-  // Halaman bayar memakai kunci atas yang mengikuti waktu senja, dan kabutnya larut ke `permukaan` (DESIGN.md).
-  const kartuBayar = jenis === "bayar";
   const lukisan =
     wadah && wadah.lebar > 0 && wadah.tinggi > 0 && teks !== null
       ? lukisPemandangan(jenis, {
           lebar: wadah.lebar,
           tinggi: wadah.tinggi,
           t: typeof t === "number" ? t : wadah.gelap ? t.gelap : t.terang,
-          atas: kartuBayar ? undefined : wadah.langit,
-          kabutKe: kartuBayar ? wadah.permukaan : wadah.tanah,
           teks,
         })
       : null;
-  const warnaTeks =
-    lukisan && teks
-      ? warnaTeksLangit(lukisan, teks).warna
-      : WARNA_TEKS_LANGIT.putih;
 
   return (
     <>
@@ -127,148 +95,157 @@ export function PemandanganSenja({
         ref={elemen}
         aria-hidden="true"
         data-pemandangan={jenis}
-        className="absolute inset-0 overflow-hidden"
+        className="pointer-events-none absolute inset-0 overflow-hidden"
       >
-        {wadah && lukisan && (
-          <>
-            <svg
-              viewBox={`0 0 ${lukisan.lebar} ${lukisan.tinggi}`}
-              preserveAspectRatio="none"
-              className="absolute inset-0 block size-full"
-            >
-              <defs>
-                <linearGradient id={`${id}l`} x1="0" y1="0" x2="0" y2="1">
-                  <Henti henti={lukisan.langit} />
-                </linearGradient>
-                <radialGradient id={`${id}u`} cx=".5" cy=".5" r=".5">
-                  <Henti henti={lukisan.cahayaUfuk.henti} />
-                </radialGradient>
-                {lukisan.matahari && (
-                  <radialGradient id={`${id}g`}>
-                    <Henti henti={lukisan.matahari.pendar.henti} />
-                  </radialGradient>
-                )}
-                <filter
-                  id={`${id}a`}
-                  x="-20%"
-                  y="-200%"
-                  width="140%"
-                  height="500%"
-                >
-                  <feGaussianBlur stdDeviation={lukisan.awan.kabur} />
-                </filter>
-                {lukisan.punggung.map((lapis, k) => (
-                  <linearGradient
-                    key={k}
-                    id={`${id}r${k}`}
-                    x1="0"
-                    y1="0"
-                    x2="0"
-                    y2="1"
-                  >
-                    <Henti henti={lapis.henti} />
-                  </linearGradient>
-                ))}
-                {lukisan.punggung.map(
-                  (lapis, k) =>
-                    lapis.kabur !== null && (
-                      <filter key={k} id={`${id}h${k}`}>
-                        <feGaussianBlur stdDeviation={lapis.kabur} />
-                      </filter>
-                    ),
-                )}
-                <linearGradient id={`${id}k`} x1="0" y1="0" x2="0" y2="1">
-                  <Henti henti={lukisan.kabut.henti} />
-                </linearGradient>
-              </defs>
-              <rect
-                width={lukisan.lebar}
-                height={lukisan.tinggi}
-                fill={`url(#${id}l)`}
-              />
-              {lukisan.bintang.map((b, i) => (
-                <circle
-                  key={i}
-                  cx={b.cx}
-                  cy={b.cy}
-                  r={b.r}
-                  fill={b.warna}
-                  opacity={b.opasitas}
-                />
+        {lukisan && (
+          <svg
+            viewBox={`0 0 ${lukisan.lebar} ${lukisan.tinggi}`}
+            preserveAspectRatio="none"
+            fill="none"
+            className="absolute inset-0 block size-full"
+          >
+            <defs>
+              <clipPath id={`${id}langit`}>
+                <rect width={lukisan.lebar} height={lukisan.dasar} />
+              </clipPath>
+              {lukisan.punggung.map((lapis, k) => (
+                <clipPath key={k} id={`${id}lapis${k}`}>
+                  <path d={lapis.d} />
+                </clipPath>
               ))}
-              <ellipse
-                cx={lukisan.cahayaUfuk.cx}
-                cy={lukisan.cahayaUfuk.cy}
-                rx={lukisan.cahayaUfuk.rx}
-                ry={lukisan.cahayaUfuk.ry}
-                fill={`url(#${id}u)`}
-              />
-              {lukisan.awan.elips.map((a, i) => (
-                <ellipse
+            </defs>
+
+            {/* Langit: semua isinya dipotong di garis cakrawala, jadi matahari tenggelam di baliknya. */}
+            <g clipPath={`url(#${id}langit)`}>
+              {lukisan.arsiranLangit && (
+                <path
+                  data-arsiran-langit=""
+                  d={lukisan.arsiranLangit}
+                  stroke="var(--pulpen)"
+                  strokeWidth={1.5}
+                  opacity={0.32}
+                  {...GARIS}
+                />
+              )}
+              {lukisan.bintang.map((b, i) => (
+                <path
                   key={i}
-                  cx={a.cx}
-                  cy={a.cy}
-                  rx={a.rx}
-                  ry={a.ry}
-                  fill={a.warna}
-                  opacity={a.opasitas}
-                  filter={`url(#${id}a)`}
+                  data-bintang=""
+                  d={b.d}
+                  stroke="var(--pensil)"
+                  strokeWidth={1.6}
+                  {...GARIS}
                 />
               ))}
               {lukisan.matahari && (
-                <>
-                  <circle
-                    cx={lukisan.matahari.cx}
-                    cy={lukisan.matahari.cy}
-                    r={lukisan.matahari.pendar.r}
-                    fill={`url(#${id}g)`}
+                <g
+                  data-matahari=""
+                  transform={`translate(${lukisan.matahari.cx} ${lukisan.matahari.cy})`}
+                >
+                  {/* Sinar berputar pelan di sekitar pusat matahari, kecuali gerak dikurangi. */}
+                  <g
+                    className="motion-safe:animate-spin"
+                    style={{ animationDuration: "48s" }}
+                  >
+                    <path
+                      d={lukisan.matahari.sinar}
+                      stroke="var(--pensil)"
+                      strokeWidth={lukisan.tebal}
+                      {...GARIS}
+                    />
+                  </g>
+                  <path
+                    d={lukisan.matahari.tubuh}
+                    fill="var(--matahari)"
+                    stroke="var(--pensil)"
+                    strokeWidth={lukisan.tebal}
+                    {...GARIS}
                   />
-                  <circle
-                    cx={lukisan.matahari.cx}
-                    cy={lukisan.matahari.cy}
-                    r={lukisan.matahari.r}
-                    fill={lukisan.matahari.warna}
-                    opacity={lukisan.matahari.opasitas}
-                  />
-                </>
+                </g>
               )}
-              {lukisan.punggung.map((lapis, k) => (
+              {lukisan.bulan && (
                 <path
-                  key={k}
-                  d={lapis.d}
-                  fill={`url(#${id}r${k})`}
-                  filter={lapis.kabur !== null ? `url(#${id}h${k})` : undefined}
+                  data-bulan=""
+                  transform={`translate(${lukisan.bulan.cx} ${lukisan.bulan.cy})`}
+                  d={lukisan.bulan.tubuh}
+                  fill="var(--matahari)"
+                  stroke="var(--pensil)"
+                  strokeWidth={lukisan.tebal}
+                  {...GARIS}
+                />
+              )}
+              {lukisan.awan.map((a, i) => (
+                <path
+                  key={i}
+                  data-awan=""
+                  d={a.d}
+                  fill="var(--permukaan)"
+                  stroke="var(--pensil)"
+                  strokeWidth={2}
+                  {...GARIS}
                 />
               ))}
-              <rect
-                y={lukisan.kabut.y}
-                width={lukisan.lebar}
-                height={lukisan.kabut.tinggi}
-                fill={`url(#${id}k)`}
-              />
-            </svg>
-            <div
-              className="pointer-events-none absolute inset-0 mix-blend-soft-light"
-              style={{
-                backgroundImage: `url(${wadah.butir})`,
-                opacity: lukisan.butir,
-              }}
+              {lukisan.burung.map((d, i) => (
+                <path
+                  key={i}
+                  data-burung=""
+                  d={d}
+                  stroke="var(--pulpen)"
+                  strokeWidth={2}
+                  {...GARIS}
+                />
+              ))}
+            </g>
+
+            {/* Punggung gunung dari lapis terjauh ke terdekat. */}
+            {lukisan.punggung.map((lapis, k) => (
+              <g key={k} data-lapis="">
+                <path d={lapis.d} fill={lapis.isi} />
+                <path
+                  d={lapis.arsiran}
+                  clipPath={`url(#${id}lapis${k})`}
+                  stroke="var(--pensil)"
+                  strokeWidth={1.2}
+                  opacity={0.3}
+                  {...GARIS}
+                />
+                {lapis.salju && (
+                  <path
+                    d={lapis.salju}
+                    stroke="var(--pensil)"
+                    strokeWidth={1.5}
+                    strokeDasharray="3 4"
+                    {...GARIS}
+                  />
+                )}
+                <path
+                  d={lapis.garisTipis}
+                  stroke="var(--pensil)"
+                  strokeWidth={1}
+                  strokeDasharray="28 14"
+                  strokeDashoffset={k * 11}
+                  opacity={0.5}
+                  {...GARIS}
+                />
+                <path
+                  d={lapis.garis}
+                  stroke="var(--pensil)"
+                  strokeWidth={lukisan.tebal}
+                  {...GARIS}
+                />
+              </g>
+            ))}
+            <path
+              data-cakrawala=""
+              d={lukisan.cakrawala}
+              stroke="var(--pensil)"
+              strokeWidth={lukisan.tebal}
+              {...GARIS}
             />
-          </>
+          </svg>
         )}
       </div>
-      {children?.(warnaTeks)}
+      {children?.(WARNA_TEKS)}
     </>
   );
-}
-
-function Henti({ henti }: { henti: HentiGradien[] }) {
-  return henti.map((h) => (
-    <stop
-      key={h.offset}
-      offset={h.offset}
-      stopColor={h.warna}
-      stopOpacity={h.opasitas}
-    />
-  ));
 }
