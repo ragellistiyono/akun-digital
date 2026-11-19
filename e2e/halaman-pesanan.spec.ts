@@ -452,7 +452,7 @@ test("setiap pil status menampilkan warna, ikon, dan label sesuai DESIGN.md bagi
     await expect(pil).toBeVisible();
     await expect(pil.locator(`svg.${kelasIkon}`)).toBeVisible();
     await expect(pil).toHaveCSS("height", "28px");
-    await expect(pil).toHaveCSS("font-size", "13px");
+    await expect(pil).toHaveCSS("font-size", "15px");
     await expect(pil).toHaveCSS("font-weight", "700");
     await harapkanPil(pil, latar, teks, "terang");
     await page.emulateMedia({ colorScheme: "dark" });

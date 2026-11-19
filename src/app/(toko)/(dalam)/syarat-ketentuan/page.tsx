@@ -10,10 +10,11 @@ export default async function HalamanSyaratKetentuan() {
   await connection();
   const { syaratKetentuan } = await bacaPengaturanToko();
 
+  // Pola Baca (DESIGN.md "Tata letak halaman"): kolom 720 px di tengah, dengan judul di kolom yang sama.
   return (
-    <>
+    <div className="tata-baca">
       <h1 className="mt-4">Syarat &amp; Ketentuan</h1>
       <TeksHalamanHukum teks={syaratKetentuan} />
-    </>
+    </div>
   );
 }

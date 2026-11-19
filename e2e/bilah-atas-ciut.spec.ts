@@ -7,7 +7,7 @@ import { sisipkanMember } from "../src/server/uji-member";
 
 // Bilah atas ciut saat digulir (T61, PRD §11.2, DESIGN.md Layout "Gerak responsif", Navigation
 // "Bilah atas", Elevation "Bayang bilah", UAT-K2).
-const BAYANG_BILAH = "rgba(20, 14, 40, 0.7) 0px 10px 24px -14px";
+const BAYANG_BILAH = "rgb(45, 45, 45) 0px 4px 0px 0px";
 
 const bilahAtas = (page: Page) => page.getByRole("banner");
 

@@ -12,12 +12,11 @@ import { aksiUbahStatusVoucher } from "./aksi";
 
 const ALAMAT = "/admin/voucher";
 
-/** Tombol kecil 36 px bergaris (DESIGN.md Buttons). */
 /** Satu baris daftar Voucher: Voucher beserta pemakaiannya. */
 type BarisVoucher = Awaited<ReturnType<typeof daftarVoucher>>[number];
 
-const KELAS_TOMBOL_KECIL =
-  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold whitespace-nowrap text-tinta hover:border-monogram";
+/** Tombol kecil 40 px untuk aksi kedua (DESIGN.md Buttons). */
+const KELAS_TOMBOL_KECIL = "tombol tombol-kecil tombol-kedua whitespace-nowrap";
 
 /** Potongan Voucher seperti "Rp 5.000", "10%", atau "10%, maks Rp 10.000" (PRD §8.8 ▶ Keputusan 2026-11-17). */
 function teksPotongan(voucher: Voucher) {
@@ -70,15 +69,16 @@ function TombolStatusVoucher({ voucher }: { voucher: Voucher }) {
 
 /**
  * Tabel Voucher. Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar sempit, supaya halaman
- * tidak ikut bergulir ke samping (PRD §11.1).
+ * tidak ikut bergulir ke samping (PRD §11.1). Panelnya `relative`, supaya teks sr-only (position absolute) di
+ * dalam tabel ikut tergulir di panel dan tidak melebarkan halaman.
  */
 function TabelVoucher({ semuaVoucher }: { semuaVoucher: BarisVoucher[] }) {
   return (
-    <div className="mt-6 max-w-[1120px] overflow-x-auto rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
+    <div className="kartu relative overflow-x-auto px-4 py-2 sm:px-6">
       <table className="w-full min-w-[960px] text-left">
         <caption className="sr-only">Daftar Voucher</caption>
-        <thead className="text-[13px] font-bold text-tinta-redup">
-          <tr className="border-b border-garis">
+        <thead className="font-spidol text-[16px] font-bold text-pensil-redup">
+          <tr className="border-b-2 border-dashed border-pensil">
             <th scope="col" className="py-2 pr-4">
               Kode
             </th>
@@ -103,9 +103,12 @@ function TabelVoucher({ semuaVoucher }: { semuaVoucher: BarisVoucher[] }) {
           {semuaVoucher.map((voucher) => (
             <tr
               key={voucher.id}
-              className="border-b border-garis align-top last:border-b-0"
+              className="border-b-2 border-dashed border-pensil align-top last:border-b-0"
             >
-              <th scope="row" className="py-3 pr-4 font-bold break-all">
+              <th
+                scope="row"
+                className="py-3 pr-4 font-spidol font-bold break-all"
+              >
                 {voucher.kode}
               </th>
               <td className="py-3 pr-4 whitespace-nowrap tabular-nums">
@@ -148,19 +151,16 @@ export default async function HalamanDaftarVoucher() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="kepala-halaman">
         <h1>Voucher</h1>
-        <Link
-          href={`${ALAMAT}/baru`}
-          className="inline-flex h-10 items-center gap-2 rounded-[12px] bg-aksi px-4 text-sm font-bold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98]"
-        >
-          <Plus aria-hidden="true" className="size-6" />
+        <Link href={`${ALAMAT}/baru`} className="tombol tombol-kecil">
+          <Plus aria-hidden="true" className="size-6" strokeWidth={2.5} />
           Tambah Voucher
         </Link>
       </div>
 
       {semuaVoucher.length === 0 ? (
-        <p className="mt-6 max-w-[65ch] text-tinta-redup">
+        <p className="max-w-[65ch] text-pensil-redup">
           Belum ada Voucher. Pilih Tambah Voucher untuk membuat Voucher pertama
           beserta potongan dan syaratnya.
         </p>

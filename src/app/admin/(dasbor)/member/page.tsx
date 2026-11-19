@@ -19,20 +19,23 @@ const PencarianAlamat = z.object({
   cari: z.string().trim().min(1).optional().catch(undefined),
 });
 
-const KELAS_TOMBOL_KECIL_GARIS =
-  "inline-flex h-10 items-center rounded-[12px] border-[1.5px] border-garis bg-permukaan px-4 text-sm font-bold hover:border-monogram";
+/** Tombol kecil 40 px untuk aksi kedua (DESIGN.md Buttons). */
+const KELAS_TOMBOL_KECIL_GARIS = "tombol tombol-kecil tombol-kedua";
 
-/** Form pencarian Member menurut sebagian email (PRD §2.3 ▶ Keputusan 2026-11-17). Dikirim sebagai GET. */
+/**
+ * Form pencarian Member menurut sebagian email (PRD §2.3 ▶ Keputusan 2026-11-17). Dikirim sebagai GET. Isian dan
+ * tombolnya sebaris dan rata bawah; di ponsel tombol turun ke bawah isian bila tidak muat.
+ */
 function FormCari({ cari }: { cari: string | undefined }) {
   return (
     <form
       action={ALAMAT}
       role="search"
       aria-label="Cari Member"
-      className="mt-6 flex max-w-[1120px] flex-wrap items-end gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-wrap items-end gap-4 p-4 min-[640px]:flex-nowrap"
     >
-      <div className="flex min-w-56 flex-1 flex-col gap-2">
-        <label htmlFor="cari" className="text-sm font-bold">
+      <div className="flex min-w-0 flex-[1_1_14rem] flex-col gap-2">
+        <label htmlFor="cari" className="text-[17px] leading-tight">
           Cari email
         </label>
         <input
@@ -42,14 +45,11 @@ function FormCari({ cari }: { cari: string | undefined }) {
           defaultValue={cari ?? ""}
           placeholder="Sebagian email"
           autoComplete="off"
-          className={cn(KELAS_ISIAN, "h-10 w-full min-w-0")}
+          className={cn(KELAS_ISIAN, "h-10 min-h-10 w-full min-w-0")}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="submit"
-          className="inline-flex h-10 items-center rounded-[12px] bg-aksi px-4 text-sm font-bold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98]"
-        >
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <button type="submit" className="tombol tombol-kecil">
           Cari
         </button>
         {cari !== undefined && (
@@ -62,9 +62,8 @@ function FormCari({ cari }: { cari: string | undefined }) {
   );
 }
 
-/** Tombol kecil 36 px bergaris (DESIGN.md Buttons). */
-const KELAS_TOMBOL_KECIL =
-  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold whitespace-nowrap text-tinta hover:border-monogram";
+/** Tombol kecil 40 px untuk aksi kedua (DESIGN.md Buttons). */
+const KELAS_TOMBOL_KECIL = "tombol tombol-kecil tombol-kedua whitespace-nowrap";
 
 /**
  * Tombol "Nonaktifkan" atau "Aktifkan kembali" untuk satu Member (PRD §2.3). Aksi ini bisa dibalik, jadi
@@ -93,8 +92,9 @@ function TombolStatusMember({
 
 /**
  * Tabel Member dengan kolom PRD §2.3, termasuk status Aktif atau Nonaktif beserta tombol untuk mengubahnya.
- * Tabelnya bergulir ke samping di dalam panelnya sendiri pada layar
- * sempit, supaya halaman tidak ikut bergulir ke samping (PRD §11.1).
+ * Kartunya selebar isi halaman. Tabelnya bergulir ke samping di dalam kartunya sendiri pada layar sempit, supaya
+ * halaman tidak ikut bergulir ke samping (PRD §11.1). Kartu itu `relative`, supaya teks khusus pembaca layar di
+ * tombol status ikut terpotong olehnya dan tidak melebarkan halaman.
  */
 function TabelMember({
   semuaMember,
@@ -102,11 +102,11 @@ function TabelMember({
   semuaMember: Awaited<ReturnType<typeof daftarMember>>;
 }) {
   return (
-    <div className="mt-4 max-w-[1120px] overflow-x-auto rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
+    <div className="kartu relative mt-4 overflow-x-auto px-4 py-2">
       <table className="w-full min-w-[880px] text-left">
         <caption className="sr-only">Daftar Member</caption>
-        <thead className="text-[13px] font-bold text-tinta-redup">
-          <tr className="border-b border-garis">
+        <thead className="font-spidol text-[16px] font-bold text-pensil-redup">
+          <tr className="border-b-2 border-dashed border-pensil">
             <th scope="col" className="min-w-48 py-2 pr-4">
               Email
             </th>
@@ -131,16 +131,16 @@ function TabelMember({
           {semuaMember.map((member) => (
             <tr
               key={member.id}
-              className="border-b border-garis align-top last:border-b-0"
+              className="border-b-2 border-dashed border-pensil align-top last:border-b-0"
             >
               <th
                 scope="row"
-                className="py-3 pr-4 font-bold [overflow-wrap:anywhere]"
+                className="py-3 pr-4 font-normal [overflow-wrap:anywhere]"
               >
                 {/* Email membuka Riwayat Pesanan Member itu (PRD §2.3 ▶ Keputusan 2026-11-17). */}
                 <Link
                   href={`${ALAMAT}/${member.id}`}
-                  className="inline-flex min-h-6 items-center text-aksi-teks underline-offset-2 hover:underline"
+                  className="inline-flex min-h-6 items-center text-pulpen decoration-2 underline-offset-4 hover:underline"
                 >
                   {member.email}
                 </Link>
@@ -151,7 +151,7 @@ function TabelMember({
               <td className="py-3 pr-4 text-right tabular-nums">
                 {member.belanja.jumlahPesananSelesai.toLocaleString("id-ID")}
               </td>
-              <td className="py-3 pr-4 text-right font-bold whitespace-nowrap tabular-nums">
+              <td className="py-3 pr-4 text-right font-spidol font-bold whitespace-nowrap tabular-nums">
                 {rupiah(member.belanja.totalBelanja)}
               </td>
               <td className="py-3 pr-4">
@@ -168,7 +168,7 @@ function TabelMember({
   );
 }
 
-const PESAN = "mt-6 max-w-[65ch] text-tinta-redup";
+const PESAN = "mt-6 max-w-[65ch] text-pensil-redup";
 
 // Daftar Member di dasbor admin (PRD §2.3 ▶ Keputusan 2026-11-17): Member terverifikasi, terbaru di atas,
 // dengan email, tanggal daftar dalam WIB (PRD §9.1), jumlah Pesanan Selesai, total belanja, dan status Aktif
@@ -183,7 +183,9 @@ export default async function HalamanDaftarMember({
 
   return (
     <>
-      <h1>Member</h1>
+      <div className="kepala-halaman">
+        <h1>Member</h1>
+      </div>
 
       {/* Form dipasang ulang setiap kata cari berubah, supaya isiannya kosong lagi setelah Hapus pencarian,
           yang berpindah tanpa memuat ulang halaman. */}
@@ -197,7 +199,7 @@ export default async function HalamanDaftarMember({
         </p>
       ) : (
         <>
-          <p className="mt-6 text-[13px] font-bold text-tinta-redup">
+          <p className="mt-6 text-[15px] text-pensil-redup">
             {semuaMember.length.toLocaleString("id-ID")} Member
           </p>
           <TabelMember semuaMember={semuaMember} />

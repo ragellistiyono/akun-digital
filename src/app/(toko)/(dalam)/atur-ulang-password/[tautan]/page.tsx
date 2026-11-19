@@ -7,7 +7,6 @@ import { bacaTautanAturUlangPassword } from "@/server/auth/atur-ulang-password";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 
 import { PesanGalat } from "../../../../_masuk/form-masuk";
-import { KELAS_TOMBOL_UTAMA } from "../../../_components/bilah-lekat";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { FormAturUlangPassword } from "./_components/form-atur-ulang-password";
 import {
@@ -26,7 +25,8 @@ export const metadata: Metadata = {
 // menampilkan form password baru. Tautan yang tidak berlaku lagi ditolak dengan pesan menurut alasannya:
 // kedaluwarsa, sudah dipakai, atau diganti tautan yang lebih baru. Tautan milik Member nonaktif menampilkan
 // pesan nonaktif beserta tombol WhatsApp dari Pengaturan toko; tanpa nomor WhatsApp, hanya pesannya yang
-// tampil. Alamat yang tidak dikenal menampilkan halaman tidak ditemukan.
+// tampil. Alamat yang tidak dikenal menampilkan halaman tidak ditemukan. Tata letak Fokus (DESIGN.md Tata
+// letak halaman): kolom 560 px di tengah.
 export default async function HalamanAturUlangPassword({
   params,
 }: PageProps<"/atur-ulang-password/[tautan]">) {
@@ -43,17 +43,17 @@ export default async function HalamanAturUlangPassword({
     : null;
 
   return (
-    <div className="max-w-[440px]">
+    <div className="tata-fokus">
       <h1 className="mt-4">Atur ulang password</h1>
       {keadaan.keadaan === "berlaku" ? (
         <>
-          <p className="mt-2 text-tinta-redup">
+          <p className="mt-2 text-pensil-redup">
             Buat password baru untuk akun Member Anda.
           </p>
           <FormAturUlangPassword tautan={tautan.data} />
         </>
       ) : (
-        <section className="mt-6 flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang">
+        <section className="kartu paku relative mt-6 flex flex-col gap-4 p-5">
           <PesanGalat id="tautan-galat" peran="alert">
             {PESAN_TAUTAN_TIDAK_BERLAKU[keadaan.alasan]}
           </PesanGalat>
@@ -62,7 +62,7 @@ export default async function HalamanAturUlangPassword({
               Hubungi kami di WhatsApp
             </TombolWhatsApp>
           ) : (
-            <Link href="/lupa-password" className={KELAS_TOMBOL_UTAMA}>
+            <Link href="/lupa-password" className="tombol w-full">
               Minta tautan baru
             </Link>
           )}

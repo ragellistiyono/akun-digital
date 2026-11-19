@@ -19,9 +19,9 @@ export function DaftarStokMenipis({
   varian: readonly VarianStokMenipis[];
 }) {
   return (
-    <div className="mt-4 rounded-[20px] bg-permukaan px-4 py-2 shadow-bayang">
+    <div className="kartu mt-4 px-4 py-2">
       {varian.length === 0 ? (
-        <p className="py-2 text-tinta-redup">
+        <p className="py-2 text-pensil-redup">
           Tidak ada Varian yang stoknya menipis.
         </p>
       ) : (
@@ -29,26 +29,25 @@ export function DaftarStokMenipis({
           {varian.map((v) => (
             <li
               key={v.varianId}
-              className="border-b border-garis last:border-b-0"
+              className="border-b-2 border-dashed border-pensil last:border-b-0"
             >
               <Link
                 href={`/admin/produk/${v.produkId}/varian/${v.varianId}`}
-                className="-mx-2 flex min-h-12 items-center gap-4 rounded-[12px] px-2 py-2 hover:bg-permukaan-2"
+                className="-mx-2 flex min-h-12 items-center gap-4 rounded-coret px-2 py-2 hover:bg-kertas-lama"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block font-bold break-words">
-                    {v.namaProduk}
-                  </span>
-                  <span className="block text-[13px] break-words text-tinta-redup">
+                  <span className="block break-words">{v.namaProduk}</span>
+                  <span className="block text-[15px] break-words text-pensil-redup">
                     {v.namaVarian}
                   </span>
                 </span>
-                <span className="shrink-0 font-extrabold tabular-nums">
+                <span className="shrink-0 font-spidol font-bold tabular-nums">
                   Stok {v.stokVarian}
                 </span>
                 <ChevronRight
                   aria-hidden="true"
-                  className="size-6 shrink-0 text-tinta-redup"
+                  className="size-6 shrink-0 text-pensil-redup"
+                  strokeWidth={2.5}
                 />
               </Link>
             </li>

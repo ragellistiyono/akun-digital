@@ -12,18 +12,19 @@ export function Keterangan({
 }) {
   if (galat) {
     return (
-      <p
-        id={id}
-        className="flex items-start gap-2 text-[13px] font-bold text-st-masalah"
-      >
-        <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
+      <p id={id} className="flex items-start gap-2 text-[16px] text-aksi">
+        <TriangleAlert
+          aria-hidden="true"
+          className="mt-0.5 size-5 shrink-0"
+          strokeWidth={2.5}
+        />
         {galat}
       </p>
     );
   }
   if (!bantuan) return null;
   return (
-    <p id={id} className="text-[13px] text-tinta-redup">
+    <p id={id} className="text-[15px] text-pensil-redup">
       {bantuan}
     </p>
   );

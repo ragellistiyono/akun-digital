@@ -105,7 +105,8 @@ test("setelah Admin mengubah nomor WhatsApp, tombol WhatsApp di tab Akun membuka
     page.getByRole("link", { name: "Hubungi kami di WhatsApp" }),
   ).toHaveAttribute("href", "https://wa.me/6281234567890");
   // UAT-K1 dan PRD §11.1 ▶ Keputusan 2026-11-17: sesi Admin bukan Member, jadi tab Akun tampil untuk
-  // Tamu, dengan tombol "Masuk" dan "Daftar" di atas tombol WhatsApp dan tautan halaman hukum.
+  // Tamu, dengan tombol "Masuk" dan "Daftar" di atas tombol WhatsApp, lalu tautan halaman hukum di footer
+  // toko (PRD §11.1 ▶ Keputusan 2026-11-20).
   const isiAkun = page.getByRole("main");
   const atas = async (nama: string) =>
     (await isiAkun
@@ -116,7 +117,10 @@ test("setelah Admin mengubah nomor WhatsApp, tombol WhatsApp di tab Akun membuka
     await atas("Hubungi kami di WhatsApp"),
   );
   expect(await atas("Hubungi kami di WhatsApp")).toBeLessThan(
-    await atas("Syarat & Ketentuan"),
+    (await page
+      .getByRole("contentinfo")
+      .getByRole("link", { name: "Syarat & Ketentuan" })
+      .boundingBox())!.y,
   );
 
   await page.goto("/admin/pengaturan");
@@ -486,19 +490,19 @@ for (const halaman of ["/", "/kategori", "/riwayat", "/akun"]) {
   });
 }
 
-// PRD §11.1 ▶ Keputusan 2026-11-11: tab Akun berisi tombol WhatsApp serta tautan kedua halaman itu.
-test("tab Akun menautkan halaman Syarat & Ketentuan dan Kebijakan Privasi", async ({
+// PRD §11.1 ▶ Keputusan 2026-11-20: tautan kedua halaman itu di tab Akun datang dari footer toko (diuji di
+// atas), dan tidak lagi diulang di isi tab, supaya tidak tampil dua kali.
+test("isi tab Akun tidak mengulang tautan Syarat & Ketentuan dan Kebijakan Privasi dari footer", async ({
   page,
 }) => {
   await page.goto("/akun");
 
-  const isi = page.getByRole("main");
-  await expect(isi.getByRole("link", { name: /Syarat|Privasi/ })).toHaveText([
-    "Syarat & Ketentuan",
-    "Kebijakan Privasi",
-  ]);
-  await isi.getByRole("link", { name: "Kebijakan Privasi" }).click();
-  await expect(page).toHaveURL("/kebijakan-privasi");
+  await expect(
+    page.getByRole("main").getByRole("link", { name: /Syarat|Privasi/ }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("contentinfo").getByRole("link", { name: /Syarat|Privasi/ }),
+  ).toHaveCount(2);
 });
 
 test("selama nomor WhatsApp belum diisi, tab Akun tidak menampilkan tombol WhatsApp", async ({

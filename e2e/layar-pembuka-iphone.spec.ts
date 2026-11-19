@@ -10,8 +10,9 @@ import {
 } from "@playwright/test";
 
 // Layar pembuka iPhone (T66, PRD §11.4 ▶ Keputusan 2026-11-18, UAT-K4). Nilai yang diharapkan diambil
-// dari issue #195; warna `langit` #2A1F4D dari docs/DESIGN.md.
-const LANGIT_RGB = [0x2a, 0x1f, 0x4d];
+// dari issue #195. Warna dan bilah status mengikuti PRD §11.4 ▶ Keputusan 2026-11-20: latar `kertas`
+// #FDFBF7 dari docs/DESIGN.md, dan bilah status iPhone memakai gaya bawaan.
+const KERTAS_RGB = [0xfd, 0xfb, 0xf7];
 
 async function meta(page: Page, nama: string) {
   const tag = page.locator(`meta[name="${nama}"]`);
@@ -19,16 +20,16 @@ async function meta(page: Page, nama: string) {
   return tag.getAttribute("content");
 }
 
-test("Beranda membuka toko tanpa bilah alamat dengan judul MIWE Digital dan bilah status tembus di iPhone", async ({
+test("Beranda membuka toko tanpa bilah alamat dengan judul MIWE Digital dan bilah status bawaan di iPhone", async ({
   page,
 }) => {
   await page.goto("/");
 
   expect(await meta(page, "apple-mobile-web-app-capable")).toBe("yes");
   expect(await meta(page, "apple-mobile-web-app-title")).toBe("MIWE Digital");
-  // Bilah status tembus: warna `langit` di bawahnya datang dari bilah atas toko dan dasbor admin.
+  // Bilah status bawaan: latar terang dengan teks gelap, tidak tembus di atas bilah atas toko.
   expect(await meta(page, "apple-mobile-web-app-status-bar-style")).toBe(
-    "black-translucent",
+    "default",
   );
 });
 
@@ -115,7 +116,7 @@ test("setiap layar pembuka adalah PNG seukuran piksel layar iPhone di atribut me
   }
 });
 
-test("setiap layar pembuka berwarna langit di keempat sudutnya", async ({
+test("setiap layar pembuka berwarna kertas di keempat sudutnya", async ({
   page,
 }) => {
   const daftar = await daftarLayarPembuka(page);
@@ -141,13 +142,16 @@ test("setiap layar pembuka berwarna langit di keempat sudutnya", async ({
     }, alamat);
 
     for (const piksel of sudut) {
-      expect(piksel, alamat).toEqual([...LANGIT_RGB, 255]);
+      expect(piksel, alamat).toEqual([...KERTAS_RGB, 255]);
     }
   }
 });
 
-// Tinggi jam dan poni iPhone 16 Pro dalam titik CSS. Chromium tidak punya poni, jadi env(safe-area-inset-top)
-// diisi lewat Chrome DevTools Protocol, seperti yang dilakukan Safari di iPhone berponi.
+// Tinggi jam dan poni iPhone 16 Pro dalam titik CSS. Dengan bilah status bawaan, iPhone meletakkan halaman di
+// bawah bilah status, jadi env(safe-area-inset-top) di iPhone bernilai 0. Untuk memastikan bilah atas tidak
+// lagi mewarnai zona di belakang jam dengan warna sendiri, ruang atas itu tetap ditiru lewat Chrome DevTools
+// Protocol, karena Chromium tidak punya poni.
+const LEBAR_IPHONE = 402;
 const PONI_PX = 62;
 
 async function pasangPoni(page: Page) {
@@ -205,8 +209,32 @@ const bilahAdmin = (page: Page) =>
     .getByRole("navigation", { name: "Menu admin", includeHidden: true })
     .locator("..");
 
+/**
+ * Warna piksel di tengah zona poni, 2 px dari tepi kiri dan kanan layar. Isi bilah atas berjarak 16 px dari
+ * tepi, jadi kedua piksel itu hanya memperlihatkan latar bilah atau zona di belakang jam.
+ */
+async function warnaZonaPoni(page: Page) {
+  const tangkapan = await page.screenshot({
+    clip: { x: 0, y: 0, width: LEBAR_IPHONE, height: PONI_PX },
+  });
+  return page.evaluate(async (data) => {
+    const gambar = new Image();
+    gambar.src = `data:image/png;base64,${data}`;
+    await gambar.decode();
+    const kanvas = document.createElement("canvas");
+    kanvas.width = gambar.naturalWidth;
+    kanvas.height = gambar.naturalHeight;
+    const konteks = kanvas.getContext("2d")!;
+    konteks.drawImage(gambar, 0, 0);
+    const y = Math.floor(kanvas.height / 2);
+    return [2, kanvas.width - 3].map((x) =>
+      Array.from(konteks.getImageData(x, y, 1, 1).data),
+    );
+  }, tangkapan.toString("base64"));
+}
+
 test.describe("di lebar iPhone", () => {
-  test.use({ viewport: { width: 402, height: 874 } });
+  test.use({ viewport: { width: LEBAR_IPHONE, height: 874 } });
 
   test("tanpa poni, bilah atas toko dan dasbor admin tetap setinggi 64 px tanpa ruang atas", async ({
     page,
@@ -232,34 +260,31 @@ test.describe("di lebar iPhone", () => {
     });
   });
 
-  test("dengan poni, bilah atas toko dan dasbor admin memberi ruang setinggi poni di atas isinya", async ({
+  test("dengan poni tiruan, bilah atas toko dan dasbor admin tidak mewarnai zona di belakang jam: zona itu tetap kertas", async ({
     page,
   }) => {
+    await page.emulateMedia({ colorScheme: "light" });
     await pasangPoni(page);
 
     await page.goto("/");
-    const bilahToko = page.getByRole("banner");
-    expect(await ruangAtas(bilahToko)).toEqual({
-      ruang: `${PONI_PX}px`,
-      tinggi: 64 + PONI_PX,
-    });
-    // Monogram berada di bawah poni, dan isi halaman tidak tertutup bilah atas.
-    const monogram = bilahToko.getByRole("link", {
-      name: "MIWE Digital Store, beranda",
-    });
-    expect((await monogram.boundingBox())!.y).toBeGreaterThanOrEqual(PONI_PX);
-    expect(await atasIsiToko(page)).toBe(64 + PONI_PX);
+    await expect(page.getByRole("banner")).toBeVisible();
+    expect(await warnaZonaPoni(page)).toEqual([
+      [...KERTAS_RGB, 255],
+      [...KERTAS_RGB, 255],
+    ]);
 
     await page.goto("/admin");
-    expect(await ruangAtas(page.getByRole("banner"))).toEqual({
-      ruang: `${PONI_PX}px`,
-      tinggi: 64 + PONI_PX,
-    });
+    await expect(page.getByRole("banner")).toBeVisible();
+    expect(await warnaZonaPoni(page)).toEqual([
+      [...KERTAS_RGB, 255],
+      [...KERTAS_RGB, 255],
+    ]);
 
     await masukSebagaiAdmin(page);
-    expect(await ruangAtas(bilahAdmin(page))).toEqual({
-      ruang: `${PONI_PX}px`,
-      tinggi: 64 + PONI_PX,
-    });
+    await expect(bilahAdmin(page)).toBeVisible();
+    expect(await warnaZonaPoni(page)).toEqual([
+      [...KERTAS_RGB, 255],
+      [...KERTAS_RGB, 255],
+    ]);
   });
 });

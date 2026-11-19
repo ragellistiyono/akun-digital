@@ -11,8 +11,9 @@ import type { StatusItemStok } from "@/domain/item-stok";
 import { cn } from "@/lib/utils";
 
 /**
- * Pil keadaan dengan warna, ikon, dan label sekaligus. Labelnya `label-kecil` (13 px, tebal 700), sama
- * seperti pil Sampul (DESIGN.md Status Pesanan, keputusan 2026-11-11 #53).
+ * Pil keadaan dengan warna, ikon, dan label sekaligus: tepi coretan bergaris 2 px sewarna teksnya, dengan
+ * label spidol Kalam 15 px tebal 700, sama seperti pil Sampul (DESIGN.md Status Pesanan, keputusan 2026-11-11
+ * #53). Kalam dipakai karena Patrick Hand hanya punya tebal 400.
  */
 export function Pil({
   ikon: Ikon,
@@ -26,11 +27,11 @@ export function Pil({
   return (
     <span
       className={cn(
-        "inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-bold whitespace-nowrap",
+        "inline-flex h-7 items-center gap-1 rounded-coret border-2 border-current pr-3 pl-2 font-spidol text-[15px] leading-none font-bold whitespace-nowrap",
         className,
       )}
     >
-      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.4} />
+      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.5} />
       {label}
     </span>
   );
@@ -56,19 +57,16 @@ export function PilAktif({ aktif }: { aktif: boolean }) {
 /**
  * Ikon dan warna pil setiap status Item stok. Pil ini memakai anatomi pil status Pesanan (DESIGN.md Status
  * Pesanan), tetapi tidak pernah memakai token `st-*` maupun ikon milik status Pesanan, supaya keduanya jelas
- * berbeda di layar yang sama: ikon dari keluarga kotak kiriman, dan warna dari palet merek dan senja.
+ * berbeda di layar yang sama: ikon dari keluarga kotak kiriman, dan warna dari palet kertas, pulpen, dan
+ * post-it.
  */
 const PIL_STATUS_ITEM_STOK: Record<
   StatusItemStok,
   { ikon: LucideIcon; warna: string }
 > = {
-  Tersedia: {
-    ikon: Package,
-    warna:
-      "bg-[color-mix(in_srgb,var(--monogram)_14%,var(--permukaan))] text-aksi-teks",
-  },
-  Ditahan: { ikon: Lock, warna: "bg-persik text-persik-teks" },
-  Terkirim: { ikon: Send, warna: "bg-langit-2 text-langit-teks" },
+  Tersedia: { ikon: Package, warna: "bg-permukaan text-pulpen" },
+  Ditahan: { ikon: Lock, warna: "bg-postit text-teks-postit" },
+  Terkirim: { ikon: Send, warna: "bg-kertas-lama text-pensil" },
 };
 
 /** Pil status Item stok (GLOSSARY): Tersedia, Ditahan, atau Terkirim, dengan warna, ikon, dan label sekaligus. */

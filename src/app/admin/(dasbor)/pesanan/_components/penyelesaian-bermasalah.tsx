@@ -68,15 +68,12 @@ export function PenyelesaianBermasalah({
   return (
     <section
       aria-labelledby="judul-penyelesaian-bermasalah"
-      className="flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 p-4"
     >
-      <h2
-        id="judul-penyelesaian-bermasalah"
-        className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-      >
+      <h2 id="judul-penyelesaian-bermasalah" className="text-[26px]">
         Selesaikan Pesanan Bermasalah
       </h2>
-      <p className="text-[15px] text-tinta-redup">
+      <p className="text-base text-pensil-redup">
         Pesanan ini sudah dibayar, tetapi Item stoknya belum terkirim. Kirim
         satu Item stok Tersedia dari Varian yang sama, atau tandai Dana
         Dikembalikan setelah uangnya dikembalikan di luar sistem. Keduanya tidak
@@ -84,10 +81,14 @@ export function PenyelesaianBermasalah({
       </p>
       <div className="flex flex-col gap-3">
         {penegasan ? (
-          <form action={aksi} className="flex flex-col gap-3">
+          // Penegasan di tempat dibingkai tepi merah `aksi` 2 px, karena aksinya tidak bisa dibatalkan.
+          <form
+            action={aksi}
+            className="flex flex-col gap-3 rounded-coret-md border-2 border-aksi bg-permukaan p-3"
+          >
             <input type="hidden" name="pesananId" value={pesananId} />
             <input type="hidden" name="cara" value={penegasan.cara} />
-            <p className="text-sm font-bold [overflow-wrap:anywhere]">
+            <p className="text-[17px] [overflow-wrap:anywhere]">
               {penegasan.kalimat(email)}
             </p>
             <div className="flex flex-wrap gap-3">
@@ -99,6 +100,7 @@ export function PenyelesaianBermasalah({
                 <penegasan.Ikon
                   aria-hidden="true"
                   className="size-6 shrink-0"
+                  strokeWidth={2.5}
                 />
                 {sedangMemproses ? penegasan.memproses : penegasan.tombol}
               </button>
@@ -120,7 +122,11 @@ export function PenyelesaianBermasalah({
               onClick={() => setDitegaskan("kirim-item-stok")}
               className={KELAS_TOMBOL_UTAMA}
             >
-              <PackageCheck aria-hidden="true" className="size-6 shrink-0" />
+              <PackageCheck
+                aria-hidden="true"
+                className="size-6 shrink-0"
+                strokeWidth={2.5}
+              />
               Kirim Item stok
             </button>
             <button
@@ -128,7 +134,11 @@ export function PenyelesaianBermasalah({
               onClick={() => setDitegaskan("dana-dikembalikan")}
               className={KELAS_TOMBOL_GARIS}
             >
-              <RotateCcw aria-hidden="true" className="size-6 shrink-0" />
+              <RotateCcw
+                aria-hidden="true"
+                className="size-6 shrink-0"
+                strokeWidth={2.5}
+              />
               Tandai Dana Dikembalikan
             </button>
           </div>

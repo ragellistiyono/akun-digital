@@ -414,9 +414,9 @@ test("Pesanan yang sudah Bermasalah saat Batalkan diproses menampilkan Halaman P
   await expect(page).toHaveURL(`/pesanan/${dipesan.tautan}`);
 });
 
-// docs/DESIGN.md Buttons dan prototipe Halaman bayar: "Batalkan" adalah tombol garis di bilah lekat, di
+// docs/DESIGN.md Buttons dan prototipe Halaman bayar: "Batalkan" adalah tombol kedua di bilah lekat, di
 // samping "Simpan gambar QR".
-test('di ponsel, tombol garis "Batalkan" menempel di bilah lekat di samping "Simpan gambar QR"', async ({
+test('di ponsel, tombol kedua "Batalkan" menempel di bilah lekat di samping "Simpan gambar QR"', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 800 });

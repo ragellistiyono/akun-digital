@@ -5,9 +5,14 @@ import { cn } from "@/lib/utils";
 type BarisRincian = { label: string; nilai: ReactNode; redup?: boolean };
 
 /**
- * Rincian Total bayar (PRD §5.5, DESIGN.md "Cards / Containers"): tabel 15 px dengan nilai rata kanan.
- * Baris terakhir, yaitu Total bayar atau Perkiraan bayar, dipisah garis putus 1,5 px dan berukuran 20 px
- * tebal 800. Nilainya sudah ditulis sebagai rupiah oleh halaman yang memasangnya.
+ * Rincian Total bayar (PRD §5.5, DESIGN.md "Cards / Containers"): tabel ringkas 17 px dengan nilai rata
+ * kanan. Baris terakhir, yaitu Total bayar atau Perkiraan bayar, dipisah garis putus pensil 2 px dan ditulis
+ * spidol tebal 22 px. Nilainya sudah ditulis sebagai rupiah oleh halaman yang memasangnya.
+ *
+ * Nilai tidak dipatahkan di dalam angka, misalnya "Rp" dan "45.123" di dua baris pada lebar 360 px. Bila
+ * kolomnya sempit, labelnya yang patah baris, di mana saja bila perlu, misalnya kode Voucher 20 karakter di
+ * "Potongan voucher (KODE)". Nilai panjang yang boleh dipatahkan, seperti "Rp X + Kode unik" di Checkout,
+ * membungkus bagian-bagiannya sendiri dengan `whitespace-normal`.
  */
 export function RincianNominal({
   baris,
@@ -17,31 +22,34 @@ export function RincianNominal({
   total: BarisRincian;
 }) {
   return (
-    <table className="w-full border-collapse text-[15px]">
+    <table className="w-full border-collapse text-[17px] leading-[1.3]">
       <tbody>
         {baris.map(({ label, nilai, redup }) => (
           <tr key={label}>
-            <th scope="row" className="py-2 pr-4 text-left font-normal">
+            <th
+              scope="row"
+              className="py-1.5 pr-4 text-left font-normal [overflow-wrap:anywhere]"
+            >
               {label}
             </th>
             <td
               className={cn(
-                "py-2 text-right font-bold",
-                redup && "text-tinta-redup",
+                "py-1.5 text-right whitespace-nowrap",
+                redup && "text-pensil-redup",
               )}
             >
               {nilai}
             </td>
           </tr>
         ))}
-        <tr className="text-xl font-extrabold tracking-[-0.01em]">
+        <tr className="font-spidol text-[22px] leading-[1.2] font-bold">
           <th
             scope="row"
-            className="border-t-[1.5px] border-dashed border-garis pt-4 pr-4 text-left"
+            className="border-t-2 border-dashed border-pensil pt-3 pr-4 text-left"
           >
             {total.label}
           </th>
-          <td className="border-t-[1.5px] border-dashed border-garis pt-4 text-right">
+          <td className="border-t-2 border-dashed border-pensil pt-3 text-right whitespace-nowrap">
             {total.nilai}
           </td>
         </tr>

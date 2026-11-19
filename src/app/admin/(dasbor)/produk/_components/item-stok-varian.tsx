@@ -5,7 +5,7 @@ import { useActionState, type ReactNode } from "react";
 
 import { PEMISAH_KOLOM } from "@/domain/item-stok";
 
-import { IsianTeks, KELAS_TOMBOL_GARIS } from "../../_components/isian-form";
+import { IsianTeks } from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
 import {
   aksiTambahItemStok,
@@ -16,10 +16,7 @@ import {
 
 type VarianDipilih = { produkId: string; varianId: string };
 
-const KELAS_TOMBOL_UTAMA =
-  "inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup";
-
-/** Panel 20 px dengan judul `typography.title` (DESIGN.md Cards / Containers). */
+/** Panel `kartu` dengan judul bagian (DESIGN.md Cards / Containers). */
 function Panel({
   id,
   judul,
@@ -32,12 +29,9 @@ function Panel({
   return (
     <section
       aria-labelledby={`${id}-judul`}
-      className="mt-4 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-6 p-4 sm:p-6"
     >
-      <h2
-        id={`${id}-judul`}
-        className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-      >
+      <h2 id={`${id}-judul`} className="text-[26px]">
         {judul}
       </h2>
       {children}
@@ -91,18 +85,18 @@ export function FormItemStok({
         {keadaan.tersimpan && (
           <p
             role="status"
-            className="flex items-start gap-2 text-[13px] font-bold text-st-selesai"
+            className="flex items-start gap-2 text-base text-st-selesai"
           >
-            <Check aria-hidden="true" className="size-6 shrink-0" />
+            <Check
+              aria-hidden="true"
+              className="mt-0.5 size-5 shrink-0"
+              strokeWidth={2.5}
+            />
             Item stok tersimpan dengan status Tersedia.
           </p>
         )}
         <div>
-          <button
-            type="submit"
-            disabled={sedangMenyimpan}
-            className={`${KELAS_TOMBOL_GARIS} disabled:bg-permukaan-2 disabled:text-tinta-redup`}
-          >
+          <button type="submit" disabled={sedangMenyimpan} className="tombol">
             {sedangMenyimpan ? "Menyimpan…" : "Simpan Item stok"}
           </button>
         </div>
@@ -140,11 +134,7 @@ export function TempelItemStok({
           mono
         />
         <div>
-          <button
-            type="submit"
-            disabled={sedangMenyimpan}
-            className={KELAS_TOMBOL_UTAMA}
-          >
+          <button type="submit" disabled={sedangMenyimpan} className="tombol">
             {sedangMenyimpan ? "Menyimpan…" : "Simpan tempelan"}
           </button>
         </div>
@@ -152,31 +142,31 @@ export function TempelItemStok({
 
       {hasil && (
         <div className="flex flex-col gap-4">
-          <p role="status" className="text-lg font-extrabold">
+          <p role="status" className="font-spidol text-xl font-bold">
             {hasil.ringkasan}
           </p>
           {hasil.ditolak.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 id="baris-ditolak-judul" className="font-extrabold">
+              <h3 id="baris-ditolak-judul" className="text-[22px]">
                 Baris yang ditolak
               </h3>
-              <p className="text-[13px] text-tinta-redup">
+              <p className="text-base text-pensil-redup">
                 Baris ini tidak disimpan. Perbaiki, lalu tempel lagi. Baris yang
                 tersimpan tidak perlu ditempel ulang.
               </p>
               <ul
                 aria-labelledby="baris-ditolak-judul"
-                className="flex flex-col divide-y divide-garis"
+                className="flex flex-col divide-y-2 divide-dashed divide-pensil"
               >
                 {hasil.ditolak.map((satu) => (
                   <li key={satu.baris} className="flex flex-col gap-1 py-2">
-                    <span className="text-sm font-bold">
+                    <span className="font-spidol font-bold">
                       Baris {satu.baris}
                     </span>
                     <span className="font-mono text-[15px] font-medium [overflow-wrap:anywhere]">
                       {satu.teks}
                     </span>
-                    <span className="text-[13px] font-bold text-st-masalah">
+                    <span className="text-base text-aksi">
                       {satu.keterangan}
                     </span>
                   </li>

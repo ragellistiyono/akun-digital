@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { daftarPesanan } from "@/server/daftar-pesanan";
 
-import { KELAS_ISIAN } from "../_components/isian-form";
 import { TabelPesanan } from "./_components/tabel-pesanan";
 
 const ALAMAT = "/admin/pesanan";
@@ -37,13 +36,34 @@ function alamatDaftar(saringan: Saringan, halaman: number) {
 }
 
 /** Isian 40 px untuk saringan, dengan kepadatan Operate dasbor admin (DESIGN.md Navigation). */
-const KELAS_ISIAN_SARINGAN = cn(KELAS_ISIAN, "h-10 w-full min-w-0");
+const KELAS_ISIAN_SARINGAN = "isian h-10 min-h-10 w-full min-w-0";
 
-/** Satu isian saringan dengan labelnya. Isian berbaris ke bawah bila tidak muat dalam satu baris. */
-const KELAS_KOLOM_SARINGAN = "flex min-w-40 flex-1 flex-col gap-2";
+/** Satu isian saringan dengan labelnya. */
+const KELAS_KOLOM_SARINGAN = "flex min-w-0 flex-col gap-2";
 
-const KELAS_TOMBOL_KECIL_GARIS =
-  "inline-flex h-10 items-center rounded-[12px] border-[1.5px] border-garis bg-permukaan px-4 text-sm font-bold hover:border-monogram";
+/**
+ * Susunan form saringan. Di ponsel setiap isian sebaris penuh. Mulai 640 px Status dan kedua tanggal berbagi
+ * baris pertama sama lebar, lalu Cari dan tombolnya mengisi baris kedua. Mulai 1400 px, saat isi hampir selebar
+ * 1120 px, semuanya satu baris: tiga isian sama lebar, Cari dua kali lebih lebar, lalu tombol selebar isinya.
+ * Tombol selalu rata bawah dengan isian. Varian `min-[…px]` dipakai, bukan `sm:`, supaya urutannya di CSS tetap
+ * menaik bersama `lebar:` (px).
+ */
+const KELAS_FORM_SARINGAN =
+  "kartu grid items-end gap-4 p-4 min-[640px]:grid-cols-3 min-[1400px]:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,2fr)_auto]";
+
+/**
+ * Pembungkus Cari dan tombolnya. Di ponsel tombol turun ke bawah Cari bila tidak muat. Mulai 640 px keduanya
+ * sebaris selebar form, dan mulai 1400 px pembungkus ini lebur (`contents`) sehingga Cari dan tombol menjadi
+ * lajur grid sendiri.
+ */
+const KELAS_BARIS_CARI =
+  "flex flex-wrap items-end gap-4 min-[640px]:col-span-3 min-[640px]:flex-nowrap min-[1400px]:contents";
+
+/** Tombol kecil 40 px untuk aksi kedua (kelas `tombol-kecil` di globals.css). */
+const KELAS_TOMBOL_KECIL_GARIS = "tombol tombol-kedua tombol-kecil";
+
+/** Label isian saringan. */
+const KELAS_LABEL = "text-[17px] leading-tight";
 
 /** Form saringan status, rentang tanggal WIB, dan pencarian (PRD §9.5). Dikirim sebagai GET ke alamat ini. */
 function FormSaringan({
@@ -58,10 +78,10 @@ function FormSaringan({
       action={ALAMAT}
       role="search"
       aria-label="Saring Pesanan"
-      className="mt-6 flex max-w-[1120px] flex-wrap items-end gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className={KELAS_FORM_SARINGAN}
     >
       <div className={KELAS_KOLOM_SARINGAN}>
-        <label htmlFor="status" className="text-sm font-bold">
+        <label htmlFor="status" className={KELAS_LABEL}>
           Status
         </label>
         <select
@@ -79,7 +99,7 @@ function FormSaringan({
         </select>
       </div>
       <div className={KELAS_KOLOM_SARINGAN}>
-        <label htmlFor="dari" className="text-sm font-bold">
+        <label htmlFor="dari" className={KELAS_LABEL}>
           Dari tanggal
         </label>
         <input
@@ -91,7 +111,7 @@ function FormSaringan({
         />
       </div>
       <div className={KELAS_KOLOM_SARINGAN}>
-        <label htmlFor="sampai" className="text-sm font-bold">
+        <label htmlFor="sampai" className={KELAS_LABEL}>
           Sampai tanggal
         </label>
         <input
@@ -102,32 +122,31 @@ function FormSaringan({
           className={KELAS_ISIAN_SARINGAN}
         />
       </div>
-      <div className={cn(KELAS_KOLOM_SARINGAN, "min-w-56 flex-[2]")}>
-        <label htmlFor="cari" className="text-sm font-bold">
-          Cari
-        </label>
-        <input
-          id="cari"
-          name="cari"
-          type="search"
-          defaultValue={saringan.cari ?? ""}
-          placeholder="Email atau Nomor Pesanan"
-          autoComplete="off"
-          className={KELAS_ISIAN_SARINGAN}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="submit"
-          className="inline-flex h-10 items-center rounded-[12px] bg-aksi px-4 text-sm font-bold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98]"
-        >
-          Saring
-        </button>
-        {menyaring && (
-          <Link href={ALAMAT} className={KELAS_TOMBOL_KECIL_GARIS}>
-            Hapus saringan
-          </Link>
-        )}
+      <div className={KELAS_BARIS_CARI}>
+        <div className={cn(KELAS_KOLOM_SARINGAN, "flex-[1_1_14rem]")}>
+          <label htmlFor="cari" className={KELAS_LABEL}>
+            Cari
+          </label>
+          <input
+            id="cari"
+            name="cari"
+            type="search"
+            defaultValue={saringan.cari ?? ""}
+            placeholder="Email atau Nomor Pesanan"
+            autoComplete="off"
+            className={KELAS_ISIAN_SARINGAN}
+          />
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <button type="submit" className="tombol tombol-kecil">
+            Saring
+          </button>
+          {menyaring && (
+            <Link href={ALAMAT} className={KELAS_TOMBOL_KECIL_GARIS}>
+              Hapus saringan
+            </Link>
+          )}
+        </div>
       </div>
     </form>
   );
@@ -158,7 +177,7 @@ function NavigasiHalaman({
           Sebelumnya
         </Link>
       )}
-      <p className="px-2 text-[13px] font-bold text-tinta-redup">
+      <p className="px-2 text-[15px] text-pensil-redup">
         Halaman {halaman} dari {jumlahHalaman}
       </p>
       {halaman < jumlahHalaman && (
@@ -173,7 +192,7 @@ function NavigasiHalaman({
   );
 }
 
-const PESAN = "mt-6 max-w-[65ch] text-tinta-redup";
+const PESAN = "mt-6 max-w-[65ch] text-pensil-redup";
 
 // Daftar Pesanan di dasbor admin (PRD §9.5): saringan status dan rentang tanggal WIB (PRD §9.1), pencarian
 // menurut email atau Nomor Pesanan, dan pintasan ke Pesanan Bermasalah, yang tampil menonjol (PRD §5.9).
@@ -196,13 +215,17 @@ export default async function HalamanDaftarPesanan({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="kepala-halaman">
         <h1>Pesanan</h1>
         <Link
           href={alamatDaftar({ status: "Bermasalah" }, 1)}
-          className="inline-flex h-10 items-center gap-2 rounded-full border-[1.5px] border-transparent bg-st-masalah-bg px-4 text-sm font-bold text-st-masalah hover:border-monogram"
+          className="chip bg-st-masalah-bg text-st-masalah"
         >
-          <TriangleAlert aria-hidden="true" className="size-6" />
+          <TriangleAlert
+            aria-hidden="true"
+            className="size-6"
+            strokeWidth={2.5}
+          />
           Pesanan Bermasalah
         </Link>
       </div>
@@ -218,9 +241,13 @@ export default async function HalamanDaftarPesanan({
       {daftar === null ? (
         <p
           role="alert"
-          className="mt-6 flex max-w-[65ch] items-start gap-2 text-[13px] font-bold text-st-masalah"
+          className="mt-6 flex max-w-[65ch] items-start gap-2 text-base text-aksi"
         >
-          <TriangleAlert aria-hidden="true" className="size-6 shrink-0" />
+          <TriangleAlert
+            aria-hidden="true"
+            className="mt-0.5 size-5 shrink-0"
+            strokeWidth={2.5}
+          />
           Tanggal &quot;Dari&quot; jatuh sesudah tanggal &quot;Sampai&quot;,
           jadi tidak ada Pesanan yang bisa cocok. Tukar kedua tanggal, lalu
           tekan Saring lagi.
@@ -233,7 +260,7 @@ export default async function HalamanDaftarPesanan({
         </p>
       ) : (
         <>
-          <p className="mt-6 text-[13px] font-bold text-tinta-redup">
+          <p className="mt-6 text-[15px] text-pensil-redup">
             {daftar.jumlah.toLocaleString("id-ID")} Pesanan
           </p>
           {daftar.pesanan.length === 0 ? (

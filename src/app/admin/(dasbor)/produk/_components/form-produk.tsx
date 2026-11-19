@@ -4,14 +4,7 @@ import { Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
-import { cn } from "@/lib/utils";
-
-import {
-  IsianTeks,
-  KELAS_ISIAN,
-  KELAS_TOMBOL_GARIS,
-  KotakCentang,
-} from "../../_components/isian-form";
+import { IsianTeks, KotakCentang } from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
 import {
   aksiBuatProduk,
@@ -82,16 +75,18 @@ export function EditorFormatItemStok({
       aria-describedby="format-keterangan"
       className="flex flex-col gap-4"
     >
-      <legend className="mb-2 text-sm font-bold">Format Item stok</legend>
+      <legend className="mb-2 text-[17px] leading-tight">
+        Format Item stok
+      </legend>
       {baris.length === 0 ? (
-        <p className="text-tinta-redup">Belum ada kolom.</p>
+        <p className="text-pensil-redup">Belum ada kolom.</p>
       ) : (
         <ol className="flex flex-col gap-4">
           {baris.map((b, indeks) => {
             const id = `kolom-${b.kunci}`;
             return (
               <li key={b.kunci} className="flex flex-col gap-2">
-                <label htmlFor={id} className="text-sm font-bold">
+                <label htmlFor={id} className="text-[17px] leading-tight">
                   Nama kolom {indeks + 1}
                 </label>
                 <div className="flex gap-2">
@@ -110,15 +105,19 @@ export function EditorFormatItemStok({
                     aria-describedby={
                       b.ditolak ? "format-keterangan" : undefined
                     }
-                    className={cn(KELAS_ISIAN, "h-[52px] min-w-0 flex-1")}
+                    className="isian min-w-0 flex-1"
                   />
                   <button
                     type="button"
                     onClick={() => hapusKolom(b.kunci)}
                     aria-label={`Hapus kolom ${indeks + 1}`}
-                    className="inline-flex size-[52px] shrink-0 items-center justify-center rounded-[14px] border-[1.5px] border-garis bg-permukaan text-tinta hover:border-monogram"
+                    className="tombol tombol-kedua size-[52px] shrink-0 px-0"
                   >
-                    <X aria-hidden="true" className="size-6" />
+                    <X
+                      aria-hidden="true"
+                      className="size-6"
+                      strokeWidth={2.5}
+                    />
                   </button>
                 </div>
               </li>
@@ -130,9 +129,9 @@ export function EditorFormatItemStok({
         <button
           type="button"
           onClick={tambahKolom}
-          className={KELAS_TOMBOL_GARIS}
+          className="tombol tombol-kedua"
         >
-          <Plus aria-hidden="true" className="size-6" />
+          <Plus aria-hidden="true" className="size-6" strokeWidth={2.5} />
           Tambah kolom
         </button>
       </div>
@@ -193,49 +192,52 @@ export function FormProduk({
     <form
       action={aksi}
       noValidate
-      className="mt-6 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu @container flex flex-col gap-6 p-4 sm:p-6"
     >
       {produk && <input type="hidden" name="id" value={produk.id} />}
 
-      <IsianTeks
-        nama="nama"
-        label="Nama"
-        nilaiAwal={keadaan.nama}
-        galat={galat?.nama}
-      />
+      {/* Nama dan Kategori berdampingan bila form cukup lebar (DESIGN.md Tata letak halaman). */}
+      <div className="grid items-start gap-6 @md:grid-cols-2">
+        <IsianTeks
+          nama="nama"
+          label="Nama"
+          nilaiAwal={keadaan.nama}
+          galat={galat?.nama}
+        />
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="kategoriId" className="text-sm font-bold">
-          Kategori
-        </label>
-        {/* Dipasang ulang setiap kali server menjawab, karena select tidak mengikuti defaultValue
+        <div className="flex flex-col gap-2">
+          <label htmlFor="kategoriId" className="text-[17px] leading-tight">
+            Kategori
+          </label>
+          {/* Dipasang ulang setiap kali server menjawab, karena select tidak mengikuti defaultValue
             yang berubah setelah dipasang, sehingga pengaturan ulang form setelah aksi akan
             mengosongkan Kategori yang sudah dipilih. */}
-        <select
-          key={versi}
-          id="kategoriId"
-          name="kategoriId"
-          defaultValue={keadaan.kategoriId}
-          aria-invalid={galat?.kategoriId ? true : undefined}
-          aria-describedby="kategoriId-keterangan"
-          className={cn(KELAS_ISIAN, "h-[52px]")}
-        >
-          <option value="">Pilih Kategori</option>
-          {semuaKategori.map((kategori) => (
-            <option key={kategori.id} value={kategori.id}>
-              {kategori.nama}
-            </option>
-          ))}
-        </select>
-        <Keterangan
-          id="kategoriId-keterangan"
-          galat={galat?.kategoriId}
-          bantuan={
-            semuaKategori.length === 0
-              ? "Belum ada Kategori. Buat Kategori dulu lewat menu Kategori."
-              : "Setiap Produk masuk tepat satu Kategori."
-          }
-        />
+          <select
+            key={versi}
+            id="kategoriId"
+            name="kategoriId"
+            defaultValue={keadaan.kategoriId}
+            aria-invalid={galat?.kategoriId ? true : undefined}
+            aria-describedby="kategoriId-keterangan"
+            className="isian"
+          >
+            <option value="">Pilih Kategori</option>
+            {semuaKategori.map((kategori) => (
+              <option key={kategori.id} value={kategori.id}>
+                {kategori.nama}
+              </option>
+            ))}
+          </select>
+          <Keterangan
+            id="kategoriId-keterangan"
+            galat={galat?.kategoriId}
+            bantuan={
+              semuaKategori.length === 0
+                ? "Belum ada Kategori. Buat Kategori dulu lewat menu Kategori."
+                : "Setiap Produk masuk tepat satu Kategori."
+            }
+          />
+        </div>
       </div>
 
       <IsianTeks
@@ -283,14 +285,10 @@ export function FormProduk({
       )}
 
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          disabled={sedangMenyimpan}
-          className="inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup"
-        >
+        <button type="submit" disabled={sedangMenyimpan} className="tombol">
           {sedangMenyimpan ? "Menyimpan…" : "Simpan"}
         </button>
-        <Link href="/admin/produk" className={KELAS_TOMBOL_GARIS}>
+        <Link href="/admin/produk" className="tombol tombol-kedua">
           Batal
         </Link>
       </div>

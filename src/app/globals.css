@@ -18,30 +18,27 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  /* Huruf (DESIGN.md Typography): Patrick Hand untuk isi, Kalam untuk judul, JetBrains Mono untuk data salinan. */
+  --font-sans: var(--font-patrick-hand), "Comic Sans MS", cursive;
+  --font-tangan: var(--font-patrick-hand), "Comic Sans MS", cursive;
+  --font-spidol: var(--font-kalam), "Comic Sans MS", cursive;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
   /* Token docs/DESIGN.md */
-  --color-langit: var(--langit);
-  --color-langit-2: var(--langit-2);
-  --color-langit-garis: var(--langit-garis);
-  --color-langit-teks: var(--langit-teks);
-  --color-langit-redup: var(--langit-redup);
-  --color-monogram: var(--monogram);
-  --color-aksi: var(--aksi);
-  --color-aksi-tekan: var(--aksi-tekan);
-  --color-aksi-teks: var(--aksi-teks);
-  --color-teks-di-aksi: var(--teks-di-aksi);
-  --color-matahari: var(--matahari);
-  --color-persik: var(--persik);
-  --color-persik-teks: var(--persik-teks);
-  --color-mauve: var(--mauve);
-  --color-tanah: var(--tanah);
+  --color-kertas: var(--kertas);
   --color-permukaan: var(--permukaan);
-  --color-permukaan-2: var(--permukaan-2);
-  --color-garis: var(--garis);
-  --color-tinta: var(--tinta);
-  --color-tinta-redup: var(--tinta-redup);
+  --color-kertas-lama: var(--kertas-lama);
+  --color-pensil: var(--pensil);
+  --color-pensil-redup: var(--pensil-redup);
+  --color-spidol: var(--spidol);
+  --color-aksi: var(--aksi);
+  --color-teks-di-aksi: var(--teks-di-aksi);
+  --color-pulpen: var(--pulpen);
+  --color-teks-di-pulpen: var(--teks-di-pulpen);
+  --color-postit: var(--postit);
+  --color-teks-postit: var(--teks-postit);
+  --color-matahari: var(--matahari);
+  --color-bayang: var(--bayang);
   --color-st-tunggu-bg: var(--st-tunggu-bg);
   --color-st-tunggu: var(--st-tunggu);
   --color-st-selesai-bg: var(--st-selesai-bg);
@@ -54,9 +51,19 @@
   --color-st-masalah: var(--st-masalah);
   --color-st-kembali-bg: var(--st-kembali-bg);
   --color-st-kembali: var(--st-kembali);
-  --shadow-bayang: var(--bayang);
-  --shadow-bayang-naik: var(--bayang-naik);
-  --shadow-bayang-lekat: var(--bayang-lekat);
+
+  /* Tepi coretan (DESIGN.md Shapes): radius elips tak beraturan, tidak pernah radius bulat biasa. */
+  --radius-coret: var(--coret);
+  --radius-coret-md: var(--coret-md);
+  --radius-coret-alt: var(--coret-alt);
+  --radius-coret-bulat: var(--coret-bulat);
+
+  /* Bayangan potongan kertas (DESIGN.md Elevation): bergeser tegas, tanpa blur. */
+  --shadow-coret: 4px 4px 0 0 var(--bayang);
+  --shadow-coret-kecil: 2px 2px 0 0 var(--bayang);
+  --shadow-coret-sedang: 6px 6px 0 0 var(--bayang);
+  --shadow-coret-tegas: 8px 8px 0 0 var(--bayang);
+  --shadow-coret-halus: 3px 3px 0 0 var(--bayang-halus);
 
   /* Variabel shadcn/ui (tabel "Pemetaan ke Tailwind 4 dan shadcn/ui") */
   --color-background: var(--background);
@@ -77,34 +84,24 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
 }
 
 /* Nilai dari frontmatter docs/DESIGN.md. Hanya berkas ini yang memegang nilai warna. */
 :root {
-  --langit: #2a1f4d;
-  --langit-2: #3a2d66;
-  --langit-garis: #5b4a92;
-  --langit-teks: #e9e2ff;
-  --langit-redup: #c7bdea;
-  --monogram: #8f61ff;
-  --aksi: #7548f2;
-  --aksi-tekan: #6236de;
-  --aksi-teks: #6a3fe0;
-  --teks-di-aksi: #ffffff;
-  --matahari: #ebc967;
-  --persik: #ed9065;
-  --persik-teks: #3a1d0e;
-  --mauve: #9f5f70;
-  --tanah: #f7f3fc;
+  --kertas: #fdfbf7;
   --permukaan: #ffffff;
-  --permukaan-2: #efe9fa;
-  --garis: #e4dcf5;
-  --tinta: #1e1838;
-  --tinta-redup: #625879;
+  --kertas-lama: #e5e0d8;
+  --pensil: #2d2d2d;
+  --pensil-redup: #5f5a54;
+  --spidol: #ff4d4d;
+  --aksi: #d63031;
+  --teks-di-aksi: #ffffff;
+  --pulpen: #2d5da1;
+  --teks-di-pulpen: #ffffff;
+  --postit: #fff9c4;
+  --teks-postit: #2d2d2d;
+  --matahari: #ffd84d;
+  --bayang: #2d2d2d;
   --st-tunggu-bg: #fff1c9;
   --st-tunggu: #6e4b00;
   --st-selesai-bg: #daf3e5;
@@ -118,16 +115,19 @@
   --st-kembali-bg: #dfe8fc;
   --st-kembali: #22448f;
 
-  --langit-gelap: #231a42;
-  --langit-2-gelap: #33295c;
-  --langit-garis-gelap: #4e4180;
-  --aksi-teks-gelap: #b49bff;
-  --tanah-gelap: #15112a;
-  --permukaan-gelap: #211a3d;
-  --permukaan-2-gelap: #2c2350;
-  --garis-gelap: #3a2f63;
-  --tinta-gelap: #f3eeff;
-  --tinta-redup-gelap: #b9afd9;
+  --kertas-gelap: #1e1c19;
+  --permukaan-gelap: #2a2723;
+  --kertas-lama-gelap: #3a3631;
+  --pensil-gelap: #ede7db;
+  --pensil-redup-gelap: #b5ad9f;
+  --spidol-gelap: #ff6b6b;
+  --aksi-gelap: #ff7b72;
+  --teks-di-aksi-gelap: #1e1c19;
+  --pulpen-gelap: #8db4f0;
+  --teks-di-pulpen-gelap: #1e1c19;
+  --postit-gelap: #efe6a6;
+  --matahari-gelap: #f5cf5a;
+  --bayang-gelap: #000000;
   --st-tunggu-bg-gelap: #3b2f0e;
   --st-tunggu-gelap: #f2d27a;
   --st-selesai-bg-gelap: #11352a;
@@ -141,49 +141,54 @@
   --st-kembali-bg-gelap: #18244a;
   --st-kembali-gelap: #a4bcff;
 
-  /* Bayang (DESIGN.md, Shadow Vocabulary) */
-  --bayang: 0 8px 24px -12px rgba(42, 31, 77, 0.38);
-  --bayang-gelap: 0 10px 26px -12px rgba(0, 0, 0, 0.65);
-  --bayang-naik: 0 14px 32px -14px rgba(42, 31, 77, 0.5);
-  --bayang-naik-gelap: 0 16px 34px -14px rgba(0, 0, 0, 0.75);
-  --bayang-lekat: 0 -10px 20px -18px rgba(42, 31, 77, 0.45);
-  --bayang-bilah: 0 10px 24px -14px rgba(20, 14, 40, 0.7);
+  /* Bayangan halus kartu: pensil 10% (acuan "Cards/Containers"). */
+  --bayang-halus: rgba(45, 45, 45, 0.1);
+  --bayang-halus-gelap: rgba(0, 0, 0, 0.45);
 
-  --background: var(--tanah);
-  --foreground: var(--tinta);
+  /* Tepi coretan (DESIGN.md Shapes). */
+  --coret: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  --coret-md: 15px 255px 15px 225px / 225px 15px 255px 15px;
+  --coret-alt: 225px 25px 255px 20px / 20px 255px 25px 225px;
+  --coret-bulat: 52% 48% 55% 45% / 47% 55% 45% 53%;
+
+  --background: var(--kertas);
+  --foreground: var(--pensil);
   --card: var(--permukaan);
-  --card-foreground: var(--tinta);
+  --card-foreground: var(--pensil);
   --popover: var(--permukaan);
-  --popover-foreground: var(--tinta);
+  --popover-foreground: var(--pensil);
   --primary: var(--aksi);
   --primary-foreground: var(--teks-di-aksi);
-  --secondary: var(--permukaan-2);
-  --secondary-foreground: var(--tinta);
-  --muted: var(--permukaan-2);
-  --muted-foreground: var(--tinta-redup);
-  --accent: var(--permukaan-2);
-  --accent-foreground: var(--tinta);
-  --destructive: var(--st-masalah);
-  --border: var(--garis);
-  --input: var(--garis);
-  --ring: var(--monogram);
-  --radius: 14px;
+  --secondary: var(--kertas-lama);
+  --secondary-foreground: var(--pensil);
+  --muted: var(--kertas-lama);
+  --muted-foreground: var(--pensil-redup);
+  --accent: var(--postit);
+  --accent-foreground: var(--teks-postit);
+  --destructive: var(--aksi);
+  --border: var(--pensil);
+  --input: var(--pensil);
+  --ring: var(--pulpen);
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-mode="terang"]) {
-    --langit: var(--langit-gelap);
-    --langit-2: var(--langit-2-gelap);
-    --langit-garis: var(--langit-garis-gelap);
-    --aksi-teks: var(--aksi-teks-gelap);
-    --tanah: var(--tanah-gelap);
+    --kertas: var(--kertas-gelap);
     --permukaan: var(--permukaan-gelap);
-    --permukaan-2: var(--permukaan-2-gelap);
-    --garis: var(--garis-gelap);
-    --tinta: var(--tinta-gelap);
-    --tinta-redup: var(--tinta-redup-gelap);
+    --kertas-lama: var(--kertas-lama-gelap);
+    --pensil: var(--pensil-gelap);
+    --pensil-redup: var(--pensil-redup-gelap);
+    --spidol: var(--spidol-gelap);
+    --aksi: var(--aksi-gelap);
+    --teks-di-aksi: var(--teks-di-aksi-gelap);
+    --pulpen: var(--pulpen-gelap);
+    --teks-di-pulpen: var(--teks-di-pulpen-gelap);
+    --postit: var(--postit-gelap);
+    --matahari: var(--matahari-gelap);
+    --bayang: var(--bayang-gelap);
+    --bayang-halus: var(--bayang-halus-gelap);
     --st-tunggu-bg: var(--st-tunggu-bg-gelap);
     --st-tunggu: var(--st-tunggu-gelap);
     --st-selesai-bg: var(--st-selesai-bg-gelap);
@@ -196,24 +201,26 @@
     --st-masalah: var(--st-masalah-gelap);
     --st-kembali-bg: var(--st-kembali-bg-gelap);
     --st-kembali: var(--st-kembali-gelap);
-    --bayang: var(--bayang-gelap);
-    --bayang-naik: var(--bayang-naik-gelap);
 
     color-scheme: dark;
   }
 }
 
 :root[data-mode="gelap"] {
-  --langit: var(--langit-gelap);
-  --langit-2: var(--langit-2-gelap);
-  --langit-garis: var(--langit-garis-gelap);
-  --aksi-teks: var(--aksi-teks-gelap);
-  --tanah: var(--tanah-gelap);
+  --kertas: var(--kertas-gelap);
   --permukaan: var(--permukaan-gelap);
-  --permukaan-2: var(--permukaan-2-gelap);
-  --garis: var(--garis-gelap);
-  --tinta: var(--tinta-gelap);
-  --tinta-redup: var(--tinta-redup-gelap);
+  --kertas-lama: var(--kertas-lama-gelap);
+  --pensil: var(--pensil-gelap);
+  --pensil-redup: var(--pensil-redup-gelap);
+  --spidol: var(--spidol-gelap);
+  --aksi: var(--aksi-gelap);
+  --teks-di-aksi: var(--teks-di-aksi-gelap);
+  --pulpen: var(--pulpen-gelap);
+  --teks-di-pulpen: var(--teks-di-pulpen-gelap);
+  --postit: var(--postit-gelap);
+  --matahari: var(--matahari-gelap);
+  --bayang: var(--bayang-gelap);
+  --bayang-halus: var(--bayang-halus-gelap);
   --st-tunggu-bg: var(--st-tunggu-bg-gelap);
   --st-tunggu: var(--st-tunggu-gelap);
   --st-selesai-bg: var(--st-selesai-bg-gelap);
@@ -226,8 +233,6 @@
   --st-masalah: var(--st-masalah-gelap);
   --st-kembali-bg: var(--st-kembali-bg-gelap);
   --st-kembali: var(--st-kembali-gelap);
-  --bayang: var(--bayang-gelap);
-  --bayang-naik: var(--bayang-naik-gelap);
 
   color-scheme: dark;
 }
@@ -236,23 +241,293 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Kertas bertitik (DESIGN.md Elevation, "Tekstur kertas"). */
   body {
     @apply bg-background font-sans text-foreground;
+    background-image: radial-gradient(var(--kertas-lama) 1px, transparent 1px);
+    background-size: 24px 24px;
+    font-size: 18px;
+    line-height: 1.5;
     font-variant-numeric: tabular-nums;
   }
-  /* Cincin fokus (DESIGN.md, Shadow Vocabulary): semua elemen dengan :focus-visible. */
+  /* Cincin fokus (DESIGN.md Elevation): garis putus pulpen biru di semua elemen dengan :focus-visible. */
   :focus-visible {
-    outline: 3px solid var(--monogram);
-    outline-offset: 2px;
+    outline: 3px dashed var(--pulpen);
+    outline-offset: 3px;
   }
-  /* Headline (DESIGN.md Typography): satu judul halaman per layar. */
-  h1 {
-    font-size: 28px;
-    font-weight: 800;
+  ::selection {
+    background-color: var(--postit);
+    color: var(--teks-postit);
+  }
+  /* Judul spidol (DESIGN.md Typography): satu judul halaman per layar. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-spidol);
+    font-weight: 700;
     line-height: 1.15;
-    letter-spacing: -0.03em;
+  }
+  h1 {
+    font-size: 36px;
     @variant lebar {
-      font-size: 36px;
+      font-size: 48px;
+    }
+  }
+}
+
+/*
+ * Komponen dasar gaya coretan tangan (DESIGN.md Components). Kelas ini berada di layer components,
+ * jadi utilitas Tailwind di elemen yang sama selalu bisa menimpanya (misalnya `tombol w-full`).
+ * Efek hover hanya berlaku di perangkat yang punya hover, dan semua gerak mati di bawah
+ * prefers-reduced-motion.
+ */
+@layer components {
+  /* Tombol utama: putih, garis pensil 3 px, bayangan 4 px. Hover terisi merah, tekan menjadi rata. */
+  .tombol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 24px;
+    font-family: var(--font-tangan);
+    font-size: 20px;
+    line-height: 1.1;
+    color: var(--pensil);
+    background-color: var(--permukaan);
+    border: 3px solid var(--pensil);
+    border-radius: var(--coret);
+    box-shadow: 4px 4px 0 0 var(--bayang);
+    transition:
+      transform 100ms ease-out,
+      box-shadow 100ms ease-out,
+      background-color 100ms ease-out,
+      color 100ms ease-out;
+    cursor: pointer;
+  }
+  .tombol-kedua {
+    background-color: var(--kertas-lama);
+  }
+  .tombol-kecil {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 17px;
+    border-width: 2px;
+    box-shadow: 2px 2px 0 0 var(--bayang);
+  }
+  @media (hover: hover) {
+    .tombol:hover:not(:disabled, [aria-disabled="true"]) {
+      background-color: var(--aksi);
+      color: var(--teks-di-aksi);
+      box-shadow: 2px 2px 0 0 var(--bayang);
+      transform: translate(2px, 2px);
+    }
+    .tombol-kedua:hover:not(:disabled, [aria-disabled="true"]) {
+      background-color: var(--pulpen);
+      color: var(--teks-di-pulpen);
+    }
+    .tombol-kecil:hover:not(:disabled, [aria-disabled="true"]) {
+      box-shadow: 1px 1px 0 0 var(--bayang);
+      transform: translate(1px, 1px);
+    }
+  }
+  .tombol:active:not(:disabled, [aria-disabled="true"]) {
+    box-shadow: none;
+    transform: translate(4px, 4px);
+  }
+  .tombol-kecil:active:not(:disabled, [aria-disabled="true"]) {
+    transform: translate(2px, 2px);
+  }
+  .tombol:disabled,
+  .tombol[aria-disabled="true"] {
+    background-color: var(--kertas-lama);
+    color: var(--pensil-redup);
+    border-style: dashed;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* Kartu dan panel: putih, garis pensil 2 px, tepi coretan sedang, bayangan halus. */
+  .kartu {
+    background-color: var(--permukaan);
+    color: var(--pensil);
+    border: 2px solid var(--pensil);
+    border-radius: var(--coret-md);
+    box-shadow: 3px 3px 0 0 var(--bayang-halus);
+  }
+  .kartu-tegas {
+    box-shadow: 4px 4px 0 0 var(--bayang);
+  }
+  .kartu-postit {
+    background-color: var(--postit);
+    color: var(--teks-postit);
+  }
+
+  /* Isian: kotak penuh bertepi coretan, fokus menjadi pulpen biru dengan halo tipis. */
+  .isian {
+    display: block;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 16px;
+    font-family: var(--font-tangan);
+    font-size: 18px;
+    color: var(--pensil);
+    background-color: var(--permukaan);
+    border: 2px solid var(--pensil);
+    border-radius: var(--coret-alt);
+    transition:
+      border-color 100ms ease-out,
+      box-shadow 100ms ease-out;
+  }
+  .isian::placeholder {
+    color: var(--pensil-redup);
+  }
+  .isian:focus,
+  .isian:focus-visible {
+    outline: none;
+    border-color: var(--pulpen);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--pulpen) 20%, transparent);
+  }
+  .isian[aria-invalid="true"] {
+    border-color: var(--aksi);
+  }
+  .isian:read-only:not(select, [type="file"]) {
+    background-color: var(--kertas-lama);
+  }
+
+  /* Chip: pil coretan 40 px. Chip terpilih (aria-pressed/aria-current) menjadi catatan post-it. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 0 16px;
+    font-family: var(--font-tangan);
+    font-size: 17px;
+    white-space: nowrap;
+    color: var(--pensil);
+    background-color: var(--permukaan);
+    border: 2px solid var(--pensil);
+    border-radius: var(--coret);
+    transition:
+      transform 100ms ease-out,
+      box-shadow 100ms ease-out,
+      background-color 100ms ease-out;
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="page"],
+  .chip[aria-current="true"] {
+    background-color: var(--postit);
+    color: var(--teks-postit);
+    box-shadow: 2px 2px 0 0 var(--bayang);
+  }
+  @media (hover: hover) {
+    .chip:hover {
+      transform: rotate(-2deg);
+    }
+  }
+
+  /* Hiasan selotip: pita abu tembus di tengah atas. Induknya harus relative. */
+  .selotip::before {
+    content: "";
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    width: 96px;
+    height: 26px;
+    translate: -50% 0;
+    rotate: -3deg;
+    background-color: color-mix(in srgb, var(--kertas-lama) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--pensil) 15%, transparent);
+    pointer-events: none;
+  }
+
+  /* Hiasan paku payung: lingkaran merah di tengah atas. Induknya harus relative. */
+  .paku::before {
+    content: "";
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    translate: -50% 0;
+    background-color: var(--spidol);
+    border: 2px solid var(--pensil);
+    border-radius: 50%;
+    box-shadow: 2px 2px 0 0 var(--bayang);
+    pointer-events: none;
+  }
+
+  /* Garis bawah bergelombang spidol merah, untuk tautan aktif dan kepala bagian. */
+  .garis-gelombang {
+    text-decoration-line: underline;
+    text-decoration-style: wavy;
+    text-decoration-color: var(--spidol);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+  }
+
+  /* Goyang saat hover: miring sedikit dengan cepat. */
+  .goyang {
+    transition: transform 100ms ease-out;
+  }
+  @media (hover: hover) {
+    .goyang:hover {
+      transform: rotate(1deg);
+    }
+    .goyang-kiri:hover {
+      transform: rotate(-1deg);
+    }
+  }
+
+  /*
+   * Tata letak halaman (DESIGN.md Layout, "Tata letak halaman"). Prinsipnya: isi satu kolom selalu berada
+   * di tengah ruang yang tersedia, dan isi lebar memakai grid yang mengisi lebar. Tidak ada halaman yang
+   * isinya menempel di kiri dengan ruang kosong besar di kanan.
+   */
+  .tata-fokus {
+    width: 100%;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .tata-baca {
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+  }
+  .tata-dua-kolom {
+    display: grid;
+    align-items: start;
+    gap: 24px;
+  }
+  @media (min-width: 900px) {
+    .tata-dua-kolom {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 48px;
+    }
+  }
+  /* Kepala halaman: judul di kiri, aksi halaman (bila ada) di kanan, turun ke bawah judul bila sempit. */
+  .kepala-halaman {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 24px;
+    margin-bottom: 24px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tombol,
+    .isian,
+    .chip,
+    .goyang {
+      transition: none;
+    }
+    .chip:hover,
+    .goyang:hover,
+    .tombol:hover,
+    .tombol:active {
+      transform: none !important;
     }
   }
 }

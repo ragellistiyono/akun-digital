@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { itemStokBolehDiubah, type StatusItemStok } from "@/domain/item-stok";
-import { cn } from "@/lib/utils";
 
-import { IsianTeks, KELAS_TOMBOL_GARIS } from "../../_components/isian-form";
+import { IsianTeks } from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
 import { PilStatusItemStok } from "../../_components/pil";
 import {
@@ -26,11 +25,8 @@ type ItemStok = {
 
 type ItemStokDipilih = { produkId: string; varianId: string; id: string };
 
-const KELAS_TOMBOL_SIMPAN = `${KELAS_TOMBOL_GARIS} disabled:bg-permukaan-2 disabled:text-tinta-redup`;
-
-/** Tombol kecil 36 px di baris Item stok (DESIGN.md Buttons). */
-const KELAS_TOMBOL_KECIL =
-  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold text-tinta hover:border-monogram disabled:bg-permukaan-2 disabled:text-tinta-redup";
+/** Tombol kecil 40 px untuk aksi kedua di baris Item stok (kelas `tombol-kecil` di globals.css). */
+const KELAS_TOMBOL_KECIL = "tombol tombol-kedua tombol-kecil";
 
 function IdItemStok({ produkId, varianId, id }: ItemStokDipilih) {
   return (
@@ -99,17 +95,13 @@ function FormUbahItemStok({
         </div>
       )}
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          disabled={sedangMenyimpan}
-          className={KELAS_TOMBOL_SIMPAN}
-        >
+        <button type="submit" disabled={sedangMenyimpan} className="tombol">
           {sedangMenyimpan ? "Menyimpan…" : "Simpan Item stok"}
         </button>
         <button
           type="button"
           onClick={onSelesai}
-          className={KELAS_TOMBOL_GARIS}
+          className="tombol tombol-kedua"
         >
           Batal
         </button>
@@ -142,16 +134,20 @@ function AksiItemStok({
   return (
     <div className="flex flex-col gap-2">
       {menegaskan ? (
-        <form action={aksi} className="flex flex-col gap-2">
+        // Penegasan di tempat dibingkai tepi merah `aksi` 2 px, karena isinya tidak bisa dikembalikan.
+        <form
+          action={aksi}
+          className="flex flex-col gap-3 rounded-coret-md border-2 border-aksi bg-permukaan p-3"
+        >
           <IdItemStok {...dipilih} />
-          <p className="text-sm font-bold">
+          <p className="text-[17px]">
             Hapus {nama}? Isinya tidak bisa dikembalikan.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="submit"
               disabled={sedangMenghapus}
-              className={cn(KELAS_TOMBOL_KECIL, "text-st-masalah")}
+              className="tombol tombol-kecil text-aksi hover:text-teks-di-aksi disabled:text-pensil-redup"
             >
               {sedangMenghapus ? "Menghapus…" : `Ya, hapus ${nama}`}
             </button>
@@ -212,15 +208,15 @@ export function BarisItemStok({
   return (
     <li className="flex flex-col gap-3 py-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h3 className="font-extrabold">Item stok {nomor}</h3>
+        <h3 className="text-xl">Item stok {nomor}</h3>
         <PilStatusItemStok status={itemStok.status} />
         {itemStok.nomorPesanan !== null && (
-          <span className="text-[13px] text-tinta-redup">
+          <span className="text-[15px] text-pensil-redup">
             {itemStok.status === "Terkirim" ? "ke" : "untuk"} Pesanan{" "}
             {/* Nomor Pesanan membuka detail Pesanan (PRD §9.5). */}
             <Link
               href={`/admin/pesanan/${itemStok.nomorPesanan}`}
-              className="inline-flex min-h-6 items-center font-mono font-bold text-aksi-teks underline-offset-2 hover:underline"
+              className="inline-flex min-h-6 items-center font-mono font-bold text-pulpen underline-offset-4 hover:underline"
             >
               {itemStok.nomorPesanan}
             </Link>
@@ -240,9 +236,7 @@ export function BarisItemStok({
           <dl className="flex flex-col gap-2">
             {itemStok.kolom.map(({ nama, nilai }, urutan) => (
               <div key={urutan}>
-                <dt className="text-[13px] font-bold text-tinta-redup">
-                  {nama}
-                </dt>
+                <dt className="text-[15px] text-pensil-redup">{nama}</dt>
                 <dd className="font-mono text-[15px] font-medium [overflow-wrap:anywhere]">
                   {nilai}
                 </dd>

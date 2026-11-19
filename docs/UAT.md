@@ -628,6 +628,8 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Tidak ada gulir ke samping di layar selebar 360 piksel.
 - PRD: §11.1
 
+▶ Keputusan 2026-11-20: Tautan Syarat & Ketentuan dan Kebijakan Privasi di tab Akun kini datang dari footer toko, tidak lagi diulang di isi tab (PRD §11.1). Hasil yang diperiksa: kedua tautan tampil satu kali di tab Akun, di footer setelah tombol WhatsApp.
+
 **UAT-K2 — Animasi navbar (M3)**
 - Langkah:
   1. Di ponsel, gulir beranda ke bawah lalu ke atas, dan pindah antar-tab.
@@ -665,6 +667,11 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 - Bilah status ponsel berwarna ungu langit.
 - Dalam mode pesawat, yang tampil adalah halaman galat bawaan browser.
 - Toko tidak punya tombol "Pasang aplikasi".
+
+▶ Keputusan 2026-11-20: Warna di hasil UAT-K4 mengikuti tema coretan tangan (PRD §11.4).
+- Ikonnya tetap logo MIWE dengan foto senja. Di ponsel yang memotong ikon menjadi bulat, latar di sekitar logo berwarna kertas, bukan ungu.
+- Layar pembuka berlatar kertas dengan logo di tengah dan nama "MIWE Digital Store" bertulisan tangan, di Android dan iPhone.
+- Di Android, bilah status berwarna kertas di mode terang dan arang di mode gelap. Di iPhone, bilah status terang dengan teks gelap.
 
 **UAT-K5 — Sesuai sistem desain**
 - Langkah: bandingkan beberapa halaman dengan `docs/DESIGN.md`.

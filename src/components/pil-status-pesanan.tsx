@@ -33,16 +33,17 @@ const PIL_STATUS: Record<StatusPesanan, { Ikon: LucideIcon; warna: string }> = {
 };
 
 /**
- * Pil status Pesanan (DESIGN.md Status Pesanan): warna, ikon, dan label sekaligus. Dipakai di Halaman bayar,
- * Halaman Pesanan, dan daftar Pesanan di dasbor admin.
+ * Pil status Pesanan (DESIGN.md Status Pesanan): warna, ikon, dan label sekaligus, setinggi 28 px dengan tepi
+ * coretan dan bingkai 2 px sewarna teks statusnya. Dipakai di Halaman bayar, Halaman Pesanan, Riwayat, dan
+ * daftar Pesanan di dasbor admin.
  */
 export function PilStatusPesanan({ status }: { status: StatusPesanan }) {
   const { Ikon, warna } = PIL_STATUS[status];
   return (
     <span
-      className={`inline-flex h-7 items-center gap-1 rounded-full pr-3 pl-2 text-[13px] font-bold whitespace-nowrap ${warna}`}
+      className={`inline-flex h-7 items-center gap-1 rounded-coret border-2 border-current pr-3 pl-2 font-spidol text-[15px] leading-none font-bold whitespace-nowrap ${warna}`}
     >
-      <Ikon aria-hidden="true" className="size-4" strokeWidth={2.4} />
+      <Ikon aria-hidden="true" className="size-4 shrink-0" strokeWidth={2.5} />
       {status}
     </span>
   );

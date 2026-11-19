@@ -8,14 +8,15 @@ import type { KartuProduk as IsiKartuProduk } from "@/server/katalog";
 /** Alamat Halaman Produk (T13). */
 const alamatHalamanProduk = (id: string) => `/produk/${id}`;
 
-// Kartu terangkat 2 px dengan Bayang naik saat di-hover. Varian hover Tailwind 4 hanya berlaku di
-// perangkat hover:hover, dan transisinya dimatikan saat gerak dikurangi (DESIGN.md Elevation & Depth).
+// Kartu terangkat seperti kertas yang diangkat saat di-hover: bergeser 2 px ke kiri atas dan bayangannya
+// memanjang. Varian hover Tailwind 4 hanya berlaku di perangkat hover:hover, dan transisinya mati saat gerak
+// dikurangi (DESIGN.md Elevation).
 const GERAK_KARTU =
-  "transition-[translate,box-shadow] duration-200 ease-[cubic-bezier(.16,1,.3,1)] hover:-translate-y-0.5 hover:shadow-bayang-naik motion-reduce:transition-none";
+  "transition-[translate,box-shadow] duration-100 ease-out hover:-translate-x-0.5 hover:-translate-y-0.5 motion-reduce:transition-none";
 
 /**
- * Foto sampul dalam bingkai radius 16 px. Produk tanpa foto mendapat petak pengganti berisi huruf awal
- * namanya. Fotonya hiasan, karena nama Produk tertulis di sebelahnya.
+ * Foto sampul dalam bingkai coretan bergaris pensil 2 px. Produk tanpa foto mendapat petak `kertas-lama`
+ * berisi huruf awal namanya. Fotonya hiasan, karena nama Produk tertulis di sebelahnya.
  */
 function FotoSampul({
   kartu,
@@ -27,7 +28,7 @@ function FotoSampul({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[16px] bg-permukaan-2",
+        "relative overflow-hidden rounded-coret-alt border-2 border-pensil bg-kertas-lama",
         kartu.habis && "opacity-55 grayscale-85",
         className,
       )}
@@ -44,7 +45,7 @@ function FotoSampul({
       ) : (
         <span
           aria-hidden="true"
-          className="absolute bottom-3 left-3 text-[32px] leading-none font-extrabold tracking-[-0.04em] text-tinta-redup"
+          className="absolute inset-0 grid place-items-center font-spidol text-[40px] leading-none font-bold text-pensil-redup"
         >
           {kartu.nama.slice(0, 1)}
         </span>
@@ -53,7 +54,7 @@ function FotoSampul({
   );
 }
 
-/** Harga jual di kartu: "Mulai Rp X" atau "Rp X" (PRD §3.8). */
+/** Harga jual di kartu: "Mulai Rp X" atau "Rp X" (PRD §3.8), ditulis spidol tebal. */
 function Harga({
   kartu,
   className,
@@ -64,12 +65,14 @@ function Harga({
   return (
     <p
       className={cn(
-        "font-extrabold tracking-[-0.02em]",
-        kartu.habis && "text-tinta-redup",
+        "font-spidol font-bold",
+        kartu.habis && "text-pensil-redup",
         className,
       )}
     >
-      {kartu.mulai && "Mulai "}
+      {kartu.mulai && (
+        <span className="font-tangan text-[16px] font-normal">Mulai </span>
+      )}
       <span className="whitespace-nowrap">{rupiah(kartu.harga)}</span>
     </p>
   );
@@ -77,26 +80,41 @@ function Harga({
 
 // Harga normal tidak dibatasi maksimum (PRD §3.2), jadi angkanya boleh patah baris supaya kartu tidak
 // melebar melewati layar 360 px. Ketiga label ini dipakai juga di Halaman Produk.
-export function HargaNormal({ nilai }: { nilai: number }) {
+export function HargaNormal({
+  nilai,
+  className,
+}: {
+  nilai: number;
+  className?: string;
+}) {
   return (
-    <s className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] text-tinta-redup">
+    <s
+      className={cn(
+        "min-w-0 text-[15px] decoration-spidol decoration-2 [overflow-wrap:anywhere] text-pensil-redup",
+        className,
+      )}
+    >
       <span className="sr-only">Harga normal </span>
       {rupiah(nilai)}
     </s>
   );
 }
 
+// Catatan post-it kecil yang sedikit miring (1°, 2° di layar lebar). Garisnya `teks-postit`, yang sama
+// dengan `pensil` di mode terang dan tetap terbaca saat label ini menempel di kartu Varian terpilih yang
+// juga post-it.
 export function LabelHemat({ persen }: { persen: number }) {
   return (
-    <span className="rounded-full bg-persik px-2 py-1 text-xs font-extrabold whitespace-nowrap text-persik-teks">
+    <span className="inline-block -rotate-1 rounded-coret border-2 border-teks-postit bg-postit px-2 py-0.5 font-spidol text-[15px] leading-[1.3] font-bold whitespace-nowrap text-teks-postit shadow-coret-kecil lebar:-rotate-2">
       Hemat {persen}%
     </span>
   );
 }
 
+// Cap "Habis": garis putus `pensil-redup` dan huruf spidol, miring seperti stempel (1°, 2° di layar lebar).
 export function LabelHabis() {
   return (
-    <span className="rounded-full bg-permukaan-2 px-2 py-1 text-xs font-extrabold text-tinta-redup">
+    <span className="inline-block rotate-1 rounded-coret border-2 border-dashed border-pensil-redup px-2 py-0.5 font-spidol text-[15px] leading-[1.3] font-bold text-pensil-redup lebar:rotate-2">
       Habis
     </span>
   );
@@ -124,31 +142,32 @@ export function KartuProduk({ kartu }: { kartu: IsiKartuProduk }) {
     <Link
       href={alamatHalamanProduk(kartu.id)}
       className={cn(
-        "flex h-full flex-col rounded-[20px] bg-permukaan p-3 shadow-bayang",
+        "kartu flex h-full flex-col p-3 hover:shadow-coret",
         GERAK_KARTU,
       )}
     >
       <FotoSampul kartu={kartu} className="h-28 lebar:h-[148px]" />
-      <h3 className="mt-3 text-base leading-[1.25] font-extrabold tracking-[-0.01em] [overflow-wrap:anywhere]">
+      <h3 className="mt-3 text-[19px] leading-[1.2] [overflow-wrap:anywhere] lebar:text-[20px]">
         {kartu.nama}
       </h3>
-      <Harga kartu={kartu} className="mt-1 text-lg" />
+      <Harga kartu={kartu} className="mt-1 text-[20px] leading-[1.2]" />
       <Banding kartu={kartu} />
     </Link>
   );
 }
 
 /**
- * Kartu Produk Unggulan: satu anak tangga lebih besar dari kartu Produk, tanpa lencana tambahan. Di
- * layar lebar kartu ini menampilkan daftar Varian aktif beserta Harga normal yang dicoret dan label
- * "Hemat N%", atau label Habis (DESIGN.md "Cards / Containers", ▶ Keputusan 2026-11-11 #53).
+ * Kartu Produk Unggulan: kartu tegas yang "dipaku" di papan, satu anak tangga lebih besar dari kartu Produk,
+ * tanpa lencana tambahan. Di layar lebar kartu ini menampilkan daftar Varian aktif beserta Harga normal yang
+ * dicoret dan label "Hemat N%", atau label Habis (DESIGN.md "Cards / Containers", ▶ Keputusan 2026-11-11
+ * #53 dan 2026-11-12 #87).
  */
 export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
   return (
     <Link
       href={alamatHalamanProduk(kartu.id)}
       className={cn(
-        "grid grid-cols-[112px_minmax(0,1fr)] gap-4 rounded-[24px] bg-permukaan p-4 shadow-bayang lebar:grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)] lebar:items-center lebar:gap-6 lebar:p-6",
+        "kartu kartu-tegas paku relative grid grid-cols-[112px_minmax(0,1fr)] gap-4 p-4 hover:shadow-coret-sedang lebar:grid-cols-[240px_minmax(0,1fr)_minmax(0,1fr)] lebar:items-center lebar:gap-6 lebar:p-6",
         GERAK_KARTU,
       )}
     >
@@ -157,22 +176,22 @@ export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
         className="min-h-[120px] self-stretch lebar:min-h-[180px]"
       />
       <div className="min-w-0">
-        <h3 className="text-xl leading-[1.25] font-extrabold tracking-[-0.01em] [overflow-wrap:anywhere]">
+        <h3 className="text-[22px] leading-[1.2] [overflow-wrap:anywhere] lebar:text-[26px]">
           {kartu.nama}
         </h3>
-        <Harga kartu={kartu} className="mt-2 text-[22px]" />
+        <Harga kartu={kartu} className="mt-2 text-[24px] leading-[1.2]" />
         <Banding kartu={kartu} />
       </div>
       <ul
         aria-label={`Varian ${kartu.nama}`}
-        className="hidden min-w-0 content-center gap-3 self-stretch border-l border-garis pl-6 lebar:grid"
+        className="hidden min-w-0 content-center divide-y-2 divide-dashed divide-pensil self-stretch border-l-2 border-dashed border-pensil pl-6 lebar:grid"
       >
         {kartu.varian.map((v) => (
           // Bila kolomnya sempit (mulai 900 px), harga turun ke baris berikutnya dan tetap rata kanan,
           // supaya nama Varian tidak terpotong per huruf.
           <li
             key={v.id}
-            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-[15px] font-bold"
+            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-3 text-[17px] first:pt-0 last:pb-0"
           >
             <span className="min-w-0 [overflow-wrap:anywhere]">{v.nama}</span>
             <span className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
@@ -186,7 +205,7 @@ export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
                   {v.persenHemat !== null && (
                     <LabelHemat persen={v.persenHemat} />
                   )}
-                  <span className="whitespace-nowrap">
+                  <span className="font-spidol text-[19px] font-bold whitespace-nowrap">
                     {rupiah(v.hargaJual)}
                   </span>
                 </>

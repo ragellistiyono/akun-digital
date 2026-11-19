@@ -1,27 +1,21 @@
 ---
 name: MIWE Digital Store
-description: Toko akun digital yang hidup di jam senja; setiap pembelian selesai sebelum matahari tenggelam.
+description: Toko akun digital yang tampil seperti buku sketsa; kertas hangat, garis pensil, dan catatan post-it.
 colors:
-  langit: "#2A1F4D"
-  langit-2: "#3A2D66"
-  langit-garis: "#5B4A92"
-  langit-teks: "#E9E2FF"
-  langit-redup: "#C7BDEA"
-  monogram: "#8F61FF"
-  aksi: "#7548F2"
-  aksi-tekan: "#6236DE"
-  aksi-teks: "#6A3FE0"
-  teks-di-aksi: "#FFFFFF"
-  matahari: "#EBC967"
-  persik: "#ED9065"
-  persik-teks: "#3A1D0E"
-  mauve: "#9F5F70"
-  tanah: "#F7F3FC"
+  kertas: "#FDFBF7"
   permukaan: "#FFFFFF"
-  permukaan-2: "#EFE9FA"
-  garis: "#E4DCF5"
-  tinta: "#1E1838"
-  tinta-redup: "#625879"
+  kertas-lama: "#E5E0D8"
+  pensil: "#2D2D2D"
+  pensil-redup: "#5F5A54"
+  spidol: "#FF4D4D"
+  aksi: "#D63031"
+  teks-di-aksi: "#FFFFFF"
+  pulpen: "#2D5DA1"
+  teks-di-pulpen: "#FFFFFF"
+  postit: "#FFF9C4"
+  teks-postit: "#2D2D2D"
+  matahari: "#FFD84D"
+  bayang: "#2D2D2D"
   st-tunggu-bg: "#FFF1C9"
   st-tunggu: "#6E4B00"
   st-selesai-bg: "#DAF3E5"
@@ -34,16 +28,19 @@ colors:
   st-masalah: "#9C2820"
   st-kembali-bg: "#DFE8FC"
   st-kembali: "#22448F"
-  langit-gelap: "#231A42"
-  langit-2-gelap: "#33295C"
-  langit-garis-gelap: "#4E4180"
-  aksi-teks-gelap: "#B49BFF"
-  tanah-gelap: "#15112A"
-  permukaan-gelap: "#211A3D"
-  permukaan-2-gelap: "#2C2350"
-  garis-gelap: "#3A2F63"
-  tinta-gelap: "#F3EEFF"
-  tinta-redup-gelap: "#B9AFD9"
+  kertas-gelap: "#1E1C19"
+  permukaan-gelap: "#2A2723"
+  kertas-lama-gelap: "#3A3631"
+  pensil-gelap: "#EDE7DB"
+  pensil-redup-gelap: "#B5AD9F"
+  spidol-gelap: "#FF6B6B"
+  aksi-gelap: "#FF7B72"
+  teks-di-aksi-gelap: "#1E1C19"
+  pulpen-gelap: "#8DB4F0"
+  teks-di-pulpen-gelap: "#1E1C19"
+  postit-gelap: "#EFE6A6"
+  matahari-gelap: "#F5CF5A"
+  bayang-gelap: "#000000"
   st-tunggu-bg-gelap: "#3B2F0E"
   st-tunggu-gelap: "#F2D27A"
   st-selesai-bg-gelap: "#11352A"
@@ -58,70 +55,82 @@ colors:
   st-kembali-gelap: "#A4BCFF"
 typography:
   monogram:
-    fontFamily: "Manrope, system-ui, sans-serif"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
     fontSize: "28px"
-    fontWeight: 800
+    fontWeight: 700
     lineHeight: 1
-    letterSpacing: "-0.045em"
   headline:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "28px"
-    fontWeight: 800
-    lineHeight: 1.15
-    letterSpacing: "-0.03em"
-  headline-lebar:
-    fontFamily: "Manrope, system-ui, sans-serif"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
     fontSize: "36px"
-    fontWeight: 800
+    fontWeight: 700
     lineHeight: 1.15
-    letterSpacing: "-0.03em"
+  headline-lebar:
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "48px"
+    fontWeight: 700
+    lineHeight: 1.15
   title:
-    fontFamily: "Manrope, system-ui, sans-serif"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "28px"
+    fontWeight: 700
+    lineHeight: 1.15
+  judul-kecil:
+    fontFamily: "Kalam, Comic Sans MS, cursive"
     fontSize: "22px"
-    fontWeight: 800
+    fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "-0.02em"
   harga:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "18px"
-    fontWeight: 800
-    letterSpacing: "-0.02em"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "20px"
+    fontWeight: 700
+    lineHeight: 1.2
     fontFeature: "tnum"
   nama-produk:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "16px"
-    fontWeight: 800
-    lineHeight: 1.25
-    letterSpacing: "-0.01em"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "18px"
+    fontWeight: 700
+    lineHeight: 1.2
+  tombol:
+    fontFamily: "Patrick Hand, Comic Sans MS, cursive"
+    fontSize: "20px"
+    fontWeight: 400
+    lineHeight: 1.1
   body:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "16px"
+    fontFamily: "Patrick Hand, Comic Sans MS, cursive"
+    fontSize: "18px"
     fontWeight: 400
     lineHeight: 1.5
     fontFeature: "tnum"
   teks-panjang:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "15px"
+    fontFamily: "Patrick Hand, Comic Sans MS, cursive"
+    fontSize: "18px"
     fontWeight: 400
     lineHeight: 1.6
   label:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "14px"
-    fontWeight: 700
+    fontFamily: "Patrick Hand, Comic Sans MS, cursive"
+    fontSize: "17px"
+    fontWeight: 400
+    lineHeight: 1.2
+  bantuan:
+    fontFamily: "Patrick Hand, Comic Sans MS, cursive"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: 1.4
   label-kecil:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "13px"
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "15px"
     fontWeight: 700
-  mikro:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "12px"
-    fontWeight: 800
-  angka-waktu:
-    fontFamily: "Manrope, system-ui, sans-serif"
-    fontSize: "36px"
-    fontWeight: 800
     lineHeight: 1
-    letterSpacing: "-0.03em"
+  mikro:
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "15px"
+    fontWeight: 700
+    lineHeight: 1
+  angka-waktu:
+    fontFamily: "Kalam, Comic Sans MS, cursive"
+    fontSize: "36px"
+    fontWeight: 700
+    lineHeight: 1
     fontFeature: "tnum"
   mono-nomor:
     fontFamily: "JetBrains Mono, ui-monospace, monospace"
@@ -134,13 +143,10 @@ typography:
     fontSize: "15px"
     fontWeight: 500
 rounded:
-  kecil: "10px"
-  kontrol: "12px"
-  input: "14px"
-  foto: "16px"
-  kartu: "20px"
-  besar: "24px"
-  chip: "999px"
+  coret: "255px 15px 225px 15px / 15px 225px 15px 255px"
+  coret-md: "15px 255px 15px 225px / 225px 15px 255px 15px"
+  coret-alt: "225px 25px 255px 20px / 20px 255px 25px 225px"
+  coret-bulat: "52% 48% 55% 45% / 47% 55% 45% 53%"
 spacing:
   "1": "4px"
   "2": "8px"
@@ -149,89 +155,102 @@ spacing:
   "6": "24px"
   "8": "32px"
 components:
-  tombol-utama:
+  tombol:
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    typography: "{typography.tombol}"
+    rounded: "{rounded.coret}"
+    padding: "0 24px"
+    height: "52px"
+  tombol-hover:
     backgroundColor: "{colors.aksi}"
     textColor: "{colors.teks-di-aksi}"
-    typography: "{typography.body}"
-    rounded: "{rounded.input}"
+  tombol-nonaktif:
+    backgroundColor: "{colors.kertas-lama}"
+    textColor: "{colors.pensil-redup}"
+  tombol-kedua:
+    backgroundColor: "{colors.kertas-lama}"
+    textColor: "{colors.pensil}"
+    typography: "{typography.tombol}"
+    rounded: "{rounded.coret}"
     padding: "0 24px"
     height: "52px"
-  tombol-utama-hover:
-    backgroundColor: "{colors.aksi-tekan}"
-  tombol-utama-nonaktif:
-    backgroundColor: "{colors.permukaan-2}"
-    textColor: "{colors.tinta-redup}"
-  tombol-garis:
-    backgroundColor: "{colors.permukaan}"
-    textColor: "{colors.tinta}"
-    rounded: "{rounded.input}"
-    padding: "0 24px"
-    height: "52px"
+  tombol-kedua-hover:
+    backgroundColor: "{colors.pulpen}"
+    textColor: "{colors.teks-di-pulpen}"
   tombol-kecil:
-    rounded: "{rounded.kecil}"
-    padding: "0 12px"
-    height: "36px"
-  tombol-langit:
-    backgroundColor: "{colors.langit}"
-    textColor: "{colors.langit-teks}"
-    rounded: "{rounded.chip}"
-    padding: "0 16px"
-    height: "40px"
-  chip-kategori:
-    backgroundColor: "{colors.permukaan}"
-    textColor: "{colors.tinta}"
     typography: "{typography.label}"
-    rounded: "{rounded.chip}"
+    rounded: "{rounded.coret}"
+    padding: "0 14px"
+    height: "40px"
+  chip:
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    typography: "{typography.label}"
+    rounded: "{rounded.coret}"
     padding: "0 16px"
     height: "40px"
-  chip-kategori-aktif:
-    backgroundColor: "{colors.langit}"
-    textColor: "{colors.teks-di-aksi}"
+  chip-terpilih:
+    backgroundColor: "{colors.postit}"
+    textColor: "{colors.teks-postit}"
   label-hemat:
-    backgroundColor: "{colors.persik}"
-    textColor: "{colors.persik-teks}"
+    backgroundColor: "{colors.postit}"
+    textColor: "{colors.teks-postit}"
     typography: "{typography.mikro}"
-    rounded: "{rounded.chip}"
-    padding: "4px 8px"
+    rounded: "{rounded.coret}"
+    padding: "4px 10px"
   label-habis:
-    backgroundColor: "{colors.permukaan-2}"
-    textColor: "{colors.tinta-redup}"
+    textColor: "{colors.pensil-redup}"
     typography: "{typography.mikro}"
-    rounded: "{rounded.chip}"
-    padding: "4px 8px"
+    rounded: "{rounded.coret}"
+    padding: "4px 10px"
+  kartu:
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    rounded: "{rounded.coret-md}"
+    padding: "16px"
   kartu-produk:
     backgroundColor: "{colors.permukaan}"
-    rounded: "{rounded.kartu}"
+    textColor: "{colors.pensil}"
+    rounded: "{rounded.coret-md}"
     padding: "12px"
   kartu-unggulan:
     backgroundColor: "{colors.permukaan}"
-    rounded: "{rounded.besar}"
+    textColor: "{colors.pensil}"
+    rounded: "{rounded.coret-md}"
     padding: "16px"
-  panel:
-    backgroundColor: "{colors.permukaan}"
-    rounded: "{rounded.kartu}"
+  kartu-postit:
+    backgroundColor: "{colors.postit}"
+    textColor: "{colors.teks-postit}"
+    rounded: "{rounded.coret-md}"
     padding: "16px"
   pilihan-varian:
     backgroundColor: "{colors.permukaan}"
-    rounded: "{rounded.kartu}"
+    textColor: "{colors.pensil}"
+    rounded: "{rounded.coret-md}"
     padding: "16px"
   isian:
     backgroundColor: "{colors.permukaan}"
-    textColor: "{colors.tinta}"
+    textColor: "{colors.pensil}"
     typography: "{typography.body}"
-    rounded: "{rounded.input}"
+    rounded: "{rounded.coret-alt}"
     padding: "0 16px"
     height: "52px"
+  isian-baca-saja:
+    backgroundColor: "{colors.kertas-lama}"
+    textColor: "{colors.pensil}"
   kotak-cari:
-    textColor: "{colors.langit-teks}"
-    rounded: "{rounded.foto}"
-    padding: "0 16px"
-    height: "48px"
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    typography: "{typography.body}"
+    rounded: "{rounded.coret-alt}"
+    padding: "0 16px 0 48px"
+    height: "52px"
   status-menunggu:
     backgroundColor: "{colors.st-tunggu-bg}"
     textColor: "{colors.st-tunggu}"
     typography: "{typography.label-kecil}"
-    rounded: "{rounded.chip}"
+    rounded: "{rounded.coret}"
     padding: "0 12px 0 8px"
     height: "28px"
   status-selesai:
@@ -250,142 +269,182 @@ components:
     backgroundColor: "{colors.st-kembali-bg}"
     textColor: "{colors.st-kembali}"
   blok-item-stok:
-    backgroundColor: "{colors.langit}"
-    textColor: "{colors.langit-teks}"
-    rounded: "{rounded.besar}"
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    rounded: "{rounded.coret-md}"
     padding: "8px 16px"
   tombol-salin:
-    backgroundColor: "{colors.langit-2}"
-    textColor: "{colors.langit-teks}"
-    rounded: "{rounded.kontrol}"
-    padding: "0 12px"
+    backgroundColor: "{colors.permukaan}"
+    textColor: "{colors.pensil}"
+    typography: "{typography.label}"
+    rounded: "{rounded.coret}"
+    padding: "0 14px"
     height: "40px"
   tombol-salin-tersalin:
     backgroundColor: "{colors.st-selesai-bg}"
     textColor: "{colors.st-selesai}"
   navigasi-bawah:
     backgroundColor: "{colors.permukaan}"
-    textColor: "{colors.tinta-redup}"
+    textColor: "{colors.pensil-redup}"
     typography: "{typography.mikro}"
     height: "76px"
   bilah-atas:
-    backgroundColor: "{colors.langit}"
-    textColor: "{colors.langit-teks}"
+    backgroundColor: "{colors.kertas}"
+    textColor: "{colors.pensil}"
     height: "64px"
   bilah-atas-ciut:
     height: "52px"
-  penanda-surya:
+  penanda-matahari:
     backgroundColor: "{colors.matahari}"
     width: "28px"
     height: "14px"
   toast:
-    backgroundColor: "{colors.langit}"
-    textColor: "{colors.teks-di-aksi}"
+    backgroundColor: "{colors.postit}"
+    textColor: "{colors.teks-postit}"
     typography: "{typography.label}"
-    rounded: "{rounded.chip}"
+    rounded: "{rounded.coret}"
     padding: "12px 16px"
 ---
 
 # Sistem Desain Akun Digital
 
-Berkas ini mencatat sistem yang sudah dibangun dan divalidasi di prototipe `docs/design/prototipe/index.html` (ponsel 390 px dan desktop 1440 px, mode terang dan gelap). Frontmatter di atas adalah sumber nilai yang mengikat. Teks di bawahnya menjelaskan kapan dan mengapa nilai itu dipakai.
+Berkas ini mencatat tema "Coretan Tangan". Sumber visualnya ada dua: acuan gaya dari pemilik di `docs/design/acuan-coretan-tangan.md`, dan token serta kelas komponen yang sudah dibangun di `src/app/globals.css`. **Baca acuan itu sebelum membuat atau mengubah tampilan apa pun.** Frontmatter di atas adalah sumber nilai yang mengikat, dan nilainya sama persis dengan `:root` di `globals.css`. Teks di bawahnya menjelaskan kapan dan mengapa nilai itu dipakai. Bila acuan dan berkas ini berbeda, berkas ini yang berlaku, karena ia sudah menyesuaikan acuan dengan PRD: mode gelap, ukuran sentuh, Item stok, dan status.
 
-**Agent memakai token dari berkas ini, bukan nilai warna langsung.** Kode aplikasi menulis `bg-aksi`, `text-tinta-redup`, atau `var(--st-selesai)`, tidak pernah `#7548F2`. Satu-satunya tempat yang boleh memegang hex mentah adalah pelukis pemandangan senja (lihat Components), karena warnanya hasil interpolasi kunci langit, bukan warna antarmuka.
+Prototipe `docs/design/prototipe/index.html` milik tema lama "Langit Senja" dan bukan lagi acuan visual. Blok keputusan (▶) lama yang menyebut "prototipe" hanya merujuknya untuk teks, urutan, dan tata letak. Blok sebelum 2026-11-19 masih memakai nama token dan komponen lama; bacalah lewat bagian **Pemetaan dari token lama** di akhir berkas ini.
+
+**Agent memakai token dari berkas ini, bukan nilai warna langsung.** Kode aplikasi menulis `bg-kertas`, `text-pensil-redup`, `border-pensil`, atau `var(--st-selesai)`, tidak pernah `#2D2D2D`. Hex hanya ada di `src/app/globals.css`, ditambah nilai `kertas` dan `kertas-gelap` di berkas JSON aplikasi terpasang (`src/app/manifest.json` dan warna bilah status), karena browser dan sistem ponsel tidak bisa membaca token CSS. Pelukis pemandangan juga memakai `var(--…)`.
+
+**Dua bagian berkas ini dibaca test.** `e2e/token-desain.spec.ts` membaca blok `colors:` dan membandingkan setiap token dengan `var(--nama)` di browser, jadi setiap baris di blok itu berformat `  nama: "#RRGGBB"`, berurutan tanpa komentar dan tanpa baris kosong. `e2e/halaman-pesanan.spec.ts` membaca tabel di bagian Status Pesanan. Saat mengubah token, ubah frontmatter dan `:root` di `globals.css` bersamaan.
 
 ## Overview
 
-**Creative North Star: "Langit Senja"**
+**Creative North Star: "Buku Sketsa"**
 
-Toko ini hidup di jam senja. Bagian atas setiap layar adalah langit malam-ungu yang memuat monogram MDS dan pemandangan gunung yang dilukis dengan kode. Di bawahnya terbentang tanah yang tenang: lavender pucat di mode terang, malam pekat di mode gelap. Di tanah itu kartu putih bersudut bulat melayang dengan bayangan ungu yang lembut. Matahari menjadi satu-satunya tanda yang bergerak di sistem ini. Ia menandai tab aktif, dan di Halaman bayar ia tenggelam mengikuti sisa waktu QRIS.
+Toko ini adalah buku sketsa milik penjualnya. Halamannya kertas hangat bertitik. Isinya ditulis dengan pensil, ditandai spidol merah, dicentang pulpen biru, dan ditempeli catatan post-it kuning. Kartu adalah potongan kertas yang ditempel dengan selotip atau paku payung, dan bayangannya tegas seperti kolase kertas guntingan. Tidak ada garis wadah yang benar-benar lurus: tepi kartu, tombol, isian, dan chip bergelombang seperti digambar tangan. Gunung dan matahari dari tema lama kini digambar sebagai sketsa pensil. Matahari kuning stabilo masih menandai tab aktif, dan di Halaman bayar ia tenggelam mengikuti sisa waktu QRIS.
 
-Kepadatannya kepadatan aplikasi belanja di ponsel. Ruangnya cukup untuk satu jempol: kontrol utama setinggi 52 px, chip 40 px, dan modul jarak 8 px. Huruf Manrope tebal dengan angka tabular membuat harga, Stok Varian, Total bayar, dan hitung mundur tidak menggeser tata letak saat angkanya berganti. Rasa percaya datang dari rincian yang jujur, bukan dari hiasan. Arah ini menolak grid kartu putih berheader ungu khas toko top-up, juga gradien ungu-neon yang berpendar.
+Kesan coretan berhenti di data. Harga, Rincian Total bayar, form, dan tabel tetap tegak dan rata supaya mudah dibaca. Item stok dan Nomor Pesanan tetap memakai huruf mono, karena pembeli menyalinnya huruf demi huruf. Rasa santai datang dari bentuk, hiasan, dan huruf judul. Rasa percaya datang dari rincian yang jujur dan teks yang jelas terbaca.
 
 **Key Characteristics:**
-- Langit ungu malam di atas, tanah tenang di bawah, kartu bulat di antaranya.
-- Pemandangan senja buatan kode, tidak memakai foto. Gradien hanya ada di langit dan kabut pemandangan.
-- Matahari menjadi penanda tab aktif dan jam hitung mundur.
-- Manrope tebal dengan angka tabular. JetBrains Mono hanya untuk Item stok dan Nomor Pesanan.
+- Kertas hangat bertitik, garis pensil 2–3 px, dan tepi coretan tak beraturan.
+- Bayangan bergeser tegas tanpa blur. Warna selalu datar.
+- Kalam tebal untuk judul, Patrick Hand untuk isi, JetBrains Mono untuk Item stok dan Nomor Pesanan.
+- Merah spidol untuk hiasan, merah `aksi` untuk teks merah dan tombol yang di-hover, biru pulpen untuk tautan dan fokus, kuning post-it untuk yang terpilih dan catatan.
+- Rotasi kecil pada foto, label, dan hiasan. Form, tabel, dan teks panjang selalu tegak.
+- Pemandangan gunung digambar sebagai sketsa pensil oleh kode.
 - Status selalu tampil sebagai warna, ikon, dan label sekaligus.
-- Mode terang dan gelap setara. Keduanya divalidasi.
+- Mode terang dan mode gelap (buku sketsa malam) setara.
+
+▶ Keputusan 2026-11-19: Atas instruksi pemilik, seluruh tema diganti ke gaya coretan tangan dengan acuan docs/design/acuan-coretan-tangan.md. Mode gelap dipertahankan sebagai buku sketsa malam (PRD §11.3). Pemandangan gunung dan matahari dipertahankan konsepnya dan digambar ulang sebagai sketsa. Layar pembuka, ikon, dan warna bilah status ponsel tetap `langit` #2A1F4D karena diikat PRD §11.4 sampai pemilik memutuskan lain.
+
+▶ Keputusan 2026-11-20: Pemilik memutuskan warna ungu ikut diganti (PRD §11.4 ▶ Keputusan 2026-11-20). Ikon maskable dan layar pembuka kini berlatar `kertas`, bilah status Android mengikuti `kertas` atau `kertas-gelap` sesuai mode perangkat, dan bilah status iPhone memakai gaya bawaan. Token `langit` dihapus. Logo MDS tetap logo asli.
 
 ## Colors
 
-Palet ini terdiri dari langit ungu-malam, satu ungu aksi untuk tindakan, aksen hangat senja untuk matahari dan hemat, serta tanah lavender netral. Setiap token punya pasangan mode gelap dengan akhiran `-gelap`. Token yang tidak punya pasangan bernilai sama di kedua mode.
+Palet ini terbatas pada warna alat tulis: kertas, pensil, spidol merah, pulpen biru, dan kertas post-it, ditambah kuning stabilo untuk matahari dan warna status. Setiap token punya pasangan mode gelap berakhiran `-gelap`. Token tanpa pasangan (`teks-postit`) bernilai sama di kedua mode.
 
-### Primary
-- **Ungu Aksi** (`aksi`): latar tombol utama dan penanda terpilih (radio Varian, garis isian yang fokus). Teks putih di atasnya mencapai 5,3:1. Saat ditekan atau di-hover warnanya menjadi **Ungu Aksi Tekan** (`aksi-tekan`, 6,8:1 dengan putih).
-- **Ungu Monogram** (`monogram`): warna monogram MDS dari `docs/input/logo.png`. Dipakai untuk monogram, cincin fokus, garis hover kartu dan chip, serta bingkai panel ajakan (`.ajakan`). Kontrasnya dengan putih hanya 3,9:1, jadi teks putih tidak pernah diletakkan di atasnya. Di atas `langit` ia hanya dipakai sebagai huruf tampilan besar (monogram 24 px atau lebih, tebal 800).
-- **Ungu Tautan** (`aksi-teks` / `aksi-teks-gelap`): teks ungu di atas tanah atau permukaan, misalnya tautan Syarat & Ketentuan dan chip Kategori di Halaman Produk. Kontrasnya 5,6:1 di terang dan 7,9:1 di gelap.
+### Kertas dan pensil
+- **Kertas** (`kertas`): latar halaman, bilah atas, pita Beranda, strip tepi, dan bilah lekat. `body` diberi pola titik `kertas-lama` 1 px setiap 24 px seperti buku catatan.
+- **Permukaan** (`permukaan`): kartu, panel, isian, tombol utama, chip, dan navigasi bawah. Putih bersih di atas kertas yang sedikit krem.
+- **Kertas Lama** (`kertas-lama`): tombol kedua, tombol nonaktif, isian baca-saja, wadah kontrol segmen, petak Produk tanpa foto, selotip, dan titik pola kertas.
+- **Pensil** (`pensil`): teks utama dan semua garis tepi. Kontrasnya 13,3:1 di atas kertas. Warna ini tidak pernah hitam murni.
+- **Pensil Redup** (`pensil-redup`): teks bantuan, meta, placeholder, tab tidak aktif, dan garis gunung jauh. Kontrasnya 6,6:1 di kertas dan 5,2:1 di kertas lama.
+- **Bayang** (`bayang`): warna bayangan bergeser. Sama dengan pensil di mode terang, hitam di mode gelap.
 
-### Secondary
-- **Langit Malam** (`langit`, `langit-2`, `langit-garis`): latar bilah atas, pita langit, strip tepi, blok Item stok, chip Kategori aktif, dan toast. `langit-2` dipakai untuk hover di atas langit dan latar tombol Salin. `langit-garis` dipakai untuk garis di atas langit.
-- **Teks Langit** (`langit-teks`, `langit-redup`): teks di atas langit. `langit-redup` (8,5:1) dipakai untuk placeholder, subjudul monogram, dan tautan navbar yang tidak aktif.
+### Merah
+- **Spidol** (`spidol`): merah koreksi untuk hiasan: paku payung, garis bawah bergelombang, coretan, panah, dan lingkaran sorotan.
+- **Merah Aksi** (`aksi` dengan `teks-di-aksi`): latar tombol yang di-hover, teks merah yang harus dibaca (pesan galat dan peringatan), dan garis isian yang galat. Kontrasnya 4,7:1 di kertas dan 4,9:1 di permukaan. Teks putih di atasnya mencapai 4,9:1.
 
-### Tertiary
-- **Emas Matahari** (`matahari`): hanya untuk penanda tab aktif berbentuk matahari terbit.
-- **Persik Senja** (`persik` dengan `persik-teks`, 6,5:1): label "Hemat N%". Persik tidak dipakai untuk teks di atas tanah.
-- **Mauve Lembah** (`mauve`): petak warna pengganti foto Produk di prototipe.
+### Pulpen
+- **Biru Pulpen** (`pulpen` dengan `teks-di-pulpen`): tautan teks, cincin fokus, garis isian yang fokus, garis Varian terpilih, latar tombol kedua yang di-hover, dan burung di pita Beranda. Kontrasnya 6,4:1 di kertas, dan teks putih di atasnya 6,6:1.
 
-### Neutral
-- **Tanah** (`tanah` / `tanah-gelap`): latar halaman dan latar bilah lekat. Kabut pemandangan memudar ke warna ini.
-- **Permukaan** (`permukaan` / `permukaan-gelap`): kartu, panel, isian, navigasi bawah, dan tombol garis.
-- **Permukaan Lembut** (`permukaan-2` / `permukaan-2-gelap`): tombol nonaktif, label Habis, chip Kategori di Halaman Produk, dan latar kontrol segmen.
-- **Garis** (`garis` / `garis-gelap`): garis 1,5 px di isian, chip, dan tombol garis, serta garis 1 px di navigasi bawah dan bilah lekat.
-- **Tinta** (`tinta`, `tinta-redup` dan pasangan gelapnya): teks utama dan teks sekunder. `tinta-redup` mencapai 6,0:1 di atas tanah terang dan 8,9:1 di atas tanah gelap.
+### Kuning
+- **Post-it** (`postit` dengan `teks-postit`): chip, segmen, dan Varian yang terpilih, label Hemat, toast, kartu catatan, dan sorotan teks (`::selection`). Pasangannya 12,9:1.
+- **Matahari** (`matahari`): kuning stabilo untuk matahari dan bulan di pemandangan serta penanda tab aktif. Tidak pernah menjadi latar teks.
+
+### Status
+Token `st-*` dipakai pil status Pesanan (tabel di bagian Status Pesanan), pesan sukses (`st-selesai`), dan tombol Salin yang tersalin. Nilainya sama dengan tema lama. Setiap pasangan latar dan teks mencapai minimal 6,1:1 di kedua mode.
+
+### Warna perangkat
+- **Aplikasi terpasang** (PRD §11.4): `theme_color` dan `background_color` di manifest, latar ikon maskable, dan latar layar pembuka memakai `kertas` (#FDFBF7). Meta `theme-color` untuk bilah status Android mengikuti mode perangkat: `kertas` di terang dan `kertas-gelap` (#1E1C19) di gelap. Bilah status iPhone memakai gaya bawaan, jadi tidak ada zona `env(safe-area-inset-top)` yang perlu diwarnai. Layar pembuka dan ikon adalah gambar jadi, sehingga bila token `kertas` berubah, gambarnya dibuat ulang.
 
 ### Pemetaan ke Tailwind 4 dan shadcn/ui
-Token dideklarasikan sebagai CSS custom property di `:root` dan ditimpa di `@media (prefers-color-scheme: dark)` serta `[data-mode="gelap"]`. Tailwind 4 membacanya lewat `@theme inline` (`--color-langit: var(--langit)`, `--color-aksi: var(--aksi)`, dan seterusnya). Variabel shadcn dipetakan ke token yang sama:
+Token dideklarasikan sebagai CSS custom property di `:root`. Pasangan `-gelap` menimpanya di `@media (prefers-color-scheme: dark)` pada `:root:not([data-mode="terang"])` dan di `:root[data-mode="gelap"]`. Tailwind 4 membacanya lewat `@theme inline` (`--color-kertas: var(--kertas)`, dan seterusnya), jadi utilitasnya `bg-kertas`, `text-pensil`, `border-pensil`, `bg-postit`, dan sejenisnya. Varian `dark:` mengikuti aturan yang sama, dan breakpoint `lebar:` adalah 900 px. Variabel shadcn dipetakan ke token yang sama:
 
 | Variabel shadcn | Token |
 |---|---|
-| `--background` | `tanah` |
-| `--foreground` | `tinta` |
+| `--background` | `kertas` |
+| `--foreground` | `pensil` |
 | `--card`, `--popover` | `permukaan` |
-| `--card-foreground`, `--popover-foreground` | `tinta` |
+| `--card-foreground`, `--popover-foreground` | `pensil` |
 | `--primary` | `aksi` |
 | `--primary-foreground` | `teks-di-aksi` |
-| `--secondary`, `--muted`, `--accent` | `permukaan-2` |
-| `--secondary-foreground`, `--accent-foreground` | `tinta` |
-| `--muted-foreground` | `tinta-redup` |
-| `--destructive` | `st-masalah` |
-| `--border`, `--input` | `garis` |
-| `--ring` | `monogram` |
-| `--radius` | `rounded.input` (14 px) |
+| `--secondary`, `--muted` | `kertas-lama` |
+| `--secondary-foreground` | `pensil` |
+| `--muted-foreground` | `pensil-redup` |
+| `--accent` | `postit` |
+| `--accent-foreground` | `teks-postit` |
+| `--destructive` | `aksi` |
+| `--border`, `--input` | `pensil` |
+| `--ring` | `pulpen` |
 
-Token di luar pemetaan ini (`langit*`, `matahari`, `persik*`, `st-*`) dipakai dengan namanya sendiri.
+Variabel `--radius` tidak dipakai. Primitif shadcn diberi radius `rounded-coret-*` (lihat Shapes). Token di luar pemetaan ini (`spidol`, `pulpen`, `matahari`, `bayang`, `st-*`) dipakai dengan namanya sendiri.
 
 ### Named Rules
-**Aturan Dua Ungu.** Teks putih hanya diletakkan di atas `aksi` atau `aksi-tekan`, tidak pernah di atas `monogram`. `monogram` adalah warna merek untuk monogram dan huruf tampilan besar, bukan latar tombol.
+**Aturan Merah Dua Tingkat.** `spidol` (#FF4D4D) hanya untuk hiasan, karena kontrasnya dengan kertas hanya sekitar 3:1 (3,2:1). Teks merah yang harus dibaca dan latar merah yang bertulisan memakai `aksi` (4,7:1 di kertas), dengan `teks-di-aksi` di atasnya. Kelas `tombol` dan `isian` sudah mengikuti aturan ini.
 
-**Aturan Gradien Senja.** Gradien hanya ada di langit dan kabut pemandangan senja. Teks, tombol, kartu, chip, dan panel selalu berwarna datar. Efek kaca (backdrop-filter, blur di belakang permukaan) tidak dipakai di mana pun.
+**Aturan Pasangan Teks.** Setiap latar berwarna punya warna teksnya sendiri: `aksi` dengan `teks-di-aksi`, `pulpen` dengan `teks-di-pulpen`, `postit` dengan `teks-postit`, dan `st-*-bg` dengan `st-*`. `pensil` dan `pensil-redup` hanya dipakai di atas `kertas`, `permukaan`, atau `kertas-lama`. Teks merah (`aksi`) dan biru (`pulpen`) hanya dipakai di atas `kertas` atau `permukaan`, karena `aksi` di atas `kertas-lama` turun ke 3,7:1. Di dalam kartu post-it, semua teks mewarisi `teks-postit`, dan tautannya memakai `teks-postit` bergaris bawah. Alasannya mode gelap: post-it tetap kuning, sedangkan `pensil` berubah menjadi kapur yang hanya 1,03:1 di atas post-it.
+
+**Aturan Warna Perangkat.** Warna yang dibaca browser dan sistem ponsel (manifest, `theme-color`, ikon, dan layar pembuka) memakai nilai `kertas` dan `kertas-gelap` yang sama persis dengan token. Ungu lama (#2A1F4D) tidak dipakai di mana pun.
+
+## Mode gelap: buku sketsa malam
+
+Mode gelap adalah buku sketsa yang dibuka di malam hari: kertas arang (`kertas-gelap`), garis dan tulisan kapur (`pensil-gelap`), dan potongan kertas yang sedikit lebih terang (`permukaan-gelap`). Mode ini dipertahankan karena PRD §11.3 mewajibkannya. Tampilan mengikuti mode perangkat, dan pilihan Perangkat, Terang, atau Gelap di tab Akun mengalahkannya.
+
+- **Merah dan biru menjadi lebih terang** supaya terbaca di kertas arang: `aksi-gelap` 6,7:1 dan `pulpen-gelap` 8,0:1. Teks di atasnya berganti menjadi kertas arang (`teks-di-aksi-gelap`, `teks-di-pulpen-gelap`).
+- **Post-it tetap kuning.** `postit-gelap` hanya sedikit diredam, dan `teks-postit` tetap pensil gelap, seperti catatan kertas di bawah lampu (10,9:1). Karena itu Aturan Pasangan Teks paling penting di mode ini.
+- **Matahari sedikit diredam** (`matahari-gelap`). Di pita Beranda, bulan sabit dan bintang coretan menggantikan matahari.
+- **Bayangan menjadi hitam pekat** (`bayang-gelap`), dan `bayang-halus` menjadi hitam 45%.
+- **Pola titik kertas** memakai `kertas-lama-gelap`. Status memakai pasangan `st-*-gelap`.
+- `teks-postit` tidak punya pasangan gelap.
+
+Komponen cukup memakai token dan kelas dari `globals.css`, maka mode gelap berjalan sendiri. Periksa setiap layar baru di kedua mode.
 
 ## Typography
 
-**Display Font:** Manrope (fallback system-ui, sans-serif)
-**Body Font:** Manrope (fallback system-ui, sans-serif)
-**Label/Mono Font:** JetBrains Mono (fallback ui-monospace, monospace)
+**Display Font:** Kalam 700 (fallback "Comic Sans MS", cursive)
+**Body Font:** Patrick Hand 400 (fallback "Comic Sans MS", cursive)
+**Data Font:** JetBrains Mono 500 dan 700 (fallback ui-monospace, monospace)
 
-**Character:** Manrope tebal yang dirapatkan memberi suara aplikasi yang hangat dan tegas. JetBrains Mono menandai data yang disalin pembeli kata demi kata.
+**Character:** Kalam tebal terlihat seperti spidol, cocok untuk judul dan angka yang ingin menonjol seperti catatan yang ditebalkan. Patrick Hand jelas tulisan tangan tetapi tetap terbaca di ukuran isi. JetBrains Mono menandai data yang disalin pembeli huruf demi huruf.
 
-Di aplikasi, kedua font dimuat lewat `next/font/google` (Manrope 400–800, JetBrains Mono 500 dan 700) sebagai variabel `--font-manrope` dan `--font-jetbrains`. Variabel itu dipetakan ke `--font-sans` dan `--font-mono` di `@theme`. Prototipe memakai tautan Google Fonts hanya karena berupa HTML statis. Seluruh `body` memakai `font-variant-numeric: tabular-nums`.
+Ketiga font dimuat lewat `next/font/google` di `src/app/layout.tsx`: Patrick Hand 400 (`--font-patrick-hand`), Kalam 400 dan 700 (`--font-kalam`), serta JetBrains Mono 500 dan 700 (`--font-jetbrains`). `@theme inline` memetakannya ke utilitas `font-sans` dan `font-tangan` (Patrick Hand), `font-spidol` (Kalam), dan `font-mono` (JetBrains Mono). Base style di `globals.css` sudah mengatur `body` (Patrick Hand 18 px, tinggi baris 1,5, `tabular-nums`) serta `h1`–`h3` (Kalam 700, tinggi baris 1,15; `h1` 36 px, 48 px mulai 900 px).
+
+Patrick Hand hanya punya tebal 400, dan browser memalsukan tebal lain. Penekanan memakai Kalam: `font-spidol font-bold`.
 
 ### Hierarchy
-- **Monogram** (800, 28 px; 24 px saat bilah ciut; jarak huruf −0,045em): monogram MDS di bilah atas, berwarna `monogram`. Di layar lebar diikuti "MIWE Digital Store" dalam `label-kecil` warna `langit-redup`.
-- **Headline** (800, 28 px di ponsel, 36 px mulai 900 px, tinggi baris 1,15): judul halaman, satu per layar.
-- **Title** (800, 22 px, tinggi baris 1,2): judul bagian seperti "Produk Unggulan" dan "Semua Produk", dengan jarak 32 px di atas dan 16 px di bawah.
-- **Harga** (800, 18 px; 22 px di kartu Unggulan; 28 px di Halaman Produk dengan satu Varian): Harga jual.
-- **Nama Produk** (800, 16 px; 20 px di kartu Unggulan).
-- **Body** (400, 16 px, tinggi baris 1,5): teks umum. Isian juga memakai 16 px supaya iOS tidak memperbesar layar.
-- **Teks panjang** (400, 15 px, tinggi baris 1,6, lebar maksimal 65ch): deskripsi Produk dan ketentuan garansi.
-- **Label** (700, 14 px): label isian, chip, dan tombol kecil. **Label kecil** (700, 13 px): Stok Varian, meta, dan teks bantuan. **Mikro** (800, 12 px): Hemat, Habis, dan label navigasi bawah.
-- **Angka waktu** (800, 36 px di ponsel, 48 px di layar lebar, tinggi baris 1): hitung mundur QRIS.
-- **Mono nomor** (JetBrains Mono 700, 30 px): Nomor Pesanan sebagai kepala Halaman Pesanan. Di panel Halaman bayar ukurannya 20 px, dan di daftar Riwayat 13 px.
+- **Monogram** (Kalam 700, 28 px; 24 px saat bilah ciut): monogram MDS di bilah atas, berwarna `pensil`. Di layar lebar diikuti "MIWE Digital Store" dalam `bantuan` berwarna `pensil-redup`.
+- **Headline** (Kalam 700, 36 px di ponsel, 48 px mulai 900 px, tinggi baris 1,15): judul halaman `h1`, satu per layar.
+- **Title** (Kalam 700, 28 px): judul bagian `h2` seperti "Produk Unggulan" dan "Semua Produk", dengan jarak 32 px di atas dan 16 px di bawah. Boleh diberi `garis-gelombang`.
+- **Judul kecil** (Kalam 700, 22 px): judul panel dan nama Produk di kartu Unggulan.
+- **Harga** (Kalam 700, 20 px; 24 px di kartu Unggulan; 32 px di Halaman Produk dengan satu Varian): Harga jual.
+- **Nama Produk** (Kalam 700, 18 px; 22 px di kartu Unggulan).
+- **Tombol** (Patrick Hand, 20 px): label tombol 52 px.
+- **Body** (Patrick Hand, 18 px, tinggi baris 1,5): teks umum. Isian juga 18 px, jadi iOS tidak memperbesar layar.
+- **Teks panjang** (Patrick Hand, 18 px, tinggi baris 1,6, lebar maksimal 65ch): deskripsi Produk dan ketentuan garansi.
+- **Label** (Patrick Hand, 17 px): label isian, chip, tombol kecil, dan tabel Rincian Total bayar.
+- **Bantuan** (Patrick Hand, 16 px): teks bantuan isian, pesan galat, Stok Varian, meta, dan nama kolom Item stok.
+- **Label kecil** (Kalam 700, 15 px): pil status Pesanan dan pil sejenis di dasbor admin.
+- **Mikro** (Kalam 700, 15 px): label Hemat, label Habis, dan label navigasi bawah.
+- **Angka waktu** (Kalam 700, 36 px di ponsel, 48 px di layar lebar, tinggi baris 1): hitung mundur QRIS.
+- **Mono nomor** (JetBrains Mono 700, 30 px): Nomor Pesanan sebagai kepala Halaman Pesanan. Di panel Halaman bayar ukurannya 20 px, dan di daftar Riwayat 15 px.
 - **Mono item** (JetBrains Mono 500, 15 px, `overflow-wrap: anywhere`): nilai Item stok.
 
 ### Named Rules
-**Aturan Mono untuk Data Salinan.** JetBrains Mono hanya dipakai untuk nilai Item stok dan Nomor Pesanan. Harga, tanggal, dan label tetap Manrope, termasuk tanggal yang bersebelahan dengan Nomor Pesanan di Riwayat.
+**Aturan Mono untuk Data Salinan.** JetBrains Mono hanya dipakai untuk nilai Item stok dan Nomor Pesanan. Huruf tulisan tangan menyamarkan l, I, dan 1 serta 0 dan O, padahal pembeli menyalin kredensial itu huruf demi huruf dan menyebut Nomor Pesanan ke Admin. Harga, tanggal, dan label tetap huruf tulisan tangan, termasuk tanggal yang bersebelahan dengan Nomor Pesanan di Riwayat.
 
-**Aturan Angka Bersel Tetap.** Stok Varian, Harga jual, Total bayar, dan hitung mundur memakai angka tabular, jadi pergantian angka tidak menggeser tata letak.
+**Aturan Angka Bersel Tetap.** Stok Varian, Harga jual, Total bayar, dan hitung mundur memakai `tabular-nums` (sudah dipasang di `body`). Huruf tulisan tangan belum tentu punya angka tabular, jadi angka yang berganti di tempat, yaitu hitung mundur QRIS, diberi lebar tetap dalam satuan `ch` supaya pergantiannya tidak menggeser tata letak.
+
+**Aturan Ukuran Tulisan Tangan.** Huruf tulisan tangan tampak lebih kecil dari ukurannya. Isi memakai 18 px, label 16–17 px, dan teks terkecil 15 px.
 
 ## Layout
 
@@ -393,71 +452,120 @@ Di aplikasi, kedua font dimuat lewat `next/font/google` (Manrope 400–800, JetB
 
 **Ponsel (di bawah 900 px)**
 - Bilah atas lekat 64 px, berisi monogram MDS di kiri dan tombol Masuk (atau nama Member) di kanan. Halaman dalam menampilkan tombol kembali dan judul halaman.
-- Beranda: pita langit 236 px dengan kotak cari 48 px, lalu chip Kategori yang bisa digeser ke samping, kartu Produk Unggulan, dan grid kartu Produk dua kolom dengan celah 16 px. Urutannya mengikuti PRD §3.6, dan tidak ada banner promo.
-- Halaman lain: strip tepi langit 44 px di bawah bilah.
+- Beranda: pita Beranda 236 px dengan kotak cari, lalu chip Kategori yang bisa digeser ke samping, kartu Produk Unggulan, dan grid kartu Produk dua kolom dengan celah 16 px. Urutannya mengikuti PRD §3.6, dan tidak ada banner promo.
+- Halaman lain: strip tepi 44 px di bawah bilah atas.
 - Navigasi bawah 76 px dengan empat tab (Beranda, Kategori, Riwayat, Akun) sesuai PRD §11.1, ditambah `safe-area-inset-bottom`.
 - Isi halaman diberi padding bawah 112 px. Halaman yang punya bilah lekat diberi 216 px supaya isi terakhir tidak tertutup.
 
 **Layar lebar (mulai 900 px)**
 - Navigasi bawah hilang. Empat tab yang sama pindah ke navbar atas di sebelah monogram (PRD §11.1).
-- Pita langit 320 px, strip tepi 56 px.
-- Grid Produk empat kolom dengan celah 24 px. Kartu Unggulan menjadi tiga kolom: foto 240 px, info, lalu daftar Varian dengan garis pemisah.
-- Halaman Produk, Checkout, bayar, Pesanan, Riwayat Tamu, dan Akun memakai dua kolom sama lebar dengan celah 32 px. Bilah lekat menjadi blok statis biasa di kolomnya.
+- Pita Beranda 320 px, strip tepi 56 px.
+- Grid Produk empat kolom dengan celah 24 px. Kartu Unggulan menjadi tiga kolom: foto 240 px, info, lalu daftar Varian dengan pemisah garis putus-putus.
+- Halaman Produk, Checkout, bayar, dan Pesanan memakai dua kolom sama lebar (`tata-dua-kolom`, celah 48 px). Bilah lekat menjadi blok statis biasa di kolomnya.
+- Navbar atas terbagi tiga zona dengan jarak yang jelas: monogram dan nama toko di kiri, empat tab di tengah, dan tombol Masuk (atau nama Member) di kanan.
 
-**Gerak responsif (PRD §11.2).** Begitu halaman digulir lebih dari 24 px, bilah atas mengecil dari 64 ke 52 px dan mendapat bayangan. Navigasi bawah bersembunyi saat digulir ke bawah melewati 120 px, lalu muncul lagi saat digulir ke atas. Bilah lekat ikut turun ke dasar layar. Easing standarnya `cubic-bezier(.16,1,.3,1)`. Semua transisi dan animasi dimatikan di bawah `prefers-reduced-motion: reduce`.
+### Tata letak halaman
 
-**Target ukuran.** Lebar terkecil yang didukung 360 px, tanpa gulir ke samping (PRD §11.1). Target sentuh terkecil 36 px (tombol kecil). Kontrol utama 52 px.
+▶ Keputusan 2026-11-20: Atas permintaan pemilik, tata letak semua halaman diaudit karena isi halaman menempel di kiri dengan ruang kosong besar di kanan, dan navbar terlalu rapat dengan nama toko. Aturan di bawah ini menggantikan susunan kolom lama untuk Riwayat Tamu dan Akun, termasuk ▶ Keputusan 2026-11-11 (#53) tentang judul dan panel penjelasan Riwayat Tamu di kolom kiri.
+
+**Aturan Tengah untuk Satu Kolom.** Isi yang hanya satu kolom selalu diletakkan di tengah ruang yang tersedia, dengan judul halaman di dalam kolom yang sama. Isi yang lebar memakai grid yang mengisi lebar. Tidak ada halaman, di toko maupun dasbor admin, yang isinya menempel di kiri dengan ruang kosong besar di kanan.
+
+Setiap halaman memakai salah satu dari empat pola berikut. Kelasnya ada di `src/app/globals.css`.
+
+| Pola | Kelas | Lebar | Halaman |
+|---|---|---|---|
+| Fokus | `tata-fokus` | 560 px di tengah | Akun (Tamu dan Member), Masuk, Daftar, Kode verifikasi, Lupa password, Atur ulang password, Riwayat untuk Tamu, dan halaman "tidak ditemukan" |
+| Baca | `tata-baca` | 720 px di tengah | Syarat & Ketentuan, Kebijakan Privasi, dan daftar Riwayat Pesanan Member |
+| Dua kolom | `tata-dua-kolom` | penuh 1120 px, dua kolom mulai 900 px | Halaman Produk, Checkout, Halaman bayar, dan Halaman Pesanan |
+| Katalog | grid biasa | penuh 1120 px | Beranda dan Kategori |
+
+- **Kepala halaman** (`kepala-halaman`): judul halaman di kiri dan aksi halaman di kanan, misalnya "Tambah Produk" di dasbor admin. Bila sempit, aksi turun ke bawah judul. Jarak ke isi 24 px.
+- **Ritme tegak:** isi mulai 24 px di bawah strip tepi (32 px di layar lebar). Antarbagian berjarak 24–32 px, dan antarkartu dalam satu bagian 16 px. Footer berjarak minimal 48 px dari isi terakhir.
+- **Halaman bayar:** gambar QR adalah benda utama halaman ini. Ia tampil 240 px di ponsel dan 288 px di layar lebar, di tengah `kartu kartu-tegas` berselotip, dan selalu di atas alas putih (`bg-white`), juga di mode gelap, supaya pola dan zona tenangnya tetap terbaca pemindai. QR tidak diberi tepi coretan dan tidak diputar. Di ponsel urutannya kartu bayar, QR, lalu ringkasan Pesanan. Di layar lebar kartu QR lekat di kolom kiri, sedangkan kartu bayar dan ringkasan Pesanan bertumpuk di kolom kanan.
+- **Kolom kanan** di pola dua kolom berisi ringkasan, misalnya Rincian Total bayar. Di layar lebar ia boleh lekat (`sticky`) di bawah bilah atas, supaya tetap terlihat saat kolom kiri digulir.
+- **Dasbor admin:** isi di sebelah menu samping memakai lebar maksimal 1120 px di tengah ruang isi. Halaman daftar (tabel) memakai lebar penuh itu. Halaman yang isinya satu form memakai kolom 720 px di tengah. Halaman ubah yang punya beberapa panel, misalnya ubah Produk dengan panel Foto dan Varian, memakai dua kolom mulai 1200 px: form utama di kiri dan panel pendukung di kanan.
+
+**Gerak responsif (PRD §11.2).** Begitu halaman digulir lebih dari 24 px, bilah atas mengecil dari 64 ke 52 px dan mendapat bayangan tegas. Navigasi bawah bersembunyi saat digulir ke bawah melewati 120 px, lalu muncul lagi saat digulir ke atas. Bilah lekat ikut turun ke dasar layar. Easing standarnya `cubic-bezier(.16,1,.3,1)`. Gerak kecil (hover, tekan, goyang) berlangsung 100 ms `ease-out`. Efek hover hanya berlaku di `@media (hover: hover)`. Semua transisi dan animasi dimatikan di bawah `prefers-reduced-motion: reduce`, termasuk goyang dan tombol yang ditekan rata.
+
+**Rotasi.** Rotasi kecil memecah grid supaya terasa ditempel tangan, tetapi hanya pada benda yang tidak perlu dibaca teliti.
+
+| Boleh miring diam | Miring hanya saat hover | Selalu tegak |
+|---|---|---|
+| Foto besar di Halaman Produk, label Hemat dan Habis, toast, dan hiasan | Kartu Produk (`goyang`, 1°) dan chip (−2°) | Isian, form, panel yang berisi form, tabel dan Rincian Total bayar, deret harga, pilihan Varian, blok Item stok, pil status, Nomor Pesanan, angka waktu, kartu bayar, baris Riwayat, teks panjang, bilah atas, navigasi, bilah lekat, dan seluruh dasbor admin |
+
+Rentangnya −2° sampai 2°, dan paling banyak ±1° di bawah 900 px. Selotip memakai −3° bawaan kelasnya.
+
+**Target ukuran.** Lebar terkecil yang didukung 360 px, tanpa gulir ke samping (PRD §11.1). Bayangan bergeser dan elemen yang miring tetap berada di dalam padding samping 16 px. Target sentuh terkecil 40 px (tombol kecil dan chip). Kontrol utama 52 px.
 
 ## Elevation & Depth
 
-Kedalaman datang dari dua lapis: langit yang gelap di atas tanah yang terang, dan kartu yang melayang dengan bayangan ungu lembut berjarak. Bayangan selalu negatif-spread dan berwarna ungu langit di mode terang, sedangkan di mode gelap bayangan menjadi hitam pekat. Tidak ada bayangan keras bergeser (offset tanpa blur).
+Kedalaman datang dari potongan kertas yang ditumpuk: kartu bergaris pensil di atas kertas bertitik, dengan bayangan yang bergeser tegas ke kanan bawah tanpa blur. Semua bayangan memakai `bayang`, kecuali bayangan halus kartu yang memakai `bayang-halus`.
+
+`bayang-halus` adalah pensil 10% (`rgba(45, 45, 45, 0.1)`) di mode terang dan hitam 45% (`rgba(0, 0, 0, 0.45)`) di mode gelap. Nilainya berupa rgba, jadi ia tidak masuk blok `colors:` dan hanya dipegang `globals.css`.
 
 ### Shadow Vocabulary
-- **Bayang** (`0 8px 24px -12px rgba(42,31,77,.38)`; gelap `0 10px 26px -12px rgba(0,0,0,.65)`): kartu, panel, gambar QR, kartu senja, dan segmen terpilih.
-- **Bayang naik** (`0 14px 32px -14px rgba(42,31,77,.5)`; gelap `0 16px 34px -14px rgba(0,0,0,.75)`): kartu yang di-hover (terangkat 2 px, hanya di perangkat `hover:hover`) dan toast.
-- **Bayang bilah** (`0 10px 24px -14px rgba(20,14,40,.7)`): bilah atas saat ciut.
-- **Bayang lekat** (`0 -10px 20px -18px rgba(42,31,77,.45)`): bilah lekat di atas navigasi bawah.
-- **Cincin fokus** (`outline: 3px solid monogram; outline-offset: 2px`): semua elemen dengan `:focus-visible`. Isian memakai garis `aksi` ditambah halo `0 0 0 3px` dari `monogram` 30%.
+- **Coret halus** (`shadow-coret-halus`, `3px 3px 0 0 var(--bayang-halus)`): kartu, panel, dan baris Riwayat. Sudah dipasang kelas `kartu`.
+- **Coret kecil** (`shadow-coret-kecil`, `2px 2px 0 0 var(--bayang)`): tombol kecil, chip terpilih, Varian terpilih, label Hemat, paku, dan kotak cari.
+- **Coret** (`shadow-coret`, `4px 4px 0 0 var(--bayang)`): tombol 52 px dan `kartu-tegas` (blok Item stok, panel ajakan, kartu bayar).
+- **Bayang bilah** (`0 4px 0 0 var(--bayang)`): bilah atas saat ciut. Bayangan ini lurus ke bawah karena bilahnya selebar layar.
+- **Coret sedang** (`shadow-coret-sedang`, 6 px): kartu Produk yang di-hover dan toast.
+- **Coret tegas** (`shadow-coret-tegas`, 8 px): kartu Produk Unggulan, satu-satunya sorotan di Beranda.
+- **Ditekan rata.** Tombol yang di-hover menyusut ke bayangan 2 px dan bergeser 2 px. Saat ditekan, bayangannya hilang dan tombol bergeser 4 px, seperti kertas yang ditekan ke meja.
+- **Cincin fokus** (`outline: 3px dashed var(--pulpen); outline-offset: 3px`): semua elemen dengan `:focus-visible`. Isian memakai garis `pulpen` ditambah halo `0 0 0 3px` dari `pulpen` 20%.
+
+### Tekstur kertas
+`body` memakai `radial-gradient(var(--kertas-lama) 1px, transparent 1px)` berukuran 24 px, jadi halaman tampak seperti kertas buku catatan bertitik. Kartu dan panel menutupi pola itu dengan latar `permukaan`.
 
 ### Named Rules
-**Aturan Bayangan Berjarak.** Bayangan kartu selalu lembut, lebar, dan menjauh dari tepi. Kartu tidak diberi garis tepi. Garis hanya untuk kontrol (isian, chip, tombol garis, pilihan Varian).
+**Aturan Bayangan Tegas.** Setiap bayangan bergeser tegas tanpa blur dan diambil dari `shadow-coret-*`, kecuali bayang bilah yang lurus ke bawah. Warna selalu datar: tanpa gradasi warna, pendar, blur, derau, atau `backdrop-filter`, termasuk di pemandangan. Satu-satunya `radial-gradient` adalah pola titik kertas, dan warna tembus hanya dipakai selotip, garis tepi selotip, dan halo fokus isian.
+
+**Aturan Garis Pensil.** Setiap kartu, panel, tombol, isian, chip, pil, dan foto bergaris `pensil` minimal 2 px. Tombol 52 px bergaris 3 px untuk penekanan. Garis putus-putus menandai yang sekunder: pemisah, keadaan nonaktif, label Habis, Varian habis, dan garis atas bilah lekat.
 
 ## Shapes
 
-Bentuknya bulat dan bersahabat, dengan radius yang naik sesuai besarnya permukaan:
-- **Pil** (999 px): chip Kategori, label Hemat dan Habis, pil status, tombol di atas langit, dan toast.
-- **Kecil** (10 px) dan **kontrol** (12 px): tombol kecil, segmen, tombol kembali, tombol Salin, dan tautan navbar atas.
-- **Isian** (14 px): tombol 52 px, isian, kontrol segmen, dan kotak bantuan prototipe.
-- **Foto** (16 px): foto Produk di dalam kartu, gambar QR, dan kotak cari.
-- **Kartu** (20 px): kartu Produk, panel, pilihan Varian, dan baris Riwayat.
-- **Besar** (24 px): kartu Produk Unggulan, foto besar di Halaman Produk, kartu senja di Halaman bayar, dan blok Item stok.
+Tidak ada wadah bersudut lurus atau berradius bulat biasa. Setiap wadah memakai salah satu radius coretan dari frontmatter, yang tersedia sebagai utilitas Tailwind:
+- **Coret** (`rounded-coret`): tombol, chip, pil status, label Hemat dan Habis, tombol Salin, kontrol segmen, dan toast.
+- **Coret sedang** (`rounded-coret-md`): kartu, panel, pilihan Varian, baris Riwayat, blok Item stok, dan kartu bayar.
+- **Coret variasi** (`rounded-coret-alt`): isian, kotak cari, foto Produk, gambar QR, dan petak Produk tanpa foto.
+- **Coret bulat** (`rounded-coret-bulat`): bentuk "bulat" yang tidak sempurna, seperti radio, avatar, ikon di dalam lingkaran, dan titik.
 
-Garis kontrol setebal 1,5 px. Pilihan Varian memakai 2 px supaya keadaan terpilih terbaca. Satu-satunya siluet yang bukan persegi bulat adalah setengah lingkaran matahari terbit pada penanda tab aktif.
+Kelas `rounded-sm` sampai `rounded-3xl`, `rounded-full`, dan `rounded-[Npx]` tidak dipakai. Pengecualiannya dua: paku payung berbentuk lingkaran utuh (sudah diatur kelas `paku`), dan penanda matahari berbentuk setengah lingkaran. Pada elemen kecil, browser mengecilkan radius coretan secara proporsional, jadi radius yang sama tetap aman dipakai di chip 40 px.
 
 ## Components
 
-Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (16 px dengan stroke 2,4 di pil status, 18 px di tombol Salin dan segmen). Sprite SVG di prototipe digambar tangan meniru glif lucide. Padanannya: Beranda `House`, Kategori `LayoutGrid`, Riwayat `History`, Akun `User`, cari `Search`, kembali `ChevronLeft`, Salin `Copy`, tersalin `Check`, simpan QR `Download`, WhatsApp `MessageCircle`, garansi `ShieldCheck`, mode `Smartphone`/`Sun`/`Moon`, dan Tautan Pesanan `Ticket`. Ikon status ada di bagian Status Pesanan. Komponen dibangun di atas primitif shadcn/ui (Radix) dan diberi token dari berkas ini. Toast memakai `sonner`.
+Ikon di aplikasi berasal dari `lucide-react` dengan `strokeWidth={2.5}`, berukuran 24 px (16 px di pil status, 18 px di tombol Salin dan segmen). Ikon penting boleh dibungkus lingkaran `rounded-coret-bulat` bergaris 2 px `pensil`, misalnya `Ticket` di Riwayat Tamu dan `ShieldCheck` di panel garansi. Padanan ikonnya: Beranda `House`, Kategori `LayoutGrid`, Riwayat `History`, Akun `User`, cari `Search`, kembali `ChevronLeft`, Salin `Copy`, tersalin `Check`, simpan QR `Download`, WhatsApp `MessageCircle`, garansi `ShieldCheck`, mode `Smartphone`/`Sun`/`Moon`, dan Tautan Pesanan `Ticket`. Ikon status ada di bagian Status Pesanan.
+
+Komponen dibangun di atas primitif shadcn/ui (Radix) dan diberi token serta kelas dari `src/app/globals.css`. Kelas itu berada di layer `components`, jadi utilitas Tailwind di elemen yang sama bisa menimpanya (misalnya `tombol w-full`). Toast memakai `sonner`.
+
+### Hiasan
+Hiasan menguatkan kesan buku sketsa. Setiap hiasan diberi `aria-hidden="true"` dan `pointer-events-none`, tidak menutupi teks atau kontrol, dan paling banyak satu jenis per kartu.
+- **Selotip** (`selotip`, induk `relative`): pita `kertas-lama` 75% tembus, 96×26 px, miring −3° di tengah atas. Dipakai di kartu Unggulan, blok Item stok, dan foto besar Halaman Produk.
+- **Paku payung** (`paku`, induk `relative`): lingkaran `spidol` 18 px bergaris 2 px `pensil` dengan bayangan 2 px, di tengah atas. Dipakai di panel ajakan dan kartu catatan.
+- **Garis bergelombang** (`garis-gelombang`): garis bawah bergelombang `spidol` 2 px dengan jarak 6 px. Dipakai untuk tautan navbar atas yang aktif dan judul bagian.
+- **Goyang** (`goyang`, `goyang-kiri`): miring 1° atau −1° saat hover. Dipakai kartu Produk secara bergantian.
+- **Coretan SVG** (panah putus-putus, lingkaran sorotan, garis berkelok): garis `spidol` atau `pensil` lewat token. Hiasan besar seperti ini tampil mulai 900 px (`hidden lebar:block`).
 
 ### Buttons
-- **Bentuk:** sudut membulat lembut (14 px), tinggi 52 px, padding samping 24 px, Manrope 800 16 px, ikon di kiri dengan celah 8 px.
-- **Utama:** latar `aksi`, teks putih. Saat hover latarnya menjadi `aksi-tekan`, dan saat ditekan tombol mengecil ke skala 0,98. Saat nonaktif latarnya `permukaan-2` dan teksnya `tinta-redup`, misalnya tombol "Habis" di Halaman Produk. Satu tombol utama per layar.
-- **Garis:** latar `permukaan`, garis 1,5 px `garis`, teks `tinta`. Saat hover garisnya berubah menjadi `monogram`. Dipakai untuk aksi kedua: Batalkan, Pakai voucher, Daftar, dan WhatsApp.
-- **Kecil:** 36 px, radius 10 px, 14 px.
-- **Tombol langit:** pil 40 px dengan garis `langit-garis` di atas langit (Masuk atau nama Member). Saat hover latarnya `langit-2`.
+- **Bentuk:** kelas `tombol`. Tinggi minimal 52 px, padding samping 24 px, Patrick Hand 20 px, ikon di kiri dengan celah 8 px, garis 3 px `pensil`, radius `coret`, dan bayangan 4 px.
+- **Utama** (`tombol`): latar `permukaan`, teks `pensil`. Saat hover latarnya menjadi `aksi` dengan teks `teks-di-aksi`, lalu tombol ditekan rata saat diklik (lihat Elevation). Saat nonaktif latarnya `kertas-lama`, teksnya `pensil-redup`, garisnya putus-putus, dan bayangannya hilang, misalnya tombol "Habis" di Halaman Produk. Satu tombol utama per layar.
+- **Kedua** (`tombol tombol-kedua`): latar `kertas-lama`. Saat hover latarnya menjadi `pulpen` dengan teks `teks-di-pulpen`. Dipakai untuk aksi kedua: Batalkan, Pakai voucher, Daftar, WhatsApp, dan "Simpan email". Ini pengganti tombol garis tema lama.
+- **Kecil** (`tombol tombol-kecil`): 40 px, padding 14 px, 17 px, garis 2 px, bayangan 2 px. Bisa digabung dengan `tombol-kedua`. Dipakai untuk tombol Masuk atau nama Member di bilah atas, tombol Salin, dan aksi di dasbor admin.
 
 ▶ Keputusan 2026-11-17 (#128): Member tidak punya nama. "Nama Member" di tombol langit dan bilah atas adalah bagian email Member sebelum "@", dipotong menjadi 12 karakter diikuti "…" bila lebih panjang (PRD §11.1, `tests/golden/label-member.json`).
 
 ### Chips
-- **Chip Kategori:** pil 40 px, latar `permukaan`, garis 1,5 px `garis`, teks label. Saat hover garisnya `monogram`. Chip yang terpilih (`aria-pressed`) berlatar `langit` dengan teks putih. Deret chip bisa digeser ke samping sampai tepi layar.
-- **Label Hemat:** pil `persik` dengan teks `persik-teks`, "Hemat N%" (PRD §3.5).
-- **Label Habis:** pil `permukaan-2` dengan teks `tinta-redup` (PRD §3.4).
+- **Chip Kategori** (`chip`): pil 40 px, latar `permukaan`, garis 2 px `pensil`, radius `coret`, label 17 px. Saat hover chip miring −2°. Chip yang terpilih (`aria-pressed="true"` atau `aria-current`) otomatis menjadi catatan post-it dengan bayangan 2 px. Deret chip bisa digeser ke samping sampai tepi layar. Chip Kategori di Halaman Produk memakai kelas yang sama.
+- **Label Hemat:** pil `postit` dengan teks `teks-postit`, garis 2 px `teks-postit` (supaya garisnya tetap gelap di mode gelap), bayangan coret kecil, Mikro, berbunyi "Hemat N%" (PRD §3.5). Label ini miring −1° (−2° mulai 900 px).
+- **Label Habis:** pil dengan teks `pensil-redup` dan garis putus-putus 2 px `pensil-redup`, Mikro, miring 1° (2° mulai 900 px) (PRD §3.4).
 
 ### Cards / Containers
-- **Kartu Produk:** radius 20 px, latar `permukaan`, padding 12 px, Bayang. Isinya foto sampul (112 px, 148 px di layar lebar), nama, harga, lalu baris banding (Harga normal dicoret, Hemat, atau Habis). Seluruh kartu adalah tautan ke Halaman Produk. Kartu tidak menampilkan angka stok gabungan.
-- **Kartu Produk habis:** foto diberi grayscale 85% dan opasitas 55%, harga menjadi `tinta-redup`, dan label Habis tampil (PRD §3.4, §3.8).
-- **Kartu Produk Unggulan:** radius 24 px dan naik satu anak tangga ukuran (nama 20 px, harga 22 px), tanpa lencana tambahan. Di layar lebar kartu ini menampilkan daftar Varian beserta Harga normal yang dicoret atau label Habis.
-- **Panel:** radius 20 px, padding 16 px, Bayang, dengan jarak 16 px antar-panel. Dipakai untuk deskripsi, garansi, rincian Total bayar, dan ringkasan Pesanan. Panel ajakan (Buat akun, PRD §7.1) diberi bingkai 2 px `monogram`.
-- **Rincian Total bayar** (PRD §5.5): tabel 15 px berisi Harga jual, Potongan voucher, Kode unik, dan Total bayar, dengan nilai rata kanan. Baris Total bayar dipisah garis putus 1,5 px dan berukuran 20 px tebal 800. Di Checkout, Kode unik belum diketahui, jadi barisnya berbunyi "Rp 1–499, dari Qrispy" dan totalnya "Perkiraan bayar".
+- **Kartu** (`kartu`): latar `permukaan`, teks `pensil`, garis 2 px `pensil`, radius `coret-md`, dan bayangan coret halus. Tambahkan `kartu-tegas` untuk bayangan 4 px, atau `kartu-postit` untuk catatan kuning.
+- **Kartu Produk:** `kartu` dengan padding 12 px, tegak supaya grid dua kolom tetap rapi di 360 px. Isinya foto sampul (112 px, 148 px di layar lebar) berradius `coret-alt` bergaris 2 px `pensil`, nama, harga, lalu baris banding (Harga normal dicoret, Hemat, atau Habis). Seluruh kartu adalah tautan ke Halaman Produk. Saat hover kartu bergoyang (`goyang` dan `goyang-kiri` bergantian) dan bayangannya naik ke coret sedang. Kartu tidak menampilkan angka stok gabungan.
+- **Kartu Produk habis:** foto diberi grayscale 85% dan opasitas 55%, harga menjadi `pensil-redup`, dan label Habis tampil (PRD §3.4, §3.8).
+- **Kartu Produk Unggulan:** `kartu` dengan padding 16 px, bayangan coret tegas, dan selotip di atasnya. Ukurannya naik satu anak tangga (nama 22 px, harga 24 px), tanpa lencana tambahan. Di layar lebar kartu ini menampilkan daftar Varian beserta Harga normal yang dicoret atau label Habis, jadi kartunya tetap tegak.
+- **Panel:** `kartu` dengan padding 16 px dan jarak 16 px antar-panel, berjudul Judul kecil. Dipakai untuk deskripsi, garansi, rincian Total bayar, dan ringkasan Pesanan.
+- **Panel ajakan** (Buat akun, PRD §7.1): `kartu kartu-postit kartu-tegas` dengan paku payung. Panel ini berisi form, jadi ia tegak, dan semua teksnya mewarisi `teks-postit`. Isian di dalamnya tetap berlatar `permukaan`. Di mode gelap panel ini berlatar `permukaan` dengan teks `pensil` (`dark:bg-permukaan dark:text-pensil`). Alasannya, teks bantuan (`pensil-redup`) dan pesan galat (`aksi`) dari komponen isian bersama memakai warna mode gelap, dan kontrasnya hanya sekitar 2:1 di atas post-it.
+- **Rincian Total bayar** (PRD §5.5): tabel tegak berisi Harga jual, Potongan voucher, Kode unik, dan Total bayar, dalam Label 17 px dengan nilai rata kanan. Baris Total bayar dipisah garis putus-putus 2 px `pensil` dan memakai Kalam 700 22 px. Di Checkout, Kode unik belum diketahui, jadi barisnya berbunyi "Rp 1–499, dari Qrispy" dan totalnya "Perkiraan bayar".
 
 ▶ Keputusan 2026-11-11 (#53):
 - Kartu Produk Unggulan tidak menampilkan chip Kategori atau jumlah Varian seperti di prototipe. Bila semua Variannya habis, kartu ini memakai gaya Kartu Produk habis yang sama dengan kartu biasa.
@@ -478,24 +586,26 @@ Ikon di aplikasi berasal dari `lucide-react`, berukuran 24 px dengan stroke 2 (1
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
 
 ### Inputs / Fields
-- **Isian:** tinggi 52 px, radius 14 px, latar `permukaan`, garis 1,5 px `garis`, teks 16 px. Label berada di atas isian (14 px, tebal 700, jarak 8 px), dan teks bantuan di bawahnya (13 px, `tinta-redup`).
-- **Fokus:** garis menjadi `aksi`, ditambah halo 3 px `monogram` 30%.
-- **Galat:** garis `st-masalah`, dan teks bantuan diganti pesan galat 13 px tebal berwarna `st-masalah` dengan ikon `TriangleAlert`. Isian diberi `aria-invalid`. Pesan sukses voucher berwarna `st-selesai`.
-- **Isian gabung:** isian kode voucher (huruf kapital) dengan tombol garis "Pakai" di sebelahnya (PRD §8).
-- **Kotak cari:** 48 px, radius 16 px, di atas pita langit, berlatar langit gelap pekat 78% dengan garis tipis. Kotak ini bukan efek kaca karena tidak ada blur. Saat fokus muncul cincin `monogram`.
-- **Pilihan Varian** (radiogroup, PRD §3.2–§3.4): kartu 20 px bergaris 2 px. Kolomnya berisi radio 24 px, nama Varian dan "Stok N", lalu Harga jual dengan Harga normal yang dicoret dan Hemat. Varian terpilih bergaris `aksi`, berlatar `monogram` 9% di atas `permukaan`, dan titik radionya `aksi`. Varian habis bertulisan "Habis", beropasitas 60%, dan tidak bisa dipilih. Produk dengan satu Varian tidak menampilkan pilihan ini, melainkan harga 28 px dan "Stok N".
-- **Kontrol segmen mode** (PRD §11.3): tiga pilihan, yaitu Perangkat, Terang, dan Gelap, di wadah `permukaan-2` radius 14 px. Pilihan aktif berlatar `permukaan` dengan Bayang.
+- **Isian** (`isian`): tinggi 52 px, radius `coret-alt`, latar `permukaan`, garis 2 px `pensil`, Patrick Hand 18 px, placeholder `pensil-redup`. Textarea ditambah `py-3`. Label berada di atas isian (Label 17 px, jarak 8 px), dan teks bantuan di bawahnya (Bantuan 16 px, `pensil-redup`).
+- **Fokus:** garis menjadi `pulpen`, ditambah halo 3 px `pulpen` 20%, tanpa outline bawaan.
+- **Galat:** isian diberi `aria-invalid="true"`, dan garisnya otomatis menjadi `aksi`. Teks bantuan diganti pesan galat 16 px berwarna `aksi` dengan ikon `TriangleAlert`. Pesan sukses voucher berwarna `st-selesai`.
+- **Baca-saja:** isian `read-only` otomatis berlatar `kertas-lama` dengan teks `pensil`.
+- **Isian gabung:** isian kode voucher (huruf kapital) dengan `tombol tombol-kedua` "Pakai" di sebelahnya (PRD §8).
+- **Kotak cari:** kelas `isian` 52 px di pita Beranda, dengan ikon `Search` di kiri dan bayangan coret kecil. Fokusnya sama dengan isian lain. Hiasan pemandangan dijauhkan dari kotak ini.
+- **Pilihan Varian** (radiogroup, PRD §3.2–§3.4): kartu `rounded-coret-md` bergaris 2 px `pensil` berlatar `permukaan`, tegak. Kolomnya berisi radio 28 px (lingkaran `rounded-coret-bulat` bergaris 2 px `pensil`), nama Varian dan "Stok N", lalu Harga jual dengan Harga normal yang dicoret dan Hemat. Saat di-hover garisnya menjadi `pulpen`. Varian terpilih menjadi catatan post-it: garis 3 px `pulpen`, latar `postit`, bayangan coret kecil, dan semua teks di dalamnya (termasuk "Stok N", Harga normal, dan titik radio) berganti ke `teks-postit` sesuai Aturan Pasangan Teks. Varian habis bergaris putus-putus, bertulisan "Habis", beropasitas 60%, dan tidak bisa dipilih. Produk dengan satu Varian tidak menampilkan pilihan ini, melainkan harga 32 px dan "Stok N".
+- **Kontrol segmen mode** (PRD §11.3): tiga pilihan, yaitu Perangkat, Terang, dan Gelap, di wadah `kertas-lama` bergaris 2 px `pensil` dengan radius `coret`. Setiap pilihan setinggi 44 px dengan ikon 18 px dan teks `pensil-redup`. Pilihan aktif menjadi catatan post-it bergaris 2 px `pensil` dengan teks `teks-postit`, sama dengan chip terpilih.
 
 ▶ Keputusan 2026-11-11 (#53): Kotak cari menjalankan pencarian saat Pembeli menekan Enter atau tombol cari di papan ketik, tidak sambil mengetik seperti di prototipe. Hasilnya terbuka di alamat yang bisa dibagikan dan bekerja dengan tombol kembali.
 
 ▶ Keputusan 2026-11-17 (#174): Isian yang tidak bisa diubah, seperti email Member di Checkout (PRD §5.2), tetap berbentuk isian dengan latar `permukaan-2` dan teks `tinta`. Teks bantuannya tetap tampil.
 
 ### Navigation
-- **Bilah atas:** latar `langit`, lekat di atas, 64 px, dan ciut ke 52 px dengan Bayang bilah saat digulir. Monogram ikut mengecil dari 28 ke 24 px.
-- **Navigasi bawah (di bawah 900 px):** 76 px, latar `permukaan`, garis atas 1 px `garis`. Empat tab berisi ikon 24 px dan label mikro. Tab tidak aktif berwarna `tinta-redup`, tab aktif `tinta` dengan `aria-current="page"`.
-- **Navbar atas (mulai 900 px):** empat tautan 40 px, 15 px tebal 700, berwarna `langit-redup`. Saat hover latarnya `langit-2`, dan tab aktif berwarna putih.
-- **Bilah lekat:** aksi utama Halaman Produk, Checkout, dan Halaman bayar menempel di atas navigasi bawah (`bottom: 76px`). Latarnya `tanah` yang pekat dengan garis atas dan Bayang lekat. Padding-nya 12/16/26 px. Padding bawah 26 px menyediakan ruang bagi matahari penanda yang naik 13 px di atas garis navigasi. Saat navigasi bawah bersembunyi, bilah lekat turun ke dasar layar dengan padding bawah 12 px.
-- **Dasbor admin** (PRD §9, §11.1): menu samping di layar lebar, menu lipat di ponsel, tanpa navigasi bawah. **Belum divalidasi oleh build.** Dasbor ini mewarisi token dan komponen di berkas ini dengan kepadatan Operate: baris tabel yang padat, kontrol 36–40 px, panel 20 px, dan pil status yang sama.
+- **Garis coretan** (`GarisCoretan` di `kerangka-bilah-atas.tsx`): garis `pensil` bergelombang tipis, seperti garis yang ditarik tangan. Dipakai di tepi bawah bilah atas dan tepi atas navigasi bawah.
+- **Bilah atas:** latar `kertas` dengan garis coretan di tepi bawahnya, lekat di atas, 64 px. Saat digulir ia ciut ke 52 px dan mendapat bayangan tegas `0 4px 0 0 var(--bayang)` lurus ke bawah, yang menebalkan garis coretan. Monogram ikut mengecil dari 28 ke 24 px. Bilah status iPhone memakai gaya bawaan (PRD §11.4), jadi bilah atas tidak mewarnai zona di belakangnya.
+- **Navigasi bawah (di bawah 900 px):** 76 px, latar `permukaan`, dengan garis coretan di tepi atasnya yang menjadi cakrawala bagi penanda matahari. Empat tab berisi ikon 24 px dan label Mikro. Tab tidak aktif berwarna `pensil-redup`, tab aktif `pensil` dengan `aria-current="page"`.
+- **Navbar atas (mulai 900 px):** empat tautan 40 px, Patrick Hand 18 px, berwarna `pensil-redup`. Saat hover warnanya menjadi `pensil`. Jarak antarlabel 32 px. Tautan aktif berwarna `pensil` dan ditandai penanda matahari saja, tanpa garis gelombang, supaya dua penanda tidak bertabrakan.
+- **Bilah lekat:** aksi utama Halaman Produk, Checkout, dan Halaman bayar menempel di atas navigasi bawah (`bottom: 76px`). Latarnya `kertas` dengan garis atas 2 px putus-putus `pensil`, tanpa bayangan. Padding-nya 12/16/26 px. Padding bawah 26 px menyediakan ruang bagi penanda matahari yang menonjol di atas garis navigasi. Saat navigasi bawah bersembunyi, bilah lekat turun ke dasar layar dengan padding bawah 12 px.
+- **Dasbor admin** (PRD §9, §11.1): menu samping di layar lebar, menu lipat di ponsel, tanpa navigasi bawah. Dasbor mewarisi token dan kelas di berkas ini dengan kepadatan Operate: tabel padat yang tegak, kontrol 40 px, panel `kartu`, dan pil status yang sama. Hiasan dan rotasi tidak dipakai di dasbor admin, supaya pekerjaan Admin tetap rapi dan cepat dipindai.
 
 ▶ Keputusan 2026-11-11 (#53):
 - Judul toko di Beranda hanya dibaca pembaca layar, karena Beranda langsung dibuka dengan pita langit. Di ponsel, monogram MDS di bilah atas sudah cukup sebagai tanda toko.
@@ -513,32 +623,32 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 
 ▶ Keputusan 2026-11-17 (#174): Hapus Voucher memakai panel "Hapus Voucher" di bawah halaman ubah Voucher, sama seperti hapus Produk dan Kategori. Penegasannya berbunyi "Hapus Voucher KODE? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan." (PRD §8.8).
 
-### Penanda tab aktif: matahari terbit (komponen khas)
-Setengah lingkaran `matahari` (28×14 px, radius `14px 14px 0 0`) dengan pendar `0 -2px 14px 3px` emas 55%. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seolah matahari terbit dari cakrawala. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas, ukurannya 20×10 px dan duduk di tepi bawah bilah langit, di bawah tautan aktif. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
+### Penanda tab aktif: matahari coretan (komponen khas)
+Setengah matahari coretan berupa SVG: busur berisi `matahari` dengan garis 2 px `pensil` dan lima sinar pendek dari guratan `pensil`, tanpa pendar. Wadahnya 28×14 px; sinarnya keluar dari wadah itu, jadi ukuran tempat penanda tidak berubah, dan garisnya tetap 2 px di ukuran berapa pun. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seperti matahari yang terbit dari cakrawala pensil. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas ukurannya 20×10 px, dan ia duduk di garis bawah bilah atas, di bawah tautan aktif. Saat bilah ciut, matahari navbar ikut mengecil ke 85% bersama monogram. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.
 
-### Pemandangan senja (komponen khas)
-Pemandangan ini adalah komponen yang dilukis dengan kode sebagai SVG, bukan foto, supaya tetap tajam di semua layar dan bisa bergerak. Di Next.js ia menjadi client component yang melukis ulang saat ukuran wadah atau mode berubah. Isinya:
-- **Langit:** gradien vertikal empat kunci, yaitu atas, tengah (42%), bawah (78%), dan cakrawala. Setiap kunci diinterpolasi terhadap waktu `t`: 0 = sore keemasan, 0,5 = matahari menyentuh punggung gunung, 1 = malam. Kunci atas di pita dan strip tepi memakai token `langit` supaya menyatu dengan bilah.
-- **Matahari:** cakram `#FFF1C4` dengan pendar radial dan cahaya ufuk elips. Posisi vertikalnya turun dari 30% ke 60% ke 110% tinggi, dan pendarnya meredup dari 0,95 ke 0.
-- **Awan:** enam guratan elips tipis yang dikaburkan dan menyala hangat di dekat matahari.
-- **Bintang:** 46 titik putih yang memudar masuk saat `t` di atas 0,6.
-- **Punggung gunung:** lima lapis dari midpoint displacement dengan benih tetap (LCG), 128 segmen, dan kurva kuadratik halus. Lapis jauh lebih halus (kekasaran 0,40), lebih pucat, dan lebih berkabut di lembah, dan dua lapis terjauh dikaburkan tipis. Lapis dekat lebih kasar (0,62) dan lebih gelap seperti siluet. Path dilebarkan 5% melewati tepi supaya tidak ada baji di pinggir.
-- **Kabut lembah:** gradien dari transparan ke warna tanah (`tanah` di pita dan strip, `permukaan` di kartu bayar), jadi pemandangan larut ke halaman tanpa garis batas.
-- **Butiran:** tekstur derau 96 px dengan `mix-blend-mode: soft-light` dan opasitas 0,28 (0,14 di strip tepi). Supaya hasil SSR dan hidrasi cocok, derau dibuat di klien.
+### Pemandangan gunung coretan (komponen khas)
+Pemandangan ini adalah SVG yang dilukis kode, bukan gambar jadi, supaya tetap tajam di semua lebar dan bisa menjadi jam hitung mundur. Ia menggantikan pemandangan senja realistis (gradien langit, kabut, butiran derau) atas instruksi pemilik pada 2026-11-19. Isinya:
+- **Benih tetap.** Bentuk punggung gunung, getar garis, arsiran, awan, burung, dan bintang dihitung dari benih tetap (LCG). Hasil server dan klien sama persis, dan gambar tidak berubah antar-kunjungan.
+- **Warna lewat token.** Setiap `stroke` dan `fill` berupa `var(--pensil)`, `var(--pensil-redup)`, `var(--pulpen)`, `var(--matahari)`, `var(--kertas)`, atau `var(--permukaan)`. Pelukis tidak memegang hex, dan pergantian mode tidak perlu melukis ulang.
+- **Warna datar.** Tanpa gradien, filter blur, derau, `mix-blend-mode`, atau lapisan kabut. Kedalaman datang dari tebal garis dan rapat arsiran.
+- **Punggung gunung:** garis pensil yang sedikit bergetar seperti tangan, dari midpoint displacement berbenih tetap. Lapis dekat bergaris `pensil` 2 px, dan lapis jauh `pensil-redup` 1,5 px. Setiap lapis diisi warna latar wadahnya (`kertas` di pita dan strip, `permukaan` di kartu bayar) supaya menutupi lapis di belakangnya, lalu lerengnya diberi arsiran garis miring tipis. Path dilebarkan melewati tepi supaya tidak ada baji di pinggir. Jumlah lapis dan kerapatan arsiran di pita dan kartu bayar adalah keputusan teknis pelukis.
+- **Matahari:** lingkaran `matahari` (kuning stabilo) bergaris 2 px `pensil`, dengan sinar berupa guratan pensil pendek di sekelilingnya.
+- **Bulan dan bintang (mode gelap):** bulan sabit `matahari` bergaris `pensil`, dan bintang coretan kecil bergaris `pensil`. Di mode gelap `pensil` berwarna kapur, jadi sketsanya terbaca di kertas arang.
+- **Awan dan burung (pita Beranda saja):** awan berupa garis lengkung bergerigi `pensil` tanpa isi, dan beberapa burung berbentuk "v" dari guratan `pulpen`.
+- **Teks dan hiasan.** Teks di dalam atau di atas pemandangan selalu `pensil` di atas `kertas` atau `permukaan`. Pelukis menerima kotak teks dan menjauhkan matahari, bulan, bintang, burung, dan arsiran dari kotak itu, jadi warna teks tidak pernah berganti mengikuti gambar.
+- **Aksesibilitas.** SVG-nya `aria-hidden`. Pergantian matahari dan bulan mengikuti mode tanpa melukis ulang dan tanpa kedip saat hidrasi, misalnya dengan menggambar keduanya lalu menukarnya lewat varian `dark:`.
 
 Pemakaiannya:
-- **Pita langit Beranda** (236/320 px): lima lapis, cakrawala di 50%, matahari di 72% lebar. `t` ≈ 0,16 di mode terang dan ≈ 0,82 di mode gelap (senja akhir berbintang).
-- **Strip tepi halaman dalam** (44/56 px): cakrawala pendek tiga lapis dengan amplitudo 0,5, tanpa matahari, bintang, atau awan.
-- **Kartu senja Halaman bayar** (136/280 px, radius 24 px, PRD §5.6): hitung mundur QRIS menggerakkan `t` dari 0 (15:00) sampai 1 (00:00). Matahari menyentuh punggung gunung sekitar 07:30, lalu malam berbintang tiba saat waktu habis. Angka waktu dan Total bayar ditulis di atas langit. Warnanya berganti antara `#2A1F4D` dan putih mengikuti luminans langit, supaya kontrasnya selalu minimal 4,5:1. Pembaca layar mendapat sisa menit lewat `aria-live` sekali per menit, bukan setiap detik. Saat waktu habis, labelnya menjadi "QRIS kedaluwarsa".
-
-Pemandangan ini menggantikan aturan lama "lapisan gunung berwarna datar" atas instruksi pemilik pada 2026-11-11.
+- **Pita Beranda** (236/320 px): latar `kertas`, punggung gunung di bagian bawah, matahari di mode terang atau bulan sabit dan bintang di mode gelap, serta awan dan burung. Kotak cari dan chip Kategori berada di atasnya.
+- **Strip tepi halaman dalam** (44/56 px): dua lapis punggung gunung bergaris pensil, tanpa matahari, bulan, bintang, awan, atau burung. Cahaya ufuk yang disebut keputusan di bawah digambar sebagai satu guratan stabilo `matahari` berbentuk elips pipih di garis cakrawala, tanpa pendar.
+- **Kartu bayar Halaman bayar** (136/280 px, `kartu kartu-tegas`, tegak, PRD §5.6): hitung mundur QRIS menggerakkan `t` dari 0 (15:00) sampai 1 (00:00). Seiring `t` naik, matahari tenggelam di balik punggung gunung (menyentuhnya sekitar `t` = 0,5), arsiran `pulpen` di lereng dan langit bertambah rapat, dan bintang coretan muncul saat `t` di atas 0,6. Kartu ini memakai matahari di kedua mode, karena di sini matahari adalah jam. Angka waktu dan Total bayar ditulis `pensil` di atas `permukaan`. Pembaca layar mendapat sisa menit lewat `aria-live` sekali per menit, bukan setiap detik.
 
 ▶ Keputusan 2026-11-11 (#53): Strip tepi halaman dalam tetap menggambar cahaya ufuk elips di garis cakrawala, seperti prototipe. Yang tidak digambar di strip adalah cakram matahari beserta pendar radialnya, bintang, dan awan.
 
 ▶ Keputusan 2026-11-12 (#87): Teks kartu senja mengikuti prototipe. Labelnya "sisa waktu bayar", pembaca layar mendengar "Sisa waktu bayar N menit" sekali per menit, dan saat waktu habis label serta pengumumannya menjadi "QRIS kedaluwarsa".
 
 ### Status Pesanan (PRD §5.7)
-Setiap status adalah pil setinggi 28 px dengan ikon 16 px, label 13 px tebal 700 (`label-kecil`), dan padding `0 12px 0 8px`. Warna, ikon, dan label selalu tampil bersama, tidak pernah warna saja. Labelnya memakai nama status persis seperti di GLOSSARY. Semua pasangan mencapai minimal 6,1:1.
+Setiap status adalah pil setinggi 28 px dengan ikon 16 px, Label kecil (Kalam 700, 15 px), padding `0 12px 0 8px`, radius `coret`, dan garis 2 px berwarna teks statusnya sendiri (`border-current`), jadi setiap status punya tinta sendiri. Pil status selalu tegak. Warna, ikon, dan label selalu tampil bersama, tidak pernah warna saja. Labelnya memakai nama status persis seperti di GLOSSARY. Semua pasangan mencapai minimal 6,1:1.
 
 | Status | Ikon lucide | Terang (latar / teks) | Gelap (latar / teks) |
 |---|---|---|---|
@@ -549,14 +659,14 @@ Setiap status adalah pil setinggi 28 px dengan ikon 16 px, label 13 px tebal 700
 | Bermasalah | `TriangleAlert` | `st-masalah-bg` / `st-masalah` | `st-masalah-bg-gelap` / `st-masalah-gelap` |
 | Dana Dikembalikan | `RotateCcw` | `st-kembali-bg` / `st-kembali` | `st-kembali-bg-gelap` / `st-kembali-gelap` |
 
-Pil status muncul di Halaman bayar (Menunggu Pembayaran, di samping Nomor Pesanan), di kepala Halaman Pesanan, dan di setiap baris Riwayat Pesanan (PRD §7.4). Baris Riwayat adalah kartu 20 px yang memuat pil status, Total bayar rata kanan, Produk dan Varian, serta Nomor Pesanan dalam mono 13 px diikuti tanggal WIB dalam Manrope. Urutannya terbaru di atas.
+Pil status muncul di Halaman bayar (Menunggu Pembayaran, di samping Nomor Pesanan), di kepala Halaman Pesanan, dan di setiap baris Riwayat Pesanan (PRD §7.4). Baris Riwayat adalah `kartu` tegak yang memuat pil status, Total bayar rata kanan, Produk dan Varian, serta Nomor Pesanan dalam mono 13 px diikuti tanggal WIB dalam huruf tulisan tangan. Urutannya terbaru di atas.
 
-Status Item stok (Tersedia, Ditahan, Terkirim) hanya tampil di dasbor admin, dan belum diprototipekan. Statusnya memakai anatomi pil yang sama: warna, ikon, dan label. Pemetaan token dan ikonnya ditetapkan saat dasbor admin dibangun, dan wajib berbeda jelas dari status Pesanan di layar yang sama.
+Status Item stok (Tersedia, Ditahan, Terkirim) hanya tampil di dasbor admin. Statusnya memakai anatomi pil yang sama: warna, ikon, dan label. Pemetaan token dan ikonnya wajib berbeda jelas dari status Pesanan di layar yang sama.
 
 ▶ Keputusan 2026-11-11 (#53): Label pil status Pesanan dan pil berbentuk sama di dasbor admin, seperti Aktif, Nonaktif, Unggulan, dan Sampul, bertebal 700 sesuai token `label-kecil` di frontmatter. Sebelumnya teks bagian ini menulis tebal 800, yang bertentangan dengan frontmatter. Label Hemat dan Habis tidak berubah: keduanya tetap memakai Mikro (800, 12 px).
 
 ### Blok Item stok dan tombol Salin (PRD §6.1, §6.2)
-Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam blok `langit` radius 24 px. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (12 px `langit-redup`), nilai mono 15 px putih, dan tombol Salin 40 px (`langit-2`, garis `langit-garis`, hover `monogram`). Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check` dan warna `st-selesai` selama 1,6 dtk. Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
+Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam `kartu kartu-tegas` yang tegak, dengan selotip di atasnya. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (Bantuan 16 px, `pensil-redup`), nilai mono 15 px `pensil`, dan tombol Salin (`tombol tombol-kecil`, 40 px, ikon `Copy` 18 px). Baris-barisnya dipisah garis putus-putus 2 px. Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check`, latar `st-selesai-bg`, dan teks `st-selesai` selama 1,6 dtk. Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
 
 ▶ Keputusan 2026-11-11 (#53): Sebelum M2, tab Riwayat untuk Tamu di layar lebar menaruh judul di atas dan panel penjelasan di kolom kiri. Tata letak prototipe, yaitu judul di kiri dan panel di kanan, baru dipakai bila kolom kiri sudah berisi tombol Masuk dan Daftar.
 
@@ -565,10 +675,10 @@ Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 
 - Tombol WhatsApp di Halaman Pesanan Bermasalah berbunyi "Hubungi kami di WhatsApp".
 
 ### Toast
-Pil `langit` dengan teks putih 14 px tebal 700 dan Bayang naik. Toast muncul 96 px dari dasar layar di ponsel (di atas navigasi bawah) dan 32 px di layar lebar, lalu hilang setelah 1,8 dtk. Toast diumumkan lewat `role="status"`. Di aplikasi, toast memakai `sonner` dengan gaya ini.
+Catatan post-it: latar `postit`, teks `teks-postit` (Label 17 px), garis 2 px `pensil`, radius `coret`, bayangan coret sedang, dan miring −1°. Toast muncul 96 px dari dasar layar di ponsel (di atas navigasi bawah) dan 32 px di layar lebar, lalu hilang setelah 1,8 dtk. Toast diumumkan lewat `role="status"`. Di aplikasi, toast memakai `sonner` dengan gaya ini.
 
 ### Foto Produk
-Di prototipe, foto Produk diganti petak warna berisi huruf awal nama Produk. Petak itu pengganti sementara, bukan bagian dari sistem. Di aplikasi, foto diunggah Admin (PRD §3.3), dipotong mengisi bingkai radius 16 px (24 px di Halaman Produk), dan foto pertama menjadi sampul kartu.
+Foto diunggah Admin (PRD §3.3), dipotong mengisi bingkai radius `coret-alt` bergaris 2 px `pensil`, dan foto pertama menjadi sampul kartu. Foto besar di Halaman Produk diberi selotip dan miring 1° (paling banyak 2° di layar lebar). Foto di kartu Produk tegak.
 
 ▶ Keputusan 2026-11-11 (#53):
 - Produk tanpa foto tampil sebagai petak `permukaan-2` berisi huruf awal nama Produk berwarna `tinta-redup`. Petak mauve dari prototipe tidak dipakai, karena teks putih di atasnya melanggar aturan teks putih.
@@ -579,22 +689,95 @@ Di prototipe, foto Produk diganti petak warna berisi huruf awal nama Produk. Pet
 ## Do's and Don'ts
 
 ### Do:
-- **Do** pakai token dari berkas ini lewat utilitas Tailwind atau `var(--…)`. Jangan menulis hex di komponen.
-- **Do** letakkan teks putih hanya di atas `aksi` (5,3:1) atau `aksi-tekan`, dan pakai `monogram` untuk monogram, cincin fokus, garis hover, dan huruf tampilan besar.
+- **Do** baca `docs/design/acuan-coretan-tangan.md` sebelum mengubah tampilan, lalu pakai kelas dari `globals.css` (`tombol`, `kartu`, `isian`, `chip`, `selotip`, `paku`, `garis-gelombang`, `goyang`) sebelum menulis gaya sendiri.
+- **Do** pakai token lewat utilitas Tailwind atau `var(--…)`, termasuk di SVG pemandangan.
+- **Do** beri setiap wadah, tombol, isian, chip, dan foto radius `rounded-coret-*` dan garis `pensil` minimal 2 px.
+- **Do** pakai bayangan dari Shadow Vocabulary, dan biarkan tombol "ditekan rata" lewat kelas `tombol`.
+- **Do** pakai `aksi` untuk teks merah yang harus dibaca, dan simpan `spidol` untuk hiasan.
+- **Do** pasangkan setiap latar berwarna dengan warna teksnya (`teks-di-aksi`, `teks-di-pulpen`, `teks-postit`, `st-*`).
+- **Do** biarkan form, isian, tabel, deret harga, blok Item stok, pil status, dan teks panjang tegak.
 - **Do** tampilkan setiap status Pesanan sebagai pil dengan warna, ikon lucide, dan label sekaligus.
-- **Do** pakai angka tabular untuk Harga jual, Stok Varian, Total bayar, dan hitung mundur.
+- **Do** pakai angka tabular untuk Harga jual, Stok Varian, Total bayar, dan hitung mundur, dan beri hitung mundur lebar tetap.
 - **Do** pakai JetBrains Mono hanya untuk nilai Item stok dan Nomor Pesanan.
 - **Do** ambil Harga normal yang dicoret dan Hemat di kartu "Mulai Rp X" dari Varian ber-stok yang menjadi sumber harga itu (PRD §3.8).
-- **Do** letakkan aksi utama di bilah lekat berlatar `tanah` pekat di atas navigasi bawah pada layar di bawah 900 px.
-- **Do** matikan semua transisi dan animasi, termasuk pergeseran matahari dan penggulungan navigasi, di bawah `prefers-reduced-motion: reduce`.
+- **Do** letakkan aksi utama di bilah lekat berlatar `kertas` di atas navigasi bawah pada layar di bawah 900 px.
+- **Do** beri setiap hiasan `aria-hidden="true"` dan `pointer-events-none`.
+- **Do** matikan semua transisi dan animasi, termasuk goyang, tombol ditekan, pergeseran matahari, dan penggulungan navigasi, di bawah `prefers-reduced-motion: reduce`.
 - **Do** jaga jarak dalam kelipatan 8 px, dan pakai 4 atau 12 px hanya di dalam komponen.
+- **Do** periksa setiap layar di mode terang dan mode gelap.
 
 ### Don't:
-- **Don't** letakkan teks putih di atas `monogram` (3,9:1), termasuk warna sorotan teks (`::selection`).
-- **Don't** pakai gradien di luar langit dan kabut pemandangan senja: tidak di teks, tombol, kartu, chip, atau panel.
-- **Don't** pakai efek kaca (backdrop-filter) di mana pun.
-- **Don't** ganti pemandangan senja dengan foto. Pemandangan itu dilukis dengan kode supaya tajam dan bisa menjadi jam hitung mundur.
+- **Don't** tulis hex di `.ts` atau `.tsx`, termasuk di pelukis pemandangan.
+- **Don't** pakai `spidol` untuk teks atau latar bertulisan (kontrasnya sekitar 3:1).
+- **Don't** letakkan `pensil`, `aksi`, atau `pulpen` sebagai teks di atas `postit` (di mode gelap `pensil` hanya 1,03:1), dan jangan letakkan teks `aksi` di atas `kertas-lama` (3,7:1).
+- **Don't** pakai ungu lama (#2A1F4D) di mana pun. Token `langit` sudah dihapus.
+- **Don't** pakai gradasi warna, blur, pendar, derau, `backdrop-filter`, atau bayangan lembut di mana pun.
+- **Don't** pakai `rounded-*` biasa, `rounded-full`, atau `rounded-[Npx]`.
+- **Don't** beri `font-bold` pada teks Patrick Hand. Pakai `font-spidol font-bold` untuk penekanan.
+- **Don't** ganti pemandangan dengan foto atau gambar jadi. Pemandangan itu dilukis kode supaya tajam dan bisa menjadi jam hitung mundur.
 - **Don't** tampilkan angka stok gabungan di kartu Produk. Kartu hanya menampilkan "Habis" bila semua Varian aktif habis.
 - **Don't** tampilkan status hanya dengan warna.
-- **Don't** tambahkan testimoni, rating, jumlah Pembeli, atau logo layanan pihak ketiga. Nama layanan hanya muncul sebagai nama Produk.
-- **Don't** pakai bayangan keras bergeser, dan jangan beri garis tepi pada kartu.
+- **Don't** tambahkan testimoni, rating, jumlah Pembeli, atau logo layanan pihak ketiga, walau acuan menyebut gelembung testimoni. Nama layanan hanya muncul sebagai nama Produk.
+
+## Pemetaan dari token lama
+
+Tema "Langit Senja" berlaku sampai 2026-11-18. Blok keputusan (▶) sebelum 2026-11-19 masih menyebut nama token, komponen, dan bagian dari tema itu. Tabel di bawah menerjemahkannya ke tema ini.
+
+**Cara membaca blok keputusan (▶) lama.** Blok itu tetap mengikat untuk teks, urutan, perilaku, tata letak, dan token mana yang dipakai. Nama token dan komponen di dalamnya dibaca lewat tabel ini. Nilai visual di dalam kurung, seperti "Mikro (800, 12 px)", adalah nilai tema lama: yang mengikat adalah nama tokennya, dan nilainya kini mengikuti frontmatter. Efek yang tidak dipakai gaya coretan (gradien, pendar, blur) digambar ulang menurut bagian terkait di berkas ini.
+
+### Warna
+| Token lama | Pengganti |
+|---|---|
+| `tanah` (latar halaman) | `kertas` |
+| `permukaan` | `permukaan` (kartu, panel, isian) |
+| `permukaan-2` | `kertas-lama` |
+| `garis` (border) | `pensil` |
+| `tinta` | `pensil` |
+| `tinta-redup` | `pensil-redup` |
+| `aksi` ungu (tombol utama) | kelas `tombol`. Token `aksi` kini merah untuk hover dan teks merah |
+| `aksi-tekan` | hilang; hover dan tekan diatur kelas `tombol` |
+| `aksi-teks` (tautan ungu) | `pulpen` |
+| `monogram` | `spidol` untuk hiasan, `pulpen` untuk fokus, `pensil` untuk monogram MDS |
+| `langit`, `langit-2`, `langit-garis`, `langit-teks`, `langit-redup` | `kertas`, `permukaan`, `pensil`, `pensil-redup`. `langit` dihapus pada 2026-11-20 |
+| `matahari` | `matahari` (kini kuning stabilo) |
+| `persik` dan `persik-teks` (label Hemat) | `postit` dan `teks-postit` |
+| `mauve` | hilang |
+| `teks-di-aksi` | tetap: teks di atas `aksi` |
+| `st-*` | tetap, nilainya sama |
+| (baru) | `spidol`, `pulpen` dan `teks-di-pulpen`, `postit` dan `teks-postit`, `bayang` |
+
+### Bayangan, radius, dan huruf
+| Lama | Pengganti |
+|---|---|
+| Bayang (`shadow-bayang`) | `shadow-coret-halus` untuk kartu biasa, `shadow-coret` untuk yang ditonjolkan |
+| Bayang naik (`shadow-bayang-naik`) | `shadow-coret-sedang` |
+| Bayang bilah | `0 4px 0 0 var(--bayang)`, lurus ke bawah tanpa blur |
+| Bayang lekat (`shadow-bayang-lekat`) | garis atas `border-t-2 border-dashed border-pensil`, tanpa bayangan |
+| Cincin fokus `monogram` | garis putus 3 px `pulpen` |
+| Radius `chip` (999 px), `kecil` (10 px), `kontrol` (12 px) | `rounded-coret` |
+| Radius `input` (14 px) | `rounded-coret` untuk tombol, `rounded-coret-alt` untuk isian |
+| Radius `foto` (16 px) | `rounded-coret-alt` |
+| Radius `kartu` (20 px) dan `besar` (24 px) | `rounded-coret-md` |
+| `rounded-full` untuk bentuk bulat | `rounded-coret-bulat` |
+| Manrope (`font-sans`) | Patrick Hand untuk isi (bawaan `body`), Kalam 700 (`font-spidol`) untuk judul, harga, dan pil |
+| `label-kecil` (Manrope 700, 13 px) | `label-kecil` (Kalam 700, 15 px) |
+| `mikro` (Manrope 800, 12 px) | `mikro` (Kalam 700, 15 px) |
+| JetBrains Mono (`font-mono`) | tetap, hanya untuk Item stok dan Nomor Pesanan |
+
+### Komponen dan nama bagian
+| Lama | Pengganti |
+|---|---|
+| Tombol utama ungu | `tombol` |
+| Tombol garis | `tombol tombol-kedua` |
+| Tombol kecil 36 px | `tombol tombol-kecil` (40 px) |
+| Tombol langit (Masuk atau nama Member) | `tombol tombol-kecil` di bilah atas berlatar `kertas` |
+| Pita langit Beranda | pita Beranda (`kertas` dengan pemandangan gunung coretan) |
+| Strip tepi langit | strip tepi (dua lapis punggung gunung) |
+| Kartu senja Halaman bayar | kartu bayar |
+| Pemandangan senja | Pemandangan gunung coretan |
+| Penanda tab aktif matahari terbit (`penanda-surya`) | penanda matahari coretan (`penanda-matahari`) |
+| Blok Item stok berlatar `langit` | `kartu kartu-tegas` dengan selotip |
+| Panel ajakan berbingkai `monogram` | `kartu kartu-postit kartu-tegas` dengan paku |
+| Chip Kategori aktif berlatar `langit` | chip terpilih berupa post-it |
+| Toast berlatar `langit` | catatan post-it |
+| Prototipe `docs/design/prototipe/index.html` | acuan `docs/design/acuan-coretan-tangan.md` dan `src/app/globals.css`. Prototipe hanya dirujuk untuk teks dan tata letak yang disebut blok lama |

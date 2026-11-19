@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
 const LAMA_TERSALIN_MS = 1_600;
 
 /**
- * Tombol Salin satu kolom Item stok (PRD §6.1, DESIGN.md "Blok Item stok dan tombol Salin"): tombol 40 px
- * berlatar `langit-2` dengan garis `langit-garis` dan garis `monogram` saat hover. Setelah diketuk, isi
- * kolom itu disalin ke clipboard, lalu tombol menjadi "Tersalin" dengan ikon Check dan warna `st-selesai`
- * selama 1,6 detik. Ketukan berikutnya memulai 1,6 detik itu dari awal. Pembaca layar mendengar bahwa
- * kolom itu tersalin. Bila browser menolak penyalinan, tombol tetap "Salin".
+ * Tombol Salin satu kolom Item stok (PRD §6.1, DESIGN.md "Blok Item stok dan tombol Salin"): tombol kedua
+ * 40 px (`tombol tombol-kedua tombol-kecil`). Setelah diketuk, isi kolom itu disalin ke clipboard, lalu tombol
+ * menjadi "Tersalin" dengan ikon Check dan warna `st-selesai` selama 1,6 detik. Ketukan berikutnya memulai
+ * 1,6 detik itu dari awal. Pembaca layar mendengar bahwa kolom itu tersalin. Bila browser menolak penyalinan,
+ * tombol tetap "Salin".
  */
 export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
   // Berapa kali kolom ini berhasil disalin sejak tombol terakhir kembali menjadi "Salin".
@@ -44,13 +44,16 @@ export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
         onClick={salin}
         aria-label={`Salin ${nama}`}
         className={cn(
-          "inline-flex h-10 shrink-0 items-center gap-2 rounded-[12px] border-[1.5px] px-3 text-sm font-extrabold",
-          tersalin
-            ? "border-transparent bg-st-selesai-bg text-st-selesai"
-            : "border-langit-garis bg-langit-2 text-langit-teks hover:border-monogram",
+          "tombol tombol-kedua tombol-kecil shrink-0",
+          // Warna "Tersalin" adalah utilitas, jadi tetap menang atas warna hover tombol kedua.
+          tersalin && "bg-st-selesai-bg text-st-selesai",
         )}
       >
-        <Ikon aria-hidden="true" className="size-[18px] shrink-0" />
+        <Ikon
+          aria-hidden="true"
+          strokeWidth={2.5}
+          className="size-[18px] shrink-0"
+        />
         {tersalin ? "Tersalin" : "Salin"}
       </button>
       <span role="status" className="sr-only">

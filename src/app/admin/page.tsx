@@ -14,18 +14,27 @@ export default async function HalamanLoginAdmin() {
 
   return (
     <>
-      {/* Ruang env(safe-area-inset-top) menjaga merek dari jam dan poni iPhone saat bilah status tembus. */}
-      <header className="bg-langit pt-[env(safe-area-inset-top)] text-langit-teks">
-        <div className="mx-auto flex h-16 max-w-[1120px] items-center px-4">
-          <MerekAdmin />
+      {/* Ruang env(safe-area-inset-top) menjaga merek dari jam dan poni iPhone. Bilah status iPhone memakai gaya
+          bawaan (PRD §11.4 ▶ Keputusan 2026-11-20), jadi ruang itu ikut berwarna kertas seperti bilahnya, yang
+          bergaris bawah putus-putus. */}
+      <header className="pt-[env(safe-area-inset-top)]">
+        <div className="h-16 border-b-2 border-dashed border-pensil">
+          <div className="mx-auto flex h-full max-w-[1120px] items-center px-4">
+            <MerekAdmin />
+          </div>
         </div>
       </header>
-      <main className="mx-auto max-w-[440px] px-4 pt-8 pb-16">
-        <h1>Masuk ke dasbor admin</h1>
-        <p className="mt-2 text-tinta-redup">
-          Halaman ini khusus Admin MIWE Digital Store.
-        </p>
-        <FormMasuk aksiMasuk={aksiMasukAdmin} />
+      {/* Pola Fokus (DESIGN.md Tata letak halaman): judul, keterangan, dan form dalam satu kolom 560 px di
+          tengah, dengan padding samping 16 px di ponsel. */}
+      <main className="px-4 pt-6 pb-16 lebar:pt-8">
+        <div className="tata-fokus">
+          <h1>Masuk ke dasbor admin</h1>
+          <p className="mt-2 text-pensil-redup">
+            Halaman ini khusus Admin MIWE Digital Store.
+          </p>
+          {/* Kartu berselotip form ini diatur FormMasuk sendiri, sama dengan login Member. */}
+          <FormMasuk aksiMasuk={aksiMasukAdmin} />
+        </div>
       </main>
     </>
   );

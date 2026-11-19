@@ -129,8 +129,10 @@ test("tab Akun menampilkan email Member dan tombol Keluar, dan Keluar mengakhiri
   await expect(isi.getByText(email)).toBeVisible();
   const keluar = isi.getByRole("button", { name: "Keluar" });
   await expect(keluar).toBeVisible();
-  // Email dan Keluar berada di atas tautan halaman hukum yang sudah ada.
-  const tautanHukum = isi.getByRole("link", { name: "Syarat & Ketentuan" });
+  // Email dan Keluar berada di atas tautan halaman hukum di footer toko (PRD §11.1 ▶ Keputusan 2026-11-20).
+  const tautanHukum = page
+    .getByRole("contentinfo")
+    .getByRole("link", { name: "Syarat & Ketentuan" });
   await expect(tautanHukum).toBeVisible();
   expect((await keluar.boundingBox())!.y).toBeLessThan(
     (await tautanHukum.boundingBox())!.y,
@@ -154,7 +156,7 @@ test("Tamu di tab Akun tidak melihat email maupun tombol Keluar", async ({
   const isi = page.getByRole("main");
   await expect(isi.getByRole("button", { name: "Keluar" })).toHaveCount(0);
   await expect(
-    isi.getByRole("link", { name: "Syarat & Ketentuan" }),
+    isi.getByRole("link", { name: "Masuk", exact: true }),
   ).toBeVisible();
 });
 

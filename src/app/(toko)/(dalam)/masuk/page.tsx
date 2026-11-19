@@ -26,6 +26,9 @@ import {
 // Tautan Masuk di pesan Voucher khusus Member membawa alamat kembali (`?kembali=/checkout?varianId=…`). Member
 // dibawa ke alamat itu setelah login, atau langsung bila sesinya masih berlaku. Alamat kembali yang menunjuk ke
 // luar toko diabaikan (PRD §7.5 dan §8.7 ▶ Keputusan 2026-11-17).
+//
+// Tata letak Fokus (DESIGN.md Tata letak halaman): kolom 560 px di tengah. Tautan bantu ditata rata tengah di
+// bawah form: "Lupa password?" lalu catatan post-it ke halaman Daftar.
 export default async function HalamanMasuk({
   searchParams,
 }: PageProps<"/masuk">) {
@@ -39,10 +42,10 @@ export default async function HalamanMasuk({
     .safeParse(parameter[TANDA_PASSWORD_DIGANTI.nama]).success;
 
   return (
-    <div className="max-w-[440px]">
+    <div className="tata-fokus">
       <h1 className="mt-4">Masuk</h1>
       {passwordDiganti && (
-        <p role="status" className="mt-4 font-bold text-st-selesai">
+        <p role="status" className="mt-4 text-st-selesai">
           {PESAN_PASSWORD_DIGANTI}
         </p>
       )}
@@ -55,19 +58,21 @@ export default async function HalamanMasuk({
           />
         )}
       </FormMasuk>
-      <p className="mt-4">
+      <p className="mt-6 text-center">
         <Link
           href="/lupa-password"
-          className="text-sm font-bold text-aksi-teks underline decoration-[1.5px] underline-offset-4"
+          className="text-[17px] text-pulpen underline decoration-2 underline-offset-4"
         >
           Lupa password?
         </Link>
       </p>
-      <p className="mt-4 text-sm font-bold">
+      {/* Catatan post-it: tautan di atas post-it memakai `teks-postit`, karena biru pulpen tidak terbaca di
+          post-it mode gelap. */}
+      <p className="kartu kartu-postit mx-auto mt-6 w-fit -rotate-1 px-4 py-2 text-[17px]">
         Belum punya akun?{" "}
         <Link
           href="/daftar"
-          className="text-aksi-teks underline decoration-[1.5px] underline-offset-4"
+          className="underline decoration-2 underline-offset-4"
         >
           Daftar
         </Link>

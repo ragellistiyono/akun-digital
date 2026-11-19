@@ -10,10 +10,11 @@ export default async function HalamanKebijakanPrivasi() {
   await connection();
   const { kebijakanPrivasi } = await bacaPengaturanToko();
 
+  // Pola Baca (DESIGN.md "Tata letak halaman"): kolom 720 px di tengah, dengan judul di kolom yang sama.
   return (
-    <>
+    <div className="tata-baca">
       <h1 className="mt-4">Kebijakan Privasi</h1>
       <TeksHalamanHukum teks={kebijakanPrivasi} />
-    </>
+    </div>
   );
 }

@@ -22,7 +22,7 @@ function Chip({
       type="button"
       aria-pressed={ditekan}
       onClick={onClick}
-      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border-[1.5px] border-garis bg-permukaan px-4 text-sm font-bold whitespace-nowrap text-tinta transition-colors duration-200 hover:border-monogram motion-reduce:transition-none aria-pressed:border-langit aria-pressed:bg-langit aria-pressed:text-teks-di-aksi"
+      className="chip shrink-0"
     >
       {children}
     </button>
@@ -31,7 +31,8 @@ function Chip({
 
 /**
  * Deret chip Kategori di bawah kotak cari (PRD §3.6, DESIGN.md "Chips"). Chip yang ditekan
- * (`aria-pressed`) menyaring bagian semua Produk lewat `?kategori=`; menekannya lagi, atau menekan
+ * (`aria-pressed`) tampil sebagai catatan post-it lewat kelas `chip`, dan menyaring bagian semua Produk
+ * lewat `?kategori=`; menekannya lagi, atau menekan
  * "Semua", menghapus saringan. Kata cari tidak ikut terbawa. Deret bisa digeser ke samping sampai tepi
  * layar tanpa membuat halaman ikut bergulir ke samping.
  */
@@ -55,13 +56,16 @@ export function DeretKategori({
       router.push(alamatSaringanKategori(id), { scroll: false });
     });
 
-  // Padding 8 px di atas dan bawah memberi ruang bagi cincin fokus chip, karena deret yang bisa
-  // digeser memotong apa pun di luar kotaknya.
+  // Padding 8 px di atas dan bawah memberi ruang bagi cincin fokus, bayangan chip terpilih, dan chip yang
+  // miring saat hover, karena deret yang bisa digeser memotong apa pun di luar kotaknya. Deret menjorok
+  // selebar padding samping halaman (16 px, 32 px mulai 900 px), jadi di ponsel ia bisa digeser sampai
+  // tepi layar sementara chip pertama tetap sejajar dengan isi. Mulai 900 px chip yang tidak muat turun
+  // ke baris berikutnya, supaya semua Kategori terlihat tanpa digeser.
   return (
     <div
       role="group"
       aria-label="Saring menurut Kategori"
-      className="-mx-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:none]"
+      className="-mx-4 flex gap-3 overflow-x-auto overscroll-x-contain px-4 py-2 [scrollbar-width:none] lebar:-mx-8 lebar:flex-wrap lebar:px-8"
     >
       <Chip ditekan={dipilihId === null} onClick={() => pilih(null)}>
         Semua

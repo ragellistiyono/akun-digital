@@ -23,9 +23,9 @@ export function FormGantiPassword() {
       action={aksi}
       noValidate
       aria-labelledby="ganti-password-judul"
-      className="flex flex-col gap-4 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-4 p-5"
     >
-      <h2 id="ganti-password-judul" className="text-lg font-extrabold">
+      <h2 id="ganti-password-judul" className="text-[26px]">
         Ganti password
       </h2>
       <Isian
@@ -49,14 +49,14 @@ export function FormGantiPassword() {
         </PesanGalat>
       )}
       {keadaan.berhasil && (
-        <p role="status" className="text-[13px] font-bold text-st-selesai">
+        <p role="status" className="text-[16px] leading-snug text-st-selesai">
           {keadaan.berhasil}
         </p>
       )}
       <button
         type="submit"
         disabled={sedangMengirim}
-        className="mt-2 inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup"
+        className="tombol mt-2 w-full"
       >
         {sedangMengirim ? "Menyimpan…" : "Ganti password"}
       </button>

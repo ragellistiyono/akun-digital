@@ -29,17 +29,14 @@ export function FormKodeVerifikasi() {
         maxLength={6}
         bantuan="Kode 6 angka di email terakhir dari kami."
         galat={keadaan.galat?.kode}
+        className="text-[26px] tracking-[0.4em] uppercase"
       />
       {keadaan.galat?.umum && (
         <PesanGalat id="kode-galat-umum" peran="alert">
           {keadaan.galat.umum}
         </PesanGalat>
       )}
-      <button
-        type="submit"
-        disabled={sedangMengirim}
-        className="inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup"
-      >
+      <button type="submit" disabled={sedangMengirim} className="tombol w-full">
         {sedangMengirim ? "Memeriksa…" : "Verifikasi"}
       </button>
     </form>

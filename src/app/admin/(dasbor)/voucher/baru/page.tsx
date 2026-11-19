@@ -16,8 +16,8 @@ export default async function HalamanTambahVoucher() {
   ]);
 
   return (
-    <>
-      <h1>Tambah Voucher</h1>
+    <div className="tata-baca">
+      <h1 className="mb-6">Tambah Voucher</h1>
       <FormVoucher
         awal={{
           isian: {
@@ -40,6 +40,6 @@ export default async function HalamanTambahVoucher() {
         pilihanProduk={semuaProduk}
         pilihanKategori={semuaKategori}
       />
-    </>
+    </div>
   );
 }

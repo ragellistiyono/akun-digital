@@ -10,11 +10,7 @@ import {
 } from "@/domain/validasi-harga";
 import { angkaRupiah, rupiah } from "@/lib/rupiah";
 
-import {
-  IsianTeks,
-  KELAS_TOMBOL_GARIS,
-  KotakCentang,
-} from "../../_components/isian-form";
+import { IsianTeks, KotakCentang } from "../../_components/isian-form";
 import { PenegasanHapus } from "../../_components/penegasan-hapus";
 import { PilAktif } from "../../_components/pil";
 import {
@@ -32,11 +28,8 @@ type Varian = {
   aktif: boolean;
 };
 
-const KELAS_TOMBOL_SIMPAN = `${KELAS_TOMBOL_GARIS} disabled:bg-permukaan-2 disabled:text-tinta-redup`;
-
-/** Tombol kecil 36 px di baris Varian (DESIGN.md Buttons). */
-const KELAS_TOMBOL_KECIL =
-  "inline-flex h-9 items-center rounded-[10px] border-[1.5px] border-garis bg-permukaan px-3 text-sm font-bold hover:border-monogram";
+/** Tombol kecil 40 px untuk aksi kedua di baris Varian (kelas `tombol-kecil` di globals.css). */
+const KELAS_TOMBOL_KECIL = "tombol tombol-kedua tombol-kecil";
 
 /**
  * Form Varian untuk menambah (tanpa `varian`) atau mengubah Varian yang sudah ada. Setelah Varian
@@ -87,7 +80,7 @@ function FormVarian({
       <input type="hidden" name="produkId" value={produkId} />
       {varian && <input type="hidden" name="id" value={varian.id} />}
 
-      <h3 id={`${awalan}-judul`} className="font-extrabold break-words">
+      <h3 id={`${awalan}-judul`} className="text-[22px] break-words">
         {varian ? `Ubah Varian ${varian.nama}` : "Tambah Varian"}
       </h3>
 
@@ -101,25 +94,28 @@ function FormVarian({
         autoFocus
       />
 
-      <IsianTeks
-        nama="hargaJual"
-        id={`${awalan}-harga-jual`}
-        label="Harga jual"
-        nilaiAwal={keadaan.hargaJual}
-        galat={galat?.hargaJual}
-        bantuan={`Rupiah bulat dari ${rupiah(HARGA_JUAL_MINIMUM)} sampai ${rupiah(HARGA_JUAL_MAKSIMUM)}, misalnya 50.000.`}
-        inputMode="numeric"
-      />
+      {/* Harga jual dan Harga normal berdampingan bila panel Varian cukup lebar. */}
+      <div className="grid items-start gap-6 @md:grid-cols-2">
+        <IsianTeks
+          nama="hargaJual"
+          id={`${awalan}-harga-jual`}
+          label="Harga jual"
+          nilaiAwal={keadaan.hargaJual}
+          galat={galat?.hargaJual}
+          bantuan={`Rupiah bulat dari ${rupiah(HARGA_JUAL_MINIMUM)} sampai ${rupiah(HARGA_JUAL_MAKSIMUM)}, misalnya 50.000.`}
+          inputMode="numeric"
+        />
 
-      <IsianTeks
-        nama="hargaNormal"
-        id={`${awalan}-harga-normal`}
-        label="Harga normal (opsional)"
-        nilaiAwal={keadaan.hargaNormal}
-        galat={galat?.hargaNormal}
-        bantuan="Harga pembanding yang tampil dicoret di samping Harga jual. Harus lebih besar dari Harga jual. Kosongkan bila tidak ada."
-        inputMode="numeric"
-      />
+        <IsianTeks
+          nama="hargaNormal"
+          id={`${awalan}-harga-normal`}
+          label="Harga normal (opsional)"
+          nilaiAwal={keadaan.hargaNormal}
+          galat={galat?.hargaNormal}
+          bantuan="Harga pembanding yang tampil dicoret di samping Harga jual. Harus lebih besar dari Harga jual. Kosongkan bila tidak ada."
+          inputMode="numeric"
+        />
+      </div>
 
       <KotakCentang
         nama="aktif"
@@ -130,17 +126,13 @@ function FormVarian({
       />
 
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          disabled={sedangMenyimpan}
-          className={KELAS_TOMBOL_SIMPAN}
-        >
+        <button type="submit" disabled={sedangMenyimpan} className="tombol">
           {sedangMenyimpan ? "Menyimpan…" : "Simpan Varian"}
         </button>
         <button
           type="button"
           onClick={onSelesai}
-          className={KELAS_TOMBOL_GARIS}
+          className="tombol tombol-kedua"
         >
           Batal
         </button>
@@ -174,14 +166,14 @@ function BarisVarian({
     );
   }
   return (
-    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
+    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
       <div className="flex min-w-0 flex-col">
-        <span className="font-extrabold break-words">{varian.nama}</span>
-        <span className="text-lg font-extrabold tracking-[-0.02em]">
+        <span className="font-spidol font-bold break-words">{varian.nama}</span>
+        <span className="font-spidol text-xl font-bold">
           {rupiah(varian.hargaJual)}
         </span>
         {varian.hargaNormal !== null && (
-          <span className="text-[13px] text-tinta-redup">
+          <span className="text-[15px] text-pensil-redup">
             Harga normal {rupiah(varian.hargaNormal)}
           </span>
         )}
@@ -235,16 +227,13 @@ export function VarianProduk({
   return (
     <section
       aria-labelledby="varian-judul"
-      className="mt-4 flex max-w-[560px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu @container flex flex-col gap-6 p-4 sm:p-6"
     >
       <div className="flex flex-col gap-2">
-        <h2
-          id="varian-judul"
-          className="text-[22px] leading-[1.2] font-extrabold tracking-[-0.02em]"
-        >
+        <h2 id="varian-judul" className="text-[26px]">
           Varian
         </h2>
-        <p className="text-[13px] text-tinta-redup">
+        <p className="text-base text-pensil-redup">
           Pilihan di dalam Produk ini, misalnya 1 Bulan atau 3 Bulan. Varian
           langsung tersimpan saat Simpan Varian dipilih, terpisah dari tombol
           Simpan di form Produk.
@@ -252,11 +241,11 @@ export function VarianProduk({
       </div>
 
       {varian.length === 0 ? (
-        <p className="text-tinta-redup">Belum ada Varian.</p>
+        <p className="text-pensil-redup">Belum ada Varian.</p>
       ) : (
         <ul
           aria-labelledby="varian-judul"
-          className="flex flex-col divide-y divide-garis"
+          className="flex flex-col divide-y-2 divide-dashed divide-pensil"
         >
           {varian.map((satu) => (
             <BarisVarian key={satu.id} produkId={produkId} varian={satu} />
@@ -271,9 +260,9 @@ export function VarianProduk({
           <button
             type="button"
             onClick={() => setMenambah(true)}
-            className={KELAS_TOMBOL_GARIS}
+            className="tombol tombol-kedua"
           >
-            <Plus aria-hidden="true" className="size-6" />
+            <Plus aria-hidden="true" className="size-6" strokeWidth={2.5} />
             Tambah Varian
           </button>
         </div>

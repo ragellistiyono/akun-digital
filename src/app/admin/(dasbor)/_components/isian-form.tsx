@@ -2,13 +2,14 @@ import { cn } from "@/lib/utils";
 
 import { Keterangan } from "./keterangan-isian";
 
-/** Isian 52 px (DESIGN.md Inputs / Fields): garis `garis`, fokus `aksi` dengan halo, galat `st-masalah`. */
-export const KELAS_ISIAN =
-  "rounded-[14px] border-[1.5px] border-garis bg-permukaan px-4 text-base text-tinta focus-visible:border-aksi focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--monogram)_30%,transparent)] focus-visible:outline-none aria-invalid:border-st-masalah";
+/**
+ * Isian coretan 52 px (DESIGN.md Inputs / Fields): garis pensil 2 px, fokus pulpen dengan halo, galat `aksi`.
+ * Kelas `isian` memberi tinggi minimal 52 px, jadi isian padat 40 px perlu `min-h-10` juga.
+ */
+export const KELAS_ISIAN = "isian";
 
-/** Tombol garis 52 px untuk aksi kedua (DESIGN.md Buttons). */
-export const KELAS_TOMBOL_GARIS =
-  "inline-flex h-[52px] items-center justify-center gap-2 rounded-[14px] border-[1.5px] border-garis bg-permukaan px-6 text-base font-extrabold text-tinta hover:border-monogram";
+/** Tombol kedua 52 px untuk aksi kedua (DESIGN.md Buttons): latar kertas lama, hover pulpen. */
+export const KELAS_TOMBOL_GARIS = "tombol tombol-kedua";
 
 /**
  * Isian teks satu baris atau beberapa baris, dengan label di atas dan keterangan di bawah. `id` hanya
@@ -50,7 +51,7 @@ export function IsianTeks({
   };
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-bold">
+      <label htmlFor={id} className="text-[17px] leading-tight">
         {label}
       </label>
       {banyakBaris ? (
@@ -99,9 +100,9 @@ export function KotakCentang({
           type="checkbox"
           defaultChecked={dicentang}
           aria-describedby={`${id}-keterangan`}
-          className="size-6 shrink-0 accent-aksi"
+          className="size-6 shrink-0 accent-pulpen"
         />
-        <label htmlFor={id} className="text-sm font-bold">
+        <label htmlFor={id} className="text-[17px] leading-tight">
           {label}
         </label>
       </div>

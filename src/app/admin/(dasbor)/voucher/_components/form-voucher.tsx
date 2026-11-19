@@ -55,27 +55,24 @@ function DaftarCentang({
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-bold">{legenda}</legend>
+      <legend className="mb-2 text-[17px] leading-tight">{legenda}</legend>
       {pilihan.length === 0 ? (
-        <p className="text-tinta-redup">{kosong}</p>
+        <p className="text-pensil-redup">{kosong}</p>
       ) : (
         <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           {pilihan.map((satu) => (
-            <label
-              key={satu.id}
-              className="flex min-h-10 items-center gap-3 text-base"
-            >
+            <label key={satu.id} className="flex min-h-10 items-center gap-3">
               <input
                 type="checkbox"
                 name={nama}
                 value={satu.id}
                 defaultChecked={terpilih.includes(satu.id)}
-                className="size-6 shrink-0 accent-aksi"
+                className="size-6 shrink-0 accent-pulpen"
               />
               <span className="min-w-0 break-words">
                 {satu.nama}
                 {satu.keterangan && (
-                  <span className="text-[13px] text-tinta-redup">
+                  <span className="text-[15px] text-pensil-redup">
                     {" "}
                     · {satu.keterangan}
                   </span>
@@ -106,7 +103,7 @@ function IsianWaktu({
   const idKeterangan = `${nama}-keterangan`;
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={nama} className="text-sm font-bold">
+      <label htmlFor={nama} className="text-[17px] leading-tight">
         {label}
       </label>
       <input
@@ -154,15 +151,17 @@ export function FormVoucher({
     <form
       action={aksi}
       noValidate
-      className="mt-6 flex max-w-[720px] flex-col gap-6 rounded-[20px] bg-permukaan p-4 shadow-bayang"
+      className="kartu flex flex-col gap-6 p-4 sm:p-6"
     >
       {idVoucher ? (
         <>
           <input type="hidden" name="id" value={idVoucher} />
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-bold">Kode</p>
-            <p className="text-lg font-extrabold break-all">{isian.kode}</p>
-            <p className="text-[13px] text-tinta-redup">
+            <p className="text-[17px] leading-tight">Kode</p>
+            <p className="font-spidol text-[24px] leading-tight font-bold break-all">
+              {isian.kode}
+            </p>
+            <p className="text-[15px] text-pensil-redup">
               Kode tidak bisa diubah setelah Voucher dibuat.
             </p>
           </div>
@@ -178,12 +177,14 @@ export function FormVoucher({
       )}
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-2 text-sm font-bold">Jenis potongan</legend>
+        <legend className="mb-2 text-[17px] leading-tight">
+          Jenis potongan
+        </legend>
         <div className="flex flex-wrap gap-6">
           {PILIHAN_JENIS.map((pilihan) => (
             <label
               key={pilihan.nilai}
-              className="flex min-h-10 items-center gap-3 text-base"
+              className="flex min-h-10 items-center gap-3"
             >
               <input
                 type="radio"
@@ -191,7 +192,7 @@ export function FormVoucher({
                 value={pilihan.nilai}
                 defaultChecked={isian.jenisPotongan === pilihan.nilai}
                 onChange={() => setJenis(pilihan.nilai)}
-                className="size-6 shrink-0 accent-aksi"
+                className="size-6 shrink-0 accent-pulpen"
               />
               {pilihan.label}
             </label>
@@ -199,31 +200,34 @@ export function FormVoucher({
         </div>
       </fieldset>
 
-      <IsianTeks
-        nama="nilai"
-        label="Nilai potongan"
-        nilaiAwal={isian.nilai}
-        galat={galat?.nilai}
-        bantuan={
-          jenis === "persen"
-            ? "Persen dari Harga jual, bilangan bulat 1 sampai 100, misalnya 10. Hasilnya dibulatkan ke bawah ke rupiah."
-            : "Potongan dalam rupiah bulat, minimal Rp 1, misalnya 5.000."
-        }
-        inputMode="numeric"
-      />
-
-      {jenis === "persen" && (
+      {/* Isian angka yang pendek berdampingan dua per baris di layar lebar, dengan urutan tetap. */}
+      <div className="grid items-start gap-6 sm:grid-cols-2">
         <IsianTeks
-          nama="batasMaksimum"
-          label="Batas maksimum"
-          nilaiAwal={isian.batasMaksimum}
-          galat={galat?.batasMaksimum}
-          bantuan="Potongan terbesar dalam rupiah, misalnya 10.000. Kosongkan bila tanpa batas."
+          nama="nilai"
+          label="Nilai potongan"
+          nilaiAwal={isian.nilai}
+          galat={galat?.nilai}
+          bantuan={
+            jenis === "persen"
+              ? "Persen dari Harga jual, bilangan bulat 1 sampai 100, misalnya 10. Hasilnya dibulatkan ke bawah ke rupiah."
+              : "Potongan dalam rupiah bulat, minimal Rp 1, misalnya 5.000."
+          }
           inputMode="numeric"
         />
-      )}
 
-      <div className="grid gap-6 sm:grid-cols-2">
+        {jenis === "persen" && (
+          <IsianTeks
+            nama="batasMaksimum"
+            label="Batas maksimum"
+            nilaiAwal={isian.batasMaksimum}
+            galat={galat?.batasMaksimum}
+            bantuan="Potongan terbesar dalam rupiah, misalnya 10.000. Kosongkan bila tanpa batas."
+            inputMode="numeric"
+          />
+        )}
+      </div>
+
+      <div className="grid items-start gap-6 sm:grid-cols-2">
         <IsianWaktu
           nama="mulai"
           label="Waktu mulai (WIB)"
@@ -240,41 +244,45 @@ export function FormVoucher({
         />
       </div>
 
-      <IsianTeks
-        nama="kuotaVoucher"
-        label="Kuota voucher"
-        nilaiAwal={isian.kuotaVoucher}
-        galat={galat?.kuotaVoucher}
-        bantuan="Berapa kali Voucher boleh dipakai oleh semua Pembeli. Kosongkan bila tanpa batas."
-        inputMode="numeric"
-      />
-      <IsianTeks
-        nama="batasPerEmail"
-        label="Batas per email"
-        nilaiAwal={isian.batasPerEmail}
-        galat={galat?.batasPerEmail}
-        bantuan="Berapa kali Voucher boleh dipakai oleh satu email. Kosongkan bila tanpa batas."
-        inputMode="numeric"
-      />
-      <IsianTeks
-        nama="minimalHargaJual"
-        label="Minimal Harga jual"
-        nilaiAwal={isian.minimalHargaJual}
-        galat={galat?.minimalHargaJual}
-        bantuan="Voucher hanya berlaku untuk Varian dengan Harga jual minimal ini, misalnya 50.000. Kosongkan bila tanpa syarat."
-        inputMode="numeric"
-      />
+      <div className="grid items-start gap-6 sm:grid-cols-2">
+        <IsianTeks
+          nama="kuotaVoucher"
+          label="Kuota voucher"
+          nilaiAwal={isian.kuotaVoucher}
+          galat={galat?.kuotaVoucher}
+          bantuan="Berapa kali Voucher boleh dipakai oleh semua Pembeli. Kosongkan bila tanpa batas."
+          inputMode="numeric"
+        />
+        <IsianTeks
+          nama="batasPerEmail"
+          label="Batas per email"
+          nilaiAwal={isian.batasPerEmail}
+          galat={galat?.batasPerEmail}
+          bantuan="Berapa kali Voucher boleh dipakai oleh satu email. Kosongkan bila tanpa batas."
+          inputMode="numeric"
+        />
+        <IsianTeks
+          nama="minimalHargaJual"
+          label="Minimal Harga jual"
+          nilaiAwal={isian.minimalHargaJual}
+          galat={galat?.minimalHargaJual}
+          bantuan="Voucher hanya berlaku untuk Varian dengan Harga jual minimal ini, misalnya 50.000. Kosongkan bila tanpa syarat."
+          inputMode="numeric"
+        />
+      </div>
 
       <fieldset
         className="flex flex-col gap-2"
         aria-describedby="cakupan-keterangan"
       >
-        <legend className="mb-2 text-sm font-bold">Cakupan voucher</legend>
+        <legend className="mb-2 text-[17px] leading-tight">
+          Cakupan voucher
+        </legend>
         <div className="flex flex-wrap gap-x-6 gap-y-1">
           {PILIHAN_CAKUPAN.map((pilihan) => (
             <label
               key={pilihan.nilai}
-              className="flex min-h-10 items-center gap-3 text-base"
+              className="flex min-h-10 items-center gap-3"
             >
               <input
                 type="radio"
@@ -282,7 +290,7 @@ export function FormVoucher({
                 value={pilihan.nilai}
                 defaultChecked={isian.cakupan === pilihan.nilai}
                 onChange={() => setCakupan(pilihan.nilai)}
-                className="size-6 shrink-0 accent-aksi"
+                className="size-6 shrink-0 accent-pulpen"
               />
               {pilihan.label}
             </label>
@@ -332,11 +340,7 @@ export function FormVoucher({
       />
 
       <div className="flex flex-wrap items-center gap-4">
-        <button
-          type="submit"
-          disabled={sedangMenyimpan}
-          className="inline-flex h-[52px] items-center justify-center rounded-[14px] bg-aksi px-6 text-base font-extrabold text-teks-di-aksi hover:bg-aksi-tekan active:scale-[0.98] disabled:bg-permukaan-2 disabled:text-tinta-redup"
-        >
+        <button type="submit" disabled={sedangMenyimpan} className="tombol">
           {sedangMenyimpan ? "Menyimpan…" : "Simpan"}
         </button>
         <Link href="/admin/voucher" className={KELAS_TOMBOL_GARIS}>

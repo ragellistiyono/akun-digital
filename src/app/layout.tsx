@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono, Manrope } from "next/font/google";
+import { JetBrains_Mono, Kalam, Patrick_Hand } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -8,11 +8,19 @@ import { SKRIP_MODE_AWAL } from "./_mode/mode-tampilan";
 import "./globals.css";
 import { pengaturanIphone } from "./layar-pembuka-iphone";
 import manifest from "./manifest.json";
+import warnaBilahStatus from "./warna-bilah-status.json";
 
-// Manrope dimuat sebagai font variabel, jadi satu berkas mencakup tebal 400–800.
-const manrope = Manrope({
+// Huruf coretan tangan (DESIGN.md Typography): Patrick Hand untuk isi, Kalam tebal untuk judul.
+const patrickHand = Patrick_Hand({
   subsets: ["latin"],
-  variable: "--font-manrope",
+  weight: "400",
+  variable: "--font-patrick-hand",
+});
+
+const kalam = Kalam({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-kalam",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -32,14 +40,19 @@ export const metadata: Metadata = {
 
 // viewport-fit=cover membuat env(safe-area-inset-bottom) terisi di ponsel berponi.
 //
-// Pasang seperti aplikasi (PRD §11.4 ▶ Keputusan 2026-11-18): manifest.json di folder ini ditautkan Next.js
-// ke semua halaman. Browser dan sistem ponsel tidak bisa membaca token CSS, jadi warna `langit` ditulis
-// sebagai nilai di manifest itu, dan bilah status ponsel mengambil warna yang sama dari sana, di mode terang
-// maupun gelap. Ikon di public/ikon/ dibuat sekali dari docs/input/logo.png; ikon maskable memuat logo
-// selebar 80% di tengah latar `langit`, supaya huruf MDS tidak terpotong di ponsel yang memotong ikon bulat.
+// Pasang seperti aplikasi (PRD §11.4 ▶ Keputusan 2026-11-20): manifest.json di folder ini ditautkan Next.js
+// ke semua halaman. Browser dan sistem ponsel tidak bisa membaca token CSS, jadi warna `kertas` ditulis
+// sebagai nilai di manifest itu, dan warna bilah status Android ditulis di warna-bilah-status.json. Bilah
+// status itu mengikuti mode perangkat, bukan pilihan mode di tab Akun: `kertas` di mode terang dan
+// `kertas-gelap` di mode gelap. Ikon di public/ikon/ dibuat sekali dari docs/input/logo.png; ikon maskable
+// memuat logo selebar 80% di tengah latar `kertas`, supaya huruf MDS tidak terpotong di ponsel yang memotong
+// ikon bulat.
 export const viewport: Viewport = {
   viewportFit: "cover",
-  themeColor: manifest.theme_color,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: warnaBilahStatus.terang },
+    { media: "(prefers-color-scheme: dark)", color: warnaBilahStatus.gelap },
+  ],
 };
 
 // Script mode tampilan berjalan di <head> sebelum isi halaman dilukis, jadi halaman langsung tampil dengan
@@ -49,7 +62,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="id"
-      className={cn(manrope.variable, jetbrainsMono.variable)}
+      className={cn(
+        patrickHand.variable,
+        kalam.variable,
+        jetbrainsMono.variable,
+      )}
       suppressHydrationWarning
     >
       <head>

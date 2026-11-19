@@ -111,9 +111,9 @@ test("Tamu dengan email yang belum Member melihat Item stok lalu panel ajakan di
   await expect(blokItemStok(page)).toContainText(selesai.kode);
   const panel = panelAjakan(page);
   await expect(panel).toBeVisible();
-  // Panel ajakan berbingkai 2 px monogram (DESIGN.md Cards / Containers), di bawah Item stok.
-  await expect(panel).toHaveCSS("border-top-width", "2px");
-  await expect(panel).toHaveCSS("border-top-color", "rgb(143, 97, 255)");
+  // Panel ajakan berbingkai 3 px pensil (DESIGN.md Cards / Containers), di bawah Item stok.
+  await expect(panel).toHaveCSS("border-top-width", "3px");
+  await expect(panel).toHaveCSS("border-top-color", "rgb(45, 45, 45)");
   const kotakItemStok = await blokItemStok(page).boundingBox();
   const kotakPanel = await panel.boundingBox();
   expect(kotakPanel!.y).toBeGreaterThanOrEqual(
