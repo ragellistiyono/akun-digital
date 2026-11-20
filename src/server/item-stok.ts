@@ -1,5 +1,6 @@
-// Mengisi Item stok sebuah Varian dan menghitung Stok Varian (PRD §4.2, §5.3), serta daftar Item stok per
-// Varian beserta mengubah dan menghapus Item stok Tersedia (PRD §4.4, §9.7). Aturannya ada di
+// Mengisi Item stok sebuah Varian dan menghitung Stok Varian (PRD §4.2, §5.3), daftar semua Varian untuk menu
+// Item stok (PRD §4.2 ▶ Keputusan 2026-11-20), serta daftar Item stok per Varian beserta mengubah dan menghapus
+// Item stok Tersedia (PRD §4.4, §9.7). Aturannya ada di
 // src/domain/item-stok.ts dan src/domain/stok-varian.ts. Isinya disimpan terenkripsi (PRD §12) lewat
 // enkripsi-item-stok.ts.
 import { and, count, eq, ne } from "drizzle-orm";
@@ -168,9 +169,63 @@ export async function bacaStokVarian(
   return stokVarian({ jumlahPerStatus });
 }
 
-// Isi Item stok dibandingkan seperti yang dibaca orang: angka di dalamnya dibandingkan sebagai angka, jadi
-// "Profil 2" berada sebelum "Profil 10".
+// Isi Item stok, serta nama Produk dan Varian, dibandingkan seperti yang dibaca orang: angka di dalamnya
+// dibandingkan sebagai angka, jadi "Profil 2" berada sebelum "Profil 10".
 const pembanding = new Intl.Collator("id", { numeric: true });
+
+/**
+ * Semua Varian untuk menu Item stok di dasbor admin (PRD §4.2 ▶ Keputusan 2026-11-20), termasuk Varian dan
+ * Produk nonaktif. Setiap Varian membawa nama dan status aktif Varian serta Produknya, Format Item stok
+ * Produknya, dan Stok Varian beserta jumlah Item stok per status sebagai bahan hitungnya (PRD §5.3).
+ *
+ * Urutannya menurut nama Produk, lalu nama Varian, A sampai Z, dengan angka di dalam nama dibandingkan sebagai
+ * angka, jadi "3 Bulan" berada sebelum "12 Bulan".
+ */
+export async function daftarVarianItemStok() {
+  const baris = await db
+    .select({
+      varianId: varian.id,
+      namaVarian: varian.nama,
+      varianAktif: varian.aktif,
+      produkId: produk.id,
+      namaProduk: produk.nama,
+      produkAktif: produk.aktif,
+      formatItemStok: produk.formatItemStok,
+      status: itemStok.status,
+      jumlah: count(itemStok.id),
+    })
+    .from(varian)
+    .innerJoin(produk, eq(varian.produkId, produk.id))
+    .leftJoin(itemStok, eq(itemStok.varianId, varian.id))
+    .groupBy(varian.id, produk.id, itemStok.status);
+
+  const perVarian = new Map<
+    string,
+    Omit<(typeof baris)[number], "status" | "jumlah"> & {
+      jumlahPerStatus: Record<StatusItemStok, number>;
+    }
+  >();
+  for (const { status, jumlah, ...v } of baris) {
+    const ada = perVarian.get(v.varianId) ?? {
+      ...v,
+      jumlahPerStatus: { Tersedia: 0, Ditahan: 0, Terkirim: 0 },
+    };
+    if (status !== null) ada.jumlahPerStatus[status] = jumlah;
+    perVarian.set(v.varianId, ada);
+  }
+
+  return [...perVarian.values()]
+    .map(({ jumlahPerStatus, ...v }) => ({
+      ...v,
+      stok: stokVarian({ jumlahPerStatus }),
+    }))
+    .sort(
+      (a, b) =>
+        pembanding.compare(a.namaProduk, b.namaProduk) ||
+        pembanding.compare(a.namaVarian, b.namaVarian) ||
+        a.varianId.localeCompare(b.varianId),
+    );
+}
 
 /**
  * Semua Item stok sebuah Varian untuk daftar Item stok di dasbor admin (PRD §9.7), atau hanya yang berstatus

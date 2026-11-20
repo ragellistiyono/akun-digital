@@ -1,8 +1,9 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 
+import { hitunganBarisTempel } from "@/domain/hitungan-baris-tempel";
 import { PEMISAH_KOLOM } from "@/domain/item-stok";
 
 import { IsianTeks } from "../../_components/isian-form";
@@ -107,7 +108,9 @@ export function FormItemStok({
 
 /**
  * Menempel banyak Item stok sekaligus (PRD §4.2): satu baris untuk satu Item stok, dengan kolom dipisah
- * |. Setelah disimpan, ringkasan dan baris yang ditolak beserta alasannya tampil di bawah form.
+ * |. Di bawah kotak tempel tampil "N baris akan diproses", yang berubah langsung saat Admin menempel atau
+ * mengetik (PRD §4.2 ▶ Keputusan 2026-11-20). Setelah disimpan, ringkasan dan baris yang ditolak beserta
+ * alasannya tampil di bawah form. Dipakai di halaman Varian dan di menu Item stok.
  */
 export function TempelItemStok({
   kolom,
@@ -118,6 +121,11 @@ export function TempelItemStok({
     FormData
   >(aksiTempelItemStok, { teks: "" });
   const hasil = keadaan.hasil;
+  // Teks yang sedang diketik, dicatat bersama keadaan form saat diketik. Setelah tempelan diproses, kotak tempel
+  // kembali berisi teks dari keadaan baru, jadi hitungannya ikut memakai teks itu.
+  const [ketikan, setKetikan] = useState({ keadaan, teks: keadaan.teks });
+  const teks = ketikan.keadaan === keadaan ? ketikan.teks : keadaan.teks;
+  const { jumlahBaris } = hitunganBarisTempel(teks);
 
   return (
     <Panel id="item-stok-tempel" judul="Tempel banyak Item stok">
@@ -132,7 +140,14 @@ export function TempelItemStok({
           bantuan={`Satu baris untuk satu Item stok, dengan kolom dipisah garis tegak (${PEMISAH_KOLOM}) menurut urutan Format Item stok: ${kolom.join(", ")}. Baris kosong diabaikan.`}
           banyakBaris
           mono
+          onChange={(isi) => setKetikan({ keadaan, teks: isi })}
         />
+        <p
+          aria-live="polite"
+          className="-mt-4 font-spidol text-[17px] font-bold tabular-nums"
+        >
+          {jumlahBaris} baris akan diproses
+        </p>
         <div>
           <button type="submit" disabled={sedangMenyimpan} className="tombol">
             {sedangMenyimpan ? "Menyimpan…" : "Simpan tempelan"}

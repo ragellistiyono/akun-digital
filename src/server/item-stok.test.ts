@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { db, koneksi } from "./db";
 import { itemStok, varian } from "./db/schema";
-import { daftarItemStokVarian } from "./item-stok";
+import { daftarItemStokVarian, daftarVarianItemStok } from "./item-stok";
 import { isiItemStokUji, sisipkanProduk } from "./uji-katalog";
 import { sisipkanPesanan } from "./uji-pesanan";
 
@@ -140,6 +140,89 @@ describe("daftarItemStokVarian (PRD §9.7)", () => {
       "Profil 1",
       "Profil 2",
       "Profil 10",
+    ]);
+  });
+});
+
+describe("daftarVarianItemStok (PRD §4.2 ▶ Keputusan 2026-11-20)", () => {
+  /** Baris daftar dari Produk test ini saja, tanpa akhiran unik di nama Produk. */
+  async function barisProduk(akhiran: string) {
+    return (await daftarVarianItemStok())
+      .filter((v) => v.namaProduk.endsWith(akhiran))
+      .map((v) => ({ ...v, namaProduk: v.namaProduk.replace(akhiran, "") }));
+  }
+
+  it("memuat semua Varian, termasuk yang nonaktif, urut menurut nama Produk lalu Varian, beserta jumlah Tersedia, Ditahan, dan Terkirim", async () => {
+    const akhiran = ` ${randomUUID().slice(0, 8)}`;
+    await sisipkanProduk({
+      nama: `Spotify${akhiran}`,
+      formatItemStok: ["Kode"],
+      varian: [
+        { nama: "3 Bulan", hargaJual: 45000, Tersedia: 2, Ditahan: 1 },
+        { nama: "1 Bulan", hargaJual: 20000, aktif: false, Terkirim: 3 },
+      ],
+    });
+    await sisipkanProduk({
+      nama: `Canva${akhiran}`,
+      aktif: false,
+      formatItemStok: FORMAT,
+      varian: [{ nama: "1 Tahun", hargaJual: 90000, Tersedia: 1 }],
+    });
+
+    const daftar = await barisProduk(akhiran);
+
+    expect(
+      daftar.map(
+        ({
+          namaProduk,
+          namaVarian,
+          varianAktif,
+          produkAktif,
+          formatItemStok,
+          stok,
+        }) => ({
+          namaProduk,
+          namaVarian,
+          varianAktif,
+          produkAktif,
+          formatItemStok,
+          stok,
+        }),
+      ),
+    ).toEqual([
+      {
+        namaProduk: "Canva",
+        namaVarian: "1 Tahun",
+        varianAktif: true,
+        produkAktif: false,
+        formatItemStok: FORMAT,
+        stok: {
+          stokVarian: 1,
+          jumlahPerStatus: { Tersedia: 1, Ditahan: 0, Terkirim: 0 },
+        },
+      },
+      {
+        namaProduk: "Spotify",
+        namaVarian: "1 Bulan",
+        varianAktif: false,
+        produkAktif: true,
+        formatItemStok: ["Kode"],
+        stok: {
+          stokVarian: 0,
+          jumlahPerStatus: { Tersedia: 0, Ditahan: 0, Terkirim: 3 },
+        },
+      },
+      {
+        namaProduk: "Spotify",
+        namaVarian: "3 Bulan",
+        varianAktif: true,
+        produkAktif: true,
+        formatItemStok: ["Kode"],
+        stok: {
+          stokVarian: 2,
+          jumlahPerStatus: { Tersedia: 2, Ditahan: 1, Terkirim: 0 },
+        },
+      },
     ]);
   });
 });

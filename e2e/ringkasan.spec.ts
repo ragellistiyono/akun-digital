@@ -228,11 +228,22 @@ test("kartu Pesanan Selesai, Pesanan Menunggu Pembayaran, dan Member aktif membu
   await expect(
     page.getByRole("heading", { level: 1, name: "Member" }),
   ).toBeVisible();
+});
 
-  // Kartu Item stok belum bisa diketuk (PRD §13).
-  await page.goto("/admin/ringkasan");
+// PRD §9.2 ▶ Keputusan 2026-11-20: kartu 9 dan 10 membuka menu Item stok (PRD §4.2).
+test("kartu Item stok Tersedia dan Item stok Terkirim membuka menu Item stok", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+
   for (const nama of ["Item stok Tersedia", "Item stok Terkirim"]) {
-    await expect(kartu(page, nama).getByRole("link")).toHaveCount(0);
+    await page.goto("/admin/ringkasan");
+    await kartu(page, nama).getByRole("link").click();
+    // Daftar Varian memuat semua Varian di app_test, jadi halamannya diberi waktu muat lebih longgar.
+    await expect(page).toHaveURL("/admin/item-stok", { timeout: 15_000 });
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Item stok" }),
+    ).toBeVisible();
   }
 });
 
