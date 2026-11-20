@@ -101,3 +101,13 @@ const OFFSET_WIB_MS = 7 * 60 * 60 * 1000;
 export function isianWib(instan: Date): string {
   return new Date(instan.getTime() + OFFSET_WIB_MS).toISOString().slice(0, 16);
 }
+
+/** Tanggal WIB sebuah instan sebagai "YYYY-MM-DD", misalnya "hari ini" untuk isian tanggal (PRD §9.1, §14.4). */
+export function tanggalIsianWib(instan: Date): string {
+  return isianWib(instan).slice(0, 10);
+}
+
+/** Tanggal kalender WIB "YYYY-MM-DD" ditulis seperti tanggalWib, misalnya "1 Nov 2026". */
+export function tanggalWibDariIsian(tanggal: string): string {
+  return tanggalWib(awalTanggalWib(tanggal));
+}

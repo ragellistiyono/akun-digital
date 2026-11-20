@@ -61,6 +61,7 @@ async function jumlahData() {
     "riwayat_status_pesanan",
     "pengaturan_toko",
     "voucher",
+    "biaya_operasional",
   ] as const;
   const jumlah: Record<string, number> = {};
   for (const nama of tabel) {
@@ -445,12 +446,33 @@ describe("pnpm db:seed di database kosong", () => {
     ]);
   });
 
+  // Issue T69 (docs/UAT.md ▶ Keputusan 2026-11-20): satu Biaya operasional "Sewa server" Rp 150.000 [CONTOH],
+  // bertanggal 1 pada bulan seed dijalankan menurut zona waktu toko.
+  it('Biaya operasional seed berisi "Sewa server" Rp 150.000 bertanggal 1 pada bulan seed dijalankan', async () => {
+    const { daftarBiayaOperasional } = await import("./biaya-operasional");
+    const { tanggalIsianWib } = await import("./zona-waktu-toko");
+    const bulan = tanggalIsianWib(new Date(waktuSeed.selesai)).slice(0, 7);
+
+    const { biaya, total } = await daftarBiayaOperasional(bulan);
+
+    expect(
+      biaya.map(({ tanggal, keterangan, nominal }) => ({
+        tanggal,
+        keterangan,
+        nominal,
+      })),
+    ).toEqual([
+      { tanggal: `${bulan}-01`, keterangan: "Sewa server", nominal: 150000 },
+    ]);
+    expect(total).toBe(150000);
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan
     // 10 Tersedia dan 1 Terkirim ke Pesanan Selesai, Netflix 3 Bulan 4, YouTube 3 Bulan 3, Uji Bayar 10),
     // dan 8 berkas gambar (3 ikon Kategori dan 5 foto Produk). User berisi 1 Admin dan 2 Member, masing-masing
-    // dengan satu akun password, dan Voucher berisi 6 Voucher seed.
+    // dengan satu akun password, Voucher berisi 6 Voucher seed, dan Biaya operasional berisi Sewa server.
     expect(sebelum).toEqual({
       user: 3,
       account: 3,
@@ -462,6 +484,7 @@ describe("pnpm db:seed di database kosong", () => {
       riwayat_status_pesanan: 6,
       pengaturan_toko: 1,
       voucher: 6,
+      biaya_operasional: 1,
       berkas: 8,
     });
 

@@ -5,7 +5,9 @@ import {
   isianWib,
   jamWibDibulatkanKeAtas,
   rentangTanggalWib,
+  tanggalIsianWib,
   tanggalWib,
+  tanggalWibDariIsian,
   waktuWib,
 } from "./zona-waktu-toko";
 
@@ -121,5 +123,27 @@ describe("instanDariIsianWib", () => {
 describe("isianWib", () => {
   it("menulis instan sebagai isian tanggal-dan-jam WIB", () => {
     expect(isianWib(new Date("2026-11-30T17:05:00Z"))).toBe("2026-12-01T00:05");
+  });
+});
+
+// PRD §9.1, §14.4: "hari ini" untuk isian tanggal Biaya operasional mengikuti tanggal WIB.
+describe("tanggalIsianWib", () => {
+  it("menulis tanggal WIB sebuah instan sebagai YYYY-MM-DD", () => {
+    expect(tanggalIsianWib(new Date("2026-11-20T03:00:00Z"))).toBe(
+      "2026-11-20",
+    );
+  });
+
+  it("memakai tanggal WIB walaupun tanggal UTC-nya masih kemarin", () => {
+    // 19 November 17.00 UTC adalah 20 November 00.00 WIB.
+    expect(tanggalIsianWib(new Date("2026-11-19T17:00:00Z"))).toBe(
+      "2026-11-20",
+    );
+  });
+});
+
+describe("tanggalWibDariIsian", () => {
+  it('menulis tanggal "YYYY-MM-DD" seperti tanggalWib, misalnya 1 Nov 2026', () => {
+    expect(tanggalWibDariIsian("2026-11-01")).toBe("1 Nov 2026");
   });
 });

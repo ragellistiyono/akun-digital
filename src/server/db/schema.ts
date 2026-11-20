@@ -6,6 +6,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   index,
   integer,
   numeric,
@@ -458,5 +459,25 @@ export const voucherKategori = pgTable(
   (tabel) => [
     primaryKey({ columns: [tabel.voucherId, tabel.kategoriId] }),
     index("voucher_kategori_kategori_id_idx").on(tabel.kategoriId),
+  ],
+);
+
+// Biaya operasional (PRD §14.4): biaya toko di luar Harga modal dan Biaya transaksi yang dicatat Admin per tanggal.
+// Tanggal adalah tanggal kalender dalam zona waktu toko (PRD §9.1), bukan instan, jadi disimpan sebagai date.
+// Keterangan disimpan tanpa spasi di tepi. Aturan isiannya diperiksa periksaIsianBiayaOperasional di domain.
+// Nominal tidak dibatasi maksimum, jadi bigint. Waktu dicatat hanya menentukan urutan biaya bertanggal sama di
+// daftar, dengan yang terakhir dicatat di atas.
+export const biayaOperasional = pgTable(
+  "biaya_operasional",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tanggal: date("tanggal", { mode: "string" }).notNull(),
+    keterangan: text("keterangan").notNull(),
+    nominal: bigint("nominal", { mode: "number" }).notNull(),
+    dicatatPada: instan("dicatat_pada").defaultNow().notNull(),
+  },
+  (tabel) => [
+    index("biaya_operasional_tanggal_idx").on(tabel.tanggal),
+    check("biaya_operasional_nominal_minimal", sql`${tabel.nominal} >= 1`),
   ],
 );
