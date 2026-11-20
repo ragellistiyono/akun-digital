@@ -599,6 +599,8 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 
 ▶ Keputusan 2026-11-17 (#174): Isian yang tidak bisa diubah, seperti email Member di Checkout (PRD §5.2), tetap berbentuk isian dengan latar `permukaan-2` dan teks `tinta`. Teks bantuannya tetap tampil.
 
+▶ Keputusan 2026-11-20 (#224): Isian rupiah di dasbor admin, seperti Harga modal (PRD §14.1) dan minimal Total bayar yang dikenai biaya (PRD §14.3), berisi angka dengan titik ribuan, misalnya "100.000", tanpa awalan "Rp".
+
 ### Navigation
 - **Garis coretan** (`GarisCoretan` di `kerangka-bilah-atas.tsx`): garis `pensil` bergelombang tipis, seperti garis yang ditarik tangan. Dipakai di tepi bawah bilah atas dan tepi atas navigasi bawah.
 - **Bilah atas:** latar `kertas` dengan garis coretan di tepi bawahnya, lekat di atas, 64 px. Saat digulir ia ciut ke 52 px dan mendapat bayangan tegas `0 4px 0 0 var(--bayang)` lurus ke bawah, yang menebalkan garis coretan. Monogram ikut mengecil dari 28 ke 24 px. Bilah status iPhone memakai gaya bawaan (PRD §11.4), jadi bilah atas tidak mewarnai zona di belakangnya.
@@ -701,6 +703,8 @@ Grafik digambar sebagai SVG oleh kode toko sendiri, tanpa pustaka grafik. Grafik
 
 ### Rincian angka Laporan keuangan dan kartu Ringkasan
 Rincian angka Laporan keuangan (PRD §14.5, §14.6) memakai tata letak Rincian Total bayar: baris tegak, label di kiri, nominal rata kanan, dan baris Laba kotor serta Laba bersih ditebalkan dengan garis pemisah 2 px `pensil` di atasnya. Tanda − dan + ditulis di depan label pengurang dan penambah. Nominal negatif ditulis "−Rp 12.500" dengan warna `aksi`. Peringatan Pesanan tanpa Harga modal dan keterangan Biaya operasional saat saringan aktif tampil sebagai kartu catatan post-it di atas rincian. Kartu Ringkasan yang memuat tiga angka (hari ini, bulan ini, sepanjang waktu) menaruh angka hari ini paling besar dan dua angka lainnya di bawahnya sebagai baris kecil berlabel.
+
+▶ Keputusan 2026-11-20 (#224): Di Ringkasan, peringatan Pesanan tanpa Harga modal tampil satu kali sebagai kartu catatan post-it di atas semua kartu, tidak di dalam kartu tertentu, supaya urutan 11 kartu tidak terpotong.
 
 ## Do's and Don'ts
 

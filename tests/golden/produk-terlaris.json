@@ -4,7 +4,7 @@
   "keterangan": "Input adalah Pesanan Selesai yang sudah lolos saringan Laporan keuangan. Pesanan dijumlahkan per Produk dari semua Variannya. Paling banyak 10 Produk, diurutkan menurut jumlah Pesanan Selesai terbanyak, lalu Pendapatan terbesar, lalu nama Produk A sampai Z. Pendapatan adalah jumlah Total bayar.",
   "kasus": [
     {
-      "nama": "Sepuluh Produk teratas dari dua belas, dengan jumlah yang sama",
+      "nama": "Sepuluh Produk teratas dari sebelas, dengan jumlah yang sama",
       "input": {
         "pesananSelesai": [
           {
