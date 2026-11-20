@@ -13,6 +13,7 @@ import { rupiah, rupiahBertanda } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import {
+  grafikLaporan,
   pilihanSaringanLaporan,
   rincianLaporan,
   tabelPesananLaporan,
@@ -22,6 +23,8 @@ import { tanggalWibDariIsian, waktuWib } from "@/server/zona-waktu-toko";
 
 import { BarisTautan } from "./_components/baris-tautan";
 import { FormSaringanLaporan } from "./_components/form-saringan-laporan";
+import { GrafikPeriode } from "./_components/grafik-periode";
+import { labelKelompok } from "./_components/label-kelompok";
 import { ALAMAT_LAPORAN } from "./alamat";
 import { ALAMAT_BIAYA_OPERASIONAL } from "./biaya-operasional/alamat";
 
@@ -233,6 +236,69 @@ function RincianAngka({
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+type Grafik = Awaited<ReturnType<typeof grafikLaporan>>;
+
+/**
+ * Grafik per kelompok periode (PRD §14.7): Pendapatan dan jumlah Pesanan Selesai berupa batang, serta Laba kotor
+ * (garis utuh) dan Laba bersih (garis putus-putus). Semuanya mengikuti saringan rentang, Kategori, dan Produk.
+ */
+function GrafikLaporan({ grafik }: { grafik: Grafik }) {
+  const kelompok = grafik.kelompok.map((k) => labelKelompok(grafik.periode, k));
+  const nilai = (ambil: (k: Grafik["kelompok"][number]) => number) =>
+    grafik.kelompok.map(ambil);
+  return (
+    <section aria-labelledby="judul-grafik" className="flex flex-col gap-4">
+      <h2 id="judul-grafik" className={KELAS_JUDUL_BAGIAN}>
+        Grafik
+      </h2>
+      <GrafikPeriode
+        judul="Pendapatan"
+        jenis="batang"
+        satuan="rupiah"
+        kelompok={kelompok}
+        seri={[
+          {
+            nama: "Pendapatan",
+            nilai: nilai((k) => k.pendapatan),
+            gaya: "utuh",
+          },
+        ]}
+      />
+      <GrafikPeriode
+        judul="Laba kotor dan Laba bersih"
+        jenis="garis"
+        satuan="rupiah"
+        kelompok={kelompok}
+        seri={[
+          {
+            nama: "Laba kotor",
+            nilai: nilai((k) => k.labaKotor),
+            gaya: "utuh",
+          },
+          {
+            nama: "Laba bersih",
+            nilai: nilai((k) => k.labaBersih),
+            gaya: "putus",
+          },
+        ]}
+      />
+      <GrafikPeriode
+        judul="Jumlah Pesanan Selesai"
+        jenis="batang"
+        satuan="jumlah"
+        kelompok={kelompok}
+        seri={[
+          {
+            nama: "Pesanan Selesai",
+            nilai: nilai((k) => k.pesananSelesai),
+            gaya: "utuh",
+          },
+        ]}
+      />
     </section>
   );
 }
@@ -463,9 +529,9 @@ function IsiTabel({
 }
 
 // Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, dan periode, rincian
-// angka sampai Laba bersih, lalu tabel Pesanan Selesai. Halaman dibuka dengan periode Harian dan rentang awalnya.
-// Grafik menyusul (§14.7). Halaman ini belum ditautkan dari menu samping maupun Ringkasan (PRD §13 ▶ Keputusan
-// 2026-11-20).
+// angka sampai Laba bersih, grafik per kelompok periode (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan
+// periode Harian dan rentang awalnya. Grafik Produk terlaris dan Pendapatan per Kategori menyusul. Halaman ini
+// belum ditautkan dari menu samping maupun Ringkasan (PRD §13 ▶ Keputusan 2026-11-20).
 export default async function HalamanLaporanKeuangan({
   searchParams,
 }: PageProps<"/admin/laporan">) {
@@ -505,6 +571,7 @@ export default async function HalamanLaporanKeuangan({
             cari: saringan.cari,
             halaman: alamat.halaman,
           }),
+          grafikLaporan({ ...saringanData, periode: saringan.periode }),
         ]),
   ]);
 
@@ -561,6 +628,9 @@ export default async function HalamanLaporanKeuangan({
         <>
           <div className="mt-8">
             <RincianAngka rincian={data[0]} saringan={saringan} />
+          </div>
+          <div className="mt-8">
+            <GrafikLaporan grafik={data[2]} />
           </div>
           <section
             aria-labelledby="judul-tabel"

@@ -12,9 +12,9 @@ import { db } from "../src/server/db";
 import { varian } from "../src/server/db/schema";
 import { sisipkanKategori, sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
-import { tanggalIsianWib } from "../src/server/zona-waktu-toko";
+import { tanggalIsianWib, tanggalWib } from "../src/server/zona-waktu-toko";
 
-// Laporan keuangan (T71, PRD §14.5, §14.6, §14.8, UAT-N6, UAT-N8).
+// Laporan keuangan (T71, T72, PRD §14.5, §14.6, §14.7, §14.8, UAT-N6, UAT-N7, UAT-N8).
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 const PASSWORD = "sandi-uji-admin-123";
 const ALAMAT = "/admin/laporan";
@@ -83,7 +83,7 @@ const nilaiRincian = (page: Page, label: string) =>
 /** Baris data tabel Pesanan Selesai, tanpa baris judul kolom. */
 const barisTabel = (page: Page) =>
   isi(page)
-    .getByRole("table", { name: "Pesanan Selesai" })
+    .getByRole("table", { name: "Pesanan Selesai", exact: true })
     .getByRole("row")
     .filter({ has: page.getByRole("rowheader") });
 
@@ -230,7 +230,7 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
   // Kolom PRD §14.8, dengan Pesanan terbaru dibayar di atas.
   await expect(
     isi(page)
-      .getByRole("table", { name: "Pesanan Selesai" })
+      .getByRole("table", { name: "Pesanan Selesai", exact: true })
       .getByRole("columnheader"),
   ).toHaveText([
     "Nomor Pesanan",
@@ -305,4 +305,85 @@ test("tabel tanpa Pesanan Selesai dalam saringan menampilkan pesan PRD §14.8", 
   await expect(
     isi(page).getByText("Belum ada Pesanan Selesai dalam rentang ini."),
   ).toBeVisible();
+});
+
+/** Grafik berjudul itu (PRD §14.7). */
+const grafik = (page: Page, judul: string) =>
+  isi(page).getByRole("figure", { name: judul, exact: true });
+
+test("mengetuk batang atau titik grafik menampilkan label kelompok dan nilainya, dan hari tanpa Pesanan Selesai bernilai 0 (UAT-N7)", async ({
+  page,
+}) => {
+  const katalog = await katalogUji({ awalan: "Grafik" });
+  const waktuBayar = new Date(Date.now() - 60 * 1000);
+  // Rincian contoh PRD §5.5 dari sisipkanPesanan: Total bayar Rp 45.123, potongan voucher Rp 5.000, dan Kode
+  // unik Rp 123. Dengan Harga modal Rp 35.000, Laba kotor Rp 15.000 dan Laba bersih Rp 10.123 (saringan Kategori
+  // aktif, jadi Biaya operasional tidak dikurangkan).
+  await sisipkanPesanan({
+    varianId: katalog.varianId,
+    status: "Selesai",
+    hargaModal: 35000,
+    biayaTransaksi: 0,
+    waktuBayar,
+  });
+  const hariBayar = tanggalWib(waktuBayar);
+  const hariSebelumnya = tanggalWib(
+    new Date(waktuBayar.getTime() - 24 * 60 * 60 * 1000),
+  );
+  await masukSebagaiAdmin(page);
+
+  await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}`);
+
+  const pendapatan = grafik(page, "Pendapatan");
+  await pendapatan
+    .getByRole("button", { name: `${hariBayar} · Rp 45.123`, exact: true })
+    .click();
+  await expect(pendapatan.getByRole("status")).toHaveText(
+    `${hariBayar} · Rp 45.123`,
+  );
+
+  const laba = grafik(page, "Laba kotor dan Laba bersih");
+  await laba
+    .getByRole("button", {
+      name: `${hariBayar} · Laba bersih Rp 10.123`,
+      exact: true,
+    })
+    .click();
+  await expect(laba.getByRole("status")).toHaveText(
+    `${hariBayar} · Laba bersih Rp 10.123`,
+  );
+
+  const jumlah = grafik(page, "Jumlah Pesanan Selesai");
+  await jumlah
+    .getByRole("button", { name: `${hariBayar} · 1`, exact: true })
+    .click();
+  await expect(jumlah.getByRole("status")).toHaveText(`${hariBayar} · 1`);
+  await jumlah
+    .getByRole("button", { name: `${hariSebelumnya} · 0`, exact: true })
+    .click();
+  await expect(jumlah.getByRole("status")).toHaveText(`${hariSebelumnya} · 0`);
+});
+
+test("di lebar 360 px, grafik 30 hari bergulir di dalam kartunya dan halaman tidak bergulir ke samping (PRD §11.1, UAT-N7)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 800 });
+  await masukSebagaiAdmin(page);
+
+  await page.goto(ALAMAT);
+
+  const pendapatan = grafik(page, "Pendapatan");
+  await expect(pendapatan.getByRole("button")).toHaveCount(30);
+  // Wadah gulir grafik lebih sempit dari isinya, jadi grafik bergulir di dalam kartu.
+  const bergulirDiKartu = await pendapatan
+    .getByRole("group", { name: "Grafik Pendapatan" })
+    .evaluate((svg) => {
+      const wadah = svg.closest(".overflow-x-auto");
+      return wadah !== null && wadah.scrollWidth > wadah.clientWidth;
+    });
+  expect(bergulirDiKartu).toBe(true);
+  const lebarHalaman = await page.evaluate(
+    () => document.documentElement.scrollWidth,
+  );
+  expect(lebarHalaman).toBeLessThanOrEqual(360);
 });
