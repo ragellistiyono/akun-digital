@@ -43,3 +43,12 @@ export function rentangWaktuToko({ sekarang }: { sekarang: Date }): {
 export function dalamRentang(instan: Date, { mulai, sebelum }: RentangWaktu) {
   return instan >= mulai && instan < sebelum;
 }
+
+/**
+ * Instan pukul 00.00.00 WIB pada tanggal kalender toko "YYYY-MM-DD", misalnya tanggal Biaya operasional
+ * (PRD §9.1, §14.4). Tanggal itu masuk sebuah rentang bila instan ini masuk rentang itu.
+ */
+export function awalTanggalToko(tanggal: string) {
+  const [tahun, bulan, hari] = tanggal.split("-").map(Number);
+  return awalTanggalWib(tahun, bulan - 1, hari);
+}

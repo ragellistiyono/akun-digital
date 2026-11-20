@@ -6,11 +6,18 @@ import type { StatusPesanan } from "./status-pesanan";
 /**
  * Jumlah Pesanan Selesai yang dibayar dalam rentang itu, menurut waktu pembayaran seperti Pendapatan (PRD §9.2
  * ▶ Keputusan 2026-11-17). Pesanan Bermasalah yang kemudian diselesaikan Admin dihitung pada tanggal
- * pembayarannya. Hasilnya membawa rentang dan Pesanan yang dihitung sebagai bahan hitungnya.
+ * pembayarannya. Rentang null berarti sepanjang waktu (PRD §9.2 ▶ Keputusan 2026-11-20). Hasilnya membawa rentang
+ * dan Pesanan yang dihitung sebagai bahan hitungnya.
  */
 export function jumlahPesananSelesai<
   P extends { status: StatusPesanan; dibayarPada: Date | null },
->({ rentang, pesanan }: { rentang: RentangWaktu; pesanan: readonly P[] }) {
+>({
+  rentang,
+  pesanan,
+}: {
+  rentang: RentangWaktu | null;
+  pesanan: readonly P[];
+}) {
   const dihitung = pesananSelesaiDibayar({ rentang, pesanan });
   return { jumlah: dihitung.length, rentang, dihitung };
 }
