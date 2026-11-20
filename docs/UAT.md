@@ -69,6 +69,15 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Biaya transaksi memakai nilai awal PRD §14.3, yaitu 0,7% untuk Total bayar Rp 100.000 ke atas.
 - **Produksi.** UAT M4 di server produksi juga dijalankan tanpa data seed. Saat fitur ini tayang, Varian sungguhan belum punya Harga modal. Biarkan Harga modal Uji Bayar kosong sampai UAT-N3. Varian lain boleh diisi kapan saja, kecuali yang dipakai di UAT-N1, yang diisi saat menjalankan skenario itu.
 
+▶ Keputusan 2026-11-20 (#226): Persiapan M5
+- **Seed lokal.** `pnpm db:seed` juga mengisi data berikut, semuanya bertanda `[CONTOH]`:
+  - Saldo `member@miwe.example` Rp 100.000, dengan satu baris Riwayat saldo "Ditambah Admin" berketerangan "Saldo awal seed";
+  - Saldo `nonaktif@miwe.example` Rp 20.000;
+  - satu Top up Berhasil milik `member@miwe.example`: Nominal top up Rp 100.000, Kode unik Rp 77, dan Total bayar Rp 100.077;
+  - satu Top up Bermasalah milik `member@miwe.example`: Nominal top up Rp 50.000, Total bayar Rp 50.123, dan nominal diterima Rp 50.000.
+- **Produksi.** UAT M5 di server produksi juga dijalankan tanpa data seed. Member uji memulai dengan Saldo Rp 0. Top up sungguhan memakai nominal minimal Rp 10.000 ditambah Kode unik, dan saldonya dipakai untuk membeli Uji Bayar. Setelah UAT, Admin mengurangi sisa saldo Member uji dengan keterangan "Selesai UAT", atau membiarkannya sebagai saldo pemilik sendiri.
+- **Top up Bermasalah.** Top up kurang bayar tidak bisa dibuat dengan QRIS sungguhan, jadi UAT-O5 dijalankan di seed lokal.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -709,6 +718,7 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 | M2 | B3, E3, G1–G7, H1–H5, I1, I2, J1 |
 | M3 | K2, K3, K4 |
 | M4 | N1–N10, lalu ulangi I1 untuk memastikan Pendapatan dan Pesanan Selesai tidak berubah |
+| M5 | O1–O9, lalu ulangi I1 dan N4 untuk memastikan kartu lain tidak berubah selain dua kartu saldo |
 
 PRD: §13
 
@@ -862,3 +872,125 @@ Skenario bagian ini dijalankan berurutan, karena N3 sampai N8 memakai Pesanan da
   - Langkah 2: yang tertempel adalah satu baris untuk setiap kolom, misalnya "Email: …", "Password: …", dan "Profil: …", dengan urutan yang sama seperti di layar.
   - Tombol "Salin" per kolom tetap ada.
 - PRD: §6.1
+
+## O. Saldo Member (§15)
+
+Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari skenario sebelumnya. Pakai Member uji (`member@miwe.example` di seed lokal).
+
+**UAT-O1 — Admin menambah dan mengurangi saldo**
+- Langkah:
+  1. Di dasbor admin, buka Member, lalu ketuk email Member uji.
+  2. Tekan "Tambah saldo", isi nominal 5000 tanpa keterangan, lalu simpan.
+  3. Isi keterangan "Uji tambah saldo", simpan, lalu batalkan penegasannya.
+  4. Ulangi langkah 3, lalu setujui penegasannya.
+  5. Tekan "Kurangi saldo" dengan nominal Rp 1 lebih besar dari saldo sekarang dan keterangan "Uji kurangi".
+  6. Kurangi Rp 2.000 dengan keterangan "Uji kurangi".
+  7. Login sebagai Member uji, lalu buka tab Akun dan Riwayat saldo.
+- Hasil:
+  - Langkah 2 ditolak karena keterangan wajib diisi.
+  - Langkah 3 tidak mengubah saldo.
+  - Langkah 4: penegasan berbunyi "Tambah Rp 5.000 ke saldo <email>?", lalu saldo bertambah Rp 5.000.
+  - Langkah 5 ditolak dengan "Saldo tidak cukup untuk dikurangi Rp … Saldo <email> sekarang Rp …", dan saldo tidak berubah.
+  - Langkah 6: saldo berkurang Rp 2.000.
+  - Daftar Member menampilkan kolom Saldo dengan angka yang sama.
+  - Langkah 7: tab Akun menampilkan "Saldo Rp …" di bawah email. Riwayat saldo menampilkan baris "Dikurangi Admin" −Rp 2.000 di atas baris "Ditambah Admin" +Rp 5.000, beserta keterangan dan saldo sesudahnya.
+- PRD: §15.1, §15.2, §15.6, §15.10
+
+**UAT-O2 — Top up (bayar)**
+- Langkah:
+  1. Sebagai Member uji, tekan "Top up" di tab Akun.
+  2. Coba bayar dengan nominal 9999, lalu 499001.
+  3. Tekan tombol cepat Rp 50.000, lalu ganti nominalnya menjadi 10000 dan tekan "Bayar dengan QRIS".
+  4. Bayar QRIS-nya dari ponsel.
+- Hasil:
+  - Langkah 2 ditolak dengan "Nominal top up minimal Rp 10.000." dan "Nominal top up maksimal Rp 499.000."
+  - Langkah 3: tombol cepat mengisi 50000. Halaman bayar Top up menampilkan QR, hitung mundur, dan rincian Nominal top up Rp 10.000, Kode unik, serta Total bayar.
+  - Langkah 4: halaman berpindah sendiri ke Riwayat saldo dengan pesan "Top up Rp 10.000 berhasil. Saldo sekarang Rp …".
+  - Saldo bertambah tepat Rp 10.000, bukan Total bayar, dan baris Top up menyebut Nomor Top up `TOPUP-…`.
+  - Tidak ada email yang masuk untuk top up.
+- PRD: §15.3, §15.5
+
+**UAT-O3 — Satu Top up menunggu, batal, dan kedaluwarsa (tunggu)**
+- Langkah:
+  1. Mulai top up Rp 10.000 tanpa membayar, lalu kembali ke tab Akun.
+  2. Buka Top up lagi dan tekan "Bayar dengan QRIS" dengan nominal 20000.
+  3. Tekan "Batalkan".
+  4. Mulai top up lagi tanpa membayar, lalu tunggu 15 menit.
+- Hasil:
+  - Langkah 1: tab Akun menampilkan "Top up Rp 10.000 menunggu pembayaran" dengan tombol "Lanjutkan bayar".
+  - Langkah 2 membuka Halaman bayar Top up Rp 10.000 yang masih menunggu, bukan membuat Top up baru.
+  - Langkah 3: Member kembali ke tab Akun, dan tulisan menunggu hilang. Saldo tidak berubah.
+  - Langkah 4: setelah 15 menit, tulisan menunggu hilang. Top up yang batal dan kedaluwarsa tidak muncul di Riwayat saldo.
+- PRD: §15.3, §15.4
+
+**UAT-O4 — Menu Top up di dasbor admin**
+- Langkah:
+  1. Buka menu Top up di dasbor admin.
+  2. Saring status Berhasil, lalu cari sebagian email Member uji dengan huruf besar.
+  3. Buka Top up dari UAT-O2.
+- Hasil:
+  - Menu Top up ada tepat di bawah Member.
+  - Daftar memuat Top up dari UAT-O2 dan UAT-O3 dengan status Berhasil, Dibatalkan, dan Kedaluwarsa, yang terbaru di atas.
+  - Saringan dan pencarian hanya menampilkan Top up yang cocok.
+  - Detail Top up menampilkan Nominal top up, Kode unik, Total bayar, nominal diterima, Biaya transaksi Rp 0, riwayat status dengan pelaku "Member" dan "Qrispy", serta tautan ke halaman Member.
+- PRD: §15.4, §15.9
+
+**UAT-O5 — Top up Bermasalah (seed lokal)**
+- Langkah:
+  1. Di seed lokal, buka Ringkasan, lalu ketuk kartu Top up Bermasalah.
+  2. Buka Top up Bermasalah milik `member@miwe.example`, lalu tekan "Tambahkan ke saldo" dan setujui penegasannya.
+  3. Ulangi seed lokal, lalu selesaikan Top up yang sama dengan "Dana Dikembalikan".
+- Hasil:
+  - Langkah 1: kartu ditonjolkan dengan warna Bermasalah dan membuka menu Top up yang sudah disaring ke Bermasalah.
+  - Langkah 2: Top up menjadi Berhasil, dan saldo Member bertambah Rp 50.000. Riwayat saldo mencatat baris Top up, dan riwayat status mencatat pelaku "Admin".
+  - Langkah 3: Top up menjadi Dana Dikembalikan, dan saldo tidak berubah.
+- PRD: §15.4, §15.9
+
+**UAT-O6 — Bayar dengan saldo (bayar)**
+- Langkah:
+  1. Pastikan saldo Member uji paling sedikit Rp 1.000. Login sebagai Member uji, lalu buka Checkout Uji Bayar.
+  2. Bayar dengan tombol saldo.
+  3. Sebagai Admin, kurangi saldo Member uji sampai Rp 0, lalu buka lagi Checkout Uji Bayar sebagai Member uji.
+  4. Buka Checkout yang sama sebagai Tamu di jendela penyamaran.
+- Hasil:
+  - Langkah 1: pilihan "Saldo (Rp …)" terpilih, dan tombolnya berbunyi "Bayar Rp 1.000 dengan saldo".
+  - Langkah 2: Halaman Pesanan Selesai langsung tampil dengan Item stok, tanpa QRIS. Rinciannya tanpa baris Kode unik dan bertuliskan "Dibayar dengan saldo". Email "Pesanan selesai" masuk dengan rincian yang sama.
+  - Riwayat saldo mencatat baris Pembelian −Rp 1.000 dengan Nomor Pesanan-nya.
+  - Detail Pesanan di dasbor admin menampilkan Metode Saldo, Biaya transaksi Rp 0, dan riwayat status "Selesai" dengan pelaku "Pembeli (saldo)".
+  - Langkah 3: pilihan Saldo tidak bisa dipilih dan bertuliskan "Saldo kurang Rp 1.000. Top up dulu.", dan pilihan awalnya QRIS.
+  - Langkah 4: Tamu hanya melihat QRIS.
+- PRD: §5.2, §15.7
+
+**UAT-O7 — Saldo dengan Voucher dan Pesanan menunggu (seed lokal)**
+- Langkah:
+  1. Di seed lokal, login sebagai `member@miwe.example` dengan saldo Rp 45.000. Atur saldonya lewat "Kurangi saldo".
+  2. Buka Checkout Netflix Premium 1 Bulan.
+  3. Isi `HEMAT10`, lalu tekan "Pakai".
+  4. Mulai checkout YouTube Premium 3 Bulan dengan QRIS tanpa membayar, lalu buka lagi Checkout Netflix Premium 1 Bulan dan bayar dengan saldo.
+- Hasil:
+  - Langkah 2: pilihan Saldo tidak bisa dipilih dan bertuliskan "Saldo kurang Rp 5.000. Top up dulu."
+  - Langkah 3: potongan Rp 5.000 membuat saldo cukup, dan tombolnya berbunyi "Bayar Rp 45.000 dengan saldo".
+  - Langkah 4: Member diarahkan ke Pesanan YouTube yang masih menunggu, dan saldo tidak berubah. Batalkan Pesanan itu sesudahnya.
+- PRD: §5.4, §8.7, §15.7
+
+**UAT-O8 — Kartu saldo di Ringkasan**
+- Langkah:
+  1. Buka Ringkasan.
+  2. Ketuk kartu Total saldo Member.
+- Hasil:
+  - Ada 13 kartu. Kartu Total saldo Member dan Top up Bermasalah ada tepat setelah Member aktif.
+  - Total saldo Member sama dengan jumlah kolom Saldo di daftar Member, termasuk Member nonaktif, dan kartunya berketerangan "Saldo milik Member yang belum dibelanjakan. Ini uang Member, bukan Pendapatan."
+  - Langkah 2 membuka daftar Member.
+  - Pendapatan hari ini tidak bertambah karena top up di UAT-O2, tetapi bertambah Rp 1.000 karena pembelian dengan saldo di UAT-O6.
+- PRD: §9.2, §15.8
+
+**UAT-O9 — Saringan Metode di Laporan keuangan**
+- Langkah:
+  1. Buka Laporan keuangan dengan rentang hari ini.
+  2. Pilih Metode Saldo, lalu QRIS.
+  3. Kembalikan Metode ke Semua, lalu pilih Produk Uji Bayar.
+- Hasil:
+  - Langkah 1: rincian angka memuat baris "+ Kode unik Top up" dan "− Biaya transaksi Top up" sesudah Biaya operasional, serta baris "Top up Berhasil: N, Rp X (uang Member, bukan Pendapatan)" di bawah Laba bersih. Tabel Pesanan punya kolom Metode.
+  - Langkah 2: rincian, grafik, dan tabel hanya berisi Pesanan dengan Metode itu. Baris Biaya operasional, baris Top up, dan baris informasi Top up hilang, dan tampil keterangan "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif."
+  - Langkah 3: keterangan yang sama tampil.
+- PRD: §14.5, §14.6, §15.8

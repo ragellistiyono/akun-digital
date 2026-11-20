@@ -1,0 +1,177 @@
+{
+  "aturan": "Hasil kabar pembayaran untuk Top up",
+  "prd": "§15.4, §15.5",
+  "keterangan": "totalBayar = nominalTopUp + kodeUnik. statusBaru null berarti kabar itu tidak mengubah apa pun. saldoBertambah adalah tambahan saldo Member, selalu sebesar nominalTopUp bila Top up menjadi Berhasil, dan 0 bila tidak. biayaTransaksi dicatat saat pembayaran masuk dengan rumus biaya-transaksi.json dari totalBayar, juga untuk Top up yang menjadi Bermasalah; null berarti tidak ada yang dicatat.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: normal",
+      "input": {
+        "statusTopUp": "Menunggu Pembayaran",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 50123,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Berhasil",
+        "saldoBertambah": 50000,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Nominal lebih: kelebihan tidak ditambahkan",
+      "input": {
+        "statusTopUp": "Menunggu Pembayaran",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 51000,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Berhasil",
+        "saldoBertambah": 50000,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Nominal kurang",
+      "input": {
+        "statusTopUp": "Menunggu Pembayaran",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 50000,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "saldoBertambah": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Contoh PRD: Biaya transaksi dibulatkan ke atas",
+      "input": {
+        "statusTopUp": "Menunggu Pembayaran",
+        "nominalTopUp": 150000,
+        "kodeUnik": 200,
+        "totalBayar": 150200,
+        "nominalDiterima": 150200,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Berhasil",
+        "saldoBertambah": 150000,
+        "biayaTransaksi": 1052
+      }
+    },
+    {
+      "nama": "Telat setelah Kedaluwarsa",
+      "input": {
+        "statusTopUp": "Kedaluwarsa",
+        "nominalTopUp": 100000,
+        "kodeUnik": 45,
+        "totalBayar": 100045,
+        "nominalDiterima": 100045,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Berhasil",
+        "saldoBertambah": 100000,
+        "biayaTransaksi": 701
+      }
+    },
+    {
+      "nama": "Telat setelah Dibatalkan",
+      "input": {
+        "statusTopUp": "Dibatalkan",
+        "nominalTopUp": 10000,
+        "kodeUnik": 499,
+        "totalBayar": 10499,
+        "nominalDiterima": 10499,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Berhasil",
+        "saldoBertambah": 10000,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Telat dan nominal kurang",
+      "input": {
+        "statusTopUp": "Kedaluwarsa",
+        "nominalTopUp": 100000,
+        "kodeUnik": 45,
+        "totalBayar": 100045,
+        "nominalDiterima": 100000,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": "Bermasalah",
+        "saldoBertambah": 0,
+        "biayaTransaksi": 701
+      }
+    },
+    {
+      "nama": "Kabar berulang untuk Top up Berhasil",
+      "input": {
+        "statusTopUp": "Berhasil",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 50123,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": null,
+        "saldoBertambah": 0,
+        "biayaTransaksi": null
+      }
+    },
+    {
+      "nama": "Kabar berulang untuk Top up Bermasalah",
+      "input": {
+        "statusTopUp": "Bermasalah",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 50000,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": null,
+        "saldoBertambah": 0,
+        "biayaTransaksi": null
+      }
+    },
+    {
+      "nama": "Kabar untuk Top up Dana Dikembalikan",
+      "input": {
+        "statusTopUp": "Dana Dikembalikan",
+        "nominalTopUp": 50000,
+        "kodeUnik": 123,
+        "totalBayar": 50123,
+        "nominalDiterima": 50123,
+        "persenBiayaTransaksi": 0.7,
+        "minimalTotalBayarBiayaTransaksi": 100000
+      },
+      "output": {
+        "statusBaru": null,
+        "saldoBertambah": 0,
+        "biayaTransaksi": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,262 @@
+{
+  "aturan": "Tambah saldo dan Kurangi saldo oleh Admin",
+  "prd": "§15.6",
+  "keterangan": "aksi 'tambah' atau 'kurangi'. nominal adalah teks isian; rupiah bulat minimal 1 (alasanNominal 'kosong', 'bukan-rupiah-bulat', atau 'di-bawah-minimal'). keterangan wajib, paling banyak 100 karakter setelah spasi di awal dan akhir dibuang (alasanKeterangan 'kosong' atau 'terlalu-panjang'). Setiap isian diperiksa sendiri. alasanSaldo 'tidak-cukup' bila aksi kurangi melebihi saldo, hanya diperiksa bila nominal sah; pesannya \"Saldo tidak cukup untuk dikurangi Rp Y. Saldo <email> sekarang Rp X.\". Saldo tidak pernah negatif. saldoSesudah null bila ditolak.",
+  "kasus": [
+    {
+      "nama": "Tambah saldo",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "50000",
+        "keterangan": "Ganti rugi akun Netflix bermasalah"
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 50000,
+        "keteranganTersimpan": "Ganti rugi akun Netflix bermasalah"
+      }
+    },
+    {
+      "nama": "Kurangi sebagian",
+      "input": {
+        "aksi": "kurangi",
+        "saldo": 50000,
+        "nominal": "20000",
+        "keterangan": "Pengembalian uang lewat transfer"
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 30000,
+        "keteranganTersimpan": "Pengembalian uang lewat transfer"
+      }
+    },
+    {
+      "nama": "Kurangi seluruh saldo untuk mengosongkan",
+      "input": {
+        "aksi": "kurangi",
+        "saldo": 50000,
+        "nominal": "50000",
+        "keterangan": "Saldo dikembalikan"
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 0,
+        "keteranganTersimpan": "Saldo dikembalikan"
+      }
+    },
+    {
+      "nama": "Kurangi melebihi saldo",
+      "input": {
+        "aksi": "kurangi",
+        "saldo": 50000,
+        "nominal": "50001",
+        "keterangan": "Saldo dikembalikan"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": "tidak-cukup",
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Kurangi saat saldo Rp 0",
+      "input": {
+        "aksi": "kurangi",
+        "saldo": 0,
+        "nominal": "1",
+        "keterangan": "Koreksi"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": "tidak-cukup",
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Tambah tanpa batas atas",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 450000,
+        "nominal": "600000",
+        "keterangan": "Hadiah undian"
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 1050000,
+        "keteranganTersimpan": "Hadiah undian"
+      }
+    },
+    {
+      "nama": "Nominal minimal Rp 1",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "1",
+        "keterangan": "Koreksi"
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 1,
+        "keteranganTersimpan": "Koreksi"
+      }
+    },
+    {
+      "nama": "Nominal 0 ditolak",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "0",
+        "keterangan": "Koreksi"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": "di-bawah-minimal",
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal kosong",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "",
+        "keterangan": "Koreksi"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": "kosong",
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal ada sen",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "1000.5",
+        "keterangan": "Koreksi"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": "bukan-rupiah-bulat",
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Keterangan kosong",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "10000",
+        "keterangan": "   "
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": null,
+        "alasanKeterangan": "kosong",
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Keterangan dirapikan",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "10000",
+        "keterangan": "  Bonus  "
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 10000,
+        "keteranganTersimpan": "Bonus"
+      }
+    },
+    {
+      "nama": "Keterangan tepat 100 karakter",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "10000",
+        "keterangan": " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa "
+      },
+      "output": {
+        "valid": true,
+        "alasanNominal": null,
+        "alasanKeterangan": null,
+        "alasanSaldo": null,
+        "saldoSesudah": 10000,
+        "keteranganTersimpan": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "nama": "Keterangan 101 karakter",
+      "input": {
+        "aksi": "tambah",
+        "saldo": 0,
+        "nominal": "10000",
+        "keterangan": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": null,
+        "alasanKeterangan": "terlalu-panjang",
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal dan keterangan salah sekaligus",
+      "input": {
+        "aksi": "kurangi",
+        "saldo": 50000,
+        "nominal": "abc",
+        "keterangan": ""
+      },
+      "output": {
+        "valid": false,
+        "alasanNominal": "bukan-rupiah-bulat",
+        "alasanKeterangan": "kosong",
+        "alasanSaldo": null,
+        "saldoSesudah": null,
+        "keteranganTersimpan": null
+      }
+    }
+  ]
+}

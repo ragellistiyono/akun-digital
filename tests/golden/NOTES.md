@@ -29,3 +29,7 @@ Aturan PRD yang memuat angka tetapi belum atau tidak punya berkas golden:
 - **§14.3 Biaya transaksi Pesanan yang dibayar sebelum fitur tayang** dihitung sekali dengan nilai awal (0,7% dan Rp 100.000) memakai rumus `biaya-transaksi.json`. Ini pekerjaan migrasi data, jadi diuji lewat test migrasi.
 - **§14.6 penolakan tanggal akhir sebelum tanggal mulai** dan **§14.8 50 Pesanan per halaman** adalah aturan form dan tampilan, jadi diuji lewat test biasa.
 - **§14.7 Pendapatan per Kategori** adalah penjumlahan `pendapatan.json` per Kategori, dengan Pendapatan terbesar di atas. Urutan tampil ini tidak punya berkas golden sendiri.
+- **§15.3 satu Top up Menunggu Pembayaran per Member** dan **§15.3 tombol cepat Rp 50.000, Rp 100.000, dan Rp 200.000** adalah aturan alur dan tampilan, jadi diuji lewat test integrasi dan end-to-end. Masa berlaku dan pembatalan Top up memakai aturan `kedaluwarsa-pesanan.json`.
+- **§15.2 dan §15.9 50 baris per halaman** di Riwayat saldo dan daftar Top up adalah aturan tampilan, jadi diuji lewat test biasa.
+- **§15.1 Saldo tidak pernah negatif** diuji lewat `ubah-saldo-admin.json` dan `bayar-saldo.json`. Pemotongan saldo yang terjadi bersamaan, misalnya Admin mengurangi saldo saat Member membayar, diuji lewat test integrasi.
+- **§9.2 kartu Total saldo Member dan Top up Bermasalah** (▶ Keputusan 2026-11-20, #226) adalah hitungan jumlah tanpa rumus, jadi diuji lewat test integrasi. Kartu Laba bersih memakai `laba-top-up.json`.
