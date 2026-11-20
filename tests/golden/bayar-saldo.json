@@ -1,0 +1,126 @@
+{
+  "aturan": "Bayar Pesanan dengan saldo",
+  "prd": "§15.7",
+  "keterangan": "harusDibayar = hargaJual − potonganVoucher, tanpa Kode unik dan tanpa Biaya transaksi; ini juga Total bayar Pesanan itu. saldoCukup bila saldo >= harusDibayar. kurang = harusDibayar − saldo bila saldo tidak cukup (untuk \"Saldo kurang Rp X. Top up dulu.\"), selain itu 0. pilihanAwal 'Saldo' bila cukup, 'QRIS' bila tidak. saldoSesudah adalah saldo setelah Pesanan dibuat dengan saldo, null bila saldo tidak cukup. potonganVoucher sudah dihitung menurut potongan-voucher.json.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: dengan HEMAT5",
+      "input": {
+        "saldo": 50000,
+        "hargaJual": 50000,
+        "potonganVoucher": 5000
+      },
+      "output": {
+        "harusDibayar": 45000,
+        "saldoCukup": true,
+        "kurang": 0,
+        "pilihanAwal": "Saldo",
+        "saldoSesudah": 5000,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Contoh PRD: tanpa Voucher, saldo kurang",
+      "input": {
+        "saldo": 40000,
+        "hargaJual": 50000,
+        "potonganVoucher": 0
+      },
+      "output": {
+        "harusDibayar": 50000,
+        "saldoCukup": false,
+        "kurang": 10000,
+        "pilihanAwal": "QRIS",
+        "saldoSesudah": null,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Saldo tepat sama",
+      "input": {
+        "saldo": 50000,
+        "hargaJual": 50000,
+        "potonganVoucher": 0
+      },
+      "output": {
+        "harusDibayar": 50000,
+        "saldoCukup": true,
+        "kurang": 0,
+        "pilihanAwal": "Saldo",
+        "saldoSesudah": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Kurang satu rupiah",
+      "input": {
+        "saldo": 49999,
+        "hargaJual": 50000,
+        "potonganVoucher": 0
+      },
+      "output": {
+        "harusDibayar": 50000,
+        "saldoCukup": false,
+        "kurang": 1,
+        "pilihanAwal": "QRIS",
+        "saldoSesudah": null,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Voucher membuat saldo cukup",
+      "input": {
+        "saldo": 45000,
+        "hargaJual": 50000,
+        "potonganVoucher": 5000
+      },
+      "output": {
+        "harusDibayar": 45000,
+        "saldoCukup": true,
+        "kurang": 0,
+        "pilihanAwal": "Saldo",
+        "saldoSesudah": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Potongan dipangkas sampai Rp 1.000",
+      "input": {
+        "saldo": 1000,
+        "hargaJual": 30000,
+        "potonganVoucher": 29000
+      },
+      "output": {
+        "harusDibayar": 1000,
+        "saldoCukup": true,
+        "kurang": 0,
+        "pilihanAwal": "Saldo",
+        "saldoSesudah": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Saldo Rp 0",
+      "input": {
+        "saldo": 0,
+        "hargaJual": 1000,
+        "potonganVoucher": 0
+      },
+      "output": {
+        "harusDibayar": 1000,
+        "saldoCukup": false,
+        "kurang": 1000,
+        "pilihanAwal": "QRIS",
+        "saldoSesudah": null,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0
+      }
+    }
+  ]
+}

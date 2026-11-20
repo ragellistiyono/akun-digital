@@ -1,0 +1,97 @@
+{
+  "aturan": "Bentuk Nomor Top up",
+  "prd": "§15.3",
+  "keterangan": "TOPUP- diikuti 6 karakter dari huruf besar A–Z dan angka 2–9, tanpa O, 0, I, dan 1, sama seperti Nomor Pesanan (§9.6). Pembuatannya acak; yang diuji di sini hanya bentuknya.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "nomor": "TOPUP-7K3P9Q"
+      },
+      "output": {
+        "valid": true
+      }
+    },
+    {
+      "nama": "Ada huruf O",
+      "input": {
+        "nomor": "TOPUP-7K3P9O"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada angka 0",
+      "input": {
+        "nomor": "TOPUP-7K3P90"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada huruf I",
+      "input": {
+        "nomor": "TOPUP-7K3PIQ"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Ada angka 1",
+      "input": {
+        "nomor": "TOPUP-7K3P1Q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Huruf kecil",
+      "input": {
+        "nomor": "TOPUP-7k3p9q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Lima karakter",
+      "input": {
+        "nomor": "TOPUP-7K3P9"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Tujuh karakter",
+      "input": {
+        "nomor": "TOPUP-7K3P9QA"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Awalan Nomor Pesanan",
+      "input": {
+        "nomor": "MIWE-7K3P9Q"
+      },
+      "output": {
+        "valid": false
+      }
+    },
+    {
+      "nama": "Awalan huruf kecil",
+      "input": {
+        "nomor": "topup-7K3P9Q"
+      },
+      "output": {
+        "valid": false
+      }
+    }
+  ]
+}

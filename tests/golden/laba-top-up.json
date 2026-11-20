@@ -1,0 +1,650 @@
+{
+  "aturan": "Laba bersih dengan Pesanan saldo dan Top up",
+  "prd": "§14.5, §14.6, §15.8",
+  "keterangan": "Melanjutkan laba.json. Pesanan Selesai yang dibayar dalam rentang [mulai, sebelum) dan cocok dengan metode ('Semua', 'QRIS', atau 'Saldo') dihitung di pendapatan dan pesananSelesai; angka laba hanya dari yang punya Harga modal. Pesanan saldo punya kodeUnik dan biayaTransaksi 0. kodeUnikTopUp dan biayaTransaksiTopUp dijumlahkan dari Top up berstatus Berhasil yang dibayar dalam rentang; status lain tidak dihitung. Nominal top up tidak pernah masuk pendapatan. Bila metode bukan 'Semua' atau saringanProdukAtauKategori true, biayaOperasional, kodeUnikTopUp, biayaTransaksiTopUp, dan topUpBerhasil null dan tidak ikut Laba bersih. Laba bersih = Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up. topUpBerhasil adalah baris informasi: jumlah Top up Berhasil dan jumlah Nominal top up-nya. rentang null berarti sepanjang waktu.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD §15.8: satu Pesanan saldo dan satu Top up",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "kodeUnikTopUp": 200,
+        "biayaTransaksiTopUp": 1052,
+        "labaBersih": 14148,
+        "topUpBerhasil": {
+          "jumlah": 1,
+          "nominal": 150000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Contoh PRD §14.5 ditambah satu Top up",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230632,
+        "pesananSelesai": 3,
+        "totalHargaModal": 170000,
+        "labaKotor": 65000,
+        "potonganVoucher": 5000,
+        "kodeUnik": 632,
+        "biayaTransaksi": 949,
+        "biayaOperasional": 10000,
+        "kodeUnikTopUp": 200,
+        "biayaTransaksiTopUp": 1052,
+        "labaBersih": 48831,
+        "topUpBerhasil": {
+          "jumlah": 1,
+          "nominal": 150000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Hanya Top up Berhasil yang dihitung",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          },
+          {
+            "status": "Bermasalah",
+            "nominalTopUp": 50000,
+            "kodeUnik": 123,
+            "totalBayar": 50123,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T11:00:00+07:00"
+          },
+          {
+            "status": "Dana Dikembalikan",
+            "nominalTopUp": 200000,
+            "kodeUnik": 300,
+            "totalBayar": 200300,
+            "biayaTransaksi": 1403,
+            "dibayarPada": "2026-11-11T12:00:00+07:00"
+          },
+          {
+            "status": "Kedaluwarsa",
+            "nominalTopUp": 100000,
+            "kodeUnik": 45,
+            "totalBayar": 100045,
+            "biayaTransaksi": null,
+            "dibayarPada": null
+          },
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 120000,
+            "kodeUnik": 5,
+            "totalBayar": 120005,
+            "biayaTransaksi": 841,
+            "dibayarPada": "2026-11-11T16:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "kodeUnikTopUp": 205,
+        "biayaTransaksiTopUp": 1893,
+        "labaBersih": 13312,
+        "topUpBerhasil": {
+          "jumlah": 2,
+          "nominal": 270000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Saringan Metode QRIS",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "QRIS",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230632,
+        "pesananSelesai": 3,
+        "totalHargaModal": 170000,
+        "labaKotor": 65000,
+        "potonganVoucher": 5000,
+        "kodeUnik": 632,
+        "biayaTransaksi": 949,
+        "biayaOperasional": null,
+        "kodeUnikTopUp": null,
+        "biayaTransaksiTopUp": null,
+        "labaBersih": 59683,
+        "topUpBerhasil": null,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Saringan Metode Saldo",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Saldo",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": null,
+        "kodeUnikTopUp": null,
+        "biayaTransaksiTopUp": null,
+        "labaBersih": 15000,
+        "topUpBerhasil": null,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Saringan Produk atau Kategori dengan Metode Semua",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": true,
+        "pesanan": [
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": null,
+        "kodeUnikTopUp": null,
+        "biayaTransaksiTopUp": null,
+        "labaBersih": 15000,
+        "topUpBerhasil": null,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Batas hari dan zona waktu untuk Top up",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [],
+        "biayaOperasional": [],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T23:59:59+07:00"
+          },
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-12T00:00:00+07:00"
+          },
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-10T17:00:00Z"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 0,
+        "totalHargaModal": 0,
+        "labaKotor": 0,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "kodeUnikTopUp": 400,
+        "biayaTransaksiTopUp": 2104,
+        "labaBersih": -1704,
+        "topUpBerhasil": {
+          "jumlah": 2,
+          "nominal": 300000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Hanya Top up tanpa Pesanan: Laba bersih negatif, Pendapatan 0",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [],
+        "biayaOperasional": [],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 0,
+        "totalHargaModal": 0,
+        "labaKotor": 0,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "kodeUnikTopUp": 200,
+        "biayaTransaksiTopUp": 1052,
+        "labaBersih": -852,
+        "topUpBerhasil": {
+          "jumlah": 1,
+          "nominal": 150000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Sepanjang waktu",
+      "input": {
+        "rentang": null,
+        "metode": "Semua",
+        "saringanProdukAtauKategori": false,
+        "pesanan": [
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "metode": "QRIS",
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "metode": "Saldo",
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 50000,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ],
+        "topUp": [
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          },
+          {
+            "status": "Berhasil",
+            "nominalTopUp": 150000,
+            "kodeUnik": 200,
+            "totalBayar": 150200,
+            "biayaTransaksi": 1052,
+            "dibayarPada": "2026-10-01T08:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 280632,
+        "pesananSelesai": 4,
+        "totalHargaModal": 205000,
+        "labaKotor": 80000,
+        "potonganVoucher": 5000,
+        "kodeUnik": 632,
+        "biayaTransaksi": 949,
+        "biayaOperasional": 10000,
+        "kodeUnikTopUp": 400,
+        "biayaTransaksiTopUp": 2104,
+        "labaBersih": 62979,
+        "topUpBerhasil": {
+          "jumlah": 2,
+          "nominal": 300000
+        },
+        "pesananTanpaHargaModal": 0
+      }
+    }
+  ]
+}

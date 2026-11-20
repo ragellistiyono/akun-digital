@@ -1,0 +1,128 @@
+{
+  "aturan": "Isian Nominal top up",
+  "prd": "§15.3",
+  "keterangan": "nominal adalah teks isian apa adanya. Spasi di awal dan akhir dibuang. Nominal top up berupa rupiah bulat, minimal 10000 dan maksimal 499000. alasan: null bila sah; 'kosong' untuk isian kosong; 'bukan-rupiah-bulat' untuk isian yang bukan bilangan bulat; 'di-bawah-minimal' dengan pesan \"Nominal top up minimal Rp 10.000.\"; 'di-atas-maksimal' dengan pesan \"Nominal top up maksimal Rp 499.000.\". nominalTersimpan adalah angka yang dipakai bila sah.",
+  "kasus": [
+    {
+      "nama": "Tepat minimal",
+      "input": {
+        "nominal": "10000"
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "nominalTersimpan": 10000
+      }
+    },
+    {
+      "nama": "Satu rupiah di bawah minimal",
+      "input": {
+        "nominal": "9999"
+      },
+      "output": {
+        "valid": false,
+        "alasan": "di-bawah-minimal",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Tombol cepat Rp 50.000",
+      "input": {
+        "nominal": "50000"
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "nominalTersimpan": 50000
+      }
+    },
+    {
+      "nama": "Tepat maksimal",
+      "input": {
+        "nominal": "499000"
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "nominalTersimpan": 499000
+      }
+    },
+    {
+      "nama": "Satu rupiah di atas maksimal",
+      "input": {
+        "nominal": "499001"
+      },
+      "output": {
+        "valid": false,
+        "alasan": "di-atas-maksimal",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Kosong",
+      "input": {
+        "nominal": ""
+      },
+      "output": {
+        "valid": false,
+        "alasan": "kosong",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Hanya spasi dianggap kosong",
+      "input": {
+        "nominal": "   "
+      },
+      "output": {
+        "valid": false,
+        "alasan": "kosong",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Spasi di awal dan akhir dibuang",
+      "input": {
+        "nominal": " 100000 "
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "nominalTersimpan": 100000
+      }
+    },
+    {
+      "nama": "Ada sen",
+      "input": {
+        "nominal": "10000.50"
+      },
+      "output": {
+        "valid": false,
+        "alasan": "bukan-rupiah-bulat",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Bukan angka",
+      "input": {
+        "nominal": "lima puluh ribu"
+      },
+      "output": {
+        "valid": false,
+        "alasan": "bukan-rupiah-bulat",
+        "nominalTersimpan": null
+      }
+    },
+    {
+      "nama": "Negatif",
+      "input": {
+        "nominal": "-10000"
+      },
+      "output": {
+        "valid": false,
+        "alasan": "bukan-rupiah-bulat",
+        "nominalTersimpan": null
+      }
+    }
+  ]
+}

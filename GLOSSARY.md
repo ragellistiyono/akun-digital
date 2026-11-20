@@ -189,12 +189,46 @@ Biaya toko di luar Harga modal dan Biaya transaksi, misalnya sewa server atau ik
 _Avoid_: pengeluaran, beban, expense, biaya lain-lain
 
 **Laba bersih**:
-Laba kotor dikurangi potongan voucher, ditambah Kode unik, lalu dikurangi Biaya transaksi dan Biaya operasional dalam suatu rentang waktu.
+Laba kotor dikurangi potongan voucher, ditambah Kode unik, lalu dikurangi Biaya transaksi dan Biaya operasional, ditambah Kode unik Top up dan dikurangi Biaya transaksi Top up, dalam suatu rentang waktu.
 _Avoid_: untung bersih, keuntungan bersih, net profit, laba (tanpa keterangan)
 
 **Laporan keuangan**:
-Halaman dasbor admin berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang, yang bisa disaring per Kategori dan Produk.
+Halaman dasbor admin berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang, yang bisa disaring per Kategori, Produk, dan Metode.
 _Avoid_: laporan (tanpa keterangan), dashboard keuangan, statistik, analitik
+
+### Saldo
+
+**Saldo**:
+Uang milik seorang Member di toko yang belum dibelanjakan, berupa rupiah bulat yang tidak pernah negatif. Saldo bukan Pendapatan.
+_Avoid_: deposit, dompet, wallet, poin, kredit, balance
+
+**Top up**:
+Penambahan Saldo oleh Member sendiri, dibayar dengan QRIS lewat Qrispy.
+_Avoid_: isi ulang, deposit, topup, top-up
+
+**Nominal top up**:
+Jumlah yang dipilih Member untuk ditambahkan ke Saldo-nya, tanpa Kode unik.
+_Avoid_: jumlah top up, nilai deposit
+
+**Nomor Top up**:
+Kode acak berawalan `TOPUP-` yang mengenali satu Top up, misalnya `TOPUP-7K3P9Q`.
+_Avoid_: ID top up, nomor deposit
+
+**Riwayat saldo**:
+Daftar setiap perubahan Saldo seorang Member: Top up, Pembelian, Ditambah Admin, dan Dikurangi Admin.
+_Avoid_: mutasi, histori saldo, log saldo, ledger
+
+**Metode**:
+Cara sebuah Pesanan dibayar, yaitu QRIS atau Saldo.
+_Avoid_: metode pembayaran (di kode), payment method, cara bayar
+
+**Kode unik Top up**:
+Jumlah Kode unik dari Top up Berhasil dalam suatu rentang waktu, yang masuk toko dan menambah Laba bersih.
+_Avoid_: pendapatan top up, untung top up
+
+**Biaya transaksi Top up**:
+Jumlah Biaya transaksi dari Top up Berhasil dalam suatu rentang waktu, yang mengurangi Laba bersih.
+_Avoid_: MDR top up, fee top up
 
 ### Toko
 
@@ -203,7 +237,7 @@ Bagian toko di bawah `/admin` tempat Admin mengelola toko.
 _Avoid_: panel admin, backoffice, CMS
 
 **Dasbor Member**:
-Bagian toko tempat Member melihat Riwayat Pesanan dan mengelola profilnya.
+Bagian toko tempat Member melihat Riwayat Pesanan, Saldo, dan Riwayat saldo, serta mengelola profilnya.
 _Avoid_: dashboard user, akun saya
 
 **Ringkasan**:

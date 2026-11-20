@@ -33,6 +33,11 @@ MIWE Digital Store menjual Produk digital, misalnya akun premium aplikasi dan ga
 
 ▶ Keputusan 2026-11-20 (#204): Pemilik ingin menambah saldo Member, yaitu top up oleh Member dan pengelolaan saldo oleh Admin. Fitur ini direncanakan sebagai M5 dan aturannya diputuskan tersendiri. Sampai keputusan M5 masuk PRD, butir "saldo/deposit di toko" di atas tetap berlaku, dan QRIS lewat Qrispy tetap satu-satunya cara bayar.
 
+▶ Keputusan 2026-11-20 (#226): Saldo Member dibangun di M5 menurut §15. Butir "saldo/deposit di toko" di atas tidak berlaku lagi.
+- Member membayar Pesanan dengan QRIS lewat Qrispy atau dengan saldo. Tamu tetap hanya membayar dengan QRIS.
+- Top up saldo hanya dibayar dengan QRIS lewat Qrispy.
+- Cara bayar lain, seperti transfer manual dan e-wallet lain, tetap tidak dibangun. Saldo tidak bisa ditarik menjadi uang atau dipindah ke Member lain.
+
 ## 2. Pengguna dan peran
 
 ### 2.1 Peran
@@ -44,6 +49,8 @@ MIWE Digital Store menjual Produk digital, misalnya akun premium aplikasi dan ga
 | Admin | Pengelola toko | Mengelola katalog, Item stok, voucher, Pesanan, dan Member lewat dasbor admin. |
 
 Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
+
+▶ Keputusan 2026-11-20 (#226): Member juga boleh top up saldo dan membayar Pesanan dengan saldo (§15.3, §15.7). Admin juga mengelola saldo Member dan Top up (§15.6, §15.9).
 
 ### 2.2 Akun Admin
 
@@ -263,6 +270,12 @@ Saat menempel banyak baris:
 
 ▶ Keputusan 2026-11-17 (#174): Pesan penolakan checkout karena email milik Member nonaktif tampil beserta tombol WhatsApp, sama seperti di login Member nonaktif (§7.5). Bila nomor WhatsApp toko belum diisi (§9.8), hanya pesannya yang tampil.
 
+▶ Keputusan 2026-11-20 (#226): Bayar dengan saldo (§15.7)
+- Member yang login memilih cara bayar "Saldo (Rp X)" atau "QRIS" di form checkout. Tamu hanya melihat QRIS.
+- Urutan pemeriksaan di atas mendapat langkah keenam, yang hanya berlaku bila Member memilih Saldo:
+  6. saldo kurang dari Harga jual − potongan voucher.
+- Batas Pesanan menunggu (langkah 3, §5.4) juga berlaku saat Member memilih Saldo.
+
 ### 5.3 Penahanan Item stok
 
 - Begitu Pesanan dibuat dan QRIS-nya terbit, satu Item stok Varian itu ditahan untuk Pesanan tersebut.
@@ -334,6 +347,8 @@ Satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabar pembayarannya 
 - "Qrispy": perubahan karena kabar pembayaran;
 - "Sistem": Kedaluwarsa otomatis;
 - "Admin": Pesanan Bermasalah diselesaikan Admin.
+
+▶ Keputusan 2026-11-20 (#226): Pesanan yang dibayar dengan saldo (§15.7) dibuat langsung berstatus Selesai, tanpa melewati Menunggu Pembayaran. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (saldo)". Pesanan itu tidak pernah Bermasalah dan tidak bisa dibatalkan. Perpindahan status di atas tetap berlaku untuk Pesanan QRIS.
 
 ### 5.8 Pembatalan dan kedaluwarsa
 
@@ -731,6 +746,26 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Seperti kartu lama (▶ Keputusan 2026-11-17, #174), setiap kartu baru punya satu kalimat keterangan tentang cara hitungnya, yang diambil dari teks PRD. Contoh kartu Item stok Tersedia: "Item stok yang bisa dibeli sekarang, di Varian aktif dari Produk aktif. Item stok Ditahan tidak dihitung."
 - Peringatan Pesanan tanpa Harga modal tampil satu kali untuk kartu 2 sampai 4. Letaknya diatur `docs/DESIGN.md`.
 
+▶ Keputusan 2026-11-20 (#226): Dua kartu saldo dipasang tepat setelah kartu Member aktif, sehingga Ringkasan berisi 13 kartu. Urutan dan aturan kartu lain tidak berubah.
+- Kartu baru:
+  - **Total saldo Member:** jumlah saldo semua Member saat ini, aktif maupun nonaktif (§15.1). Keterangannya: "Saldo milik Member yang belum dibelanjakan. Ini uang Member, bukan Pendapatan." Kartu ini membuka daftar Member.
+  - **Top up Bermasalah:** jumlah Top up Bermasalah saat ini (§15.4). Kartu ini ditonjolkan seperti kartu Pesanan Bermasalah dan membuka menu Top up yang sudah disaring ke status Bermasalah (§15.9).
+- Urutan lengkapnya:
+  1. Pendapatan
+  2. Total Harga modal
+  3. Laba kotor
+  4. Laba bersih
+  5. Pesanan Selesai
+  6. Pesanan Menunggu Pembayaran
+  7. Pesanan Bermasalah
+  8. Member aktif
+  9. Total saldo Member
+  10. Top up Bermasalah
+  11. Item stok Tersedia
+  12. Item stok Terkirim
+  13. Varian stok menipis
+- Kartu Laba bersih ikut menghitung Kode unik Top up dan Biaya transaksi Top up (§15.8).
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -767,6 +802,8 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - **Biaya transaksi** (§14.3). Baris ini hanya tampil bila Pesanan sudah dibayar.
 
 Baris tambahan ini hanya ada di dasbor admin. Pembeli tidak pernah melihat Harga modal, laba, maupun Biaya transaksi.
+
+▶ Keputusan 2026-11-20 (#226): Detail Pesanan dasbor admin menampilkan Metode, yaitu QRIS atau Saldo. Rincian nominal Pesanan yang dibayar dengan saldo mengikuti §15.7: tanpa baris Kode unik, diikuti "Dibayar dengan saldo", dengan Biaya transaksi Rp 0.
 
 ### 9.6 Nomor Pesanan
 
@@ -849,6 +886,8 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 - Dasbor admin memakai menu samping di layar lebar dan menu lipat di ponsel, tanpa navigasi bawah.
 
 ▶ Keputusan 2026-11-20 (#204): Urutan menu samping dasbor admin: Ringkasan, Laporan keuangan (§14.6), Pesanan, Member, Kategori, Produk, Item stok (§4.2), Voucher, lalu Pengaturan toko. Halaman Biaya operasional (§14.4) dibuka dari Laporan keuangan dan tidak punya menu sendiri.
+
+▶ Keputusan 2026-11-20 (#226): Menu samping dasbor admin mendapat menu "Top up" (§15.9), tepat di bawah Member. Urutannya menjadi: Ringkasan, Laporan keuangan, Pesanan, Member, Top up, Kategori, Produk, Item stok, Voucher, lalu Pengaturan toko. Tab Akun untuk Member mendapat kotak saldo di bawah email Member dan di atas form ganti password (§15.10).
 
 ▶ Keputusan 2026-11-11: Sebelum M2, keempat tab sudah tampil dengan isi berikut.
 - **Riwayat:** penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", tanpa ajakan login.
@@ -936,6 +975,7 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 | M2 | Member dan Voucher | Daftar dan Kode verifikasi; login dan lupa password; Riwayat Pesanan; dasbor Member; Admin mengelola Member; Voucher; ringkasan dasbor admin | §2.3, §7, §8, §9.2–§9.4 |
 | M3 | Sentuhan aplikasi | Animasi navbar, mode gelap, dan pasang seperti aplikasi | §11.2–§11.4 |
 | M4 | Laporan keuangan dan stok | Harga modal; Biaya transaksi dan Biaya operasional; Laba kotor dan Laba bersih; Ringkasan yang lebih lengkap; Laporan keuangan dengan saringan, grafik, dan tabel Pesanan; menu Item stok dengan hitungan baris; tombol "Salin semua" | §4.2, §6.1, §9.2, §9.5, §9.8, §11.1, §14 |
+| M5 | Saldo Member | Admin menambah dan mengurangi saldo; Riwayat saldo; top up dengan QRIS; menu Top up dan Top up Bermasalah; bayar Pesanan dengan saldo; kartu saldo di Ringkasan; saringan Metode di Laporan keuangan | §1.3, §5.2, §5.7, §9.2, §9.5, §11.1, §14.5, §14.6, §15 |
 
 Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checkout belum punya isian kode voucher, dan halaman Pesanan belum menampilkan ajakan membuat akun.
 
@@ -960,6 +1000,14 @@ Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dar
   - Menu "Laporan keuangan" ditautkan dari menu samping dan dari kartu Ringkasan setelah halamannya berisi rincian angka, saringan, grafik, dan tabel Pesanan.
   - Menu "Item stok" ditautkan setelah halamannya lengkap.
 - Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dari menu samping maupun Ringkasan.
+
+▶ Keputusan 2026-11-20 (#226): Urutan tayang M5. Setiap merge tetap langsung tayang, jadi tiket M5 diurutkan sebagai berikut:
+1. Saldo, Riwayat saldo, serta "Tambah saldo" dan "Kurangi saldo" oleh Admin. Kotak saldo di tab Akun sudah boleh tampil, tetapi belum berisi tombol "Top up".
+2. Halaman Top up, Halaman bayar Top up, dan kabar pembayarannya. Halaman ini boleh sudah ada di alamatnya, asal belum ditautkan dari halaman mana pun yang dibuka Member.
+3. Menu Top up di dasbor admin dan penyelesaian Top up Bermasalah.
+4. Tombol "Top up" dan "Lanjutkan bayar" di tab Akun dipasang setelah langkah 2 dan 3 selesai, supaya Admin sudah bisa menangani Top up Bermasalah sebelum Member bisa top up.
+5. Bayar dengan saldo di Checkout.
+6. Kartu saldo di Ringkasan dan saringan Metode di Laporan keuangan.
 
 ## 14. Keuangan toko
 
@@ -1078,6 +1126,13 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 
 ▶ Keputusan 2026-11-20 (#224): Saat saringan Produk atau Kategori aktif, baris "− Biaya operasional" dihapus dari rincian angka, dan keterangan "Laba bersih ini belum dikurangi Biaya operasional, …" tampil sebagai catatan di atas rincian, seperti diatur `docs/DESIGN.md`.
 
+▶ Keputusan 2026-11-20 (#226): Laba bersih dengan saldo Member (§15.8)
+- **Laba bersih = Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up**
+- Kode unik Top up dan Biaya transaksi Top up diambil dari Top up Berhasil yang waktu bayarnya berada dalam rentang itu. Nominal top up tidak ikut dihitung.
+- Pesanan yang dibayar dengan saldo dihitung seperti Pesanan lain, dengan Kode unik dan Biaya transaksi Rp 0.
+- Bila saringan Kategori, Produk, atau Metode di Laporan keuangan aktif, Biaya operasional, Kode unik Top up, dan Biaya transaksi Top up tidak dikurangkan, karena ketiganya bukan milik Produk atau metode tertentu. Barisnya dihapus dari rincian, dan keterangannya menjadi "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif."
+- Contoh: Laba bersih contoh di atas (Rp 49.683), ditambah satu Top up Berhasil pada hari yang sama dengan Kode unik Rp 200 dan Biaya transaksi Rp 1.052, menjadi 49.683 + 200 − 1.052 = Rp 48.831. Pendapatan tetap Rp 230.632. Contoh lengkapnya ada di `tests/golden/laba-top-up.json`.
+
 ### 14.6 Laporan keuangan
 
 Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang. Letaknya di menu samping diatur di §11.1, dan halamannya punya tautan ke halaman Biaya operasional (§14.4).
@@ -1088,6 +1143,14 @@ Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, 
 - **Kategori sebuah Pesanan** adalah Kategori Produknya saat Laporan dibuka. Bila Produk dipindah ke Kategori lain, Pesanan lamanya ikut pindah ke Kategori baru.
 - **Cari:** kotak cari Nomor Pesanan atau email hanya menyaring tabel Pesanan (§14.8). Rincian angka dan grafik tidak ikut berubah.
 - Saringan metode pembayaran belum ada, karena QRIS masih satu-satunya cara bayar. Saringan ini direncanakan bersama saldo Member di M5 (§13).
+
+▶ Keputusan 2026-11-20 (#226): Saringan Metode
+- **Metode:** Semua, QRIS, atau Saldo, dengan Semua sebagai pilihan awal. Saringan ini membatasi Pesanan Selesai di rincian angka, grafik, dan tabel Pesanan, sama seperti saringan Kategori dan Produk.
+- **Rincian angka** mendapat dua baris sesudah Biaya operasional, yaitu "+ Kode unik Top up" dan "− Biaya transaksi Top up", sebelum Laba bersih (§14.5).
+  - Di bawah Laba bersih tampil baris informasi "Top up Berhasil: N, Rp X (uang Member, bukan Pendapatan)" (§15.8).
+  - Saat saringan Kategori, Produk, atau Metode aktif, kedua baris Top up, baris Biaya operasional, dan baris informasi Top up tidak tampil, dan keterangan §14.5 yang baru dipakai.
+- **Grafik 2** mengurangkan Biaya transaksi Top up dan menambahkan Kode unik Top up pada kelompok periode yang memuat waktu bayar Top up, kecuali saat saringan Kategori, Produk, atau Metode aktif.
+- **Tabel Pesanan** (§14.8) mendapat kolom Metode, yaitu QRIS atau Saldo, sesudah kolom waktu bayar.
 
 **Periode**
 - Pilihan periode Harian, Mingguan, Bulanan, dan Tahunan menentukan pengelompokan grafik per periode (§14.7).
@@ -1136,3 +1199,189 @@ Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, 
 - Setiap baris membuka detail Pesanan di dasbor admin (§9.5).
 - Kotak cari menerima sebagian Nomor Pesanan atau sebagian email, tanpa membedakan huruf besar dan kecil, sama seperti daftar Pesanan (§9.5).
 - Bila tidak ada Pesanan Selesai dalam saringan, tabel berbunyi "Belum ada Pesanan Selesai dalam rentang ini." Bila pencarian tidak menemukan apa pun, tabel berbunyi "Tidak ada Pesanan yang cocok dengan pencarian ini."
+
+## 15. Saldo Member
+
+Bagian ini ditambahkan pada 2026-11-20 (#226) untuk M5. Sebelumnya saldo termasuk hal yang sengaja tidak dibangun (§1.3).
+
+### 15.1 Saldo
+
+- Setiap Member punya satu Saldo, berupa rupiah bulat yang dimulai dari Rp 0. Saldo tidak pernah negatif.
+- Saldo hanya berubah lewat empat jalan: Top up yang Berhasil (§15.3), pembelian dengan saldo (§15.7), serta penambahan dan pengurangan oleh Admin (§15.6).
+- Saldo tidak bisa ditarik menjadi uang atau dipindah ke Member lain. Pengembalian uang diurus di luar sistem, lalu Admin mengurangi saldonya (§15.6).
+- Saldo adalah uang Member yang belum dibelanjakan, bukan Pendapatan (§15.8).
+- Saldo Member nonaktif (§2.3) tetap tersimpan. Saldo itu tidak bisa dipakai, karena Member nonaktif tidak bisa login, tetapi Admin tetap bisa menambah atau menguranginya. Top up yang sedang menunggu tetap diproses bila dibayar.
+- Toko tidak mengirim email untuk top up maupun perubahan saldo. Daftar email di §10.2 tidak berubah, dan Member melihat hasilnya di Riwayat saldo.
+
+### 15.2 Riwayat saldo
+
+- Setiap perubahan saldo dicatat sebagai satu baris Riwayat saldo, berisi:
+  - waktu;
+  - jenis: Top up, Pembelian, Ditambah Admin, atau Dikurangi Admin;
+  - nominal dengan tanda + atau −;
+  - saldo sesudahnya;
+  - rujukan: Nomor Top up, Nomor Pesanan, atau keterangan Admin.
+- Contoh:
+
+  | Waktu | Jenis | Nominal | Saldo | Rujukan |
+  |---|---|---|---|---|
+  | 21 Nov 2026 10.00 | Top up | +Rp 50.000 | Rp 50.000 | TOPUP-7K3P9Q |
+  | 21 Nov 2026 10.20 | Pembelian | −Rp 45.000 | Rp 5.000 | MIWE-4H8M2R |
+  | 22 Nov 2026 09.00 | Ditambah Admin | +Rp 10.000 | Rp 15.000 | Ganti rugi akun Netflix bermasalah |
+
+- Member melihat Riwayat saldo-nya dari tab Akun (§15.10), termasuk keterangan Admin. Admin melihatnya di halaman Member (§15.6).
+- Baris terbaru tampil di atas, dengan 50 baris per halaman.
+
+### 15.3 Top up
+
+- Top up adalah penambahan saldo oleh Member sendiri, dibayar dengan QRIS lewat Qrispy. Hanya Member yang sedang login yang bisa top up, lewat tombol "Top up" di tab Akun.
+- Halaman Top up berisi isian nominal dan tiga tombol cepat, yaitu Rp 50.000, Rp 100.000, dan Rp 200.000, yang mengisi isian itu.
+- Nominal top up berupa rupiah bulat, minimal Rp 10.000 dan maksimal Rp 499.000. Batas atas ini sama dengan batas QRIS Qrispy untuk merchant standar (§3.2).
+  - Nominal di bawah minimal ditolak dengan "Nominal top up minimal Rp 10.000."
+  - Nominal di atas maksimal ditolak dengan "Nominal top up maksimal Rp 499.000."
+  - Isian kosong atau bukan rupiah bulat ditolak dengan pesan yang menyebut sebabnya, mengikuti pola isian lain (§14.3).
+  - Contohnya ada di `tests/golden/isian-top-up.json`.
+- Tombol "Bayar dengan QRIS" membuat Top up dan menerbitkan QRIS untuk Nominal top up. Qrispy menambahkan Kode unik, sama seperti Pesanan (§5.5).
+- **Total bayar Top up = Nominal top up + Kode unik.** Contoh: Nominal top up Rp 50.000 dan Kode unik Rp 123 menghasilkan Total bayar Rp 50.123. Saldo bertambah Rp 50.000, dan Kode unik masuk toko.
+- Halaman bayar Top up sama dengan Halaman bayar Pesanan (§5.6). Isinya gambar QR, hitung mundur, rincian (Nominal top up, Kode unik, dan Total bayar), tombol "Simpan gambar QR", dan tombol "Batalkan".
+- Begitu pembayaran masuk, halaman berpindah sendiri ke Riwayat saldo dengan pesan "Top up Rp 50.000 berhasil. Saldo sekarang Rp X."
+- **Nomor Top up** berbentuk `TOPUP-` diikuti 6 karakter acak, misalnya `TOPUP-7K3P9Q`. Karakternya mengikuti aturan Nomor Pesanan (§9.6). Contohnya ada di `tests/golden/nomor-top-up.json`.
+- **Satu Top up menunggu.** Setiap Member hanya boleh punya 1 Top up Menunggu Pembayaran.
+  - Member yang menekan "Bayar dengan QRIS" selagi masih punya Top up menunggu diarahkan ke Halaman bayar Top up itu. Di sana ia boleh membatalkannya, lalu top up lagi.
+  - Batas ini terpisah dari batas Pesanan menunggu (§5.4). Seorang Member boleh punya satu Pesanan Menunggu Pembayaran dan satu Top up Menunggu Pembayaran sekaligus.
+- **Pembatalan dan kedaluwarsa** mengikuti §5.8:
+  - "Batalkan" langsung membatalkan, tanpa dialog konfirmasi. QRIS-nya ikut dibatalkan di Qrispy, lalu Member kembali ke tab Akun.
+  - Bila Qrispy menolak pembatalan karena tagihan sudah dibayar, Top up diproses sebagai sudah dibayar.
+  - Masa berlaku QRIS 15 menit. Saat waktu kedaluwarsa tercapai, toko memeriksa status QRIS ke Qrispy sekali.
+- Top up Kedaluwarsa dan Dibatalkan tidak tampil di mana pun bagi Member, karena saldonya tidak berubah. Riwayat lengkap semua Top up ada di menu Top up dasbor admin (§15.9).
+
+### 15.4 Status Top up
+
+| Status | Arti |
+|---|---|
+| Menunggu Pembayaran | QRIS sudah terbit dan belum dibayar. |
+| Berhasil | Sudah dibayar, dan saldo sudah bertambah. |
+| Kedaluwarsa | Masa berlaku QRIS lewat tanpa pembayaran. |
+| Dibatalkan | Dibatalkan Member sebelum membayar. |
+| Bermasalah | Sudah dibayar, tetapi nominalnya kurang, sehingga saldo belum bertambah (§15.5). |
+| Dana Dikembalikan | Top up Bermasalah yang uangnya sudah dikembalikan Admin di luar sistem. |
+
+Perpindahan status yang boleh terjadi:
+- Menunggu Pembayaran → Berhasil, Kedaluwarsa, Dibatalkan, atau Bermasalah;
+- Kedaluwarsa atau Dibatalkan → Berhasil atau Bermasalah, hanya bila kabar pembayaran datang terlambat;
+- Bermasalah → Berhasil atau Dana Dikembalikan, oleh Admin (§15.9).
+
+Saldo bertambah tepat satu kali untuk setiap Top up, yaitu saat Top up menjadi Berhasil, sebesar Nominal top up. Kabar pembayaran yang datang berulang tidak mengubah apa pun.
+
+Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
+- "Member": Top up dibuat atau dibatalkan;
+- "Qrispy": perubahan karena kabar pembayaran;
+- "Sistem": Kedaluwarsa otomatis;
+- "Admin": Top up Bermasalah diselesaikan Admin.
+
+### 15.5 Kabar pembayaran Top up
+
+1. **Nominal yang diterima sama dengan atau lebih dari Total bayar.** Top up menjadi Berhasil, dan saldo bertambah sebesar Nominal top up. Kelebihan bayar tidak ditambahkan ke saldo, sama seperti Pesanan (§5.9).
+2. **Nominal yang diterima kurang dari Total bayar.** Top up menjadi Bermasalah, dan saldo tidak berubah.
+3. **Kabar bayar datang untuk Top up yang sudah Kedaluwarsa atau Dibatalkan.** Aturan 1 dan 2 tetap berlaku. Top up tidak bergantung pada stok, jadi pembayaran telat yang nominalnya cukup langsung Berhasil.
+
+- Waktu bayar dan nominal yang diterima dicatat di Top up.
+- **Biaya transaksi Top up** dihitung dan dicatat saat pembayaran masuk, dengan rumus dan pengaturan yang sama dengan Pesanan (§14.3), dari Total bayar Top up. Contoh dengan nilai awal: Total bayar Rp 150.200 menghasilkan 150.200 × 0,7 ÷ 100 = 1.051,4, jadi Biaya transaksinya Rp 1.052. Total bayar Rp 50.123 di bawah Rp 100.000, jadi Biaya transaksinya Rp 0.
+- Contoh lengkapnya ada di `tests/golden/kabar-pembayaran-top-up.json`.
+
+### 15.6 Admin mengubah saldo
+
+- Halaman Member di dasbor admin (§2.3), yang dibuka dengan mengetuk email Member, menampilkan:
+  - Saldo;
+  - tombol "Tambah saldo" dan "Kurangi saldo";
+  - Riwayat saldo (§15.2), di atas Riwayat Pesanan.
+- Kedua aksi meminta dua isian:
+  - **nominal:** rupiah bulat, minimal Rp 1;
+  - **keterangan:** wajib, paling banyak 100 karakter setelah spasi di awal dan akhir dibuang, sama seperti Biaya operasional (§14.4). Keterangan ini terlihat oleh Member di Riwayat saldo-nya.
+- Sebelum dijalankan, aksi ditegaskan lebih dulu di tempat, misalnya "Tambah Rp 50.000 ke saldo budi@mail.com?" atau "Kurangi Rp 50.000 dari saldo budi@mail.com?".
+- Pengurangan yang melebihi saldo ditolak dengan pesan "Saldo tidak cukup untuk dikurangi Rp Y. Saldo budi@mail.com sekarang Rp X.", dan saldo tidak berubah. Untuk mengosongkan saldo, Admin mengurangi sebesar seluruh saldonya.
+- Kedua aksi berlaku untuk Member aktif maupun nonaktif.
+- Daftar Member (§2.3) mendapat kolom Saldo. Member tidak punya username, jadi yang tampil tetap email.
+- Contoh lengkapnya ada di `tests/golden/ubah-saldo-admin.json`.
+
+### 15.7 Bayar dengan saldo
+
+- Hanya Member yang sedang login yang bisa membayar dengan saldo. Checkout Member menampilkan dua pilihan, yaitu "Saldo (Rp X)" dan "QRIS". Tamu hanya melihat QRIS, seperti sebelumnya.
+- **Yang harus dibayar dengan saldo = Harga jual − potongan voucher.** Tidak ada Kode unik dan tidak ada Biaya transaksi. Inilah Total bayar Pesanan yang dibayar dengan saldo.
+- Saldo hanya bisa membayar penuh, tidak dicampur dengan QRIS.
+- Saldo cukup bila Saldo sama dengan atau lebih dari yang harus dibayar.
+  - Bila saldo kurang, pilihan Saldo tidak bisa dipilih, dan di bawahnya tertulis "Saldo kurang Rp X. Top up dulu." X adalah selisihnya, dan kata "Top up" menaut ke halaman Top up.
+  - Pilihan awalnya Saldo bila saldo cukup, dan QRIS bila saldo kurang.
+  - Kecukupan saldo dihitung ulang setiap kali hasil "Pakai" voucher mengubah potongan (§8.7).
+- Tombol bayarnya menyebut nominal, misalnya "Bayar Rp 45.000 dengan saldo", tanpa dialog penegasan. Tombol untuk QRIS tetap "Bayar dengan QRIS".
+- Voucher berlaku dengan aturan yang sama persis (§8). Pemakaiannya dihitung menurut §8.5, karena Pesanan itu Selesai.
+- Pemeriksaan checkout §5.2 tetap berlaku dengan urutan yang sama, termasuk batas Pesanan menunggu (§5.4). Saldo diperiksa terakhir (▶ Keputusan 2026-11-20 di §5.2).
+- Bila saldo ternyata kurang saat Pesanan dibuat, misalnya karena baru dikurangi Admin, Pesanan tidak dibuat. Pembeli melihat "Saldo tidak cukup. Saldo Anda Rp X, sedangkan yang harus dibayar Rp Y. Top up dulu atau bayar dengan QRIS.", dan isian kode voucher tetap berisi.
+- Bila berhasil:
+  - saldo berkurang sebesar Total bayar, dan Riwayat saldo mencatat baris Pembelian dengan Nomor Pesanan-nya;
+  - Pesanan langsung Selesai, tanpa Menunggu Pembayaran dan tanpa QRIS;
+  - satu Item stok langsung dikirim;
+  - email "Pesanan selesai" dikirim;
+  - Pembeli dibawa ke Halaman Pesanan Selesai.
+- Pemotongan saldo dan pengiriman Item stok terjadi bersama. Bila salah satunya tidak bisa terjadi, tidak ada yang berubah. Karena itu Pesanan yang dibayar dengan saldo tidak pernah Bermasalah dan tidak bisa dibatalkan.
+- Waktu bayar Pesanan itu adalah waktu Pesanan dibuat. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (saldo)".
+- Rincian nominal Pesanan yang dibayar dengan saldo berisi Harga jual, Potongan voucher, dan Total bayar, tanpa baris Kode unik, lalu tulisan "Dibayar dengan saldo". Ini berlaku di Halaman Pesanan, email "Pesanan selesai", Riwayat Pesanan, dan detail Pesanan dasbor admin.
+- Contoh: Saldo Rp 50.000, Harga jual Rp 50.000, dan Voucher `HEMAT5` Rp 5.000. Yang harus dibayar Rp 45.000, jadi saldo cukup. Tombolnya "Bayar Rp 45.000 dengan saldo", dan sesudahnya saldo menjadi Rp 5.000. Tanpa Voucher, saldo Rp 40.000 kurang Rp 10.000, sehingga tertulis "Saldo kurang Rp 10.000. Top up dulu."
+- Contoh lengkapnya ada di `tests/golden/bayar-saldo.json`.
+
+### 15.8 Saldo di keuangan toko
+
+- Nominal top up bukan Pendapatan. Uang top up baru menjadi Pendapatan saat dibelanjakan.
+- Pesanan yang dibayar dengan saldo dihitung seperti Pesanan Selesai lain menurut waktu bayarnya:
+  - masuk Pendapatan sebesar Total bayar-nya, yaitu Harga jual − potongan voucher;
+  - masuk jumlah Pesanan Selesai dan laba (§14.2);
+  - Kode unik dan Biaya transaksinya Rp 0.
+- **Kode unik Top up** dan **Biaya transaksi Top up** adalah jumlah Kode unik dan Biaya transaksi dari Top up Berhasil dalam rentang itu, menurut waktu bayar Top up.
+  - Top up Bermasalah yang kemudian diselesaikan dengan "Tambahkan ke saldo" dihitung pada waktu bayarnya.
+  - Top up yang masih Bermasalah atau sudah Dana Dikembalikan tidak dihitung.
+- Keduanya ikut Laba bersih (▶ Keputusan 2026-11-20 di §14.5).
+- Contoh dalam satu hari, tanpa Biaya operasional:
+  - satu Pesanan dibayar dengan saldo: Harga jual Rp 50.000, tanpa Voucher, dan Harga modal Rp 35.000;
+  - satu Top up Berhasil: Nominal top up Rp 150.000, Kode unik Rp 200, Total bayar Rp 150.200, dan Biaya transaksi Rp 1.052.
+
+  | Rincian | Nominal |
+  |---|---|
+  | Pendapatan | Rp 50.000 |
+  | Pesanan Selesai | 1 |
+  | Total Harga modal | Rp 35.000 |
+  | **Laba kotor** | **Rp 15.000** |
+  | − Potongan voucher | Rp 0 |
+  | + Kode unik | Rp 0 |
+  | − Biaya transaksi | Rp 0 |
+  | − Biaya operasional | Rp 0 |
+  | + Kode unik Top up | Rp 200 |
+  | − Biaya transaksi Top up | Rp 1.052 |
+  | **Laba bersih** | **Rp 14.148** |
+  | Top up Berhasil | 1, Rp 150.000 |
+
+- Baris "Top up Berhasil: N, Rp X" hanya informasi, dan tidak ikut hitungan. N adalah jumlah Top up Berhasil, dan X jumlah Nominal top up-nya. Gunanya untuk mencocokkan uang yang masuk dengan saldo Qrispy.
+- Contoh lengkapnya ada di `tests/golden/laba-top-up.json`.
+
+### 15.9 Menu Top up di dasbor admin
+
+- Menu samping "Top up" letaknya tepat di bawah menu Member (▶ Keputusan 2026-11-20 di §11.1).
+- **Daftar Top up**:
+  - kolomnya Nomor Top up, waktu dibuat, email Member, Nominal top up, Total bayar, dan status;
+  - Top up terbaru di atas, dengan 50 Top up per halaman;
+  - Admin bisa menyaring menurut status, serta mencari sebagian email atau sebagian Nomor Top up tanpa membedakan huruf besar dan kecil, sama seperti daftar Pesanan (§9.5);
+  - Top up Bermasalah ditonjolkan dengan warna status Bermasalah.
+- **Detail Top up** menampilkan:
+  - rincian Nominal top up, Kode unik, dan Total bayar;
+  - nominal yang diterima dan Biaya transaksi, bila sudah dibayar;
+  - riwayat status beserta pelakunya;
+  - tautan ke halaman Member.
+- **Top up Bermasalah** diselesaikan Admin dengan salah satu cara, dan keduanya ditegaskan lebih dulu:
+  - "Tambahkan ke saldo": saldo Member bertambah sebesar Nominal top up, dan Top up menjadi Berhasil. Riwayat saldo mencatat baris Top up dengan Nomor Top up-nya;
+  - "Dana Dikembalikan": dipakai setelah uangnya dikembalikan di luar sistem. Saldo tidak berubah.
+- Admin tidak bisa membuat atau membatalkan Top up atas nama Member. Untuk menambah saldo tanpa pembayaran, Admin memakai "Tambah saldo" (§15.6).
+
+### 15.10 Saldo di tab Akun
+
+- Tab Akun untuk Member menampilkan kotak "Saldo Rp X", di bawah email Member dan di atas form ganti password. Kotak itu berisi tombol "Top up" dan tautan "Riwayat saldo".
+- Bila ada Top up Menunggu Pembayaran, kotak itu juga menampilkan "Top up Rp X menunggu pembayaran" dengan tombol "Lanjutkan bayar", yang membuka Halaman bayar Top up.
+- Bilah atas tidak berubah dan tidak menampilkan saldo.
