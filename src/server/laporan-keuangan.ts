@@ -1,6 +1,7 @@
 // Laporan keuangan di dasbor admin (PRD §14.5, §14.6, §14.8): rincian angka dan tabel Pesanan Selesai dalam
-// saringan rentang tanggal WIB, Kategori, dan Produk. Aturan hitungnya ada di src/domain/laba.ts,
-// src/domain/harga-modal.ts, dan src/domain/rentang-awal-laporan.ts.
+// saringan rentang tanggal WIB, Kategori, dan Produk, serta grafik per kelompok periode (§14.7). Aturan hitungnya
+// ada di src/domain/laba.ts, src/domain/harga-modal.ts, src/domain/rentang-awal-laporan.ts, dan
+// src/domain/kelompok-periode-laporan.ts.
 import {
   and,
   asc,
@@ -17,7 +18,9 @@ import {
 } from "drizzle-orm";
 
 import { labaKotor } from "@/domain/harga-modal";
+import { kelompokPeriodeLaporan } from "@/domain/kelompok-periode-laporan";
 import { laba } from "@/domain/laba";
+import type { PeriodeLaporan } from "@/domain/rentang-awal-laporan";
 
 import { db } from "./db";
 import {
@@ -62,13 +65,12 @@ const syaratKatalog = ({ kategoriId, produkId }: SaringanLaporan) => [
 ];
 
 /**
- * Rincian angka Laporan keuangan (PRD §14.5, §14.6): Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor,
- * potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, dan Laba bersih dalam saringan itu, dihitung
- * fungsi domain laba. Saat saringan Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (nilainya
- * null). Database hanya memilih Pesanan yang dibayar dalam rentang itu dan Biaya operasional bertanggal dalam
- * rentang itu; yang memutuskan Pesanan mana yang dihitung adalah domain.
+ * Bahan hitung Laporan keuangan dalam saringan itu: Pesanan yang dibayar dalam rentang dan saringan Kategori atau
+ * Produk, Biaya operasional bertanggal dalam rentang, dan apakah Biaya operasional dikurangkan. Saat saringan
+ * Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (PRD §14.5). Yang memutuskan Pesanan mana yang
+ * dihitung adalah fungsi domain laba.
  */
-export async function rincianLaporan(saringan: SaringanLaporan) {
+async function bahanLaporan(saringan: SaringanLaporan) {
   const rentang = rentangSaringan(saringan);
   const denganBiayaOperasional =
     saringan.kategoriId === undefined && saringan.produkId === undefined;
@@ -108,12 +110,58 @@ export async function rincianLaporan(saringan: SaringanLaporan) {
         ),
       ),
   ]);
-  return laba({
+  return {
     rentang,
     denganBiayaOperasional,
     pesanan: dibayar,
     biayaOperasional: biaya,
+  };
+}
+
+/**
+ * Rincian angka Laporan keuangan (PRD §14.5, §14.6): Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor,
+ * potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, dan Laba bersih dalam saringan itu, dihitung
+ * fungsi domain laba. Saat saringan Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (nilainya
+ * null).
+ */
+export async function rincianLaporan(saringan: SaringanLaporan) {
+  return laba(await bahanLaporan(saringan));
+}
+
+/**
+ * Nilai grafik per kelompok periode Laporan keuangan (PRD §14.6, §14.7) dalam saringan itu. Kelompoknya dari
+ * fungsi domain kelompokPeriodeLaporan, dan angka setiap kelompok dari fungsi domain laba dengan rentang kelompok
+ * itu:
+ * - Pendapatan dan jumlah Pesanan Selesai (grafik 1 dan 3) menghitung semua Pesanan Selesai, termasuk yang belum
+ *   punya Harga modal;
+ * - Laba kotor dan Laba bersih (grafik 2) mengikuti §14.2 dan §14.5, dengan Biaya operasional dikurangkan pada
+ *   kelompok yang memuat tanggalnya, kecuali saat saringan Kategori atau Produk aktif.
+ * Kelompok tanpa Pesanan Selesai bernilai 0.
+ */
+export async function grafikLaporan(
+  saringan: SaringanLaporan & { periode: PeriodeLaporan },
+) {
+  const bahan = await bahanLaporan(saringan);
+  const { kelompok } = kelompokPeriodeLaporan({
+    periode: saringan.periode,
+    mulai: saringan.dari,
+    akhir: saringan.sampai,
   });
+  return {
+    periode: saringan.periode,
+    denganBiayaOperasional: bahan.denganBiayaOperasional,
+    kelompok: kelompok.map(({ mulai, akhir, rentang }) => {
+      const angka = laba({ ...bahan, rentang });
+      return {
+        mulai,
+        akhir,
+        pendapatan: angka.pendapatan,
+        pesananSelesai: angka.pesananSelesai,
+        labaKotor: angka.labaKotor,
+        labaBersih: angka.labaBersih,
+      };
+    }),
+  };
 }
 
 /**

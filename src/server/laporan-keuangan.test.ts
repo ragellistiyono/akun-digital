@@ -7,6 +7,7 @@ import { tambahBiayaOperasional } from "./biaya-operasional";
 import { db, koneksi } from "./db";
 import { produk, varian } from "./db/schema";
 import {
+  grafikLaporan,
   pilihanSaringanLaporan,
   rincianLaporan,
   tabelPesananLaporan,
@@ -329,6 +330,154 @@ describe("pilihanSaringanLaporan (PRD §14.6)", () => {
       nama,
       kategoriId,
       aktif: false,
+    });
+  });
+});
+
+describe("grafikLaporan (PRD §14.6, §14.7)", () => {
+  it("nilai setiap batang sama dengan Pendapatan dan jumlah Pesanan Selesai kelompoknya, termasuk Pesanan tanpa Harga modal, dan hari tanpa Pesanan Selesai bernilai 0", async () => {
+    const { produkId, varianId } = await produkUji();
+    await sisipkanContohPrd(varianId, "2032-08-10");
+    // Tanpa Harga modal, dengan rincian contoh PRD §5.5 dari sisipkanPesanan: Total bayar Rp 45.123.
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-08-12T10:00:00+07:00"),
+    });
+    // Bukan Pesanan Selesai: tidak dihitung.
+    await sisipkanPesanan({
+      varianId,
+      status: "Bermasalah",
+      waktuBayar: new Date("2032-08-11T10:00:00+07:00"),
+    });
+
+    const grafik = await grafikLaporan({
+      periode: "Harian",
+      dari: "2032-08-10",
+      sampai: "2032-08-12",
+      produkId,
+    });
+
+    expect(
+      grafik.kelompok.map(({ mulai, akhir, pendapatan, pesananSelesai }) => ({
+        mulai,
+        akhir,
+        pendapatan,
+        pesananSelesai,
+      })),
+    ).toEqual([
+      {
+        mulai: "2032-08-10",
+        akhir: "2032-08-10",
+        pendapatan: 230632,
+        pesananSelesai: 3,
+      },
+      {
+        mulai: "2032-08-11",
+        akhir: "2032-08-11",
+        pendapatan: 0,
+        pesananSelesai: 0,
+      },
+      {
+        mulai: "2032-08-12",
+        akhir: "2032-08-12",
+        pendapatan: 45123,
+        pesananSelesai: 1,
+      },
+    ]);
+    // Pesanan tanpa Harga modal tidak masuk laba (PRD §14.2).
+    expect(grafik.kelompok.map((k) => k.labaKotor)).toEqual([65000, 0, 0]);
+  });
+
+  it("titik hari contoh PRD §14.5 bernilai Laba kotor Rp 65.000 dan Laba bersih Rp 49.683", async () => {
+    const { varianId } = await produkUji();
+    await sisipkanContohPrd(varianId, "2032-09-01");
+    await tambahBiayaOperasional({
+      tanggal: "2032-09-01",
+      keterangan: `Iklan ${randomUUID().slice(0, 8)}`,
+      nominal: 10000,
+    });
+
+    const grafik = await grafikLaporan({
+      periode: "Harian",
+      dari: "2032-09-01",
+      sampai: "2032-09-01",
+    });
+
+    expect(grafik.kelompok).toHaveLength(1);
+    expect(grafik.kelompok[0]).toMatchObject({
+      labaKotor: 65000,
+      labaBersih: 49683,
+    });
+  });
+
+  it("pada periode Mingguan, Biaya operasional hari Selasa masuk ke minggu yang memuat Selasa itu, dan tidak dikurangkan saat saringan Produk aktif", async () => {
+    const { produkId, varianId } = await produkUji();
+    // Rabu 6 sampai Jumat 22 Oktober 2032: minggu 6–10, 11–17, dan 18–22 Oktober.
+    await sisipkanContohPrd(varianId, "2032-10-13");
+    // Selasa 12 Oktober 2032.
+    await tambahBiayaOperasional({
+      tanggal: "2032-10-12",
+      keterangan: `Sewa server ${randomUUID().slice(0, 8)}`,
+      nominal: 10000,
+    });
+    const saringan = {
+      periode: "Mingguan" as const,
+      dari: "2032-10-06",
+      sampai: "2032-10-22",
+    };
+
+    const semua = await grafikLaporan(saringan);
+    const perProduk = await grafikLaporan({ ...saringan, produkId });
+
+    expect(
+      semua.kelompok.map(({ mulai, akhir, labaKotor, labaBersih }) => ({
+        mulai,
+        akhir,
+        labaKotor,
+        labaBersih,
+      })),
+    ).toEqual([
+      { mulai: "2032-10-06", akhir: "2032-10-10", labaKotor: 0, labaBersih: 0 },
+      {
+        mulai: "2032-10-11",
+        akhir: "2032-10-17",
+        labaKotor: 65000,
+        labaBersih: 49683,
+      },
+      { mulai: "2032-10-18", akhir: "2032-10-22", labaKotor: 0, labaBersih: 0 },
+    ]);
+    expect(perProduk.kelompok.map((k) => k.labaBersih)).toEqual([0, 59683, 0]);
+  });
+
+  it("Laba negatif tetap negatif di kelompoknya", async () => {
+    const { produkId, varianId } = await produkUji();
+    // Contoh tests/golden/laba.json: Harga modal Rp 60.000 di atas Harga jual Rp 50.000.
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      rincian: {
+        hargaJual: 50000,
+        potonganVoucher: 5000,
+        kodeUnik: 100,
+        totalBayar: 45100,
+      },
+      hargaModal: 60000,
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-08-20T09:00:00+07:00"),
+    });
+
+    const grafik = await grafikLaporan({
+      periode: "Bulanan",
+      dari: "2032-08-20",
+      sampai: "2032-08-20",
+      produkId,
+    });
+
+    expect(grafik.kelompok[0]).toMatchObject({
+      labaKotor: -10000,
+      labaBersih: -14900,
     });
   });
 });
