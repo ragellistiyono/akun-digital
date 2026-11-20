@@ -359,3 +359,65 @@ test("di lebar 390 px detail Pesanan tidak membuat halaman bergulir ke samping",
     ),
   ).toBe(false);
 });
+
+// Issue T67, UAT-N3 (PRD §9.5 ▶ Keputusan 2026-11-20, §14.1): detail Pesanan menampilkan Harga modal dan Laba
+// kotor sesudah rincian nominal. Pesanan tanpa Harga modal mendapat Harga modal pertama Varian-nya, dan
+// perubahan sesudahnya tidak mengubahnya.
+test("Pesanan Uji Bayar tanpa Harga modal menampilkan — beserta keterangannya, lalu Rp 800 dan Laba kotor Rp 200 setelah Harga modal pertama diisi, dan tetap Rp 800 setelah diubah menjadi Rp 900 (UAT-N3)", async ({
+  page,
+}) => {
+  // Uji Bayar [CONTOH] dengan Varian Standar Rp 1.000 yang belum punya Harga modal.
+  const produkId = await sisipkanProduk({
+    nama: `Uji Bayar ${randomUUID().slice(0, 8)}`,
+    varian: [{ nama: "Standar", hargaJual: 1000 }],
+  });
+  const [{ id: standar }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  const dipesan = await sisipkanPesanan({
+    varianId: standar,
+    status: "Selesai",
+    rincian: {
+      hargaJual: 1000,
+      potonganVoucher: 0,
+      kodeUnik: 123,
+      totalBayar: 1123,
+    },
+  });
+  await masukSebagaiAdmin(page);
+  const rincian = isi(page).getByRole("region", { name: "Rincian pembayaran" });
+
+  // Langkah 1.
+  await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
+  await expect(nilaiRincian(page, "Total bayar")).toHaveText("Rp 1.123");
+  await expect(nilaiRincian(page, "Harga modal")).toHaveText("—");
+  await expect(nilaiRincian(page, "Laba kotor")).toHaveText("—");
+  await expect(
+    rincian.getByText("Harga modal Varian ini belum diisi"),
+  ).toBeVisible();
+
+  // Langkah 2 dan 3: Harga modal pertama Rp 800.
+  const bagian = page.getByRole("region", { name: "Varian" });
+  const formUbah = bagian.getByRole("form", { name: "Ubah Varian Standar" });
+  const simpanHargaModal = async (hargaModal: string) => {
+    await page.goto(`/admin/produk/${produkId}`);
+    await bagian.getByRole("button", { name: "Ubah Varian Standar" }).click();
+    await formUbah.getByLabel("Harga modal").fill(hargaModal);
+    await formUbah.getByRole("button", { name: "Simpan Varian" }).click();
+    await expect(formUbah).toHaveCount(0);
+  };
+  await simpanHargaModal("800");
+  await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
+  await expect(nilaiRincian(page, "Harga modal")).toHaveText("Rp 800");
+  await expect(nilaiRincian(page, "Laba kotor")).toHaveText("Rp 200");
+  await expect(
+    rincian.getByText("Harga modal Varian ini belum diisi"),
+  ).toHaveCount(0);
+
+  // Langkah 4: perubahan sesudahnya tidak mengubah Pesanan itu.
+  await simpanHargaModal("900");
+  await page.goto(`/admin/pesanan/${dipesan.nomorPesanan}`);
+  await expect(nilaiRincian(page, "Harga modal")).toHaveText("Rp 800");
+  await expect(nilaiRincian(page, "Laba kotor")).toHaveText("Rp 200");
+});

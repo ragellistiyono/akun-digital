@@ -1,25 +1,31 @@
-// Varian sebuah Produk (PRD §3.2, §3.5, §3.7). Aturan Harga jual dan Harga normal ada di
-// src/domain/validasi-harga.ts dan diperiksa sebelum modul ini dipanggil. Aturan hapus Produk dan Varian ada
-// di src/domain/hapus-katalog.ts.
-import { and, asc, count, eq, type SQL } from "drizzle-orm";
+// Varian sebuah Produk (PRD §3.2, §3.5, §3.7, §14.1). Aturan Harga jual dan Harga normal ada di
+// src/domain/validasi-harga.ts, dan aturan Harga modal di src/domain/harga-modal.ts; keduanya diperiksa
+// sebelum modul ini dipanggil. Aturan hapus Produk dan Varian ada di src/domain/hapus-katalog.ts.
+import { and, asc, count, eq, isNull, type SQL } from "drizzle-orm";
 
 import { bolehHapusProdukAtauVarian } from "@/domain/hapus-katalog";
+import { hargaModalIsiPertama } from "@/domain/harga-modal";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import { db } from "./db";
 import { itemStok, pesanan, produk, varian } from "./db/schema";
 
-/** Isian Varian yang diisi Admin, dengan harga dalam rupiah yang sudah diperiksa periksaHarga. */
+/**
+ * Isian Varian yang diisi Admin, dengan harga dalam rupiah yang sudah diperiksa periksaHarga dan
+ * periksaHargaModal.
+ */
 type IsianVarian = {
   nama: string;
   hargaJual: number;
   hargaNormal: number | null;
+  hargaModal: number;
   aktif: boolean;
 };
 
 /**
  * Semua Varian sebuah Produk untuk dasbor admin, urut dari Harga jual termurah. Urutan ini keputusan
- * teknis, karena PRD tidak mengatur urutan Varian di dasbor admin.
+ * teknis, karena PRD tidak mengatur urutan Varian di dasbor admin. Harga modal null untuk Varian yang dibuat
+ * sebelum fitur Harga modal tayang (PRD §14.1).
  */
 export async function daftarVarian(produkId: string) {
   return db
@@ -28,6 +34,7 @@ export async function daftarVarian(produkId: string) {
       nama: varian.nama,
       hargaJual: varian.hargaJual,
       hargaNormal: varian.hargaNormal,
+      hargaModal: varian.hargaModal,
       aktif: varian.aktif,
     })
     .from(varian)
@@ -78,20 +85,40 @@ export async function tambahVarian({
 /**
  * Mengubah isian Varian milik sebuah Produk, termasuk menonaktifkan dan mengaktifkannya kembali
  * (PRD §3.7). Varian yang tidak ada, atau milik Produk lain, tidak berubah.
+ *
+ * Bila Harga modal Varian itu diisi untuk pertama kalinya, semua Pesanan Varian itu yang tercatat tanpa Harga
+ * modal ikut memakai nilai itu, apa pun statusnya, dalam transaksi yang sama (PRD §14.1, hargaModalIsiPertama).
+ * Baris Varian dikunci FOR NO KEY UPDATE lebih dulu, supaya Harga modal sebelumnya tidak berubah di tengah
+ * jalan. Checkout membaca Harga modal Varian FOR SHARE di transaksinya (buatPesanan), jadi checkout yang
+ * berjalan bersamaan menunggu transaksi ini lalu mencatat Harga modal baru, atau transaksi ini menunggu
+ * checkout itu lalu ikut mengisi Pesanan barunya.
  */
 export async function ubahVarian({
   id,
   produkId,
   ...isian
 }: IsianVarian & { id: string; produkId: string }) {
-  const diubah = await db
-    .update(varian)
-    .set(isian)
-    .where(and(eq(varian.id, id), eq(varian.produkId, produkId)))
-    .returning({ id: varian.id });
-  return diubah.length > 0
-    ? ({ hasil: "diubah" } as const)
-    : ({ hasil: "tidak-ada" } as const);
+  return db.transaction(async (tx) => {
+    const [sebelumnya] = await tx
+      .select({ hargaModal: varian.hargaModal })
+      .from(varian)
+      .where(and(eq(varian.id, id), eq(varian.produkId, produkId)))
+      .for("no key update");
+    if (!sebelumnya) return { hasil: "tidak-ada" } as const;
+
+    await tx.update(varian).set(isian).where(eq(varian.id, id));
+    const isiPertama = hargaModalIsiPertama({
+      hargaModalSebelumnya: sebelumnya.hargaModal,
+      hargaModalBaru: isian.hargaModal,
+    });
+    if (isiPertama !== null) {
+      await tx
+        .update(pesanan)
+        .set({ hargaModal: isiPertama })
+        .where(and(eq(pesanan.varianId, id), isNull(pesanan.hargaModal)));
+    }
+    return { hasil: "diubah" } as const;
+  });
 }
 
 type Penghubung = Pick<typeof db, "select">;
@@ -122,9 +149,11 @@ async function jumlahPesananPerStatus(tx: Penghubung, kondisi: SQL) {
  *   stok yang sudah dikunci di sini, lalu ditolak karena stok habis.
  * - Item stok baru tidak bisa muncul di tengah jalan, karena pengisian Item stok mengunci baris Varian FOR
  *   UPDATE, yang menunggu kunci Varian transaksi ini.
- * - Kunci Varian FOR NO KEY UPDATE tidak menghalangi checkout menyimpan Pesanan (foreign key-nya hanya
- *   mengunci FOR KEY SHARE), sehingga checkout yang sedang memegang Item stok bisa selesai dan tidak saling
- *   menunggu dengan transaksi ini.
+ * - Checkout mengunci baris Varian FOR SHARE sebelum Item stok, untuk mencatat Harga modal-nya (PRD §14.1).
+ *   Kunci itu bertabrakan dengan kunci Varian FOR NO KEY UPDATE transaksi ini, jadi checkout yang lebih dulu
+ *   mengunci Varian membuat transaksi ini menunggu sampai Pesanannya tersimpan, dan checkout yang datang
+ *   belakangan menunggu transaksi ini, lalu ditolak bila Varian-nya sudah terhapus. Karena keduanya mengunci
+ *   Varian sebelum Item stok, keduanya tidak saling menunggu.
  *
  * Pemeriksaan pertama berjalan sebelum Item stok dikunci, supaya Produk atau Varian yang sudah pernah dipesan
  * langsung ditolak tanpa menghalangi checkout lain.

@@ -66,14 +66,17 @@ const ISI_ITEM_STOK = ["miwe.akun07@contoh.id", "Senja-7419", "Profil 3"];
  * Pesanan Netflix Premium 1 Bulan [CONTOH] yang Menunggu Pembayaran dengan rincian contoh PRD §5.5
  * (Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik Rp 123, Total bayar Rp 45.123) dan satu Item
  * stok Ditahan berisi isi itu, lalu dibayar lewat Qrispy tiruan dan diproses lewat jalur cek status. Bila
- * `voucher` diberikan, Pesanan itu mencatat Voucher dan kodenya.
+ * `voucher` diberikan, Pesanan itu mencatat Voucher dan kodenya. Bila `hargaModal` diberikan, Pesanan itu
+ * mencatat Harga modal itu.
  */
 async function pesananDibayar({
   isiItemStok = ISI_ITEM_STOK,
   voucher,
+  hargaModal,
 }: {
   isiItemStok?: string[];
   voucher?: { id: string; kode: string };
+  hargaModal?: number;
 } = {}) {
   const produkId = await sisipkanProduk({
     nama: `Netflix Premium ${randomUUID().slice(0, 8)}`,
@@ -89,6 +92,7 @@ async function pesananDibayar({
     status: "Menunggu Pembayaran",
     itemStok: { status: "Ditahan", nilai: isiItemStok },
     voucher,
+    hargaModal,
   });
   const [{ email, qrisId }] = await db
     .select({ email: pesanan.email, qrisId: pesanan.qrisId })
@@ -231,6 +235,20 @@ describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
       status: "Selesai",
       itemStok: FORMAT.map((nama, i) => ({ nama, nilai: ISI_ITEM_STOK[i] })),
     });
+  });
+
+  // Issue T67 (PRD §9.5 ▶ Keputusan 2026-11-20, §14): Pembeli tidak pernah melihat Harga modal maupun laba.
+  it("email Pesanan yang tercatat dengan Harga modal Rp 35.000 tidak memuat Harga modal maupun Laba kotor", async () => {
+    const dibayar = await pesananDibayar({ hargaModal: 35000 });
+    await jalankanPekerjaanEmail(dibayar.id);
+
+    const [email] = emailTiruanKe(dibayar.email);
+    for (const isi of [email.teks, email.html]) {
+      expect(isi).toContain("Rp 50.000");
+      expect(isi).not.toMatch(/modal|laba/i);
+      expect(isi).not.toContain("35.000");
+      expect(isi).not.toContain("15.000");
+    }
   });
 
   // PRD §8.8 ▶ Keputusan 2026-11-17: baris potongan Pesanan yang memakai Voucher menyebut kode Voucher-nya.

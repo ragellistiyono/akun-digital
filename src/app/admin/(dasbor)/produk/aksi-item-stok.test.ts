@@ -78,6 +78,7 @@ async function varianBaru(formatItemStok = ["Email", "Password", "Profil"]) {
     nama: "1 Bulan",
     hargaJual: 50_000,
     hargaNormal: 75_000,
+    hargaModal: 35_000,
     aktif: true,
   });
   const [varian] = await daftarVarian(produk.id);

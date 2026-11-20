@@ -9,7 +9,7 @@ import { nomorPesanan } from "@/domain/nomor-pesanan";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import { db } from "./db";
-import { itemStok, pesanan, riwayatStatusPesanan } from "./db/schema";
+import { itemStok, pesanan, riwayatStatusPesanan, varian } from "./db/schema";
 import { isiItemStokUji } from "./uji-katalog";
 
 /** Item stok uji yang tertaut ke Pesanan itu, beserta nama kolom yang dicatat saat Terkirim. */
@@ -31,7 +31,7 @@ const RINCIAN_CONTOH_PRD = {
  * Menyisipkan Pesanan sebuah Varian dengan status itu, dan bila diminta satu Item stok yang tertaut ke
  * Pesanan itu. Rinciannya contoh PRD §5.5: Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik
  * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, email dan Nomor Pesanan-nya acak,
- * dan waktu bayarnya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
+ * dan waktu bayar serta Harga modal-nya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
  * seperti saat checkout, yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Bila `voucher` diberikan,
  * Pesanan itu mencatat Voucher dan kodenya. Hasilnya id, Tautan Pesanan, dan Nomor Pesanan-nya.
  */
@@ -46,6 +46,7 @@ export async function sisipkanPesanan({
   emailGagal = false,
   rincian = RINCIAN_CONTOH_PRD,
   waktuBayar = null,
+  hargaModal = null,
   voucher,
 }: {
   varianId: string;
@@ -58,6 +59,7 @@ export async function sisipkanPesanan({
   emailGagal?: boolean;
   rincian?: typeof RINCIAN_CONTOH_PRD;
   waktuBayar?: Date | null;
+  hargaModal?: number | null;
   voucher?: { id: string; kode: string };
 }) {
   const tautan = randomBytes(32).toString("base64url");
@@ -69,6 +71,7 @@ export async function sisipkanPesanan({
       email,
       varianId,
       ...rincian,
+      hargaModal,
       qrisId: randomUUID(),
       kedaluwarsaPada,
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",
@@ -108,8 +111,9 @@ export async function selesaiDalam(janji: Promise<unknown>, ms: number) {
 }
 
 /**
- * Transaksi yang meniru checkout (buatPesanan di pesanan.ts) dengan urutan kunci yang sama: mengunci satu Item
- * stok Tersedia FOR UPDATE SKIP LOCKED, menyimpan Pesanan Menunggu Pembayaran, lalu menahan Item stok itu.
+ * Transaksi yang meniru checkout (buatPesanan di pesanan.ts) dengan urutan kunci yang sama: mengunci baris
+ * Varian FOR SHARE, mengunci satu Item stok Tersedia FOR UPDATE SKIP LOCKED, menyimpan Pesanan Menunggu
+ * Pembayaran, lalu menahan Item stok itu.
  * Transaksinya berhenti sebelum selesai sampai `lanjutkan` dipanggil, supaya test bisa menjalankan perubahan
  * lain di tengah checkout, misalnya menghapus Produk atau Varian-nya.
  */
@@ -119,6 +123,11 @@ export function checkoutTertahan(varianId: string) {
   const sudahMenahan = new Promise<void>((r) => (menahan = r));
   const izinLanjut = new Promise<void>((r) => (lanjutkan = r));
   const selesai = db.transaction(async (tx) => {
+    await tx
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.id, varianId))
+      .for("share");
     const [tersedia] = await tx
       .select({ id: itemStok.id })
       .from(itemStok)

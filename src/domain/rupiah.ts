@@ -10,3 +10,8 @@ export function angkaRupiah(nilai: number) {
 export function rupiah(nilai: number) {
   return `Rp ${angkaRupiah(nilai)}`;
 }
+
+/** Nominal rupiah yang bisa negatif, misalnya laba: "Rp 15.000", atau "−Rp 10.000" dengan tanda minus. */
+export function rupiahBertanda(nilai: number) {
+  return nilai < 0 ? `−${rupiah(-nilai)}` : rupiah(nilai);
+}

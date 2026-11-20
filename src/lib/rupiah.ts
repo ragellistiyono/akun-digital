@@ -1,5 +1,5 @@
 // Format rupiah toko ada di modul domain, supaya pesan dari domain memakai format yang sama (PRD §8.7).
-export { angkaRupiah, rupiah } from "@/domain/rupiah";
+export { angkaRupiah, rupiah, rupiahBertanda } from "@/domain/rupiah";
 
 // Harga ditulis seperti kebiasaan di Indonesia: titik memisahkan ribuan dan koma memisahkan sen,
 // boleh diawali "Rp". Contohnya "50000", "50.000", "Rp 50.000", dan "1.500,5".

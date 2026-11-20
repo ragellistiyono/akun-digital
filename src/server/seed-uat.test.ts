@@ -388,6 +388,37 @@ describe("pnpm db:seed di database kosong", () => {
     }
   });
 
+  // Issue T67: persiapan M4 di docs/UAT.md (▶ Keputusan 2026-11-20).
+  it("Harga modal Varian seed sesuai persiapan M4, Uji Bayar tanpa Harga modal, dan Pesanan seed Netflix Premium 1 Bulan tercatat Rp 35.000", async () => {
+    const { db } = await import("./db");
+    const { pesanan, produk, varian } = await import("./db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const semuaVarian = await db
+      .select({
+        produk: produk.nama,
+        varian: varian.nama,
+        hargaModal: varian.hargaModal,
+      })
+      .from(varian)
+      .innerJoin(produk, eq(varian.produkId, produk.id))
+      .orderBy(produk.nama, varian.nama);
+    expect(semuaVarian).toEqual([
+      { produk: "Netflix Premium", varian: "1 Bulan", hargaModal: 35000 },
+      { produk: "Netflix Premium", varian: "3 Bulan", hargaModal: 100000 },
+      { produk: "Spotify Premium", varian: "1 Bulan", hargaModal: 18000 },
+      { produk: "Uji Bayar", varian: "Standar", hargaModal: null },
+      { produk: "YouTube Premium", varian: "1 Bulan", hargaModal: 14000 },
+      { produk: "YouTube Premium", varian: "3 Bulan", hargaModal: 40000 },
+    ]);
+
+    const semuaPesanan = await db
+      .select({ hargaModal: pesanan.hargaModal })
+      .from(pesanan);
+    expect(semuaPesanan).toHaveLength(3);
+    for (const satu of semuaPesanan) expect(satu.hargaModal).toBe(35000);
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan

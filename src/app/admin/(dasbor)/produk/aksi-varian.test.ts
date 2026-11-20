@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 
+import { eq } from "drizzle-orm";
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { afterAll, describe, expect, it, vi } from "vitest";
 
-import { koneksi } from "@/server/db";
+import { db, koneksi } from "@/server/db";
+import { pesanan } from "@/server/db/schema";
 import { buatKategori, daftarKategori } from "@/server/kategori";
 import { buatProduk, daftarProduk } from "@/server/produk";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
@@ -69,17 +71,25 @@ const keadaanKosong = () => ({
   nama: "",
   hargaJual: "",
   hargaNormal: "",
+  hargaModal: "",
   aktif: true,
 });
 
-/** Isian form Tambah Varian untuk Varian "1 Bulan" seharga Rp 50.000 dari PRD §3.2. */
+/**
+ * Isian form Tambah Varian untuk Varian "1 Bulan" seharga Rp 50.000 dari PRD §3.2, dengan Harga modal
+ * Rp 35.000 dari persiapan M4 di docs/UAT.md [CONTOH].
+ */
 const isianSatuBulan = (produkId: string) => ({
   produkId,
   nama: "1 Bulan",
   hargaJual: "50.000",
   hargaNormal: "75.000",
+  hargaModal: "35.000",
   aktif: "on",
 });
+
+const PESAN_HARGA_MODAL_KOSONG =
+  "Harga modal belum diisi. Ketik Harga modal dalam rupiah, misalnya 35.000, atau 0 bila Item stok didapat tanpa biaya.";
 
 afterAll(async () => {
   await koneksi.end();
@@ -115,6 +125,7 @@ describe("menambah Varian (PRD §3.2, §3.5)", () => {
         nama: "1 Bulan",
         hargaJual: 50_000,
         hargaNormal: 75_000,
+        hargaModal: 35_000,
         aktif: true,
       },
     ]);
@@ -144,6 +155,7 @@ describe("Harga jual di form Tambah Varian (PRD §3.2, UAT-C4)", () => {
           nama: "1 Bulan",
           hargaJual: tersimpan,
           hargaNormal: null,
+          hargaModal: 35_000,
           aktif: true,
         },
       ]);
@@ -190,6 +202,7 @@ describe("Harga jual di form Tambah Varian (PRD §3.2, UAT-C4)", () => {
         nama: "1 Bulan",
         hargaJual,
         hargaNormal: "",
+        hargaModal: "35.000",
         aktif: true,
         galat: { hargaJual: pesan },
       });
@@ -258,6 +271,7 @@ describe("Harga normal di form Tambah Varian (PRD §3.5, UAT-C4)", () => {
         nama: "1 Bulan",
         hargaJual,
         hargaNormal,
+        hargaModal: "35.000",
         aktif: true,
         galat: { hargaNormal: pesan },
       });
@@ -266,8 +280,73 @@ describe("Harga normal di form Tambah Varian (PRD §3.5, UAT-C4)", () => {
   }
 });
 
+// Issue T67 (PRD §14.1, UAT-N1): Harga modal wajib, rupiah bulat, minimal Rp 0, tanpa batas maksimum, dan boleh
+// lebih besar dari Harga jual.
+describe("Harga modal di form Tambah Varian (PRD §14.1, UAT-N1)", () => {
+  for (const [hargaModal, tersimpan] of [
+    ["0", 0],
+    ["35000", 35_000],
+    ["60.000", 60_000],
+    ["Rp 1.000.000", 1_000_000],
+  ] as const) {
+    it(`Harga modal "${hargaModal}" untuk Harga jual Rp 50.000 diterima sebagai Rp ${tersimpan}`, async () => {
+      const produkId = await produkBaru();
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      const keadaan = await aksiTambahVarian(
+        keadaanKosong(),
+        formulir({ ...isianSatuBulan(produkId), hargaModal }),
+      );
+
+      expect(keadaan.galat).toBeUndefined();
+      expect(await daftarVarian(produkId)).toEqual([
+        expect.objectContaining({ hargaJual: 50_000, hargaModal: tersimpan }),
+      ]);
+    });
+  }
+
+  for (const [hargaModal, pesan] of [
+    ["", PESAN_HARGA_MODAL_KOSONG],
+    [" ", PESAN_HARGA_MODAL_KOSONG],
+    ["-1", "Harga modal kurang dari Rp 0. Isi Harga modal minimal Rp 0."],
+    ["−1", "Harga modal kurang dari Rp 0. Isi Harga modal minimal Rp 0."],
+    [
+      "800,5",
+      "Harga modal harus rupiah bulat, tanpa sen. Hapus angka di belakang koma.",
+    ],
+    [
+      "tiga lima",
+      "Harga modal tidak terbaca sebagai rupiah. Ketik angkanya saja, misalnya 35000 atau 35.000.",
+    ],
+    [
+      "10.000.000.000.000.000",
+      "Harga modal terlalu besar untuk disimpan. Periksa lagi angkanya.",
+    ],
+  ] as const) {
+    it(`Harga modal "${hargaModal}" ditolak dengan pesan, dan Varian tidak dibuat`, async () => {
+      const produkId = await produkBaru();
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      const keadaan = await aksiTambahVarian(
+        keadaanKosong(),
+        formulir({ ...isianSatuBulan(produkId), hargaModal }),
+      );
+
+      expect(keadaan).toEqual({
+        nama: "1 Bulan",
+        hargaJual: "50.000",
+        hargaNormal: "75.000",
+        hargaModal,
+        aktif: true,
+        galat: { hargaModal: pesan },
+      });
+      expect(await daftarVarian(produkId)).toEqual([]);
+    });
+  }
+});
+
 describe("isian lain di form Tambah Varian", () => {
-  it("nama dan Harga jual kosong: kedua pesan tampil sekaligus, dan Varian tidak dibuat", async () => {
+  it("nama, Harga jual, dan Harga modal kosong: ketiga pesan tampil sekaligus, dan Varian tidak dibuat", async () => {
     const produkId = await produkBaru();
     sebagaiPengunjung(await cookieAdminBaru());
 
@@ -280,11 +359,13 @@ describe("isian lain di form Tambah Varian", () => {
       nama: " ",
       hargaJual: "",
       hargaNormal: "",
+      hargaModal: "",
       aktif: false,
       galat: {
         nama: "Nama Varian belum diisi. Ketik nama Varian, misalnya 1 Bulan.",
         hargaJual:
           "Harga jual belum diisi. Ketik Harga jual dalam rupiah, misalnya 50.000.",
+        hargaModal: PESAN_HARGA_MODAL_KOSONG,
       },
     });
     expect(await daftarVarian(produkId)).toEqual([]);
@@ -315,8 +396,9 @@ describe("isian lain di form Tambah Varian", () => {
 });
 
 /**
- * Produk baru dengan Varian "3 Bulan" seharga Rp 135.000 dari PRD §3.2, dibuat langsung lewat modul
- * server, dengan sesi Admin yang sudah dipasang.
+ * Produk baru dengan Varian "3 Bulan" seharga Rp 135.000 dari PRD §3.2 dan Harga modal Rp 100.000 dari
+ * persiapan M4 di docs/UAT.md [CONTOH], dibuat langsung lewat modul server, dengan sesi Admin yang sudah
+ * dipasang.
  */
 async function varianTigaBulan() {
   const produkId = await produkBaru();
@@ -325,6 +407,7 @@ async function varianTigaBulan() {
     nama: "3 Bulan",
     hargaJual: 135_000,
     hargaNormal: null,
+    hargaModal: 100_000,
     aktif: true,
   });
   const [varian] = await daftarVarian(produkId);
@@ -343,6 +426,7 @@ function isianUbah(
     nama: varian.nama,
     hargaJual: String(varian.hargaJual),
     hargaNormal: varian.hargaNormal === null ? "" : String(varian.hargaNormal),
+    hargaModal: varian.hargaModal === null ? "" : String(varian.hargaModal),
   };
   if (varian.aktif) isian.aktif = "on";
   return isian;
@@ -379,6 +463,7 @@ describe("mengubah Varian (PRD §3.2, §3.5, §3.7)", () => {
       nama: "3 Bulan Hemat ",
       hargaJual: "499.000",
       hargaNormal: "600.000",
+      hargaModal: "100000",
       aktif: true,
       tersimpan: true,
     });
@@ -389,6 +474,7 @@ describe("mengubah Varian (PRD §3.2, §3.5, §3.7)", () => {
         nama: "3 Bulan Hemat",
         hargaJual: 499_000,
         hargaNormal: 600_000,
+        hargaModal: 100_000,
         aktif: true,
       },
     ]);
@@ -443,6 +529,7 @@ describe("mengubah Varian (PRD §3.2, §3.5, §3.7)", () => {
       nama: "3 Bulan",
       hargaJual: "135.000",
       hargaNormal: "135.000",
+      hargaModal: "100000",
       aktif: true,
       galat: {
         hargaNormal:
@@ -497,6 +584,57 @@ describe("mengubah Varian (PRD §3.2, §3.5, §3.7)", () => {
       ).rejects.toSatisfy(tidakDitemukan);
     });
   }
+});
+
+// Issue T67 (PRD §14.1 "Varian dan Pesanan tanpa Harga modal"): Varian lama tanpa Harga modal harus diisi Harga
+// modal-nya saat disimpan, dan isi pertama itu ikut dicatat di Pesanan lamanya.
+describe("Harga modal Varian lama", () => {
+  /** Uji Bayar [CONTOH] dengan Varian Standar Rp 1.000 yang dibuat sebelum fitur Harga modal tayang. */
+  async function ujiBayar() {
+    const produkId = await sisipkanProduk({
+      nama: namaUnik("Uji Bayar"),
+      varian: [{ nama: "Standar", hargaJual: 1000 }],
+    });
+    const [varian] = await daftarVarian(produkId);
+    sebagaiPengunjung(await cookieAdminBaru());
+    return { produkId, varian };
+  }
+
+  it("Varian lama yang disimpan tanpa Harga modal ditolak, dan Varian tidak berubah", async () => {
+    const { produkId, varian } = await ujiBayar();
+    expect(varian.hargaModal).toBeNull();
+
+    const keadaan = await aksiUbahVarian(
+      keadaanKosong(),
+      formulir({ ...isianUbah(produkId, varian), nama: "Standar Baru" }),
+    );
+
+    expect(keadaan.galat).toEqual({ hargaModal: PESAN_HARGA_MODAL_KOSONG });
+    expect(await daftarVarian(produkId)).toEqual([varian]);
+  });
+
+  it("isi pertama Harga modal Rp 800 ikut dicatat di Pesanan Selesai lamanya", async () => {
+    const { produkId, varian } = await ujiBayar();
+    const lama = await sisipkanPesanan({
+      varianId: varian.id,
+      status: "Selesai",
+    });
+
+    const keadaan = await aksiUbahVarian(
+      keadaanKosong(),
+      formulir({ ...isianUbah(produkId, varian), hargaModal: "800" }),
+    );
+
+    expect(keadaan.tersimpan).toBe(true);
+    expect(await daftarVarian(produkId)).toEqual([
+      { ...varian, hargaModal: 800 },
+    ]);
+    const [{ hargaModal }] = await db
+      .select({ hargaModal: pesanan.hargaModal })
+      .from(pesanan)
+      .where(eq(pesanan.id, lama.id));
+    expect(hargaModal).toBe(800);
+  });
 });
 
 // Issue T29 (PRD §3.7): Varian hanya bisa dihapus bila belum pernah tercatat di Pesanan berstatus apa pun.

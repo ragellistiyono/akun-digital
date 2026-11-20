@@ -13,7 +13,7 @@ import {
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { nomorPesananSah } from "@/domain/nomor-pesanan";
 import { penyelesaianBermasalahTersedia } from "@/domain/penyelesaian-bermasalah";
-import { rupiah } from "@/lib/rupiah";
+import { rupiah, rupiahBertanda } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { bacaDetailPesanan } from "@/server/detail-pesanan";
@@ -63,10 +63,55 @@ function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
 }
 
 /**
- * Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris
- * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17).
+ * Harga modal dan Laba kotor Pesanan itu, sesudah rincian nominal (PRD §9.5 ▶ Keputusan 2026-11-20). Pesanan
+ * tanpa Harga modal menampilkan "—" beserta keterangannya. Baris ini hanya ada di dasbor admin.
  */
-function PanelRincian({ rincian }: { rincian: DetailPesanan["rincian"] }) {
+function RincianLaba({ laba }: { laba: DetailPesanan["laba"] }) {
+  const baris = [
+    {
+      label: "Harga modal",
+      nilai: laba.hargaModal === null ? "—" : rupiah(laba.hargaModal),
+    },
+    {
+      label: "Laba kotor",
+      nilai: laba.labaKotor === null ? "—" : rupiahBertanda(laba.labaKotor),
+    },
+  ];
+  return (
+    <div className="mt-3 border-t-2 border-dashed border-pensil pt-2">
+      <table className="w-full border-collapse text-[17px] leading-[1.3]">
+        <tbody>
+          {baris.map(({ label, nilai }) => (
+            <tr key={label}>
+              <th scope="row" className="py-1.5 pr-4 text-left font-normal">
+                {label}
+              </th>
+              <td className="py-1.5 text-right whitespace-nowrap">{nilai}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {laba.hargaModal === null && (
+        <p className="mt-1 text-[15px] text-pensil-redup">
+          Harga modal Varian ini belum diisi
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris
+ * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Di bawahnya ada
+ * Harga modal dan Laba kotor Pesanan itu.
+ */
+function PanelRincian({
+  rincian,
+  laba,
+}: {
+  rincian: DetailPesanan["rincian"];
+  laba: DetailPesanan["laba"];
+}) {
   return (
     <section aria-label="Rincian pembayaran" className={PANEL}>
       <RincianNominal
@@ -83,6 +128,7 @@ function PanelRincian({ rincian }: { rincian: DetailPesanan["rincian"] }) {
         ]}
         total={{ label: "Total bayar", nilai: rupiah(rincian.totalBayar) }}
       />
+      <RincianLaba laba={laba} />
     </section>
   );
 }
@@ -171,7 +217,8 @@ function PanelRiwayat({ riwayat }: { riwayat: DetailPesanan["riwayat"] }) {
 }
 
 // Detail Pesanan di dasbor admin (PRD §9.5): Nomor Pesanan dalam huruf mono dengan pil status dan tanda
-// "Email gagal" (PRD §6.4), email dan Produk beserta Varian, rincian nominal (PRD §5.5), Item stok bila sudah
+// "Email gagal" (PRD §6.4), email dan Produk beserta Varian, rincian nominal (PRD §5.5) beserta Harga modal dan
+// Laba kotor (PRD §9.5 ▶ Keputusan 2026-11-20), Item stok bila sudah
 // Terkirim, dan riwayat perubahan status. Pesanan yang kirim ulangnya tersedia (Selesai) juga punya aksi
 // kirim ulang email "Pesanan selesai" dan koreksi email (PRD §6.4), dan Pesanan Bermasalah punya koreksi email
 // yang hanya menyimpan (PRD §6.4, ▶ Keputusan 2026-11-12) serta aksi "Kirim Item stok" dan "Tandai Dana
@@ -240,7 +287,7 @@ export default async function HalamanDetailPesanan({
       >
         <div className="flex min-w-0 flex-col gap-4 min-[1200px]:col-start-1 min-[1200px]:row-start-1">
           <PanelPesanan pesanan={pesanan} />
-          <PanelRincian rincian={pesanan.rincian} />
+          <PanelRincian rincian={pesanan.rincian} laba={pesanan.laba} />
           {pesanan.itemStok && <PanelItemStok kolom={pesanan.itemStok} />}
         </div>
         {duaKolom && (

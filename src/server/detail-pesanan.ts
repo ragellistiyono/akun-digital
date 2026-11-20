@@ -3,6 +3,7 @@
 // koreksiEmailTersedia di src/domain/kirim-ulang-email.ts.
 import { asc, eq } from "drizzle-orm";
 
+import { labaKotor } from "@/domain/harga-modal";
 import {
   kirimUlangEmailTersedia,
   koreksiEmailTersedia,
@@ -17,7 +18,9 @@ import { bacaItemStokTerkirim } from "./pesanan";
 /**
  * Detail Pesanan dengan Nomor Pesanan itu untuk dasbor admin (PRD §9.5): id, Nomor Pesanan, status, tanda
  * "Email gagal" (PRD §6.4), email, nama Produk dan Varian, rincian nominal yang dicatat di Pesanan
- * (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
+ * (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, Harga modal yang tercatat di Pesanan dan
+ * Laba kotor-nya menurut labaKotor (keduanya null bila Pesanan itu belum punya Harga modal, PRD §9.5 ▶ Keputusan
+ * 2026-11-20), kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
  * (waktu, status, dan pelakunya) dari yang paling lama. Hasilnya null bila tidak ada Pesanan dengan Nomor
  * Pesanan itu.
  */
@@ -32,6 +35,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
       namaProduk: produk.nama,
       namaVarian: varian.nama,
       hargaJual: pesanan.hargaJual,
+      hargaModal: pesanan.hargaModal,
       potonganVoucher: pesanan.potonganVoucher,
       kodeVoucher: pesanan.kodeVoucher,
       kodeUnik: pesanan.kodeUnik,
@@ -55,6 +59,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
 
   const {
     hargaJual,
+    hargaModal,
     potonganVoucher,
     kodeVoucher,
     kodeUnik,
@@ -64,6 +69,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
   return {
     ...lainnya,
     rincian: { hargaJual, potonganVoucher, kodeVoucher, kodeUnik, totalBayar },
+    laba: labaKotor({ hargaJual, hargaModal }),
     itemStok: await bacaItemStokTerkirim(baris.id),
     riwayat,
   };
