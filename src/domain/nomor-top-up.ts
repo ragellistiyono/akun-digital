@@ -15,3 +15,11 @@ export function nomorTopUp(byteAcak: Uint8Array): string {
 export function nomorTopUpSah(nomor: string): boolean {
   return nomorAcakSah(AWALAN, nomor);
 }
+
+/**
+ * Apakah `payment_reference` sebuah kabar pembayaran menunjuk ke Top up, yaitu diawali TOPUP- (issue T78). Toko
+ * mengirim Nomor Top up sebagai `payment_reference` QRIS Top up, dan Nomor Pesanan untuk QRIS Pesanan.
+ */
+export function rujukanTopUp(paymentReference: string | undefined): boolean {
+  return paymentReference?.startsWith(AWALAN) ?? false;
+}

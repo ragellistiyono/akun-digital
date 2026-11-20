@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { prosesKabarPembayaran } from "@/server/kabar-pembayaran";
 import { NominalQrispy } from "@/server/nominal-qrispy";
 import {
   type FormatSignature,
   formatSignatureWebhook,
+  teruskanKabarWebhook,
 } from "@/server/webhook-qrispy";
 
 // Kabar pembayaran hanya diterima dalam bentuk dashboard, yang terbukti dipakai Qrispy pada pembayaran
@@ -21,8 +21,9 @@ const NominalDiterima = NominalQrispy.pipe(z.number().positive());
 
 /**
  * Bentuk dashboard: event payment.received dengan field di dalam data. Nominal diterima-nya
- * received_amount, bukan amount. Field lain di data, seperti amount dan unique_id, tidak dipakai, jadi
- * tidak diperiksa.
+ * received_amount, bukan amount. payment_reference boleh tidak ada; bila berupa teks, dipakai untuk mengenali
+ * kabar Top up (issue T78). Field lain di data, seperti amount dan unique_id, tidak dipakai, jadi tidak
+ * diperiksa.
  */
 const KabarDashboard = z
   .object({
@@ -31,10 +32,12 @@ const KabarDashboard = z
       qris_id: z.string().min(1),
       received_amount: NominalDiterima,
       paid_at: z.iso.datetime({ offset: true }),
+      payment_reference: z.string().optional().catch(undefined),
     }),
   })
   .transform(({ data }) => ({
     qrisId: data.qris_id,
+    paymentReference: data.payment_reference,
     nominalDiterima: data.received_amount,
     waktuBayar: new Date(data.paid_at),
   }));
@@ -86,8 +89,8 @@ function catatBentuk(
 
 // Webhook Qrispy (ADR-0004). Alamat ini didaftarkan pemilik di Dashboard Qrispy → Webhook Settings.
 // Signature diperiksa dari body mentah sebelum body di-parse. Kabar bentuk dashboard diteruskan ke pemroses
-// kabar pembayaran yang sama dengan jalur cek status, yang memprosesnya dalam satu transaksi dan hanya
-// sekali untuk qris_id yang sama.
+// kabar pembayaran Pesanan atau Top up yang sama dengan jalur cek status, yang memprosesnya dalam satu transaksi
+// dan hanya sekali untuk qris_id yang sama.
 export async function POST(request: Request) {
   const body = await request.text();
   const formatSignature = formatSignatureWebhook(
@@ -132,6 +135,6 @@ export async function POST(request: Request) {
     );
   }
 
-  await prosesKabarPembayaran(kabar.data);
+  await teruskanKabarWebhook(kabar.data);
   return teks(`Kabar pembayaran QRIS ${kabar.data.qrisId} diterima.`, 200);
 }

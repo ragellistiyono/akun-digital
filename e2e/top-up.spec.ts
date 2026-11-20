@@ -7,11 +7,12 @@ import { eq } from "drizzle-orm";
 // memakai Qrispy tiruan dari .env.ci (QRISPY_MODE=tiruan). Database dipakai bersama test lain yang berjalan bersamaan,
 // jadi setiap test memakai Member dengan email unik.
 import { db } from "../src/server/db";
-import { topUp, user } from "../src/server/db/schema";
+import { riwayatSaldo, topUp, user } from "../src/server/db/schema";
 import { buatTopUp } from "../src/server/top-up";
 import { sisipkanMember } from "../src/server/uji-member";
 
-// Halaman Top up dan Halaman bayar Top up (T77, PRD §15.3, §15.4, UAT-O2, UAT-O3).
+// Halaman Top up dan Halaman bayar Top up (T77, PRD §15.3, §15.4, UAT-O2, UAT-O3), serta kabar pembayaran Top up
+// lewat Qrispy tiruan, yang pemicu bayarnya ada di POST /api/qrispy-tiruan/bayar (T78, PRD §15.5).
 
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 
@@ -51,6 +52,7 @@ async function bacaTopUp(nomorTopUp: string) {
       status: topUp.status,
       kodeUnik: topUp.kodeUnik,
       totalBayar: topUp.totalBayar,
+      qrisId: topUp.qrisId,
     })
     .from(topUp)
     .where(eq(topUp.nomorTopUp, nomorTopUp));
@@ -217,4 +219,107 @@ test("tidak ada tautan ke Halaman Top up dari halaman toko mana pun", async ({
     await expect(page.getByRole("main")).toBeVisible();
     await expect(page.locator(`a[href^="${ALAMAT_TOP_UP}"]`)).toHaveCount(0);
   }
+});
+
+/** Saldo Member itu dan baris Riwayat saldo-nya, langsung dari database. */
+async function saldoDanRiwayat(idMember: string) {
+  const [{ saldo }] = await db
+    .select({ saldo: user.saldo })
+    .from(user)
+    .where(eq(user.id, idMember));
+  const riwayat = await db
+    .select({
+      jenis: riwayatSaldo.jenis,
+      nominal: riwayatSaldo.nominal,
+      rujukan: riwayatSaldo.rujukan,
+    })
+    .from(riwayatSaldo)
+    .where(eq(riwayatSaldo.userId, idMember));
+  return { saldo, riwayat };
+}
+
+// UAT-O2 langkah 3–4, PRD §15.3, §15.5 (issue T78).
+test("Top up Rp 10.000 yang dibayar lewat Qrispy tiruan menambah saldo tepat Rp 10.000, lalu Halaman bayar Top up berpindah sendiri ke Riwayat saldo dengan pesan PRD", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60_000);
+  const { email, id } = await memberBaru();
+  await page.goto("/masuk");
+  await isiLogin(page, email);
+  await expect(page).toHaveURL("/riwayat");
+
+  await page.goto(ALAMAT_TOP_UP);
+  await formTopUp(page).getByLabel("Nominal top up").fill("10000");
+  await formTopUp(page)
+    .getByRole("button", { name: "Bayar dengan QRIS" })
+    .click();
+  await expect(page).toHaveURL(/\/akun\/top-up\/TOPUP-[A-Z2-9]{6}$/);
+  const nomorTopUp = page.url().split("/").at(-1) ?? "";
+  const dibuat = await bacaTopUp(nomorTopUp);
+  expect(dibuat.totalBayar).toBeGreaterThan(10000);
+
+  const respons = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId: dibuat.qrisId, amount: dibuat.totalBayar },
+  });
+  expect(respons.status()).toBe(200);
+
+  // Status QRIS ditanyakan ke Qrispy paling sering sekali per 15 detik, dan sekali sudah ditanyakan saat halaman
+  // dibuka (ADR-0004), jadi pembayarannya terbaca paling lambat sekitar 15 detik kemudian.
+  await expect(page).toHaveURL(`/akun/riwayat-saldo?top-up=${nomorTopUp}`, {
+    timeout: 25_000,
+  });
+  await expect(isi(page).getByRole("status")).toHaveText(
+    "Top up Rp 10.000 berhasil. Saldo sekarang Rp 10.000.",
+  );
+  await expect(isi(page)).toContainText(nomorTopUp);
+
+  expect(await saldoDanRiwayat(id)).toEqual({
+    saldo: 10000,
+    riwayat: [{ jenis: "Top up", nominal: 10000, rujukan: nomorTopUp }],
+  });
+  expect((await bacaTopUp(nomorTopUp)).status).toBe("Berhasil");
+
+  // Halaman bayar Top up yang dibuka lagi juga membawa Member ke Riwayat saldo, tanpa menambah saldo lagi.
+  await page.goto(`${ALAMAT_TOP_UP}/${nomorTopUp}`);
+  await expect(page).toHaveURL(`/akun/riwayat-saldo?top-up=${nomorTopUp}`);
+  expect((await saldoDanRiwayat(id)).saldo).toBe(10000);
+});
+
+// PRD §15.4, §15.5 butir 2, dan pola Halaman Pesanan Bermasalah (§6.2) (issue T78).
+test("Top up yang dibayar dengan nominal kurang lewat Qrispy tiruan menampilkan Halaman Top up Bermasalah, dan saldo tidak berubah", async ({
+  page,
+  request,
+}) => {
+  const { email, id } = await memberBaru();
+  const hasil = await buatTopUp({ idMember: id, nominal: "10000" });
+  if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+  const dibuat = await bacaTopUp(hasil.nomorTopUp);
+  const respons = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId: dibuat.qrisId, amount: 10000 },
+  });
+  expect(respons.status()).toBe(200);
+
+  const alamat = `${ALAMAT_TOP_UP}/${hasil.nomorTopUp}`;
+  await page.goto(alamat);
+  await isiLogin(page, email);
+  await expect(page).toHaveURL(alamat);
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Top up" }),
+  ).toBeVisible();
+  await expect(isi(page)).toContainText(hasil.nomorTopUp);
+  await expect(
+    isi(page).getByText("Bermasalah", { exact: true }),
+  ).toBeVisible();
+  await expect(isi(page)).toContainText(
+    "Pembayaran Anda sudah kami terima, tetapi saldo belum bertambah. Hubungi kami lewat WhatsApp.",
+  );
+  await expect(isi(page).getByRole("img", { name: /QRIS/ })).toHaveCount(0);
+  await expect(
+    rincian(page).getByRole("row", { name: /^Total bayar/ }),
+  ).toContainText(rupiah(dibuat.totalBayar));
+
+  expect((await bacaTopUp(hasil.nomorTopUp)).status).toBe("Bermasalah");
+  expect(await saldoDanRiwayat(id)).toEqual({ saldo: 0, riwayat: [] });
 });
