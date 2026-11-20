@@ -666,7 +666,7 @@ Status Item stok (Tersedia, Ditahan, Terkirim) hanya tampil di dasbor admin. Sta
 ▶ Keputusan 2026-11-11 (#53): Label pil status Pesanan dan pil berbentuk sama di dasbor admin, seperti Aktif, Nonaktif, Unggulan, dan Sampul, bertebal 700 sesuai token `label-kecil` di frontmatter. Sebelumnya teks bagian ini menulis tebal 800, yang bertentangan dengan frontmatter. Label Hemat dan Habis tidak berubah: keduanya tetap memakai Mikro (800, 12 px).
 
 ### Blok Item stok dan tombol Salin (PRD §6.1, §6.2)
-Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam `kartu kartu-tegas` yang tegak, dengan selotip di atasnya. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (Bantuan 16 px, `pensil-redup`), nilai mono 15 px `pensil`, dan tombol Salin (`tombol tombol-kecil`, 40 px, ikon `Copy` 18 px). Baris-barisnya dipisah garis putus-putus 2 px. Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check`, latar `st-selesai-bg`, dan teks `st-selesai` selama 1,6 dtk. Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
+Halaman Pesanan dikepalai label "Nomor Pesanan" dan Nomor Pesanan dalam mono 30 px. Item stok tampil dalam `kartu kartu-tegas` yang tegak, dengan selotip di atasnya. Setiap kolom Format Item stok menjadi satu baris berisi nama kolom (Bantuan 16 px, `pensil-redup`), nilai mono 15 px `pensil`, dan tombol Salin (`tombol tombol-kecil`, 40 px, ikon `Copy` 18 px). Baris-barisnya dipisah garis putus-putus 2 px. Setelah diketuk, tombol berubah menjadi "Tersalin" dengan ikon `Check`, latar `st-selesai-bg`, dan teks `st-selesai` selama 1,6 dtk. Tombol "Salin semua" (PRD §6.1, ▶ Keputusan 2026-11-20) berada di kepala kartu Item stok, rata kanan sejajar judul, sebagai `tombol tombol-kecil` dengan ikon `CopyCheck` 18 px dan label "Salin semua". Umpan balik setelah diketuk sama dengan tombol Salin per kolom, dengan label "Semua tersalin". Tamu yang membuka Riwayat diberi penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", dengan ikon `Ticket`.
 
 ▶ Keputusan 2026-11-11 (#53): Sebelum M2, tab Riwayat untuk Tamu di layar lebar menaruh judul di atas dan panel penjelasan di kolom kiri. Tata letak prototipe, yaitu judul di kiri dan panel di kanan, baru dipakai bila kolom kiri sudah berisi tombol Masuk dan Daftar.
 
@@ -685,6 +685,22 @@ Foto diunggah Admin (PRD §3.3), dipotong mengisi bingkai radius `coret-alt` ber
 - Di dasbor admin, foto dikelola di panel Foto pada halaman ubah Produk. Setiap unggahan, perpindahan, dan penghapusan langsung tersimpan tanpa tombol Simpan. Panelnya menuliskan hal itu.
 - Urutan foto diatur dengan tombol Naikkan dan Turunkan, satu langkah per ketukan, tanpa seret-lepas.
 - Foto dihapus tanpa dialog konfirmasi, karena foto mudah diunggah ulang.
+
+### Grafik Laporan keuangan (PRD §14.7)
+Grafik digambar sebagai SVG oleh kode toko sendiri, tanpa pustaka grafik. Grafik adalah data, jadi grafik mengikuti aturan "kesan coretan berhenti di data": garis dan batangnya lurus dan tegak, tanpa rotasi, tanpa tepi bergelombang, dan tanpa arsiran acak. Rasa coretan cukup datang dari wadahnya.
+- **Wadah:** setiap grafik berada di `kartu` tegak dengan judul Kalam di atasnya, misalnya "Pendapatan".
+- **Sumbu dan garis bantu:** garis dasar 2 px `pensil`, garis bantu mendatar 1 px `pensil-redup` putus-putus, dan label sumbu Patrick Hand 14 px `pensil-redup`. Angka rupiah di label sumbu disingkat, misalnya "Rp 1,2 jt" atau "Rp 450 rb".
+- **Batang:** isian `pulpen` dengan garis tepi 2 px `pensil` dan sudut lurus. Batang bernilai 0 tidak digambar, tetapi kelompoknya tetap punya tempat dan label.
+- **Dua garis Laba:** Laba kotor memakai garis utuh 3 px `pulpen`, dan Laba bersih memakai garis putus-putus 3 px `pensil`. Bedanya terbaca tanpa warna. Setiap titik diberi penanda bulat 6 px. Nilai negatif digambar di bawah garis nol, dan garis nol bertebal 2 px.
+- **Batang mendatar** (Produk terlaris dan Pendapatan per Kategori): nama di kiri, batang di tengah, lalu jumlah Pesanan Selesai dan Pendapatan rata kanan dalam huruf isi. Batang terpanjang mengisi lebar yang tersedia.
+- **Keterangan seri:** ada di bawah judul, berupa contoh garis atau batang kecil beserta namanya.
+- **Nilai:** mengetuk atau menyorot sebuah batang atau titik memunculkan catatan kecil bergaya Toast (latar `postit`, teks `teks-postit`, garis 2 px `pensil`, tanpa rotasi) berisi label kelompok dan nilainya, misalnya "16–22 Nov · Rp 1.250.000".
+- **Ponsel:** bila kelompoknya lebih lebar dari layar, grafik bergulir ke samping di dalam kartunya. Halaman sendiri tidak pernah bergulir ke samping (PRD §11.1).
+- **Pembaca layar:** setiap grafik punya ringkasan teks atau tabel tersembunyi berisi semua kelompok dan nilainya.
+- **Mode gelap:** grafik memakai token yang sama, jadi otomatis mengikuti buku sketsa malam.
+
+### Rincian angka Laporan keuangan dan kartu Ringkasan
+Rincian angka Laporan keuangan (PRD §14.5, §14.6) memakai tata letak Rincian Total bayar: baris tegak, label di kiri, nominal rata kanan, dan baris Laba kotor serta Laba bersih ditebalkan dengan garis pemisah 2 px `pensil` di atasnya. Tanda − dan + ditulis di depan label pengurang dan penambah. Nominal negatif ditulis "−Rp 12.500" dengan warna `aksi`. Peringatan Pesanan tanpa Harga modal dan keterangan Biaya operasional saat saringan aktif tampil sebagai kartu catatan post-it di atas rincian. Kartu Ringkasan yang memuat tiga angka (hari ini, bulan ini, sepanjang waktu) menaruh angka hari ini paling besar dan dua angka lainnya di bawahnya sebagai baris kecil berlabel.
 
 ## Do's and Don'ts
 

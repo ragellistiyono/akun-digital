@@ -1,0 +1,253 @@
+{
+  "aturan": "Grafik Produk terlaris",
+  "prd": "§14.7",
+  "keterangan": "Input adalah Pesanan Selesai yang sudah lolos saringan Laporan keuangan. Pesanan dijumlahkan per Produk dari semua Variannya. Paling banyak 10 Produk, diurutkan menurut jumlah Pesanan Selesai terbanyak, lalu Pendapatan terbesar, lalu nama Produk A sampai Z. Pendapatan adalah jumlah Total bayar.",
+  "kasus": [
+    {
+      "nama": "Sepuluh Produk teratas dari dua belas, dengan jumlah yang sama",
+      "input": {
+        "pesananSelesai": [
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50010
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 45123
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50200
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135499
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135001
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25100
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25200
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25300
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25400
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25005
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55100
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55200
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55300
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30100
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30200
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30300
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40100
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40200
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40300
+          },
+          {
+            "produk": "Vidio Platinum",
+            "varian": "1 Bulan",
+            "totalBayar": 30100
+          },
+          {
+            "produk": "Vidio Platinum",
+            "varian": "1 Bulan",
+            "totalBayar": 30200
+          },
+          {
+            "produk": "Viu Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 15100
+          },
+          {
+            "produk": "Viu Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 15200
+          },
+          {
+            "produk": "WeTV VIP",
+            "varian": "1 Bulan",
+            "totalBayar": 20100
+          },
+          {
+            "produk": "Zoom Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 150100
+          },
+          {
+            "produk": "Apple Music",
+            "varian": "1 Bulan",
+            "totalBayar": 20100
+          },
+          {
+            "produk": "CapCut Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 20100
+          }
+        ]
+      },
+      "output": {
+        "terlaris": [
+          {
+            "produk": "Netflix Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 415833
+          },
+          {
+            "produk": "Spotify Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 126005
+          },
+          {
+            "produk": "YouTube Premium",
+            "pesananSelesai": 3,
+            "pendapatan": 165600
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "pesananSelesai": 3,
+            "pendapatan": 120600
+          },
+          {
+            "produk": "Canva Pro",
+            "pesananSelesai": 3,
+            "pendapatan": 90600
+          },
+          {
+            "produk": "Vidio Platinum",
+            "pesananSelesai": 2,
+            "pendapatan": 60300
+          },
+          {
+            "produk": "Viu Premium",
+            "pesananSelesai": 2,
+            "pendapatan": 30300
+          },
+          {
+            "produk": "Zoom Pro",
+            "pesananSelesai": 1,
+            "pendapatan": 150100
+          },
+          {
+            "produk": "Apple Music",
+            "pesananSelesai": 1,
+            "pendapatan": 20100
+          },
+          {
+            "produk": "CapCut Pro",
+            "pesananSelesai": 1,
+            "pendapatan": 20100
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Kurang dari sepuluh Produk",
+      "input": {
+        "pesananSelesai": [
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50010
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 45123
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50200
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135499
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135001
+          }
+        ]
+      },
+      "output": {
+        "terlaris": [
+          {
+            "produk": "Netflix Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 415833
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Tanpa Pesanan Selesai",
+      "input": {
+        "pesananSelesai": []
+      },
+      "output": {
+        "terlaris": []
+      }
+    }
+  ]
+}

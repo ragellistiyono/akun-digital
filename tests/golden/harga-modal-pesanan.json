@@ -1,0 +1,169 @@
+{
+  "aturan": "Harga modal yang tercatat di Pesanan",
+  "prd": "§14.1",
+  "keterangan": "Kejadian pada satu Varian, berurutan. hargaModalVarianAwal null berarti Varian itu dibuat sebelum fitur Harga modal tayang. Checkout mencatat Harga modal Varian saat itu, atau null bila belum ada. Saat Harga modal diisi untuk pertama kalinya, semua Pesanan Varian itu yang masih null ikut memakai nilai itu, apa pun statusnya. Perubahan sesudahnya hanya berlaku untuk Pesanan baru. Output null berarti Pesanan itu belum punya Harga modal.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: isi pertama dipakai Pesanan lama, perubahan berikutnya hanya untuk Pesanan baru",
+      "input": {
+        "hargaModalVarianAwal": null,
+        "kejadian": [
+          {
+            "jenis": "checkout",
+            "pesanan": "P1",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P2",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 35000
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P3",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 37000
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P4",
+            "status": "Selesai"
+          }
+        ]
+      },
+      "output": {
+        "hargaModalPesanan": {
+          "P1": 35000,
+          "P2": 35000,
+          "P3": 35000,
+          "P4": 37000
+        }
+      }
+    },
+    {
+      "nama": "Isi pertama berlaku untuk Pesanan berstatus apa pun",
+      "input": {
+        "hargaModalVarianAwal": null,
+        "kejadian": [
+          {
+            "jenis": "checkout",
+            "pesanan": "P1",
+            "status": "Dibatalkan"
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P2",
+            "status": "Bermasalah"
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P3",
+            "status": "Menunggu Pembayaran"
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 800
+          }
+        ]
+      },
+      "output": {
+        "hargaModalPesanan": {
+          "P1": 800,
+          "P2": 800,
+          "P3": 800
+        }
+      }
+    },
+    {
+      "nama": "Harga modal belum pernah diisi",
+      "input": {
+        "hargaModalVarianAwal": null,
+        "kejadian": [
+          {
+            "jenis": "checkout",
+            "pesanan": "P1",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P2",
+            "status": "Selesai"
+          }
+        ]
+      },
+      "output": {
+        "hargaModalPesanan": {
+          "P1": null,
+          "P2": null
+        }
+      }
+    },
+    {
+      "nama": "Varian baru yang sejak awal punya Harga modal",
+      "input": {
+        "hargaModalVarianAwal": 14000,
+        "kejadian": [
+          {
+            "jenis": "checkout",
+            "pesanan": "P1",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 15000
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P2",
+            "status": "Selesai"
+          }
+        ]
+      },
+      "output": {
+        "hargaModalPesanan": {
+          "P1": 14000,
+          "P2": 15000
+        }
+      }
+    },
+    {
+      "nama": "Isi pertama Rp 0 juga dihitung sebagai isi pertama",
+      "input": {
+        "hargaModalVarianAwal": null,
+        "kejadian": [
+          {
+            "jenis": "checkout",
+            "pesanan": "P1",
+            "status": "Selesai"
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 0
+          },
+          {
+            "jenis": "ubah-harga-modal",
+            "hargaModal": 500
+          },
+          {
+            "jenis": "checkout",
+            "pesanan": "P2",
+            "status": "Selesai"
+          }
+        ]
+      },
+      "output": {
+        "hargaModalPesanan": {
+          "P1": 0,
+          "P2": 500
+        }
+      }
+    }
+  ]
+}

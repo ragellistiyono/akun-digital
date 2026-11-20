@@ -1,0 +1,128 @@
+{
+  "aturan": "Biaya transaksi sebuah Pesanan",
+  "prd": "§14.3",
+  "keterangan": "Bila Total bayar sama dengan atau lebih dari minimalTotalBayar: Total bayar × persen ÷ 100, dibulatkan ke atas ke rupiah. Bila kurang: Rp 0. Hitung dengan bilangan bulat, misalnya persen × 100 per 10.000, karena perkalian pecahan biasa membuat 100.000 × 0,7% menjadi 700,0000…1 lalu terbulatkan ke atas menjadi 701.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: dibulatkan ke atas",
+      "input": {
+        "totalBayar": 135499,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 949
+      }
+    },
+    {
+      "nama": "Contoh PRD: tepat minimal, hasil tepat",
+      "input": {
+        "totalBayar": 100000,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 700
+      }
+    },
+    {
+      "nama": "Contoh PRD: di bawah minimal",
+      "input": {
+        "totalBayar": 50010,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Satu rupiah di bawah minimal",
+      "input": {
+        "totalBayar": 99999,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Sedikit di atas minimal dibulatkan ke atas",
+      "input": {
+        "totalBayar": 100001,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 701
+      }
+    },
+    {
+      "nama": "Hasil tepat tidak ikut naik",
+      "input": {
+        "totalBayar": 300000,
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 2100
+      }
+    },
+    {
+      "nama": "Persen dua desimal",
+      "input": {
+        "totalBayar": 200000,
+        "persen": 0.75,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 1500
+      }
+    },
+    {
+      "nama": "Minimal Rp 0: semua Pesanan dikenai",
+      "input": {
+        "totalBayar": 45123,
+        "persen": 0.7,
+        "minimalTotalBayar": 0
+      },
+      "output": {
+        "biayaTransaksi": 316
+      }
+    },
+    {
+      "nama": "Nominal kecil tetap dibulatkan ke atas",
+      "input": {
+        "totalBayar": 1001,
+        "persen": 0.7,
+        "minimalTotalBayar": 0
+      },
+      "output": {
+        "biayaTransaksi": 8
+      }
+    },
+    {
+      "nama": "Persen 0",
+      "input": {
+        "totalBayar": 135499,
+        "persen": 0,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "biayaTransaksi": 0
+      }
+    },
+    {
+      "nama": "Persen maksimum",
+      "input": {
+        "totalBayar": 499499,
+        "persen": 10,
+        "minimalTotalBayar": 0
+      },
+      "output": {
+        "biayaTransaksi": 49950
+      }
+    }
+  ]
+}

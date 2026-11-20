@@ -25,3 +25,7 @@ Aturan PRD yang memuat angka tetapi belum atau tidak punya berkas golden:
 - **§10.1 batas paket gratis Resend** adalah batas layanan luar, bukan aturan aplikasi.
 - **§11.1 lebar layar 360 piksel** diuji lewat test end-to-end di ukuran ponsel.
 - **§12 tujuh cadangan harian** diatur oleh skrip di server, bukan oleh modul domain.
+- **§9.2 kartu Item stok Tersedia, Item stok Terkirim, Pesanan Menunggu Pembayaran, dan Member terdaftar** (▶ Keputusan 2026-11-20) adalah hitungan jumlah tanpa rumus. Cakupannya tertulis di PRD dan diuji lewat test integrasi. Kartu uangnya memakai `laba.json` dan `pendapatan.json`.
+- **§14.3 Biaya transaksi Pesanan yang dibayar sebelum fitur tayang** dihitung sekali dengan nilai awal (0,7% dan Rp 100.000) memakai rumus `biaya-transaksi.json`. Ini pekerjaan migrasi data, jadi diuji lewat test migrasi.
+- **§14.6 penolakan tanggal akhir sebelum tanggal mulai** dan **§14.8 50 Pesanan per halaman** adalah aturan form dan tampilan, jadi diuji lewat test biasa.
+- **§14.7 Pendapatan per Kategori** adalah penjumlahan `pendapatan.json` per Kategori, dengan Pendapatan terbesar di atas. Urutan tampil ini tidak punya berkas golden sendiri.

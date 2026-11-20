@@ -1,0 +1,70 @@
+{
+  "aturan": "Hitungan \"N baris akan diproses\" di kotak tempel Item stok",
+  "prd": "§4.2",
+  "keterangan": "Jumlah baris yang tidak kosong. Baris kosong dan baris yang hanya berisi spasi atau tab tidak dihitung, karena diabaikan saat disimpan. Hasilnya selalu sama dengan jumlah tersimpan ditambah ditolak di tempel-item-stok.json; kasus \"Baris kosong dan baris spasi tidak dihitung\" adalah teks kasus \"Kolom kosong dan baris kosong\" di berkas itu.",
+  "kasus": [
+    {
+      "nama": "Tiga baris",
+      "input": {
+        "teks": "a@mail.com|rahasia1|Profil 1\nb@mail.com|rahasia2|Profil 2\nc@mail.com|rahasia3|Profil 3"
+      },
+      "output": {
+        "jumlahBaris": 3
+      }
+    },
+    {
+      "nama": "Baris baru di akhir tidak dihitung",
+      "input": {
+        "teks": "a@mail.com|rahasia1\nb@mail.com|rahasia2\n"
+      },
+      "output": {
+        "jumlahBaris": 2
+      }
+    },
+    {
+      "nama": "Baris kosong dan baris spasi tidak dihitung",
+      "input": {
+        "teks": "x@mail.com|\n\ny@mail.com|rahasia\n   \nz@mail.com|a|b"
+      },
+      "output": {
+        "jumlahBaris": 3
+      }
+    },
+    {
+      "nama": "Baris salah tetap dihitung karena akan ditolak",
+      "input": {
+        "teks": "|\nhanya-satu-kolom\na@mail.com|rahasia"
+      },
+      "output": {
+        "jumlahBaris": 3
+      }
+    },
+    {
+      "nama": "Akhir baris Windows",
+      "input": {
+        "teks": "a@mail.com|rahasia1\r\nb@mail.com|rahasia2\r\n"
+      },
+      "output": {
+        "jumlahBaris": 2
+      }
+    },
+    {
+      "nama": "Kosong",
+      "input": {
+        "teks": ""
+      },
+      "output": {
+        "jumlahBaris": 0
+      }
+    },
+    {
+      "nama": "Hanya baris kosong",
+      "input": {
+        "teks": "\n \n\t\n"
+      },
+      "output": {
+        "jumlahBaris": 0
+      }
+    }
+  ]
+}

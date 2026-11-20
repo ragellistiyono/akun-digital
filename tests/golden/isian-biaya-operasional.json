@@ -1,0 +1,231 @@
+{
+  "aturan": "Isian Biaya operasional",
+  "prd": "§14.4",
+  "keterangan": "hariIni adalah tanggal berjalan dalam zona waktu toko (WIB). Tanggal paling lambat hari ini. Keterangan wajib dan paling banyak 100 karakter setelah spasi di awal dan akhir dibuang. Nominal rupiah bulat minimal Rp 1. Setiap isian diperiksa sendiri. keteranganTersimpan adalah keterangan yang disimpan bila semua isian sah.",
+  "kasus": [
+    {
+      "nama": "Biaya hari ini",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Sewa server November",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Sewa server November"
+      }
+    },
+    {
+      "nama": "Biaya bulan lalu",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-10-31",
+        "keterangan": "Iklan Instagram",
+        "nominal": 75000
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Iklan Instagram"
+      }
+    },
+    {
+      "nama": "Tanggal besok ditolak",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-21",
+        "keterangan": "Iklan Instagram",
+        "nominal": 75000
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": "tanggal-setelah-hari-ini",
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Salah ketik tahun ditolak",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2027-11-20",
+        "keterangan": "Sewa server",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": "tanggal-setelah-hari-ini",
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Tanggal kosong",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": null,
+        "keterangan": "Sewa server",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": "tanggal-kosong",
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Spasi di awal dan akhir keterangan dibuang",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "  Domain toko  ",
+        "nominal": 200000
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Domain toko"
+      }
+    },
+    {
+      "nama": "Keterangan hanya spasi dianggap kosong",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "   ",
+        "nominal": 200000
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": null,
+        "alasanKeterangan": "keterangan-kosong",
+        "alasanNominal": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Keterangan tepat 100 karakter",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Sewa server bulan November untuk toko MIWE Digital Store, dibayar lewat transfer bank ke penyedia VP",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Sewa server bulan November untuk toko MIWE Digital Store, dibayar lewat transfer bank ke penyedia VP"
+      }
+    },
+    {
+      "nama": "Keterangan 100 karakter ditambah spasi di tepi",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "  Sewa server bulan November untuk toko MIWE Digital Store, dibayar lewat transfer bank ke penyedia VP ",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Sewa server bulan November untuk toko MIWE Digital Store, dibayar lewat transfer bank ke penyedia VP"
+      }
+    },
+    {
+      "nama": "Keterangan 101 karakter",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Sewa server bulan November untuk toko MIWE Digital Store, dibayar lewat transfer bank ke penyedia VP!",
+        "nominal": 150000
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": null,
+        "alasanKeterangan": "keterangan-terlalu-panjang",
+        "alasanNominal": null,
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal minimum",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Biaya kecil",
+        "nominal": 1
+      },
+      "output": {
+        "valid": true,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": null,
+        "keteranganTersimpan": "Biaya kecil"
+      }
+    },
+    {
+      "nama": "Nominal 0 ditolak",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Biaya kecil",
+        "nominal": 0
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": "nominal-kurang-dari-minimum",
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal bukan rupiah bulat",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Biaya kecil",
+        "nominal": 1500.5
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": "nominal-bukan-rupiah-bulat",
+        "keteranganTersimpan": null
+      }
+    },
+    {
+      "nama": "Nominal kosong",
+      "input": {
+        "hariIni": "2026-11-20",
+        "tanggal": "2026-11-20",
+        "keterangan": "Biaya kecil",
+        "nominal": null
+      },
+      "output": {
+        "valid": false,
+        "alasanTanggal": null,
+        "alasanKeterangan": null,
+        "alasanNominal": "nominal-kosong",
+        "keteranganTersimpan": null
+      }
+    }
+  ]
+}

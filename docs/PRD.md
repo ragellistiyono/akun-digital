@@ -31,6 +31,8 @@ MIWE Digital Store menjual Produk digital, misalnya akun premium aplikasi dan ga
 - Harga berbeda per Pembeli, misalnya harga reseller atau harga per level Member.
 - Mata uang selain rupiah dan bahasa selain Indonesia.
 
+▶ Keputusan 2026-11-20 (#204): Pemilik ingin menambah saldo Member, yaitu top up oleh Member dan pengelolaan saldo oleh Admin. Fitur ini direncanakan sebagai M5 dan aturannya diputuskan tersendiri. Sampai keputusan M5 masuk PRD, butir "saldo/deposit di toko" di atas tetap berlaku, dan QRIS lewat Qrispy tetap satu-satunya cara bayar.
+
 ## 2. Pengguna dan peran
 
 ### 2.1 Peran
@@ -105,6 +107,8 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 - Contoh: Harga jual Rp 499.000 diterima, dan Rp 499.001 ditolak.
 
 ▶ Keputusan 2026-11-11 (#53): Admin boleh menyimpan Produk sebelum menambah Variannya, dan boleh menonaktifkan semua Varian sebuah Produk. Produk tanpa Varian aktif tidak tampil di toko. Tidak ada aturan yang melarang Produk aktif tanpa Varian aktif.
+
+▶ Keputusan 2026-11-20 (#204): Setiap Varian juga punya Harga modal, yang diisi di form Varian di samping Harga jual. Aturannya ada di §14.1.
 
 ### 3.3 Halaman Produk
 
@@ -204,6 +208,15 @@ Saat menempel banyak baris:
 - Spasi di awal dan akhir setiap kolom dibuang sebelum Item stok disimpan dan dibandingkan, baik dari form maupun dari tempelan. Contoh: `a | b` dan `a|b` dianggap sama persis. Kolom yang hanya berisi spasi dianggap kosong.
 - Setelah tempelan diproses, kotak tempel dikosongkan. Baris yang ditolak tampil di daftar beserta nomor baris, isi baris, dan alasannya, supaya Admin bisa memperbaiki lalu menempelnya lagi.
 - Item stok boleh diisi ke Varian atau Produk yang nonaktif, supaya Admin bisa menyiapkan stok sebelum Produk dibuka untuk Pembeli.
+
+▶ Keputusan 2026-11-20 (#204): Menu Item stok
+- Dasbor admin punya menu samping "Item stok", tepat di bawah menu Produk (§11.1). Halamannya berisi:
+  - **pilihan Varian:** daftar Produk lalu Variannya, termasuk Produk dan Varian nonaktif;
+  - **keterangan Varian terpilih:** Format Item stok Produknya, contoh satu baris tempelan untuk format itu, dan Stok Varian saat ini;
+  - **kotak tempel:** cara mengisi dan aturan tolaknya sama persis dengan tempelan di bagian ini, termasuk ringkasan "48 tersimpan, 2 ditolak" beserta daftar baris yang ditolak;
+  - **daftar semua Varian:** nama Produk, nama Varian, status Aktif atau Nonaktif, serta jumlah Item stok Tersedia, Ditahan, dan Terkirim. Daftar diurutkan menurut nama Produk lalu nama Varian, A sampai Z. Mengetuk sebuah baris memilih Varian itu untuk diisi.
+- Di bawah kotak tempel tampil "N baris akan diproses", yang berubah langsung saat Admin menempel atau mengetik, sebelum menekan simpan. N adalah jumlah baris yang tidak kosong. Baris kosong dan baris yang hanya berisi spasi tidak dihitung, karena keduanya diabaikan saat disimpan. Dengan begitu N sama dengan jumlah tersimpan ditambah jumlah ditolak. Contoh lengkapnya ada di `tests/golden/hitungan-baris-tempel.json`.
+- Kotak tempel di halaman Varian (§9.7) tetap ada dan ikut menampilkan hitungan yang sama. Form satu Item stok tetap hanya ada di halaman Varian.
 
 ### 4.3 Satu Item stok untuk satu Pesanan
 
@@ -356,6 +369,18 @@ Item stok sebuah Pesanan Selesai tampil di tiga tempat:
 3. Riwayat Pesanan di dasbor Member.
 
 Setiap kolom Item stok di web punya tombol "Salin".
+
+▶ Keputusan 2026-11-20 (#204): Tombol "Salin semua"
+- Di atas Item stok Halaman Pesanan Selesai ada tombol "Salin semua" yang menyalin seluruh Item stok sekaligus. Tombol "Salin" per kolom tetap ada. Riwayat Pesanan membuka halaman yang sama (§7.4), jadi tombol ini juga tersedia bagi Member.
+- Teks yang disalin berisi satu baris untuk setiap kolom, dengan urutan kolom Format Item stok, dalam bentuk "Nama kolom: isi". Item stok yang dikirim dengan kolom lama memakai nama kolom lamanya (§4.1). Contoh untuk format `Email`, `Password`, `Profil`:
+
+  ```
+  Email: budi@mail.com
+  Password: rahasia123
+  Profil: Profil 2
+  ```
+
+- Contoh lengkapnya ada di `tests/golden/teks-salin-semua.json`.
 
 ### 6.2 Tautan Pesanan
 
@@ -673,6 +698,30 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Kartu Pendapatan, Pesanan Selesai, dan Member aktif masing-masing punya satu kalimat keterangan tentang cara hitungnya. Contoh kartu Member aktif: "Member yang sudah diverifikasi dan tidak nonaktif, sama dengan Member berstatus Aktif di daftar Member. Pendaftar tidak dihitung."
 - Kartu Pesanan Bermasalah ditonjolkan dengan warna status Bermasalah, ikon peringatan, dan teks "Perlu tindakan. Buka daftar Pesanan Bermasalah".
 
+▶ Keputusan 2026-11-20 (#204): Kartu Ringkasan diperluas. Keputusan ini menggantikan daftar dan urutan kartu di atas, sedangkan aturan "Ringkasan hanya berupa angka, tanpa grafik" tetap berlaku. Grafik ada di Laporan keuangan (§14.6).
+- Urutan kartu dan isinya:
+  1. **Pendapatan:** hari ini, bulan ini, dan sepanjang waktu (§9.3).
+  2. **Total Harga modal:** hari ini, bulan ini, dan sepanjang waktu (§14.2).
+  3. **Laba kotor:** hari ini, bulan ini, dan sepanjang waktu (§14.2).
+  4. **Laba bersih:** hari ini, bulan ini, dan sepanjang waktu (§14.5). Biaya operasional yang dikurangkan adalah biaya bertanggal hari ini, bulan ini, atau semua biaya.
+  5. **Pesanan Selesai:** hari ini, bulan ini, dan sepanjang waktu, menurut waktu pembayaran.
+  6. **Pesanan Menunggu Pembayaran:** jumlah Pesanan yang berstatus Menunggu Pembayaran saat Ringkasan dibuka.
+  7. **Pesanan Bermasalah:** jumlah saat ini, tetap ditonjolkan seperti di atas.
+  8. **Member aktif:** jumlah Member aktif, dengan keterangan "dari N Member terdaftar". Member terdaftar adalah semua Member, aktif maupun nonaktif, tanpa Pendaftar (§7.2).
+  9. **Item stok Tersedia:** jumlah Item stok Tersedia di Varian aktif dari Produk aktif, yaitu Item stok yang bisa dibeli sekarang. Item stok Ditahan tidak dihitung. Item stok di Varian atau Produk nonaktif tidak dihitung, tetapi tetap terlihat di menu Item stok (§4.2).
+  10. **Item stok Terkirim:** jumlah semua Item stok Terkirim sepanjang waktu.
+  11. **Varian stok menipis** (§9.4).
+- "Sepanjang waktu" berarti semua Pesanan sejak toko dibuka, tanpa batas tanggal.
+- Kartu 2 sampai 4 hanya menghitung Pesanan yang punya Harga modal (§14.2). Bila ada Pesanan Selesai tanpa Harga modal dalam rentang itu, kartu menampilkan "N Pesanan Selesai belum dihitung labanya, karena Harga modal Varian-nya belum diisi."
+- Setiap kartu bisa diketuk:
+  - kartu 1 sampai 4 membuka Laporan keuangan;
+  - kartu 5 dan 6 membuka daftar Pesanan yang sudah disaring ke status Selesai atau Menunggu Pembayaran;
+  - kartu 7 tetap membuka daftar Pesanan Bermasalah;
+  - kartu 8 membuka daftar Member;
+  - kartu 9 dan 10 membuka menu Item stok (§4.2);
+  - kartu 11 tetap seperti sekarang.
+- Contoh hitungan kartu uang ada di `tests/golden/laba.json`.
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -703,6 +752,13 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Saringan rentang tanggal memakai waktu Pesanan dibuat, yaitu waktu yang tampil di daftar.
 - Pencarian boleh berisi sebagian email atau sebagian Nomor Pesanan, tanpa membedakan huruf besar dan kecil. Contoh: "budi" dan "BUDI" menemukan Pesanan `budi@mail.com`. Nomor Pesanan lengkap tetap menemukan tepat Pesanan itu.
 
+▶ Keputusan 2026-11-20 (#204): Rincian nominal di detail Pesanan dasbor admin mendapat baris tambahan, sesudah rincian §5.5:
+- **Harga modal**, yaitu Harga modal yang tercatat di Pesanan (§14.1). Bila belum ada, baris ini menampilkan "—" beserta keterangan "Harga modal Varian ini belum diisi".
+- **Laba kotor** Pesanan itu (§14.2), atau "—" bila Harga modal belum ada.
+- **Biaya transaksi** (§14.3). Baris ini hanya tampil bila Pesanan sudah dibayar.
+
+Baris tambahan ini hanya ada di dasbor admin. Pembeli tidak pernah melihat Harga modal, laba, maupun Biaya transaksi.
+
 ### 9.6 Nomor Pesanan
 
 - Nomor Pesanan berbentuk `MIWE-` diikuti 6 karakter acak, misalnya `MIWE-7K3P9Q`.
@@ -729,6 +785,8 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Contoh: `0812-3456-7890`, `+62 812 3456 7890`, dan `6281234567890` semuanya disimpan sebagai `6281234567890`, dan tombol WhatsApp membuka `https://wa.me/6281234567890`.
 - Isian yang dikosongkan berarti nomor belum diisi, dan tombol WhatsApp tidak tampil.
 - Contoh lengkapnya ada di `tests/golden/nomor-whatsapp.json`.
+
+▶ Keputusan 2026-11-20 (#204): Pengaturan toko juga memuat dua isian Biaya transaksi: persen biaya transaksi dan minimal Total bayar yang dikenai biaya. Aturan dan nilai awalnya ada di §14.3.
 
 ### 9.9 Yang tidak dibuat di dasbor admin
 
@@ -780,6 +838,8 @@ Toko hanya mengirim tiga jenis email, semuanya berbahasa Indonesia:
 
 - Di layar lebar, isi yang sama tampil sebagai navbar atas, dan navigasi bawah tidak tampil.
 - Dasbor admin memakai menu samping di layar lebar dan menu lipat di ponsel, tanpa navigasi bawah.
+
+▶ Keputusan 2026-11-20 (#204): Urutan menu samping dasbor admin: Ringkasan, Laporan keuangan (§14.6), Pesanan, Member, Kategori, Produk, Item stok (§4.2), Voucher, lalu Pengaturan toko. Halaman Biaya operasional (§14.4) dibuka dari Laporan keuangan dan tidak punya menu sendiri.
 
 ▶ Keputusan 2026-11-11: Sebelum M2, keempat tab sudah tampil dengan isi berikut.
 - **Riwayat:** penjelasan bahwa Tautan Pesanan ada di email "Pesanan selesai", tanpa ajakan login.
@@ -866,6 +926,7 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 | M1 | Toko bisa berjualan | Login Admin; Kategori, Produk, Varian, dan Item stok; beranda dan halaman Produk; checkout dengan QRIS Qrispy; Penahanan dan status Pesanan; Pesanan Bermasalah; halaman Pesanan dan Tautan Pesanan; email Pesanan selesai; daftar Pesanan dan Item stok di dasbor admin; pengaturan toko; tampilan responsif dengan navbar dan navigasi bawah; siap dipasang di VPS | §2.1, §2.2, §3, §4, §5, §6, §7.7 (login Admin), §9.1, §9.5–§9.9, §10, §11.1, §11.5, §12 |
 | M2 | Member dan Voucher | Daftar dan Kode verifikasi; login dan lupa password; Riwayat Pesanan; dasbor Member; Admin mengelola Member; Voucher; ringkasan dasbor admin | §2.3, §7, §8, §9.2–§9.4 |
 | M3 | Sentuhan aplikasi | Animasi navbar, mode gelap, dan pasang seperti aplikasi | §11.2–§11.4 |
+| M4 | Laporan keuangan dan stok | Harga modal; Biaya transaksi dan Biaya operasional; Laba kotor dan Laba bersih; Ringkasan yang lebih lengkap; Laporan keuangan dengan saringan, grafik, dan tabel Pesanan; menu Item stok dengan hitungan baris; tombol "Salin semua" | §4.2, §6.1, §9.2, §9.5, §9.8, §11.1, §14 |
 
 Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checkout belum punya isian kode voucher, dan halaman Pesanan belum menampilkan ajakan membuat akun.
 
@@ -881,3 +942,173 @@ Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checko
 - isian kode voucher di Checkout dipasang setelah Admin bisa membuat Voucher.
 
 Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dari halaman mana pun yang dibuka Pembeli.
+
+▶ Keputusan 2026-11-20 (#204): M4 dan urutan tayangnya.
+- M4 berisi permintaan pemilik di #204, kecuali saldo Member. Saldo Member, termasuk kartu total saldo dan saringan metode pembayaran di Laporan keuangan, direncanakan sebagai M5 (§1.3).
+- Setiap merge tetap langsung tayang, jadi tiket M4 diurutkan sebagai berikut:
+  - Harga modal dicatat di Pesanan dan bisa diisi di form Varian sebelum angka laba tampil di mana pun.
+  - Kartu Total Harga modal, Laba kotor, dan Laba bersih di Ringkasan dipasang setelah isian Harga modal ada.
+  - Menu "Laporan keuangan" ditautkan dari menu samping dan dari kartu Ringkasan setelah halamannya berisi rincian angka, saringan, grafik, dan tabel Pesanan.
+  - Menu "Item stok" ditautkan setelah halamannya lengkap.
+- Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dari menu samping maupun Ringkasan.
+
+## 14. Keuangan toko
+
+Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian ini hanya terlihat oleh Admin. Pembeli tidak pernah melihat Harga modal, laba, Biaya transaksi, maupun Biaya operasional.
+
+### 14.1 Harga modal
+
+- Harga modal adalah biaya yang dikeluarkan toko untuk mendapat satu Item stok sebuah Varian. Setiap Varian punya satu Harga modal.
+- Isian Harga modal ada di form Varian, di samping Harga jual. Aturannya:
+  - wajib diisi;
+  - rupiah bulat, minimal Rp 0, dan tidak dibatasi maksimum. Rp 0 dipakai untuk Item stok yang didapat toko tanpa biaya;
+  - boleh lebih besar dari Harga jual, supaya toko tetap bisa menjual rugi, misalnya untuk promosi. Laba negatif tampil apa adanya.
+- Contoh lengkapnya ada di `tests/golden/harga-modal.json`.
+- Form Varian menampilkan "Laba kotor per Pesanan: Rp X", yaitu Harga jual − Harga modal, yang berubah langsung saat salah satu harga diketik.
+- Daftar Varian di halaman Produk dasbor admin menampilkan Harga jual, Harga modal, dan Laba kotor per Pesanan setiap Varian. Contoh: Rp 50.000, Rp 35.000, dan Rp 15.000.
+- Harga modal dicatat di Pesanan saat checkout, sama seperti Harga jual (§5.1). Mengubah Harga modal Varian sesudahnya tidak mengubah Pesanan yang sudah ada.
+
+**Varian dan Pesanan tanpa Harga modal**
+- Varian yang dibuat sebelum fitur ini tayang belum punya Harga modal. Checkout Varian itu tetap berjalan, dan Pesanannya tercatat tanpa Harga modal.
+- Karena isiannya wajib, Admin yang menyimpan perubahan apa pun pada Varian lama juga harus mengisi Harga modal-nya.
+- Saat Admin mengisi Harga modal sebuah Varian untuk pertama kalinya, semua Pesanan Varian itu yang tercatat tanpa Harga modal ikut memakai nilai itu, apa pun statusnya. Perubahan Harga modal sesudahnya hanya berlaku untuk Pesanan baru.
+- Contoh: Netflix Premium 1 Bulan sudah punya 40 Pesanan Selesai sebelum fitur ini tayang. Pada 25 November Admin mengisi Harga modal Rp 35.000, sehingga ke-40 Pesanan itu tercatat dengan Harga modal Rp 35.000. Pada 1 Desember Admin mengubahnya menjadi Rp 37.000. Ke-40 Pesanan tadi tetap Rp 35.000, dan hanya Pesanan yang dibuat sesudahnya yang memakai Rp 37.000. Contoh lengkapnya ada di `tests/golden/harga-modal-pesanan.json`.
+
+### 14.2 Laba kotor
+
+- Laba kotor sebuah Pesanan = Harga jual − Harga modal. Jumlah barangnya selalu 1, karena satu Pesanan berisi satu Item stok (§5.1).
+- Dalam suatu rentang waktu:
+  - Total Harga modal adalah jumlah Harga modal Pesanan yang dihitung;
+  - Laba kotor adalah jumlah Laba kotor Pesanan yang dihitung.
+- Pesanan yang dihitung adalah Pesanan Selesai yang punya Harga modal, dikelompokkan menurut waktu pembayarannya, sama seperti Pendapatan (§9.3). Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung. Pesanan Bermasalah yang kemudian diselesaikan Admin dihitung pada tanggal pembayarannya.
+- Pesanan Selesai tanpa Harga modal tetap dihitung di Pendapatan dan jumlah Pesanan Selesai, tetapi tidak di Total Harga modal, Laba kotor, dan Laba bersih. Selama ada Pesanan seperti itu dalam rentangnya, angka laba disertai peringatan "N Pesanan Selesai belum dihitung labanya, karena Harga modal Varian-nya belum diisi."
+- Contoh: Harga modal Rp 800, Harga jual Rp 1.000, dan 100 Pesanan Selesai. Total Harga modal 100 × Rp 800 = Rp 80.000, dan Laba kotor 100 × (Rp 1.000 − Rp 800) = Rp 20.000.
+- Contoh lengkapnya ada di `tests/golden/laba.json`.
+
+### 14.3 Biaya transaksi
+
+- Biaya transaksi adalah potongan Qrispy atas pembayaran sebuah Pesanan. Qrispy tidak mengabarkan besarnya untuk setiap Pesanan, dan keterangan resminya belum pasti (`docs/referensi/qrispy-api.md` bagian 3). Karena itu toko menghitungnya dari dua isian di pengaturan toko (§9.8):
+
+  | Isian | Aturan | Nilai awal |
+  |---|---|---|
+  | Persen biaya transaksi | Angka 0 sampai 10, paling banyak 2 angka di belakang koma, misalnya 0,7 atau 0,75 | 0,7 |
+  | Minimal Total bayar yang dikenai biaya | Rupiah bulat, minimal Rp 0. Rp 0 berarti semua Pesanan dikenai biaya | Rp 100.000 |
+
+  Contoh isiannya ada di `tests/golden/isian-biaya-transaksi.json`.
+- Biaya transaksi sebuah Pesanan:
+  - bila Total bayar sama dengan atau lebih dari minimal: Total bayar × persen ÷ 100, dibulatkan ke atas ke rupiah;
+  - bila Total bayar kurang dari minimal: Rp 0.
+- Pembulatan ke atas membuat laba tidak pernah tampil lebih besar dari kenyataan.
+- Contoh dengan nilai awal:
+  - Total bayar Rp 135.499: 135.499 × 0,7 ÷ 100 = 948,49…, jadi Biaya transaksinya Rp 949;
+  - Total bayar Rp 100.000: tepat Rp 700;
+  - Total bayar Rp 50.010: di bawah Rp 100.000, jadi Rp 0.
+  
+  Contoh lengkapnya ada di `tests/golden/biaya-transaksi.json`.
+- Biaya transaksi dihitung dan dicatat di Pesanan saat pembayarannya masuk. Ini termasuk pembayaran yang membuat Pesanan Bermasalah dan pembayaran yang datang terlambat (§5.9). Mengubah pengaturan sesudahnya tidak mengubah Pesanan yang sudah dibayar.
+- Pesanan yang sudah dibayar sebelum fitur ini tayang dihitung sekali dengan nilai awal.
+- Pemilik mencocokkan kedua nilai itu dengan potongan yang tampil di saldo Qrispy, lalu mengubahnya di pengaturan toko bila berbeda.
+
+### 14.4 Biaya operasional
+
+- Biaya operasional adalah biaya toko di luar Harga modal dan Biaya transaksi, misalnya sewa server, domain, atau iklan.
+- Admin mencatat setiap Biaya operasional dengan isian berikut:
+  - **tanggal:** paling lambat hari ini menurut zona waktu toko (§9.1). Tanggal yang akan datang ditolak, supaya salah ketik tahun tidak diam-diam mengubah Laba bersih;
+  - **keterangan:** wajib, paling banyak 100 karakter setelah spasi di awal dan akhir dibuang;
+  - **nominal:** rupiah bulat, minimal Rp 1.
+- Contoh isiannya ada di `tests/golden/isian-biaya-operasional.json`.
+- Admin bisa menambah, mengubah, dan menghapus Biaya operasional. Penghapusan ditegaskan lebih dulu di tempat, seperti panel hapus Voucher (§8.8).
+- Tidak ada biaya berulang otomatis. Biaya bulanan, misalnya sewa server, dicatat setiap bulan.
+- Halaman Biaya operasional dibuka dari Laporan keuangan (§14.6). Isinya:
+  - saringan bulan, dengan bulan berjalan sebagai pilihan awal;
+  - total Biaya operasional bulan itu;
+  - daftar biaya bulan itu, diurutkan menurut tanggal dengan yang terbaru di atas.
+- Biaya operasional dikurangkan dari Laba bersih menurut tanggalnya (§14.5).
+
+### 14.5 Laba bersih
+
+- **Laba bersih = Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional**
+- Potongan voucher, Kode unik, dan Biaya transaksi diambil dari Pesanan yang sama dengan Laba kotor, yaitu Pesanan Selesai yang punya Harga modal dalam rentang itu (§14.2). Biaya operasional adalah jumlah biaya yang tanggalnya berada dalam rentang itu.
+- Bila semua Pesanan Selesai punya Harga modal, Laba bersih sama dengan Pendapatan − Total Harga modal − Biaya transaksi − Biaya operasional.
+- Kode unik ditambahkan karena dibayar Pembeli dan masuk saldo toko (§5.5).
+- Contoh dalam satu hari, dengan Biaya transaksi nilai awal (§14.3) dan satu Biaya operasional Rp 10.000:
+
+  | Pesanan | Harga jual | Potongan voucher | Kode unik | Total bayar | Harga modal | Biaya transaksi |
+  |---|---|---|---|---|---|---|
+  | 1 | Rp 50.000 | Rp 5.000 | Rp 123 | Rp 45.123 | Rp 35.000 | Rp 0 |
+  | 2 | Rp 50.000 | Rp 0 | Rp 10 | Rp 50.010 | Rp 35.000 | Rp 0 |
+  | 3 | Rp 135.000 | Rp 0 | Rp 499 | Rp 135.499 | Rp 100.000 | Rp 949 |
+
+  | Rincian | Nominal |
+  |---|---|
+  | Pendapatan | Rp 230.632 |
+  | Pesanan Selesai | 3 |
+  | Total Harga modal | Rp 170.000 |
+  | **Laba kotor** | **Rp 65.000** |
+  | − Potongan voucher | Rp 5.000 |
+  | + Kode unik | Rp 632 |
+  | − Biaya transaksi | Rp 949 |
+  | − Biaya operasional | Rp 10.000 |
+  | **Laba bersih** | **Rp 49.683** |
+
+  Hitungan lewat Pendapatan memberi angka yang sama: 230.632 − 170.000 − 949 − 10.000 = 49.683.
+- Saat saringan Produk atau Kategori aktif di Laporan keuangan, Biaya operasional tidak dikurangkan, karena biaya itu bukan milik Produk tertentu. Baris Biaya operasional diganti keterangan "Laba bersih ini belum dikurangi Biaya operasional, karena saringan Produk atau Kategori sedang aktif."
+- Laba kotor dan Laba bersih boleh negatif, dan ditulis dengan tanda minus, misalnya "−Rp 12.500".
+- Contoh lengkapnya ada di `tests/golden/laba.json`.
+
+### 14.6 Laporan keuangan
+
+Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang. Letaknya di menu samping diatur di §11.1, dan halamannya punya tautan ke halaman Biaya operasional (§14.4).
+
+**Saringan**
+- **Rentang tanggal:** tanggal mulai dan tanggal akhir, keduanya ikut dihitung, menurut waktu bayar dalam zona waktu toko. Tanggal akhir yang lebih awal dari tanggal mulai ditolak dengan pesan "Tanggal akhir tidak boleh sebelum tanggal mulai."
+- **Kategori dan Produk:** masing-masing bisa dipilih satu atau "Semua". Memilih Kategori membatasi pilihan Produk ke Kategori itu, sedangkan Produk boleh dipilih tanpa memilih Kategori. Pilihan Produk juga memuat Produk nonaktif, karena Pesanan lamanya tetap tercatat.
+- **Kategori sebuah Pesanan** adalah Kategori Produknya saat Laporan dibuka. Bila Produk dipindah ke Kategori lain, Pesanan lamanya ikut pindah ke Kategori baru.
+- **Cari:** kotak cari Nomor Pesanan atau email hanya menyaring tabel Pesanan (§14.8). Rincian angka dan grafik tidak ikut berubah.
+- Saringan metode pembayaran belum ada, karena QRIS masih satu-satunya cara bayar. Saringan ini direncanakan bersama saldo Member di M5 (§13).
+
+**Periode**
+- Pilihan periode Harian, Mingguan, Bulanan, dan Tahunan menentukan pengelompokan grafik per periode (§14.7).
+- Satu minggu dihitung Senin 00.00.00 sampai Minggu 23.59.59 WIB. Bulan dan tahun mengikuti kalender dalam zona waktu toko.
+- Kelompok pertama dan terakhir hanya berisi tanggal yang ada di dalam rentang. Contoh: rentang Rabu 4 November sampai Jumat 20 November 2026 dengan periode Mingguan menghasilkan tiga kelompok, yaitu 4–8 November, 9–15 November, dan 16–20 November.
+- Kelompok tanpa Pesanan Selesai tampil dengan nilai 0.
+- Contoh lengkapnya ada di `tests/golden/kelompok-periode-laporan.json`.
+
+**Rentang awal**
+- Halaman dibuka dengan periode Harian. Setiap kali Admin memilih periode, rentangnya kembali ke rentang awal periode itu, lalu Admin bisa mengubahnya.
+- Tanggal akhir rentang awal selalu hari ini. Tanggal mulainya:
+  - Harian: 30 hari terakhir, termasuk hari ini;
+  - Mingguan: Senin dari 12 minggu terakhir, termasuk minggu berjalan;
+  - Bulanan: tanggal 1 dari 12 bulan terakhir, termasuk bulan berjalan;
+  - Tahunan: 1 Januari tahun waktu bayar Pesanan Selesai pertama, atau 1 Januari tahun berjalan bila belum ada Pesanan Selesai.
+- Contoh: hari ini Jumat 20 November 2026, dan Pesanan Selesai pertama dibayar 11 November 2026.
+  - Harian: 22 Oktober sampai 20 November 2026.
+  - Mingguan: 31 Agustus sampai 20 November 2026.
+  - Bulanan: 1 Desember 2025 sampai 20 November 2026.
+  - Tahunan: 1 Januari sampai 20 November 2026.
+  
+  Contoh lengkapnya ada di `tests/golden/rentang-awal-laporan.json`.
+
+**Rincian angka**
+- Di atas grafik tampil rincian angka yang mengikuti saringan rentang, Kategori, dan Produk. Rinciannya disusun dari atas ke bawah seperti tabel rincian di §14.5: Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor, potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, lalu Laba bersih.
+- Peringatan Pesanan tanpa Harga modal (§14.2) dan keterangan Biaya operasional saat saringan aktif (§14.5) tampil di rincian ini.
+
+### 14.7 Grafik
+
+- Grafik digambar oleh kode toko sendiri, tanpa pustaka grafik, dan mengikuti `docs/DESIGN.md`.
+- Semua grafik mengikuti saringan rentang, Kategori, dan Produk:
+  1. **Pendapatan** per kelompok periode, berupa batang.
+  2. **Laba kotor dan Laba bersih** per kelompok periode, berupa dua garis. Biaya operasional dikurangkan pada kelompok yang memuat tanggalnya, kecuali saat saringan Produk atau Kategori aktif (§14.5).
+  3. **Jumlah Pesanan Selesai** per kelompok periode, berupa batang.
+  4. **Produk terlaris:** paling banyak 10 Produk dengan Pesanan Selesai terbanyak dalam rentang, dijumlahkan dari semua Variannya, berupa batang mendatar dengan Pendapatan setiap Produk di sebelahnya. Bila jumlah Pesanan Selesai-nya sama, Produk dengan Pendapatan lebih besar ditaruh lebih atas, lalu nama Produk dari A sampai Z. Contohnya ada di `tests/golden/produk-terlaris.json`.
+  5. **Pendapatan per Kategori:** Pendapatan setiap Kategori dalam rentang, berupa batang mendatar beserta jumlah Pesanan Selesai-nya, dengan Pendapatan terbesar di atas. Kategori tanpa Pesanan Selesai dalam rentang itu tidak tampil.
+- Grafik 1, 3, 4, dan 5 menghitung semua Pesanan Selesai, termasuk yang belum punya Harga modal, sama seperti Pendapatan. Grafik 2 mengikuti §14.2 dan §14.5.
+
+### 14.8 Tabel Pesanan di Laporan keuangan
+
+- Tabel berisi Pesanan Selesai dalam saringan rentang, Kategori, dan Produk. Urutannya menurut waktu bayar dengan yang terbaru di atas, dan setiap halaman memuat 50 Pesanan.
+- Kolomnya: Nomor Pesanan, waktu bayar, Produk dan Varian, Harga jual, Harga modal, Laba kotor, potongan voucher, Kode unik, Biaya transaksi, dan Total bayar.
+- Pesanan tanpa Harga modal menampilkan "—" di kolom Harga modal dan Laba kotor.
+- Setiap baris membuka detail Pesanan di dasbor admin (§9.5).
+- Kotak cari menerima sebagian Nomor Pesanan atau sebagian email, tanpa membedakan huruf besar dan kecil, sama seperti daftar Pesanan (§9.5).
+- Bila tidak ada Pesanan Selesai dalam saringan, tabel berbunyi "Belum ada Pesanan Selesai dalam rentang ini." Bila pencarian tidak menemukan apa pun, tabel berbunyi "Tidak ada Pesanan yang cocok dengan pencarian ini."

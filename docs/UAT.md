@@ -61,6 +61,14 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - Waktu berakhir `LAMA` adalah waktu seed dijalankan dikurangi 24 jam, dibulatkan ke bawah ke menit.
 - Database lokal yang diisi seed sebelum M2 masih menyimpan Pesanan Selesai tanpa voucher. Kosongkan database lokal, lalu jalankan `pnpm db:seed` lagi sebelum UAT M2.
 
+▶ Keputusan 2026-11-20 (#204): Persiapan M4
+- **Seed lokal.** `pnpm db:seed` juga mengisi data berikut, semuanya bertanda `[CONTOH]`:
+  - Harga modal: Netflix Premium 1 Bulan Rp 35.000, Netflix Premium 3 Bulan Rp 100.000, YouTube Premium 1 Bulan Rp 14.000, YouTube Premium 3 Bulan Rp 40.000, dan Spotify Premium 1 Bulan Rp 18.000. Pesanan seed Netflix Premium 1 Bulan ikut tercatat dengan Harga modal Rp 35.000.
+  - Uji Bayar sengaja belum punya Harga modal, supaya UAT-N3 bisa menguji pengisian Harga modal pertama.
+  - Satu Biaya operasional "Sewa server" Rp 150.000, bertanggal 1 pada bulan seed dijalankan.
+  - Biaya transaksi memakai nilai awal PRD §14.3, yaitu 0,7% untuk Total bayar Rp 100.000 ke atas.
+- **Produksi.** UAT M4 di server produksi juga dijalankan tanpa data seed. Saat fitur ini tayang, Varian sungguhan belum punya Harga modal. Biarkan Harga modal Uji Bayar kosong sampai UAT-N3. Varian lain boleh diisi kapan saja, kecuali yang dipakai di UAT-N1, yang diisi saat menjalankan skenario itu.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -700,5 +708,157 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 | M1 | A1, B1, B2, C1–C6, D1–D3, E1, E2, E4–E7, F1, F2, I3, I4, I5, K1, K5, L1. Lewati bagian yang memakai Voucher atau Member: langkah Voucher di E3, pengecekan Riwayat Pesanan di C6, langkah 2 di B1, langkah 2 di K1, dan isian Ambang stok menipis. Di E6, ganti pengecekan kartu "Bermasalah" dengan jumlah Pesanan Bermasalah di daftar Pesanan dasbor admin. Di K1, tab Riwayat untuk Tamu cukup menjelaskan Tautan Pesanan tanpa ajakan login, dan tab Akun berisi tombol WhatsApp serta tautan Syarat & Ketentuan dan Kebijakan Privasi (PRD §11.1) |
 | M2 | B3, E3, G1–G7, H1–H5, I1, I2, J1 |
 | M3 | K2, K3, K4 |
+| M4 | N1–N10, lalu ulangi I1 untuk memastikan Pendapatan dan Pesanan Selesai tidak berubah |
 
 PRD: §13
+
+## N. Keuangan toko (§14)
+
+Skenario bagian ini dijalankan berurutan, karena N3 sampai N8 memakai Pesanan dari N2.
+
+**UAT-N1 — Harga modal di form Varian**
+- Langkah:
+  1. Buka form Varian Netflix Premium 1 Bulan. Kosongkan Harga modal, lalu simpan.
+  2. Isi Harga modal −1, lalu simpan.
+  3. Ketik Harga modal 35000 sambil memperhatikan tulisan di bawah isian, lalu simpan.
+  4. Ubah Harga modal menjadi 60000 dan simpan, lalu kembalikan ke 35000.
+  5. Buka halaman Produk Netflix Premium.
+- Hasil:
+  - Langkah 1 dan 2 ditolak dengan pesan di bawah isian Harga modal.
+  - Langkah 3: "Laba kotor per Pesanan: Rp 15.000" berubah langsung saat Anda mengetik, dan Harga modal tersimpan.
+  - Langkah 4 diterima, dengan "Laba kotor per Pesanan: −Rp 10.000".
+  - Langkah 5: daftar Varian menampilkan Harga jual, Harga modal, dan Laba kotor per Pesanan, yaitu Rp 50.000, Rp 35.000, dan Rp 15.000.
+  - Harga modal tidak tampil di Halaman Produk toko.
+- PRD: §3.2, §14.1
+
+**UAT-N2 — Biaya transaksi (bayar)**
+- Langkah:
+  1. Buka pengaturan toko dan lihat isian Biaya transaksi.
+  2. Coba simpan persen 10,01, lalu persen 0,755.
+  3. Simpan persen 1 dan minimal Total bayar 0.
+  4. Beli Uji Bayar dengan Email A sampai Selesai, lalu buka detail Pesanan itu di dasbor admin.
+  5. Kembalikan pengaturan ke persen 0,7 dan minimal Rp 100.000, lalu buka lagi detail Pesanan itu.
+
+  Di produksi, jalankan langkah 3 sampai 5 tanpa jeda. Pesanan sungguhan yang dibayar selama pengaturan masih 1% ikut tercatat dengan Biaya transaksi 1%.
+- Hasil:
+  - Langkah 1: nilai awalnya persen 0,7 dan minimal Rp 100.000.
+  - Langkah 2 ditolak dua kali dengan pesan.
+  - Langkah 4: Biaya transaksi sama dengan 1% Total bayar, dibulatkan ke atas ke rupiah. Contoh: Total bayar Rp 1.123 memberi Biaya transaksi Rp 12.
+  - Langkah 5: Biaya transaksi Pesanan itu tidak berubah, karena dicatat saat pembayaran masuk.
+  - Halaman Pesanan di toko tidak menampilkan Biaya transaksi.
+- PRD: §9.8, §14.3
+
+**UAT-N3 — Harga modal pertama untuk Pesanan lama**
+- Langkah:
+  1. Pastikan Uji Bayar belum punya Harga modal. Buka Ringkasan dan detail Pesanan dari UAT-N2.
+  2. Isi Harga modal Uji Bayar 800.
+  3. Buka lagi detail Pesanan itu dan Ringkasan.
+  4. Ubah Harga modal Uji Bayar menjadi 900, lalu buka lagi detail Pesanan itu. Setelah itu kembalikan ke 800.
+- Hasil:
+  - Langkah 1: kartu laba menampilkan "N Pesanan Selesai belum dihitung labanya, karena Harga modal Varian-nya belum diisi." Detail Pesanan menampilkan Harga modal "—" dengan keterangan "Harga modal Varian ini belum diisi".
+  - Langkah 3: detail Pesanan menampilkan Harga modal Rp 800 dan Laba kotor Rp 200. Angka N di peringatan Ringkasan berkurang, atau peringatannya hilang bila tidak ada lagi Pesanan Selesai tanpa Harga modal.
+  - Langkah 4: Harga modal Pesanan itu tetap Rp 800.
+- PRD: §14.1, §14.2
+
+**UAT-N4 — Kartu Ringkasan**
+- Langkah:
+  1. Mulai checkout Netflix Premium 1 Bulan dengan Email B tanpa membayar, lalu buka Ringkasan.
+  2. Ketuk setiap kartu satu per satu, lalu kembali ke Ringkasan. Setelah itu batalkan Pesanan Email B.
+- Hasil:
+  - Ada 11 kartu dengan urutan Pendapatan, Total Harga modal, Laba kotor, Laba bersih, Pesanan Selesai, Pesanan Menunggu Pembayaran, Pesanan Bermasalah, Member aktif, Item stok Tersedia, Item stok Terkirim, dan Varian stok menipis.
+  - Kartu uang dan kartu Pesanan Selesai menampilkan hari ini, bulan ini, dan sepanjang waktu.
+  - Laba kotor hari ini sama dengan jumlah (Harga jual − Harga modal) Pesanan Selesai hari ini yang punya Harga modal.
+  - Pesanan Menunggu Pembayaran berisi setidaknya 1, yaitu Pesanan Email B.
+  - Kartu Member aktif menulis "dari N Member terdaftar", dan N sama dengan jumlah baris daftar Member.
+  - Item stok Tersedia sama dengan jumlah Stok Varian semua Varian aktif dari Produk aktif.
+  - Kartu uang membuka Laporan keuangan. Kartu Pesanan Selesai dan Menunggu Pembayaran membuka daftar Pesanan yang sudah disaring ke status itu. Kartu Member aktif membuka daftar Member, dan kartu Item stok membuka menu Item stok.
+  - Ringkasan tetap tanpa grafik.
+- PRD: §9.2
+
+**UAT-N5 — Biaya operasional dan Laba bersih**
+- Langkah:
+  1. Catat angka Laba bersih hari ini di Ringkasan.
+  2. Dari Laporan keuangan, buka halaman Biaya operasional. Tambah biaya bertanggal hari ini dengan keterangan "Uji biaya" dan nominal 10000.
+  3. Coba simpan biaya bertanggal besok, biaya dengan keterangan kosong, dan biaya dengan nominal 0.
+  4. Buka Ringkasan lagi.
+  5. Ubah nominal "Uji biaya" menjadi 12000, lalu hapus biaya itu.
+- Hasil:
+  - Langkah 2: biaya tampil paling atas di daftar bulan ini, dan total bulan ini bertambah Rp 10.000.
+  - Langkah 3 ditolak tiga kali, masing-masing dengan pesan di isiannya.
+  - Langkah 4: Laba bersih hari ini turun tepat Rp 10.000 dari angka langkah 1.
+  - Langkah 5: penghapusan ditegaskan lebih dulu di tempat. Setelah dihapus, Laba bersih hari ini kembali ke angka langkah 1.
+- PRD: §14.4, §14.5
+
+**UAT-N6 — Laporan keuangan: rincian, saringan, dan periode**
+- Langkah:
+  1. Lihat menu samping dasbor admin, lalu buka Laporan keuangan.
+  2. Ubah rentang menjadi hari ini saja.
+  3. Saring Kategori Streaming, lalu Produk Uji Bayar.
+  4. Isi tanggal akhir sebelum tanggal mulai.
+  5. Pilih periode Mingguan, Bulanan, lalu Tahunan.
+- Hasil:
+  - Langkah 1: menu samping berurutan Ringkasan, Laporan keuangan, Pesanan, Member, Kategori, Produk, Item stok, Voucher, lalu Pengaturan toko. Laporan keuangan terbuka dengan periode Harian dan rentang 30 hari terakhir sampai hari ini.
+  - Langkah 2: rincian tersusun dari Pendapatan sampai Laba bersih. Pendapatan, Pesanan Selesai, Laba kotor, dan Laba bersih sama dengan angka hari ini di Ringkasan. Laba bersih sama dengan Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional, bila Anda hitung sendiri.
+  - Langkah 3: baris Biaya operasional diganti keterangan "Laba bersih ini belum dikurangi Biaya operasional, karena saringan Produk atau Kategori sedang aktif." Pilihan Produk hanya berisi Produk Kategori Streaming.
+  - Langkah 4 ditolak dengan pesan "Tanggal akhir tidak boleh sebelum tanggal mulai."
+  - Langkah 5: rentang awalnya berganti menurut PRD §14.6. Mingguan dimulai hari Senin 12 minggu lalu, Bulanan dimulai tanggal 1 dari 12 bulan lalu, dan Tahunan dimulai 1 Januari tahun Pesanan Selesai pertama.
+- PRD: §11.1, §14.5, §14.6
+
+**UAT-N7 — Grafik**
+- Langkah:
+  1. Di Laporan keuangan, kembalikan saringan ke "Semua" dan periode ke Harian.
+  2. Pilih periode Mingguan.
+  3. Buka Laporan keuangan di ponsel selebar 360 piksel, lalu dalam mode gelap.
+- Hasil:
+  - Ada lima grafik: Pendapatan, Laba kotor dan Laba bersih, jumlah Pesanan Selesai, Produk terlaris, dan Pendapatan per Kategori.
+  - Hari tanpa Pesanan Selesai tampil dengan nilai 0.
+  - Langkah 2: setiap kelompok mencakup Senin sampai Minggu, kecuali kelompok terakhir yang berakhir hari ini.
+  - Produk terlaris memuat paling banyak 10 Produk, diurutkan menurut jumlah Pesanan Selesai, dengan Pendapatan di sebelahnya.
+  - Langkah 3: grafik terbaca tanpa gulir halaman ke samping, juga dalam mode gelap.
+- PRD: §14.7
+
+**UAT-N8 — Tabel Pesanan di Laporan keuangan**
+- Langkah:
+  1. Lihat tabel di bawah grafik.
+  2. Cari dengan sebagian Email A dalam huruf besar, lalu dengan teks yang tidak ada di Pesanan mana pun.
+  3. Kosongkan pencarian, lalu ketuk baris Pesanan dari UAT-N2.
+- Hasil:
+  - Kolomnya Nomor Pesanan, waktu bayar, Produk dan Varian, Harga jual, Harga modal, Laba kotor, potongan voucher, Kode unik, Biaya transaksi, dan Total bayar. Pesanan terbaru ada di atas.
+  - Langkah 2: tabel hanya memuat Pesanan Email A, sedangkan rincian angka dan grafik tidak berubah. Teks yang tidak ada menampilkan "Tidak ada Pesanan yang cocok dengan pencarian ini."
+  - Langkah 3 membuka detail Pesanan itu di dasbor admin.
+- PRD: §14.8
+
+**UAT-N9 — Menu Item stok**
+- Langkah:
+  1. Buka menu Item stok, lalu pilih Varian Uji Bayar.
+  2. Tempel teks berikut tanpa menekan simpan. Baris keempat sengaja kosong, dan baris kelima sama dengan baris pertama:
+
+     ```
+     UJI-M4-001
+     UJI-M4-002
+     UJI-M4-003
+
+     UJI-M4-001
+     ```
+
+  3. Simpan.
+  4. Ketuk baris Netflix Premium 3 Bulan di daftar Varian.
+  5. Buka halaman Varian Uji Bayar dari menu Produk, lalu tempel satu baris di kotak tempelnya tanpa menyimpan.
+- Hasil:
+  - Langkah 1: halaman menampilkan Format Item stok `Kode`, contoh satu baris tempelan, dan Stok Varian Uji Bayar.
+  - Langkah 2: tertulis "4 baris akan diproses".
+  - Langkah 3: hasilnya "3 tersimpan, 1 ditolak", dan baris 5 ditolak sebagai baris kembar. Jumlah Tersedia Uji Bayar di daftar Varian bertambah 3.
+  - Daftar Varian memuat semua Varian, termasuk yang nonaktif dengan tanda Nonaktif, diurutkan menurut nama Produk lalu Varian, beserta jumlah Tersedia, Ditahan, dan Terkirim.
+  - Langkah 4 memilih Netflix Premium 3 Bulan, dan Format Item stok berganti menjadi `Email`, `Password`, `Profil`.
+  - Langkah 5: kotak tempel halaman Varian juga menampilkan "1 baris akan diproses".
+- PRD: §4.2
+
+**UAT-N10 — Salin semua**
+- Langkah:
+  1. Buka Halaman Pesanan dari UAT-N2 lewat email "Pesanan selesai" di Email A. Tekan "Salin semua", lalu tempel di aplikasi catatan.
+  2. Ulangi dengan Pesanan Selesai sebuah Produk yang Format Item stok-nya punya lebih dari satu kolom. Di seed lokal, pakai Pesanan Netflix Premium milik `member@miwe.example` dari tab Riwayat.
+- Hasil:
+  - Langkah 1: yang tertempel adalah satu baris "Kode: …".
+  - Langkah 2: yang tertempel adalah satu baris untuk setiap kolom, misalnya "Email: …", "Password: …", dan "Profil: …", dengan urutan yang sama seperti di layar.
+  - Tombol "Salin" per kolom tetap ada.
+- PRD: §6.1
