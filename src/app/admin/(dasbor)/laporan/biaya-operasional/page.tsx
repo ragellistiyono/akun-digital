@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { z } from "zod";
@@ -11,6 +11,7 @@ import {
 } from "@/server/biaya-operasional";
 import { tanggalIsianWib, tanggalWibDariIsian } from "@/server/zona-waktu-toko";
 
+import { ALAMAT_LAPORAN } from "../alamat";
 import { ALAMAT_BIAYA_OPERASIONAL } from "./alamat";
 
 const NAMA_BULAN = [
@@ -162,8 +163,8 @@ function TabelBiaya({ biaya }: { biaya: readonly Biaya[] }) {
 
 // Halaman Biaya operasional (PRD §14.4 ▶ Keputusan 2026-11-20): saringan bulan dengan bulan berjalan menurut zona
 // waktu toko (PRD §9.1) sebagai pilihan awal, total Biaya operasional bulan itu, dan daftar biayanya dengan tanggal
-// terbaru di atas. Halaman ini dibuka dari Laporan keuangan, dan belum ditautkan dari menu samping maupun
-// Ringkasan (PRD §13 ▶ Keputusan 2026-11-20).
+// terbaru di atas. Halaman ini dibuka dari Laporan keuangan dan punya tautan kembali ke sana. Keduanya belum
+// ditautkan dari menu samping maupun Ringkasan (PRD §13 ▶ Keputusan 2026-11-20).
 export default async function HalamanBiayaOperasional({
   searchParams,
 }: PageProps<"/admin/laporan/biaya-operasional">) {
@@ -189,7 +190,18 @@ export default async function HalamanBiayaOperasional({
 
   return (
     <>
-      <div className="kepala-halaman">
+      <Link
+        href={ALAMAT_LAPORAN}
+        className="inline-flex h-10 items-center gap-1 pr-3 text-[17px] text-pulpen decoration-2 underline-offset-4 hover:underline"
+      >
+        <ChevronLeft
+          aria-hidden="true"
+          className="size-6 shrink-0"
+          strokeWidth={2.5}
+        />
+        Laporan keuangan
+      </Link>
+      <div className="kepala-halaman mt-2">
         <h1>Biaya operasional</h1>
         <Link
           href={`${ALAMAT_BIAYA_OPERASIONAL}/baru`}
