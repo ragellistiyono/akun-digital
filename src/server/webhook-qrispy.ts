@@ -1,5 +1,18 @@
-// Pemeriksaan signature webhook Qrispy (ADR-0004, docs/referensi/qrispy-api.md bagian 6).
+// Pemeriksaan signature webhook Qrispy dan penerusan kabar pembayarannya ke pemroses Pesanan atau Top up (ADR-0004,
+// docs/referensi/qrispy-api.md bagian 6).
 import { createHmac, timingSafeEqual } from "node:crypto";
+
+import { eq } from "drizzle-orm";
+
+import { rujukanTopUp } from "@/domain/nomor-top-up";
+
+import { db } from "./db";
+import { topUp } from "./db/schema";
+import {
+  type KabarPembayaran,
+  prosesKabarPembayaran,
+} from "./kabar-pembayaran";
+import { prosesKabarPembayaranTopUp } from "./kabar-pembayaran-top-up";
 
 /** Apakah dua teks sama, dibandingkan dengan waktu tetap setelah panjangnya dicek sama. */
 function samaPersis(a: string, b: string) {
@@ -36,4 +49,29 @@ export function formatSignatureWebhook(
     samaPersis(signature, digest.toString(format)),
   );
   return cocok ?? null;
+}
+
+/** Apakah ada Top up dengan QRIS itu. */
+async function qrisTopUp(qrisId: string) {
+  const [ada] = await db
+    .select({ id: topUp.id })
+    .from(topUp)
+    .where(eq(topUp.qrisId, qrisId));
+  return ada !== undefined;
+}
+
+/**
+ * Meneruskan kabar pembayaran dari webhook ke pemrosesnya (issue T78). Kabar untuk Top up dikenali dari awalan TOPUP-
+ * pada `payment_reference`, atau dari qris_id-nya bila `payment_reference` tidak ada atau bukan Nomor Top up, lalu
+ * diproses prosesKabarPembayaranTopUp. Kabar lain diproses prosesKabarPembayaran untuk Pesanan.
+ */
+export async function teruskanKabarWebhook({
+  paymentReference,
+  ...kabar
+}: KabarPembayaran & { paymentReference?: string }) {
+  const untukTopUp =
+    rujukanTopUp(paymentReference) || (await qrisTopUp(kabar.qrisId));
+  return untukTopUp
+    ? prosesKabarPembayaranTopUp(kabar)
+    : prosesKabarPembayaran(kabar);
 }

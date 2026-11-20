@@ -14,7 +14,7 @@ import { bacaTopUpMember, batalkanTopUp, buatTopUp } from "./top-up";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
 
-// Test integrasi Top up (T77, PRD §15.3, §15.4) dengan database app_test dan Qrispy tiruan dari .env.ci, yang dipakai
+// Test integrasi Top up (T77, T78, PRD §15.3, §15.4) dengan database app_test dan Qrispy tiruan dari .env.ci, yang dipakai
 // bersama test lain. Setiap test memakai Member dengan email unik.
 afterAll(async () => {
   await koneksi.end();
@@ -148,6 +148,15 @@ async function statusDanRiwayat(topUpId: string) {
     .where(eq(riwayatStatusTopUp.topUpId, topUpId))
     .orderBy(asc(riwayatStatusTopUp.waktu));
   return { status, riwayat };
+}
+
+/** Saldo Member itu. */
+async function saldo(idMember: string) {
+  const [baris] = await db
+    .select({ saldo: user.saldo })
+    .from(user)
+    .where(eq(user.id, idMember));
+  return baris.saldo;
 }
 
 /** Jumlah Top up milik Member itu. */
@@ -301,11 +310,13 @@ describe("batalkanTopUp (PRD §15.3, §5.8)", () => {
     );
   });
 
-  it("bila Qrispy menolak karena tagihan sudah dibayar, Top up tetap Menunggu Pembayaran", async () => {
+  // Issue T78: Top up yang pembatalannya ditolak karena sudah dibayar diproses sebagai sudah dibayar (PRD §15.3).
+  it("bila Qrispy menolak karena tagihan sudah dibayar, Top up diproses sebagai sudah dibayar: Berhasil dengan pelaku Qrispy, dan saldo bertambah Rp 10.000", async () => {
     const { id } = await memberBaru();
     const qrispy = qrispyKodeUnik123();
     const dibuat = await topUpBaru(id, qrispy);
     bayarQrisTiruan({ qrisId: dibuat.qrisId, amount: 10123 });
+    vi.spyOn(console, "error").mockImplementation(() => {});
 
     expect(
       await batalkanTopUp(
@@ -313,9 +324,31 @@ describe("batalkanTopUp (PRD §15.3, §5.8)", () => {
         { qrispy },
       ),
     ).toEqual({ hasil: "sudah-dibayar" });
-    expect((await statusDanRiwayat(dibuat.id)).status).toBe(
-      "Menunggu Pembayaran",
-    );
+    expect(await statusDanRiwayat(dibuat.id)).toEqual({
+      status: "Berhasil",
+      riwayat: [
+        { status: "Menunggu Pembayaran", pelaku: "Member" },
+        { status: "Berhasil", pelaku: "Qrispy" },
+      ],
+    });
+    expect(await saldo(id)).toBe(10000);
+  });
+
+  it("bila Qrispy menolak karena tagihan sudah dibayar dengan nominal kurang, Top up menjadi Bermasalah dan saldo tidak berubah", async () => {
+    const { id } = await memberBaru();
+    const qrispy = qrispyKodeUnik123();
+    const dibuat = await topUpBaru(id, qrispy);
+    bayarQrisTiruan({ qrisId: dibuat.qrisId, amount: 10000 });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(
+      await batalkanTopUp(
+        { nomorTopUp: dibuat.nomorTopUp, idMember: id },
+        { qrispy },
+      ),
+    ).toEqual({ hasil: "sudah-dibayar" });
+    expect((await statusDanRiwayat(dibuat.id)).status).toBe("Bermasalah");
+    expect(await saldo(id)).toBe(0);
   });
 
   it("bila Qrispy tidak membatalkan dan status QRIS-nya masih pending, pembatalan gagal", async () => {
@@ -380,6 +413,29 @@ describe("prosesKedaluwarsaTopUp (PRD §15.3, §5.8)", () => {
         sekarang: pukul("10:20:00"),
       }),
     ).toEqual({ hasil: "tidak-berubah" });
+  });
+
+  // Issue T78: QRIS yang ternyata sudah dibayar saat kedaluwarsa diproses sebagai sudah dibayar.
+  it("bila status QRIS-nya paid saat kedaluwarsa, Top up diproses sebagai sudah dibayar: Berhasil dengan pelaku Qrispy, dan saldo bertambah Rp 10.000", async () => {
+    const { id } = await memberBaru();
+    const qrispy = qrispyKodeUnik123();
+    const dibuat = await topUpBaru(id, qrispy, { sekarang: pukul("10:00:00") });
+    bayarQrisTiruan({ qrisId: dibuat.qrisId, amount: 10123 });
+
+    expect(
+      await prosesKedaluwarsaTopUp(dibuat.id, {
+        qrispy,
+        sekarang: pukul("10:15:00"),
+      }),
+    ).toEqual({ hasil: "diproses-sebagai-dibayar" });
+    expect(await statusDanRiwayat(dibuat.id)).toEqual({
+      status: "Berhasil",
+      riwayat: [
+        { status: "Menunggu Pembayaran", pelaku: "Member" },
+        { status: "Berhasil", pelaku: "Qrispy" },
+      ],
+    });
+    expect(await saldo(id)).toBe(10000);
   });
 
   it("tetap Kedaluwarsa tepat waktu bila cek status Qrispy gagal", async () => {

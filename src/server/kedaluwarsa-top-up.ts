@@ -9,6 +9,7 @@ import { perpindahanStatusTopUp } from "@/domain/status-top-up";
 
 import { db } from "./db";
 import { riwayatStatusTopUp, topUp } from "./db/schema";
+import { teruskanStatusDibayarTopUp } from "./kabar-pembayaran-top-up";
 import { qrispyAktif, type Qrispy, type StatusQris } from "./qrispy";
 
 /** Pelaku perubahan status karena kedaluwarsa di Riwayat status Top up (PRD §15.4). */
@@ -18,7 +19,7 @@ type HasilKedaluwarsaTopUp =
   | { hasil: "tidak-ditemukan" }
   | { hasil: "tidak-berubah" }
   | { hasil: "belum-kedaluwarsa"; kedaluwarsaPada: Date }
-  | { hasil: "sudah-dibayar" }
+  | { hasil: "diproses-sebagai-dibayar" }
   | { hasil: "kedaluwarsa" };
 
 /**
@@ -78,8 +79,9 @@ async function jadikanKedaluwarsa(topUpId: string, sekarang: Date) {
  * - Top up yang sudah tidak Menunggu Pembayaran tidak berubah, dan Qrispy tidak ditanya.
  * - Selama waktu kedaluwarsanya belum tercapai, Top up juga tidak berubah. Hasilnya membawa waktu itu, supaya
  *   pekerjaannya bisa dijadwalkan ulang.
- * - Begitu waktunya tercapai, status QRIS-nya ditanyakan ke Qrispy sekali. Bila statusnya `paid`, Top up tetap
- *   Menunggu Pembayaran sampai kabar pembayaran Top up diproses (T78).
+ * - Begitu waktunya tercapai, status QRIS-nya ditanyakan ke Qrispy sekali. Status `paid` diteruskan ke
+ *   prosesKabarPembayaranTopUp dengan `amount` sebagai nominal diterima, jadi Top up diproses sebagai sudah dibayar
+ *   (PRD §15.5).
  * - Selain itu, termasuk bila statusnya gagal ditanyakan, Top up menjadi Kedaluwarsa tepat waktu, dan Riwayat status
  *   Top up mencatat Sistem sebagai pelakunya.
  *
@@ -109,11 +111,8 @@ export async function prosesKedaluwarsaTopUp(
   }
 
   const status = await tanyaStatusQris(qrispy ?? qrispyAktif(), dibaca.qrisId);
-  if (status?.paymentStatus === "paid") {
-    console.error(
-      `QRIS ${dibaca.qrisId} sudah dibayar saat Top up-nya kedaluwarsa, jadi Top up itu tetap Menunggu Pembayaran sampai kabar pembayarannya diproses.`,
-    );
-    return { hasil: "sudah-dibayar" };
+  if (await teruskanStatusDibayarTopUp(dibaca.qrisId, status, { sekarang })) {
+    return { hasil: "diproses-sebagai-dibayar" };
   }
 
   return (await jadikanKedaluwarsa(topUpId, sekarang))

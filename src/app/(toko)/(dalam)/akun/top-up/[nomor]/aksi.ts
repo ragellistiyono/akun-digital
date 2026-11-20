@@ -16,16 +16,15 @@ const PESAN_TIDAK_DIKENAL =
 const PESAN_GAGAL =
   "Top up belum bisa dibatalkan karena Qrispy belum membatalkan QRIS-nya, jadi Top up masih Menunggu Pembayaran. Tekan Batalkan sekali lagi untuk mencoba lagi.";
 
-const PESAN_SUDAH_DIBAYAR =
-  "Pembayaran Anda sudah masuk, jadi Top up tidak dibatalkan. Saldo bertambah setelah pembayarannya diproses.";
-
 const NomorTopUp = z.string().refine(nomorTopUpSah);
 
 /**
  * Tombol "Batalkan" di Halaman bayar Top up (PRD §15.3, mengikuti §5.8): langsung membatalkan Top up milik Member
- * yang login, tanpa dialog, lalu Member kembali ke tab Akun. Top up yang ternyata sudah tidak Menunggu Pembayaran juga
- * membawa Member ke tab Akun. Bila QRIS-nya ternyata sudah dibayar, atau pembatalannya gagal, Member tetap di Halaman
- * bayar Top up dengan pesannya. Permintaan tanpa sesi Member dibawa ke halaman Masuk.
+ * yang login, tanpa dialog, lalu Member kembali ke tab Akun. Bila QRIS-nya ternyata sudah dibayar, Top up diproses
+ * sebagai sudah dibayar; Member juga dibawa kembali ke Halaman bayar Top up bila Top up itu ternyata sudah tidak
+ * Menunggu Pembayaran. Halaman itu meneruskannya ke Riwayat saldo bila Top up Berhasil, ke Halaman Top up Bermasalah
+ * bila Bermasalah, dan ke tab Akun untuk status lain. Bila pembatalannya gagal, Member tetap di Halaman bayar Top up
+ * dengan pesannya. Permintaan tanpa sesi Member dibawa ke halaman Masuk.
  */
 export async function aksiBatalkanTopUp(
   _sebelumnya: KeadaanPembatalan,
@@ -45,10 +44,10 @@ export async function aksiBatalkanTopUp(
       return { galat: PESAN_TIDAK_DIKENAL };
     case "gagal":
       return { galat: PESAN_GAGAL };
-    case "sudah-dibayar":
-      return { galat: PESAN_SUDAH_DIBAYAR };
     case "dibatalkan":
-    case "tidak-bisa-dibatalkan":
       redirect("/akun");
+    case "sudah-dibayar":
+    case "tidak-bisa-dibatalkan":
+      redirect(`/akun/top-up/${nomor.data}`);
   }
 }

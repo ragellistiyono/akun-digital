@@ -8,6 +8,7 @@ import { z } from "zod";
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
+import { STATUS_PESANAN } from "@/domain/status-pesanan";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
@@ -27,7 +28,7 @@ import {
   TombolSimpanQr,
 } from "./_components/kerangka-halaman-bayar";
 import { PanelBuatAkun } from "./_components/panel-buat-akun";
-import { PantauStatusPesanan } from "./_components/pantau-status";
+import { PantauStatus } from "./_components/pantau-status";
 import { TANDA_SUDAH_DIBAYAR } from "./_components/tanda-sudah-dibayar";
 import { aksiBatalkanPesanan } from "./aksi";
 
@@ -148,7 +149,13 @@ function HalamanBayar({
       totalBayar={rupiah(pesanan.rincian.totalBayar)}
       gambarQr={pesanan.gambarQr}
       altQr={`QRIS Pesanan ${pesanan.nomorPesanan}`}
-      pemantau={<PantauStatusPesanan tautan={tautan} status={pesanan.status} />}
+      pemantau={
+        <PantauStatus
+          alamatStatus={`/pesanan/${tautan}/status`}
+          status={pesanan.status}
+          statusSah={STATUS_PESANAN}
+        />
+      }
     >
       <section aria-label="Pesanan" className={PANEL}>
         <div className="flex flex-wrap items-start justify-between gap-2">

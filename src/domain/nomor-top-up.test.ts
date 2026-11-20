@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import golden from "../../tests/golden/nomor-top-up.json";
-import { nomorTopUp, nomorTopUpSah } from "./nomor-top-up";
+import { nomorTopUp, nomorTopUpSah, rujukanTopUp } from "./nomor-top-up";
 
 // PRD §15.3: TOPUP- diikuti 6 karakter dengan aturan Nomor Pesanan (§9.6).
 describe("nomorTopUpSah", () => {
@@ -24,5 +24,18 @@ describe("nomorTopUp", () => {
         "Nomor Top up butuh 6 byte acak, tetapi hanya mendapat 3. Panggil nomorTopUp dengan 6 byte acak yang dibuat di lapisan server.",
       ),
     );
+  });
+});
+
+// Issue T78: kabar pembayaran dikenali sebagai Top up dari awalan TOPUP- pada payment_reference.
+describe("rujukanTopUp", () => {
+  it.each([
+    ["TOPUP-7K3P9Q", true],
+    ["MIWE-7K3P9Q", false],
+    ["Order-123", false],
+    ["", false],
+    [undefined, false],
+  ])("payment_reference %j → %s", (rujukan, topUp) => {
+    expect(rujukanTopUp(rujukan)).toBe(topUp);
   });
 });

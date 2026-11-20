@@ -20,6 +20,7 @@ import { periksaTagihanQrisTopUp } from "@/domain/total-bayar-top-up";
 
 import { db } from "./db";
 import { riwayatStatusTopUp, topUp, user } from "./db/schema";
+import { teruskanStatusDibayarTopUp } from "./kabar-pembayaran-top-up";
 import { jadwalkanKedaluwarsaTopUp } from "./pekerjaan-latar";
 import { mintaPembatalanQris } from "./pembatalan-pesanan";
 import { qrispyAktif, type QrisBaru, type Qrispy } from "./qrispy";
@@ -263,8 +264,9 @@ async function jadikanDibatalkan(topUpId: string, sekarang: Date) {
  *   lain.
  * - Toko meminta pembatalan QRIS-nya ke Qrispy. Bila permintaan itu gagal, status QRIS-nya ditanyakan, lalu
  *   hasilPembatalanPesanan menentukan akibatnya.
- * - Bila QRIS-nya ternyata sudah dibayar, hasilnya "sudah-dibayar" dan Top up tetap Menunggu Pembayaran, sampai
- *   kabar pembayaran Top up diproses (T78).
+ * - Bila QRIS-nya ternyata sudah dibayar, Top up diproses sebagai sudah dibayar lewat prosesKabarPembayaranTopUp,
+ *   dengan `amount` dari status `paid` sebagai nominal diterima, dan hasilnya "sudah-dibayar". Top up itu menjadi
+ *   Berhasil atau Bermasalah menurut nominalnya (PRD §15.5).
  * - Top up Dibatalkan mencatat Member sebagai pelaku di Riwayat status Top up.
  *
  * Adaptor Qrispy dan waktu "sekarang" bisa diganti untuk test.
@@ -288,12 +290,14 @@ export async function batalkanTopUp(
     qrispy ?? qrispyAktif(),
     dibaca.qrisId,
   );
+  const statusQris =
+    jawaban.pembatalanQris === "ditolak" ? jawaban.status : null;
   const { akibat } = hasilPembatalanPesanan(
     jawaban.pembatalanQris === "diterima"
       ? jawaban
       : {
           pembatalanQris: "ditolak",
-          statusQris: jawaban.status?.paymentStatus ?? null,
+          statusQris: statusQris?.paymentStatus ?? null,
         },
   );
   switch (akibat) {
@@ -302,6 +306,8 @@ export async function batalkanTopUp(
         ? { hasil: "dibatalkan" }
         : { hasil: "tidak-bisa-dibatalkan" };
     case "diproses-sebagai-dibayar":
+      // Akibat ini hanya datang dari status `paid`, yang membawa nominal diterima dan waktu bayarnya.
+      await teruskanStatusDibayarTopUp(dibaca.qrisId, statusQris, { sekarang });
       return { hasil: "sudah-dibayar" };
     case "gagal":
       return { hasil: "gagal" };

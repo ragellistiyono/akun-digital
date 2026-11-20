@@ -20,14 +20,14 @@ import { jadwalkanEmailPesananSelesai } from "./pekerjaan-latar";
 import { bacaPengaturanBiayaTransaksi } from "./pengaturan-toko";
 import { qrispyAktif, type Qrispy, type StatusQris } from "./qrispy";
 
-/** Pelaku perubahan status karena kabar pembayaran di Riwayat status Pesanan. */
-const PELAKU_KABAR_PEMBAYARAN = "Qrispy";
+/** Pelaku perubahan status karena kabar pembayaran di Riwayat status Pesanan dan Top up (PRD §5.7, §15.4). */
+export const PELAKU_KABAR_PEMBAYARAN = "Qrispy";
 
-/** Jeda terpendek antara dua cek status ke Qrispy untuk Pesanan yang sama (ADR-0004). */
+/** Jeda terpendek antara dua cek status ke Qrispy untuk Pesanan atau Top up yang sama (ADR-0004). */
 const JEDA_CEK_STATUS_MS = 15_000;
 
-/** Kabar bahwa QRIS sebuah Pesanan sudah dibayar. */
-type KabarPembayaran = {
+/** Kabar bahwa QRIS sebuah Pesanan atau Top up sudah dibayar. */
+export type KabarPembayaran = {
   qrisId: string;
   /**
    * Nominal yang diterima Qrispy, yang dibandingkan dengan Total bayar (PRD §5.9): `received_amount` dari
@@ -37,7 +37,7 @@ type KabarPembayaran = {
   waktuBayar: Date;
 };
 
-type HasilProsesKabar =
+export type HasilProsesKabar =
   | { hasil: "qris-tidak-dikenal" }
   | { hasil: "tidak-berubah" }
   | { hasil: "diproses" };
@@ -175,7 +175,7 @@ export async function prosesKabarPembayaran(
   });
 }
 
-// Waktu cek status terakhir ke Qrispy, menurut id Pesanan. Disimpan di globalThis, karena Next.js bisa
+// Waktu cek status terakhir ke Qrispy, menurut id Pesanan atau id Top up. Disimpan di globalThis, karena Next.js bisa
 // memuat modul ini lebih dari sekali dalam satu proses server, padahal semua yang memicu cek status harus
 // melihat batas yang sama. Toko berjalan sebagai satu proses di satu VPS (PRD §12).
 const wadah = globalThis as typeof globalThis & {
@@ -184,17 +184,17 @@ const wadah = globalThis as typeof globalThis & {
 const cekTerakhir = (wadah.__cekStatusQrispyTerakhir ??= new Map());
 
 /**
- * Apakah Pesanan itu sudah boleh ditanyakan lagi ke Qrispy pada waktu itu. Bila boleh, waktu itu langsung
+ * Apakah Pesanan atau Top up itu sudah boleh ditanyakan lagi ke Qrispy pada waktu itu. Bila boleh, waktu itu langsung
  * dicatat sebagai cek terakhir, sebelum Qrispy ditanya, sehingga permintaan yang datang bersamaan
  * menunggu giliran berikutnya. Catatan yang sudah lewat 15 detik dibuang.
  */
-function ambilGiliranCek(pesananId: string, sekarang: Date) {
+export function ambilGiliranCek(id: string, sekarang: Date) {
   const kini = sekarang.getTime();
   for (const [id, waktu] of cekTerakhir) {
     if (kini - waktu >= JEDA_CEK_STATUS_MS) cekTerakhir.delete(id);
   }
-  if (cekTerakhir.has(pesananId)) return false;
-  cekTerakhir.set(pesananId, kini);
+  if (cekTerakhir.has(id)) return false;
+  cekTerakhir.set(id, kini);
   return true;
 }
 

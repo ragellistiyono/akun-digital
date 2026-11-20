@@ -12,11 +12,20 @@ import {
 } from "vitest";
 
 import { db, koneksi } from "@/server/db";
-import { itemStok, pesanan, varian } from "@/server/db/schema";
+import {
+  itemStok,
+  pesanan,
+  riwayatSaldo,
+  topUp,
+  user,
+  varian,
+} from "@/server/db/schema";
 import { cekStatusPembayaran } from "@/server/kabar-pembayaran";
 import { buatPesanan } from "@/server/pesanan";
 import { bayarQrisTiruan, qrispyTiruan } from "@/server/qrispy-tiruan";
+import { buatTopUp } from "@/server/top-up";
 import { sisipkanProduk } from "@/server/uji-katalog";
+import { sisipkanMember } from "@/server/uji-member";
 
 import { POST } from "./route";
 
@@ -644,4 +653,132 @@ describe("webhook Qrispy POST /api/qrispy/webhook", () => {
       }
     });
   }
+});
+
+/** Member baru dengan Top up Rp 10.000 Menunggu Pembayaran lewat Qrispy tiruan. */
+async function topUpMenunggu() {
+  const email = `budi-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id: idMember }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  const hasil = await buatTopUp(
+    { idMember, nominal: "10000" },
+    { qrispy: qrispyTiruan },
+  );
+  if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+  const [dibuat] = await db
+    .select({
+      id: topUp.id,
+      nomorTopUp: topUp.nomorTopUp,
+      qrisId: topUp.qrisId,
+      kodeUnik: topUp.kodeUnik,
+      totalBayar: topUp.totalBayar,
+    })
+    .from(topUp)
+    .where(eq(topUp.nomorTopUp, hasil.nomorTopUp));
+  return { ...dibuat, idMember };
+}
+
+type DiTopUp = Awaited<ReturnType<typeof topUpMenunggu>>;
+
+/** Payload payment.received bentuk dashboard untuk Top up itu, dengan Nomor Top up sebagai payment_reference. */
+function paymentReceivedTopUp(
+  diTopUp: DiTopUp,
+  data: Record<string, unknown> = {},
+) {
+  return {
+    event: "payment.received",
+    data: {
+      qris_id: diTopUp.qrisId,
+      amount: 10000,
+      received_amount: diTopUp.totalBayar,
+      payment_reference: diTopUp.nomorTopUp,
+      paid_at: PAID_AT_DASHBOARD,
+      unique_id: diTopUp.kodeUnik,
+      ...data,
+    },
+  };
+}
+
+/** Status Top up itu, saldo Member-nya, dan baris Riwayat saldo-nya. */
+async function keadaanTopUp(diTopUp: DiTopUp) {
+  const [{ status }] = await db
+    .select({ status: topUp.status })
+    .from(topUp)
+    .where(eq(topUp.id, diTopUp.id));
+  const [{ saldo }] = await db
+    .select({ saldo: user.saldo })
+    .from(user)
+    .where(eq(user.id, diTopUp.idMember));
+  const riwayat = await db
+    .select({ nominal: riwayatSaldo.nominal, rujukan: riwayatSaldo.rujukan })
+    .from(riwayatSaldo)
+    .where(eq(riwayatSaldo.userId, diTopUp.idMember));
+  return { status, saldo, riwayatSaldo: riwayat };
+}
+
+// Issue T78 (PRD §15.5, ADR-0004): webhook untuk QRIS Top up dikenali dari awalan TOPUP- pada payment_reference, atau
+// dari qris_id, lalu diproses pemroses kabar pembayaran Top up.
+describe("webhook Qrispy untuk Top up", () => {
+  it("webhook yang sama dikirim dua kali bersamaan, lalu sekali lagi: semuanya dijawab 200, saldo bertambah Rp 10.000 satu kali, dan Riwayat saldo punya satu baris", async () => {
+    const diTopUp = await topUpMenunggu();
+    const body = JSON.stringify(paymentReceivedTopUp(diTopUp));
+    sadapLogBentuk();
+
+    const respons = await Promise.all([
+      kirimWebhook(body, signatureQrispy(body, "hex")),
+      kirimWebhook(body, signatureQrispy(body, "hex")),
+    ]);
+    respons.push(await kirimWebhook(body, signatureQrispy(body, "hex")));
+
+    expect(respons.map((r) => r.status)).toEqual([200, 200, 200]);
+    expect(await keadaanTopUp(diTopUp)).toEqual({
+      status: "Berhasil",
+      saldo: 10000,
+      riwayatSaldo: [{ nominal: 10000, rujukan: diTopUp.nomorTopUp }],
+    });
+  });
+
+  it("webhook tanpa payment_reference dikenali sebagai Top up dari qris_id-nya", async () => {
+    const diTopUp = await topUpMenunggu();
+    // payment_reference yang undefined tidak ikut ditulis JSON.stringify.
+    const body = JSON.stringify(
+      paymentReceivedTopUp(diTopUp, { payment_reference: undefined }),
+    );
+    expect(body).not.toContain("payment_reference");
+    sadapLogBentuk();
+
+    const respons = await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect(respons.status).toBe(200);
+    expect((await keadaanTopUp(diTopUp)).status).toBe("Berhasil");
+  });
+
+  it("received_amount kurang dari Total bayar membuat Top up Bermasalah tanpa mengubah saldo", async () => {
+    const diTopUp = await topUpMenunggu();
+    const body = JSON.stringify(
+      paymentReceivedTopUp(diTopUp, { received_amount: 10000 }),
+    );
+    sadapLogBentuk();
+
+    await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect(await keadaanTopUp(diTopUp)).toEqual({
+      status: "Bermasalah",
+      saldo: 0,
+      riwayatSaldo: [],
+    });
+  });
+
+  it("webhook untuk Pesanan yang payment_reference-nya Nomor Pesanan tetap diproses sebagai Pesanan", async () => {
+    const dipesan = await checkout();
+    const body = JSON.stringify(paymentReceived(dipesan));
+    sadapLogBentuk();
+
+    await kirimWebhook(body, signatureQrispy(body, "hex"));
+
+    expect((await keadaan(dipesan)).status).toBe("Selesai");
+  });
 });
