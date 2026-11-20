@@ -1,15 +1,22 @@
 import { headers } from "next/headers";
 
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
-import { bacaPengaturanToko } from "@/server/pengaturan-toko";
+import {
+  bacaPengaturanBiayaTransaksi,
+  bacaPengaturanToko,
+} from "@/server/pengaturan-toko";
 
 import { FormPengaturan } from "./_components/form-pengaturan";
+import { nilaiIsianBiayaTransaksi } from "./nilai-isian-biaya-transaksi";
 
-// Pengaturan toko (PRD §9.8): nomor WhatsApp, Ambang stok menipis (PRD §9.4), dan teks halaman Syarat &
-// Ketentuan serta Kebijakan Privasi.
+// Pengaturan toko (PRD §9.8): nomor WhatsApp, Ambang stok menipis (PRD §9.4), Biaya transaksi (PRD §14.3), dan
+// teks halaman Syarat & Ketentuan serta Kebijakan Privasi.
 export default async function HalamanPengaturanToko() {
   await wajibSesiAdmin(await headers());
-  const pengaturan = await bacaPengaturanToko();
+  const [pengaturan, biayaTransaksi] = await Promise.all([
+    bacaPengaturanToko(),
+    bacaPengaturanBiayaTransaksi(),
+  ]);
 
   return (
     <div className="tata-baca">
@@ -20,6 +27,7 @@ export default async function HalamanPengaturanToko() {
             ...pengaturan,
             nomorWhatsapp: pengaturan.nomorWhatsapp ?? "",
             ambangStokMenipis: String(pengaturan.ambangStokMenipis),
+            ...nilaiIsianBiayaTransaksi(biayaTransaksi),
           },
         }}
       />

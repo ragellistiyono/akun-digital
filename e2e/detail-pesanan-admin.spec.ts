@@ -421,3 +421,47 @@ test("Pesanan Uji Bayar tanpa Harga modal menampilkan — beserta keterangannya,
   await expect(nilaiRincian(page, "Harga modal")).toHaveText("Rp 800");
   await expect(nilaiRincian(page, "Laba kotor")).toHaveText("Rp 200");
 });
+
+// Issue T68, UAT-N2 (PRD §9.5 ▶ Keputusan 2026-11-20, §14.3): baris Biaya transaksi sesudah Laba kotor, hanya untuk
+// Pesanan yang sudah dibayar. Biaya transaksinya ditulis langsung seperti yang dicatat pemroses kabar pembayaran:
+// Total bayar Rp 1.123 dengan persen 1 memberi Rp 12.
+test("detail Pesanan yang sudah dibayar menampilkan baris Biaya transaksi sesudah Laba kotor, dan Pesanan Menunggu Pembayaran tidak menampilkannya", async ({
+  page,
+}) => {
+  const rincian = {
+    hargaJual: 1000,
+    potonganVoucher: 0,
+    kodeUnik: 123,
+    totalBayar: 1123,
+  };
+  const dibayar = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    rincian,
+    hargaModal: 800,
+    biayaTransaksi: 12,
+  });
+  const menunggu = await sisipkanPesanan({
+    varianId,
+    status: "Menunggu Pembayaran",
+    rincian,
+    hargaModal: 800,
+  });
+  await masukSebagaiAdmin(page);
+  const barisRincian = isi(page)
+    .getByRole("region", { name: "Rincian pembayaran" })
+    .getByRole("rowheader");
+
+  await page.goto(`/admin/pesanan/${dibayar.nomorPesanan}`);
+  await expect(nilaiRincian(page, "Biaya transaksi")).toHaveText("Rp 12");
+  const label = await barisRincian.allTextContents();
+  expect(label.slice(label.indexOf("Laba kotor"))).toEqual([
+    "Laba kotor",
+    "Biaya transaksi",
+  ]);
+
+  await page.goto(`/admin/pesanan/${menunggu.nomorPesanan}`);
+  await expect(nilaiRincian(page, "Laba kotor")).toHaveText("Rp 200");
+  await expect(nilaiRincian(page, "Biaya transaksi")).toHaveCount(0);
+  await expect(isi(page)).not.toContainText(/biaya transaksi/i);
+});

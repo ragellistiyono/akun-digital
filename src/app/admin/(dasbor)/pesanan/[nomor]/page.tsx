@@ -63,8 +63,9 @@ function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
 }
 
 /**
- * Harga modal dan Laba kotor Pesanan itu, sesudah rincian nominal (PRD §9.5 ▶ Keputusan 2026-11-20). Pesanan
- * tanpa Harga modal menampilkan "—" beserta keterangannya. Baris ini hanya ada di dasbor admin.
+ * Harga modal, Laba kotor, dan Biaya transaksi Pesanan itu, sesudah rincian nominal (PRD §9.5 ▶ Keputusan
+ * 2026-11-20). Pesanan tanpa Harga modal menampilkan "—" beserta keterangannya. Biaya transaksi hanya tampil
+ * bila Pesanan sudah dibayar, yaitu bila sudah tercatat (PRD §14.3). Baris ini hanya ada di dasbor admin.
  */
 function RincianLaba({ laba }: { laba: DetailPesanan["laba"] }) {
   const baris = [
@@ -76,6 +77,9 @@ function RincianLaba({ laba }: { laba: DetailPesanan["laba"] }) {
       label: "Laba kotor",
       nilai: laba.labaKotor === null ? "—" : rupiahBertanda(laba.labaKotor),
     },
+    ...(laba.biayaTransaksi === null
+      ? []
+      : [{ label: "Biaya transaksi", nilai: rupiah(laba.biayaTransaksi) }]),
   ];
   return (
     <div className="mt-3 border-t-2 border-dashed border-pensil pt-2">
@@ -217,8 +221,8 @@ function PanelRiwayat({ riwayat }: { riwayat: DetailPesanan["riwayat"] }) {
 }
 
 // Detail Pesanan di dasbor admin (PRD §9.5): Nomor Pesanan dalam huruf mono dengan pil status dan tanda
-// "Email gagal" (PRD §6.4), email dan Produk beserta Varian, rincian nominal (PRD §5.5) beserta Harga modal dan
-// Laba kotor (PRD §9.5 ▶ Keputusan 2026-11-20), Item stok bila sudah
+// "Email gagal" (PRD §6.4), email dan Produk beserta Varian, rincian nominal (PRD §5.5) beserta Harga modal,
+// Laba kotor, dan Biaya transaksi Pesanan yang sudah dibayar (PRD §9.5 ▶ Keputusan 2026-11-20), Item stok bila sudah
 // Terkirim, dan riwayat perubahan status. Pesanan yang kirim ulangnya tersedia (Selesai) juga punya aksi
 // kirim ulang email "Pesanan selesai" dan koreksi email (PRD §6.4), dan Pesanan Bermasalah punya koreksi email
 // yang hanya menyimpan (PRD §6.4, ▶ Keputusan 2026-11-12) serta aksi "Kirim Item stok" dan "Tandai Dana

@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 
 import { asc, eq } from "drizzle-orm";
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import type { StatusPesanan } from "@/domain/status-pesanan";
@@ -16,10 +16,17 @@ import {
 } from "./db/schema";
 import { bacaStokVarian } from "./item-stok";
 import { cekStatusPembayaran, prosesKabarPembayaran } from "./kabar-pembayaran";
+import {
+  bacaPengaturanBiayaTransaksi,
+  bacaPengaturanToko,
+  simpanPengaturanToko,
+  type PengaturanBiayaTransaksi,
+} from "./pengaturan-toko";
 import { buatPesanan } from "./pesanan";
 import type { Qrispy, StatusQris } from "./qrispy";
 import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
+import { kunciPengaturanToko } from "./uji-pengaturan-toko";
 
 // Test integrasi dengan database app_test dari .env.ci, yang dipakai bersama test lain. Setiap test
 // menyiapkan Produk dan Pesanannya sendiri langsung di database. Angka Total bayar, nominal diterima, dan
@@ -60,11 +67,12 @@ async function siapkanPesanan({
     .from(varian)
     .where(eq(varian.produkId, produkId));
   const qrisId = randomUUID();
+  const tautan = randomBytes(32).toString("base64url");
   const [{ id }] = await db
     .insert(pesanan)
     .values({
       nomorPesanan: nomorPesanan(randomBytes(6)),
-      tautan: randomBytes(32).toString("base64url"),
+      tautan,
       email: `budi-${randomUUID()}@example.test`,
       varianId,
       hargaJual: totalBayar - 123,
@@ -91,7 +99,7 @@ async function siapkanPesanan({
       })
       .returning({ id: itemStok.id });
   }
-  return { id, qrisId, varianId, itemStokDitahan };
+  return { id, qrisId, tautan, varianId, itemStokDitahan };
 }
 
 /** Pesanan itu langsung dari database. */
@@ -567,5 +575,121 @@ describe("cekStatusPembayaran (ADR-0004)", () => {
     });
 
     expect(qrispy.cekStatusQris).not.toHaveBeenCalled();
+  });
+});
+
+/** Menyimpan isian Biaya transaksi lewat Pengaturan toko, tanpa mengubah isian lainnya. */
+async function aturBiayaTransaksi(biaya: PengaturanBiayaTransaksi) {
+  await simpanPengaturanToko(await bacaPengaturanToko(), biaya);
+}
+
+/** Biaya transaksi yang tercatat di Pesanan itu. */
+async function biayaTransaksiPesanan(id: string) {
+  const [{ biayaTransaksi }] = await db
+    .select({ biayaTransaksi: pesanan.biayaTransaksi })
+    .from(pesanan)
+    .where(eq(pesanan.id, id));
+  return biayaTransaksi;
+}
+
+// Issue T68, UAT-N2 (PRD §14.3): Biaya transaksi dihitung dari Pengaturan toko saat kabar pembayaran diproses,
+// termasuk pembayaran yang membuat Pesanan Bermasalah dan pembayaran terlambat (§5.9), lalu tidak berubah lagi.
+// Uji Bayar [CONTOH] dengan Total bayar Rp 1.123. Pengaturan toko dikunci selama blok ini berjalan, supaya
+// berkas test lain tidak mengubah isian Biaya transaksi di tengah jalan.
+describe("Biaya transaksi Pesanan yang dibayar (PRD §14.3)", () => {
+  let lepasKunci: () => Promise<void>;
+  beforeAll(async () => {
+    lepasKunci = await kunciPengaturanToko();
+    await aturBiayaTransaksi({ persen: 1, minimalTotalBayar: 0 });
+  });
+  afterAll(async () => {
+    await aturBiayaTransaksi({ persen: 0.7, minimalTotalBayar: 100000 });
+    await lepasKunci();
+  });
+
+  it("dengan persen 1 dan minimal Rp 0, Pesanan Rp 1.123 yang dibayar lewat Qrispy tiruan mencatat Biaya transaksi Rp 12, dan tetap Rp 12 setelah pengaturan dikembalikan ke 0,7 dan Rp 100.000", async () => {
+    const dipesan = await siapkanPesanan({
+      status: "Menunggu Pembayaran",
+      totalBayar: 1123,
+      stokVarian: 3,
+    });
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBeNull();
+    bayarQrisTiruan(
+      { qrisId: dipesan.qrisId, amount: 1123 },
+      { sekarang: WAKTU_BAYAR },
+    );
+
+    await cekStatusPembayaran(dipesan.tautan, { qrispy: qrispyTiruan });
+
+    expect((await bacaPesanan(dipesan.id)).status).toBe("Selesai");
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBe(12);
+
+    await aturBiayaTransaksi({ persen: 0.7, minimalTotalBayar: 100000 });
+    expect(await bacaPengaturanBiayaTransaksi()).toEqual({
+      persen: 0.7,
+      minimalTotalBayar: 100000,
+    });
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBe(12);
+    await aturBiayaTransaksi({ persen: 1, minimalTotalBayar: 0 });
+  });
+
+  it("kabar pembayaran dengan nominal kurang yang membuat Pesanan Bermasalah juga mencatat Biaya transaksinya", async () => {
+    const dipesan = await siapkanPesanan({
+      status: "Menunggu Pembayaran",
+      totalBayar: 1123,
+      stokVarian: 3,
+    });
+
+    await prosesKabarPembayaran(
+      {
+        qrisId: dipesan.qrisId,
+        nominalDiterima: 1000,
+        waktuBayar: WAKTU_BAYAR,
+      },
+      { sekarang: SEKARANG },
+    );
+
+    expect((await bacaPesanan(dipesan.id)).status).toBe("Bermasalah");
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBe(12);
+  });
+
+  it("kabar terlambat untuk Pesanan Kedaluwarsa yang stoknya habis membuat Pesanan Bermasalah dan mencatat Biaya transaksinya", async () => {
+    const dipesan = await siapkanPesanan({
+      status: "Kedaluwarsa",
+      totalBayar: 1123,
+      stokVarian: 0,
+    });
+
+    await prosesKabarPembayaran(
+      {
+        qrisId: dipesan.qrisId,
+        nominalDiterima: 1123,
+        waktuBayar: WAKTU_BAYAR,
+      },
+      { sekarang: SEKARANG },
+    );
+
+    expect((await bacaPesanan(dipesan.id)).status).toBe("Bermasalah");
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBe(12);
+  });
+
+  it("kabar berulang untuk Pesanan yang sudah dibayar tidak menghitung ulang Biaya transaksinya", async () => {
+    const dipesan = await siapkanPesanan({
+      status: "Menunggu Pembayaran",
+      totalBayar: 1123,
+      stokVarian: 3,
+    });
+    const kabar = {
+      qrisId: dipesan.qrisId,
+      nominalDiterima: 1123,
+      waktuBayar: WAKTU_BAYAR,
+    };
+    await prosesKabarPembayaran(kabar, { sekarang: SEKARANG });
+    await aturBiayaTransaksi({ persen: 10, minimalTotalBayar: 0 });
+
+    await prosesKabarPembayaran(kabar, { sekarang: SEKARANG });
+
+    expect(await biayaTransaksiPesanan(dipesan.id)).toBe(12);
+    await aturBiayaTransaksi({ persen: 1, minimalTotalBayar: 0 });
   });
 });

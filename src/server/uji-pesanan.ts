@@ -31,7 +31,7 @@ const RINCIAN_CONTOH_PRD = {
  * Menyisipkan Pesanan sebuah Varian dengan status itu, dan bila diminta satu Item stok yang tertaut ke
  * Pesanan itu. Rinciannya contoh PRD §5.5: Harga jual Rp 50.000, potongan voucher Rp 5.000, Kode unik
  * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, email dan Nomor Pesanan-nya acak,
- * dan waktu bayar serta Harga modal-nya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
+ * dan waktu bayar, Harga modal, serta Biaya transaksi-nya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
  * seperti saat checkout, yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Bila `voucher` diberikan,
  * Pesanan itu mencatat Voucher dan kodenya. Hasilnya id, Tautan Pesanan, dan Nomor Pesanan-nya.
  */
@@ -47,6 +47,7 @@ export async function sisipkanPesanan({
   rincian = RINCIAN_CONTOH_PRD,
   waktuBayar = null,
   hargaModal = null,
+  biayaTransaksi = null,
   voucher,
 }: {
   varianId: string;
@@ -60,6 +61,7 @@ export async function sisipkanPesanan({
   rincian?: typeof RINCIAN_CONTOH_PRD;
   waktuBayar?: Date | null;
   hargaModal?: number | null;
+  biayaTransaksi?: number | null;
   voucher?: { id: string; kode: string };
 }) {
   const tautan = randomBytes(32).toString("base64url");
@@ -72,6 +74,7 @@ export async function sisipkanPesanan({
       varianId,
       ...rincian,
       hargaModal,
+      biayaTransaksi,
       qrisId: randomUUID(),
       kedaluwarsaPada,
       gambarQr: "data:image/png;base64,iVBORw0KGgo=",

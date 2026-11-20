@@ -20,7 +20,8 @@ import { bacaItemStokTerkirim } from "./pesanan";
  * "Email gagal" (PRD §6.4), email, nama Produk dan Varian, rincian nominal yang dicatat di Pesanan
  * (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, Harga modal yang tercatat di Pesanan dan
  * Laba kotor-nya menurut labaKotor (keduanya null bila Pesanan itu belum punya Harga modal, PRD §9.5 ▶ Keputusan
- * 2026-11-20), kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
+ * 2026-11-20), Biaya transaksi yang tercatat saat pembayarannya masuk (null selama belum dibayar, PRD §14.3),
+ * kolom-kolom Item stok bila sudah Terkirim (null bila belum), dan riwayat perubahan status
  * (waktu, status, dan pelakunya) dari yang paling lama. Hasilnya null bila tidak ada Pesanan dengan Nomor
  * Pesanan itu.
  */
@@ -36,6 +37,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
       namaVarian: varian.nama,
       hargaJual: pesanan.hargaJual,
       hargaModal: pesanan.hargaModal,
+      biayaTransaksi: pesanan.biayaTransaksi,
       potonganVoucher: pesanan.potonganVoucher,
       kodeVoucher: pesanan.kodeVoucher,
       kodeUnik: pesanan.kodeUnik,
@@ -60,6 +62,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
   const {
     hargaJual,
     hargaModal,
+    biayaTransaksi,
     potonganVoucher,
     kodeVoucher,
     kodeUnik,
@@ -69,7 +72,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
   return {
     ...lainnya,
     rincian: { hargaJual, potonganVoucher, kodeVoucher, kodeUnik, totalBayar },
-    laba: labaKotor({ hargaJual, hargaModal }),
+    laba: { ...labaKotor({ hargaJual, hargaModal }), biayaTransaksi },
     itemStok: await bacaItemStokTerkirim(baris.id),
     riwayat,
   };

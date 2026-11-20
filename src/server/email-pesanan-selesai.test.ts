@@ -251,6 +251,25 @@ describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
     }
   });
 
+  // Issue T68 (PRD §9.5 ▶ Keputusan 2026-11-20, §14): Pembeli tidak pernah melihat Biaya transaksi. Biaya transaksi
+  // Pesanan ini ditulis langsung Rp 316 (Total bayar Rp 45.123 dengan persen 0,7 dan minimal Rp 0), supaya
+  // angkanya bisa dicari di email.
+  it("email Pesanan yang tercatat dengan Biaya transaksi Rp 316 tidak memuat Biaya transaksi", async () => {
+    const dibayar = await pesananDibayar();
+    await db
+      .update(pesanan)
+      .set({ biayaTransaksi: 316 })
+      .where(eq(pesanan.id, dibayar.id));
+    await jalankanPekerjaanEmail(dibayar.id);
+
+    const [email] = emailTiruanKe(dibayar.email);
+    for (const isi of [email.teks, email.html]) {
+      expect(isi).toContain("Rp 45.123");
+      expect(isi).not.toMatch(/biaya/i);
+      expect(isi).not.toContain("316");
+    }
+  });
+
   // PRD §8.8 ▶ Keputusan 2026-11-17: baris potongan Pesanan yang memakai Voucher menyebut kode Voucher-nya.
   // Pesanan tanpa Voucher tetap menulis "Potongan voucher" (test pertama di atas).
   it('Pesanan yang memakai HEMAT5 menulis "Potongan voucher (HEMAT5)" di Rincian pembayaran', async () => {

@@ -4,6 +4,12 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import {
+  PERSEN_BIAYA_TRANSAKSI_MAKSIMUM,
+  periksaIsianBiayaTransaksi,
+  type AlasanMinimalBiayaTransaksiDitolak,
+  type AlasanPersenBiayaTransaksiDitolak,
+} from "@/domain/biaya-transaksi";
+import {
   PANJANG_NOMOR_WHATSAPP_MAKSIMUM,
   rapikanNomorWhatsapp,
   type AlasanNomorWhatsappDitolak,
@@ -13,8 +19,11 @@ import {
   periksaAmbangStokMenipis,
   type AlasanAmbangStokMenipisDitolak,
 } from "@/domain/stok-menipis";
+import { rupiahDariTeks } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { simpanPengaturanToko } from "@/server/pengaturan-toko";
+
+import { nilaiIsianBiayaTransaksi } from "./nilai-isian-biaya-transaksi";
 
 type NilaiFormPengaturan = {
   nomorWhatsapp: string;
@@ -22,11 +31,20 @@ type NilaiFormPengaturan = {
   kebijakanPrivasi: string;
   /** Ambang stok menipis seperti yang ditulis Admin. */
   ambangStokMenipis: string;
+  /** Persen biaya transaksi seperti yang ditulis Admin, dengan koma desimal, misalnya "0,7". */
+  persenBiayaTransaksi: string;
+  /** Minimal Total bayar yang dikenai biaya seperti yang ditulis Admin, misalnya "100.000". */
+  minimalBiayaTransaksi: string;
 };
 
 export type KeadaanFormPengaturan = {
   nilai: NilaiFormPengaturan;
-  galat?: { nomorWhatsapp?: string; ambangStokMenipis?: string };
+  galat?: {
+    nomorWhatsapp?: string;
+    ambangStokMenipis?: string;
+    persenBiayaTransaksi?: string;
+    minimalBiayaTransaksi?: string;
+  };
   tersimpan?: boolean;
 };
 
@@ -51,6 +69,76 @@ const MasukanPengaturan = z.object({
   kebijakanPrivasi: TeksHalaman,
   ambangStokMenipis: AngkaAmbang,
 });
+
+/**
+ * Persen biaya transaksi dari isian (PRD §14.3), yang ditulis dengan koma desimal, misalnya "0,7" atau "0,75":
+ * null bila kosong, supaya periksaIsianBiayaTransaksi menolaknya sebagai kosong. Tanda minus di depan angka ikut
+ * dibaca, supaya persen negatif ditolak dengan pesan rentang. Titik tidak dibaca sebagai koma desimal, karena
+ * di Indonesia titik memisahkan ribuan.
+ */
+const PersenBiayaTransaksi = z
+  .string()
+  .trim()
+  .transform((teks, ctx) => {
+    if (teks === "") return null;
+    if (!/^[-−]?\d+(?:,\d+)?$/.test(teks)) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Persen biaya transaksi tidak terbaca sebagai angka. Tulis angkanya saja dengan koma desimal, misalnya 0,7, lalu simpan lagi.",
+      });
+      return z.NEVER;
+    }
+    return Number(teks.replace("−", "-").replace(",", "."));
+  });
+
+/**
+ * Minimal Total bayar yang dikenai biaya dari isian (PRD §14.3), ditulis seperti rupiah lain, misalnya "100000"
+ * atau "100.000": null bila kosong. Tanda minus di depan angka ikut dibaca, supaya nilai negatif ditolak
+ * periksaIsianBiayaTransaksi dengan pesan minimal Rp 0.
+ */
+const MinimalBiayaTransaksi = z
+  .string()
+  .trim()
+  .transform((teks, ctx) => {
+    if (teks === "") return null;
+    const negatif = /^[-−]/.test(teks);
+    const nilai = rupiahDariTeks(negatif ? teks.slice(1).trimStart() : teks);
+    if (nilai === null || nilai > Number.MAX_SAFE_INTEGER) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Minimal Total bayar tidak terbaca sebagai rupiah. Ketik angkanya saja, misalnya 100000 atau 100.000, lalu simpan lagi.",
+      });
+      return z.NEVER;
+    }
+    return negatif ? -nilai : nilai;
+  });
+
+/** Pesan penolakan persen biaya transaksi dari periksaIsianBiayaTransaksi (PRD §14.3). */
+const PESAN_PERSEN_BIAYA_TRANSAKSI: Record<
+  AlasanPersenBiayaTransaksiDitolak,
+  string
+> = {
+  "persen-kosong":
+    "Persen biaya transaksi belum diisi. Tulis persennya, misalnya 0,7, lalu simpan lagi.",
+  "persen-di-luar-rentang": `Persen biaya transaksi hanya boleh 0 sampai ${PERSEN_BIAYA_TRANSAKSI_MAKSIMUM}. Tulis angka di rentang itu, lalu simpan lagi.`,
+  "persen-lebih-dari-2-desimal":
+    "Persen biaya transaksi paling banyak 2 angka di belakang koma, misalnya 0,75. Hapus angka berikutnya, lalu simpan lagi.",
+};
+
+/** Pesan penolakan minimal Total bayar yang dikenai biaya dari periksaIsianBiayaTransaksi (PRD §14.3). */
+const PESAN_MINIMAL_BIAYA_TRANSAKSI: Record<
+  AlasanMinimalBiayaTransaksiDitolak,
+  string
+> = {
+  "minimal-kosong":
+    "Minimal Total bayar belum diisi. Ketik rupiahnya, misalnya 100.000, atau 0 bila semua Pesanan dikenai biaya, lalu simpan lagi.",
+  "minimal-negatif":
+    "Minimal Total bayar kurang dari Rp 0. Isi minimal Rp 0, lalu simpan lagi.",
+  "minimal-bukan-rupiah-bulat":
+    "Minimal Total bayar harus rupiah bulat, tanpa sen. Hapus angka di belakang koma, lalu simpan lagi.",
+};
 
 /** Pesan penolakan nomor WhatsApp dari rapikanNomorWhatsapp (PRD §9.8 ▶ Keputusan 2026-11-11). */
 const PESAN_NOMOR_WHATSAPP: Record<AlasanNomorWhatsappDitolak, string> = {
@@ -81,13 +169,37 @@ export async function aksiSimpanPengaturanToko(
     syaratKetentuan: String(formData.get("syaratKetentuan") ?? ""),
     kebijakanPrivasi: String(formData.get("kebijakanPrivasi") ?? ""),
     ambangStokMenipis: String(formData.get("ambangStokMenipis") ?? ""),
+    persenBiayaTransaksi: String(formData.get("persenBiayaTransaksi") ?? ""),
+    minimalBiayaTransaksi: String(formData.get("minimalBiayaTransaksi") ?? ""),
   };
   const masukan = MasukanPengaturan.parse(nilai);
   const nomor = rapikanNomorWhatsapp({ isian: masukan.nomorWhatsapp });
   const ambang = periksaAmbangStokMenipis({
     ambang: masukan.ambangStokMenipis,
   });
-  if (!nomor.sah || !ambang.sah) {
+  const persen = PersenBiayaTransaksi.safeParse(nilai.persenBiayaTransaksi);
+  const minimal = MinimalBiayaTransaksi.safeParse(nilai.minimalBiayaTransaksi);
+  // Isian Biaya transaksi yang terbaca sebagai angka diperiksa domain; yang tidak terbaca sudah punya pesan.
+  const biaya = periksaIsianBiayaTransaksi({
+    persen: persen.success ? persen.data : 0,
+    minimalTotalBayar: minimal.success ? minimal.data : 0,
+  });
+  const galatPersen = !persen.success
+    ? persen.error.issues[0].message
+    : biaya.alasanPersen && PESAN_PERSEN_BIAYA_TRANSAKSI[biaya.alasanPersen];
+  const galatMinimal = !minimal.success
+    ? minimal.error.issues[0].message
+    : biaya.alasanMinimal && PESAN_MINIMAL_BIAYA_TRANSAKSI[biaya.alasanMinimal];
+  if (
+    !nomor.sah ||
+    !ambang.sah ||
+    galatPersen ||
+    galatMinimal ||
+    !persen.success ||
+    !minimal.success ||
+    persen.data === null ||
+    minimal.data === null
+  ) {
     return {
       nilai,
       galat: {
@@ -97,22 +209,33 @@ export async function aksiSimpanPengaturanToko(
         ...(!ambang.sah && {
           ambangStokMenipis: PESAN_AMBANG_STOK_MENIPIS[ambang.alasan],
         }),
+        ...(galatPersen && { persenBiayaTransaksi: galatPersen }),
+        ...(galatMinimal && { minimalBiayaTransaksi: galatMinimal }),
       },
     };
   }
 
   // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menyimpan.
-  await simpanPengaturanToko({
-    ...masukan,
-    nomorWhatsapp: nomor.nomor,
-    ambangStokMenipis: ambang.ambang,
-  });
-  // Isian menampilkan nilai yang benar-benar tersimpan, yaitu nomor hasil rapinya dan ambang tanpa spasi.
+  const biayaTransaksi = {
+    persen: persen.data,
+    minimalTotalBayar: minimal.data,
+  };
+  await simpanPengaturanToko(
+    {
+      ...masukan,
+      nomorWhatsapp: nomor.nomor,
+      ambangStokMenipis: ambang.ambang,
+    },
+    biayaTransaksi,
+  );
+  // Isian menampilkan nilai yang benar-benar tersimpan, yaitu nomor hasil rapinya, ambang tanpa spasi, dan
+  // Biaya transaksi dalam tulisan baku, misalnya "0,7" dan "100.000".
   return {
     nilai: {
       ...masukan,
       nomorWhatsapp: nomor.nomor ?? "",
       ambangStokMenipis: String(ambang.ambang),
+      ...nilaiIsianBiayaTransaksi(biayaTransaksi),
     },
     tersimpan: true,
   };
