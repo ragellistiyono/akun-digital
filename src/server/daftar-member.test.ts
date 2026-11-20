@@ -237,7 +237,7 @@ describe("daftarMember: isi dan urutan (PRD §2.3 ▶ Keputusan 2026-11-17)", ()
     const baris = await barisMember(email);
 
     expect(Object.keys(baris).sort()).toEqual(
-      ["belanja", "email", "id", "nonaktif", "terdaftarPada"].sort(),
+      ["belanja", "email", "id", "nonaktif", "saldo", "terdaftarPada"].sort(),
     );
     expect(JSON.stringify(baris)).not.toContain(PASSWORD);
   });

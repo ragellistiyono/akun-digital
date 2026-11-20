@@ -27,6 +27,7 @@ import { JENIS_CAKUPAN, JENIS_POTONGAN } from "../../domain/isian-voucher";
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
 import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
+import { JENIS_RIWAYAT_SALDO } from "../../domain/ubah-saldo-admin";
 
 // Tabel login Better Auth untuk email dan password (ADR-0001). Nama tabel dan kolom mengikuti
 // skema bawaan Better Auth, supaya adaptor Drizzle-nya bisa memakainya tanpa pemetaan.
@@ -37,22 +38,29 @@ const instan = (nama: string) => timestamp(nama, { withTimezone: true });
 export const PERAN_AKUN = ["Admin", "Member"] as const;
 export const peranAkun = pgEnum("peran_akun", PERAN_AKUN);
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  peran: peranAkun("peran").notNull(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  // Member nonaktif (PRD §2.3): dinonaktifkan Admin, sehingga tidak bisa login maupun checkout dengan
-  // emailnya. Hanya Member yang bisa dinonaktifkan; Admin selalu false.
-  nonaktif: boolean("nonaktif").default(false).notNull(),
-  image: text("image"),
-  createdAt: instan("created_at").defaultNow().notNull(),
-  updatedAt: instan("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    peran: peranAkun("peran").notNull(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    // Member nonaktif (PRD §2.3): dinonaktifkan Admin, sehingga tidak bisa login maupun checkout dengan
+    // emailnya. Hanya Member yang bisa dinonaktifkan; Admin selalu false.
+    nonaktif: boolean("nonaktif").default(false).notNull(),
+    // Saldo Member (PRD §15.1): rupiah bulat yang dimulai dari Rp 0 dan tidak pernah negatif. Setiap perubahannya
+    // ditulis bersama satu baris riwayat_saldo dalam transaksi yang sama. Admin selalu Rp 0.
+    saldo: bigint("saldo", { mode: "number" }).default(0).notNull(),
+    image: text("image"),
+    createdAt: instan("created_at").defaultNow().notNull(),
+    updatedAt: instan("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (tabel) => [check("user_saldo_tidak_negatif", sql`${tabel.saldo} >= 0`)],
+);
 
 export const session = pgTable(
   "session",
@@ -479,5 +487,41 @@ export const biayaOperasional = pgTable(
   (tabel) => [
     index("biaya_operasional_tanggal_idx").on(tabel.tanggal),
     check("biaya_operasional_nominal_minimal", sql`${tabel.nominal} >= 1`),
+  ],
+);
+
+// Jenis baris Riwayat saldo (PRD §15.2, GLOSSARY).
+export const jenisRiwayatSaldo = pgEnum(
+  "jenis_riwayat_saldo",
+  JENIS_RIWAYAT_SALDO,
+);
+
+// Riwayat saldo (PRD §15.2): satu baris untuk setiap perubahan saldo seorang Member, ditulis dalam transaksi yang
+// sama dengan perubahan saldonya. Nominal bertanda: positif menambah dan negatif mengurangi saldo. Saldo sesudah
+// adalah saldo Member tepat setelah perubahan itu. Rujukan berisi Nomor Top up, Nomor Pesanan, atau keterangan
+// Admin. Id-nya bertambah menurut urutan penulisan; karena perubahan saldo seorang Member ditulis satu per satu
+// (baris user-nya dikunci), urutan id sama dengan urutan perubahan saldonya, dan menentukan urutan tampil.
+export const riwayatSaldo = pgTable(
+  "riwayat_saldo",
+  {
+    id: bigint("id", { mode: "number" })
+      .primaryKey()
+      .generatedAlwaysAsIdentity(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    waktu: instan("waktu").defaultNow().notNull(),
+    jenis: jenisRiwayatSaldo("jenis").notNull(),
+    nominal: bigint("nominal", { mode: "number" }).notNull(),
+    saldoSesudah: bigint("saldo_sesudah", { mode: "number" }).notNull(),
+    rujukan: text("rujukan").notNull(),
+  },
+  (tabel) => [
+    index("riwayat_saldo_user_id_idx").on(tabel.userId, tabel.id),
+    check("riwayat_saldo_nominal_bukan_nol", sql`${tabel.nominal} <> 0`),
+    check(
+      "riwayat_saldo_saldo_sesudah_tidak_negatif",
+      sql`${tabel.saldoSesudah} >= 0`,
+    ),
   ],
 );

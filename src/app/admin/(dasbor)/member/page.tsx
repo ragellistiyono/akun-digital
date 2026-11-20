@@ -91,10 +91,10 @@ function TombolStatusMember({
 }
 
 /**
- * Tabel Member dengan kolom PRD §2.3, termasuk status Aktif atau Nonaktif beserta tombol untuk mengubahnya.
- * Kartunya selebar isi halaman. Tabelnya bergulir ke samping di dalam kartunya sendiri pada layar sempit, supaya
- * halaman tidak ikut bergulir ke samping (PRD §11.1). Kartu itu `relative`, supaya teks khusus pembaca layar di
- * tombol status ikut terpotong olehnya dan tidak melebarkan halaman.
+ * Tabel Member dengan kolom PRD §2.3 dan kolom Saldo (PRD §15.6), termasuk status Aktif atau Nonaktif beserta
+ * tombol untuk mengubahnya. Kartunya selebar isi halaman. Tabelnya bergulir ke samping di dalam kartunya sendiri
+ * pada layar sempit, supaya halaman tidak ikut bergulir ke samping (PRD §11.1). Kartu itu `relative`, supaya teks
+ * khusus pembaca layar di tombol status ikut terpotong olehnya dan tidak melebarkan halaman.
  */
 function TabelMember({
   semuaMember,
@@ -103,7 +103,7 @@ function TabelMember({
 }) {
   return (
     <div className="kartu relative mt-4 overflow-x-auto px-4 py-2">
-      <table className="w-full min-w-[880px] text-left">
+      <table className="w-full min-w-[1000px] text-left">
         <caption className="sr-only">Daftar Member</caption>
         <thead className="font-spidol text-[16px] font-bold text-pensil-redup">
           <tr className="border-b-2 border-dashed border-pensil">
@@ -118,6 +118,9 @@ function TabelMember({
             </th>
             <th scope="col" className="py-2 pr-4 text-right">
               Total belanja
+            </th>
+            <th scope="col" className="py-2 pr-4 text-right">
+              Saldo
             </th>
             <th scope="col" className="py-2 pr-4">
               Status
@@ -153,6 +156,9 @@ function TabelMember({
               </td>
               <td className="py-3 pr-4 text-right font-spidol font-bold whitespace-nowrap tabular-nums">
                 {rupiah(member.belanja.totalBelanja)}
+              </td>
+              <td className="py-3 pr-4 text-right font-spidol font-bold whitespace-nowrap tabular-nums">
+                {rupiah(member.saldo)}
               </td>
               <td className="py-3 pr-4">
                 <PilAktif aktif={!member.nonaktif} />

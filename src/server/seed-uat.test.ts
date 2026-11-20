@@ -62,6 +62,7 @@ async function jumlahData() {
     "pengaturan_toko",
     "voucher",
     "biaya_operasional",
+    "riwayat_saldo",
   ] as const;
   const jumlah: Record<string, number> = {};
   for (const nama of tabel) {
@@ -467,6 +468,44 @@ describe("pnpm db:seed di database kosong", () => {
     expect(total).toBe(150000);
   });
 
+  // Issue T76 (docs/UAT.md ▶ Keputusan 2026-11-20, Persiapan M5): Saldo member@miwe.example Rp 100.000 dengan satu
+  // baris "Ditambah Admin" berketerangan "Saldo awal seed", dan Saldo nonaktif@miwe.example Rp 20.000 [CONTOH].
+  it('Saldo member@miwe.example Rp 100.000 dengan baris Riwayat saldo "Saldo awal seed", dan Saldo nonaktif@miwe.example Rp 20.000', async () => {
+    const { eq } = await import("drizzle-orm");
+    const { db } = await import("./db");
+    const { user } = await import("./db/schema");
+    const { riwayatSaldoMember } = await import("./saldo");
+    const saldoDan = async (email: string) => {
+      const [{ id, saldo }] = await db
+        .select({ id: user.id, saldo: user.saldo })
+        .from(user)
+        .where(eq(user.email, email));
+      const { baris } = await riwayatSaldoMember({ idMember: id, halaman: 1 });
+      return {
+        saldo,
+        riwayat: baris.map(({ jenis, nominal, saldoSesudah, rujukan }) => ({
+          jenis,
+          nominal,
+          saldoSesudah,
+          rujukan,
+        })),
+      };
+    };
+
+    expect(await saldoDan("member@miwe.example")).toEqual({
+      saldo: 100000,
+      riwayat: [
+        {
+          jenis: "Ditambah Admin",
+          nominal: 100000,
+          saldoSesudah: 100000,
+          rujukan: "Saldo awal seed",
+        },
+      ],
+    });
+    expect((await saldoDan("nonaktif@miwe.example")).saldo).toBe(20000);
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan
@@ -485,6 +524,7 @@ describe("pnpm db:seed di database kosong", () => {
       pengaturan_toko: 1,
       voucher: 6,
       biaya_operasional: 1,
+      riwayat_saldo: 2,
       berkas: 8,
     });
 
