@@ -63,6 +63,7 @@ import {
   simpanPengaturanToko,
 } from "./pengaturan-toko";
 import { bacaProduk, buatProduk, daftarProduk } from "./produk";
+import { riwayatSaldoMember, ubahSaldoOlehAdmin } from "./saldo";
 import { daftarVarian, tambahVarian } from "./varian";
 import { buatVoucher, type SyaratVoucher } from "./voucher";
 import { tanggalIsianWib } from "./zona-waktu-toko";
@@ -448,6 +449,7 @@ type RingkasanSeed = {
   pesanan: number;
   pengaturanToko: number;
   biayaOperasional: number;
+  saldo: number;
 };
 
 /** Menghentikan seed dengan pesan yang menyebut sebabnya dan langkah berikutnya. */
@@ -936,6 +938,49 @@ async function isiBiayaOperasional(sekarang: number, ringkasan: RingkasanSeed) {
 }
 
 /**
+ * Saldo awal Member seed dari persiapan M5 di docs/UAT.md (▶ Keputusan 2026-11-20), ditambahkan sebagai "Ditambah
+ * Admin" berketerangan "Saldo awal seed". [CONTOH]
+ */
+const SALDO_SEED = [
+  { email: MEMBER_SEED.aktif.email, nominal: 100_000 },
+  { email: MEMBER_SEED.nonaktif.email, nominal: 20_000 },
+];
+const KETERANGAN_SALDO_SEED = "Saldo awal seed";
+
+/**
+ * Mengisi saldo awal setiap Member seed yang belum punya Riwayat saldo, lewat ubahSaldoOlehAdmin seperti "Tambah
+ * saldo" di halaman Member, jadi setiap saldo seed punya satu baris Riwayat saldo (PRD §15.2).
+ */
+async function isiSaldo(ringkasan: RingkasanSeed) {
+  for (const { email, nominal } of SALDO_SEED) {
+    const [member] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, emailBaku(email)));
+    if (!member) gagal(`Member seed ${email} tidak ada.`, JALANKAN_ULANG);
+    const { jumlah } = await riwayatSaldoMember({
+      idMember: member.id,
+      halaman: 1,
+    });
+    if (jumlah > 0) continue;
+
+    const hasil = await ubahSaldoOlehAdmin({
+      idMember: member.id,
+      aksi: "tambah",
+      nominal: String(nominal),
+      keterangan: KETERANGAN_SALDO_SEED,
+    });
+    if (hasil.hasil !== "diubah") {
+      gagal(
+        `Saldo awal seed ${email} ditolak aturan Tambah saldo PRD §15.6.`,
+        PERBAIKI_DATA_SEED,
+      );
+    }
+    ringkasan.saldo++;
+  }
+}
+
+/**
  * Mengisi database dengan data seed UAT yang belum ada. Hasilnya jumlah data yang baru dibuat. Melempar
  * galat yang menyebut sebabnya bila ada data seed yang ditolak.
  */
@@ -959,6 +1004,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
     pesanan: 0,
     pengaturanToko: 0,
     biayaOperasional: 0,
+    saldo: 0,
   };
   // Admin yang emailnya sudah dipakai dilewati.
   if ((await buatAdmin(ADMIN_SEED)).hasil === "dibuat") ringkasan.admin++;
@@ -971,6 +1017,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
   await isiVoucher(sekarang, ringkasan);
   await isiPesanan(kunci.kunci, sekarang, ringkasan);
   await isiBiayaOperasional(sekarang, ringkasan);
+  await isiSaldo(ringkasan);
 
   // Pengaturan toko hanya diisi selama masih kosong, supaya isian pemilik tidak tertimpa.
   const pengaturan = await bacaPengaturanToko();

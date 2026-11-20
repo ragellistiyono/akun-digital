@@ -1,8 +1,12 @@
+import { History } from "lucide-react";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { connection } from "next/server";
 
+import { rupiah } from "@/lib/rupiah";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
+import { bacaSaldoMember } from "@/server/saldo";
 
 import { TombolWhatsApp } from "../../_components/tombol-whatsapp";
 import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
@@ -11,8 +15,10 @@ import { KontrolMode } from "./_components/kontrol-mode";
 import { aksiKeluarMember } from "./aksi";
 
 // Tab Akun (PRD §11.1). Member yang login melihat emailnya, form ganti password (T46, PRD §7.6), dan
-// tombol "Keluar" (T41). Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat tombol
-// "Masuk" dan "Daftar" (PRD §11.1 ▶ Keputusan 2026-11-17). Setelahnya ada bagian "Tampilan" dengan pilihan
+// tombol "Keluar" (T41). Di antara email dan form ganti password ada kotak "Saldo Rp X" dengan tautan "Riwayat
+// saldo" (PRD §15.10); tombol "Top up" belum dipasang (PRD §13 ▶ Keputusan 2026-11-20, urutan tayang M5 langkah
+// 1). Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat tombol "Masuk" dan "Daftar"
+// (PRD §11.1 ▶ Keputusan 2026-11-17). Setelahnya ada bagian "Tampilan" dengan pilihan
 // mode, untuk Tamu dan Member (PRD §11.3 ▶ Keputusan 2026-11-18), lalu tombol WhatsApp. Tautan Syarat &
 // Ketentuan dan Kebijakan Privasi tidak diulang di sini karena footer toko sudah menampilkannya tepat di
 // bawah (PRD §11.1 ▶ Keputusan 2026-11-20).
@@ -39,6 +45,7 @@ export default async function HalamanAkun() {
                 {sesiMember.user.email}
               </p>
             </section>
+            <KotakSaldo idMember={sesiMember.user.id} />
             <FormGantiPassword />
             <form action={aksiKeluarMember}>
               <button type="submit" className="tombol tombol-kedua w-full">
@@ -55,5 +62,27 @@ export default async function HalamanAkun() {
         </TombolWhatsApp>
       </div>
     </div>
+  );
+}
+
+/** Kotak "Saldo Rp X" Member yang login, dengan tautan ke Riwayat saldo-nya (PRD §15.10). */
+async function KotakSaldo({ idMember }: { idMember: string }) {
+  const saldo = await bacaSaldoMember(idMember);
+  return (
+    <section
+      aria-label="Saldo"
+      className="kartu flex flex-wrap items-center justify-between gap-4 p-5"
+    >
+      <p className="font-spidol text-[22px] leading-snug font-bold tabular-nums">
+        Saldo {rupiah(saldo?.saldo ?? 0)}
+      </p>
+      <Link
+        href="/akun/riwayat-saldo"
+        className="tombol tombol-kecil tombol-kedua"
+      >
+        <History aria-hidden="true" className="size-5" strokeWidth={2.5} />
+        Riwayat saldo
+      </Link>
+    </section>
   );
 }

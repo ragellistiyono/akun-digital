@@ -130,6 +130,7 @@ test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, d
     "Tanggal daftar (WIB)",
     "Pesanan Selesai",
     "Total belanja",
+    "Saldo",
     "Status",
     "Aksi",
   ]);
@@ -140,6 +141,7 @@ test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, d
     "11 Nov 2026",
     "2",
     "Rp 95.133",
+    "Rp 0",
     "Aktif",
     `Nonaktifkan ${email}`,
   ]);
