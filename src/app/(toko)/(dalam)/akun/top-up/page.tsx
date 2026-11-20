@@ -11,9 +11,8 @@ import { FormTopUp } from "./_components/form-top-up";
 const ALAMAT = "/akun/top-up";
 
 // Halaman Top up (PRD §15.3): isian Nominal top up, tombol cepat, dan "Bayar dengan QRIS". Hanya untuk Member yang
-// login: Tamu diarahkan ke halaman Masuk, lalu kembali ke sini setelah login. Halaman ini belum ditautkan dari halaman
-// mana pun yang dibuka Member (PRD §13 ▶ Keputusan 2026-11-20, urutan tayang M5 langkah 2). Tata letaknya pola Fokus,
-// seperti tab Akun (DESIGN.md Tata letak halaman).
+// login: Tamu diarahkan ke halaman Masuk, lalu kembali ke sini setelah login. Halaman ini dibuka dari tombol "Top up"
+// di tab Akun (PRD §15.10). Tata letaknya pola Fokus, seperti tab Akun (DESIGN.md Tata letak halaman).
 export default async function HalamanTopUp() {
   const sesiMember = await bacaSesiMember(await headers());
   if (!sesiMember) {

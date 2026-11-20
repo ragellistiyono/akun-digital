@@ -13,6 +13,7 @@ import {
   TicketPercent,
   TriangleAlert,
   Users,
+  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -34,6 +35,7 @@ const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/laporan", label: "Laporan keuangan", ikon: ChartColumn },
   { href: "/admin/pesanan", label: "Pesanan", ikon: ReceiptText },
   { href: "/admin/member", label: "Member", ikon: Users },
+  { href: "/admin/top-up", label: "Top up", ikon: Wallet },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
   { href: "/admin/produk", label: "Produk", ikon: Package },
   { href: ALAMAT_ITEM_STOK, label: "Item stok", ikon: PackageOpen },

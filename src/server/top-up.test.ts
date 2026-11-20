@@ -10,7 +10,12 @@ import { jadwalKedaluwarsaTopUp } from "./pekerjaan-latar";
 import { buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
-import { bacaTopUpMember, batalkanTopUp, buatTopUp } from "./top-up";
+import {
+  bacaTopUpMember,
+  bacaTopUpMenunggu,
+  batalkanTopUp,
+  buatTopUp,
+} from "./top-up";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
 
@@ -454,5 +459,26 @@ describe("prosesKedaluwarsaTopUp (PRD §15.3, §5.8)", () => {
       }),
     ).toEqual({ hasil: "kedaluwarsa" });
     expect((await statusDanRiwayat(dibuat.id)).status).toBe("Kedaluwarsa");
+  });
+});
+
+// Tab Akun (PRD §15.10, issue T79): "Top up Rp X menunggu pembayaran" dengan tombol "Lanjutkan bayar".
+describe("bacaTopUpMenunggu", () => {
+  it("memberi Nomor Top up dan Nominal top up Rp 10.000 selama Top up itu menunggu, lalu null setelah dibatalkan", async () => {
+    const { id } = await memberBaru();
+    expect(await bacaTopUpMenunggu(id)).toBeNull();
+
+    const qrispy = qrispyKodeUnik123();
+    const dibuat = await topUpBaru(id, qrispy);
+    expect(await bacaTopUpMenunggu(id)).toEqual({
+      nomorTopUp: dibuat.nomorTopUp,
+      nominalTopUp: 10000,
+    });
+
+    await batalkanTopUp(
+      { nomorTopUp: dibuat.nomorTopUp, idMember: id },
+      { qrispy },
+    );
+    expect(await bacaTopUpMenunggu(id)).toBeNull();
   });
 });

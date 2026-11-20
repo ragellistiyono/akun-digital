@@ -8,7 +8,7 @@
 //
 // Seed boleh dijalankan ulang tanpa menggandakan data. Data seed yang sudah ada dikenali dari email Admin dan
 // Member, nama Kategori, nama Produk, nama Varian di Produknya, isi Item stok di Variannya, kode Voucher,
-// qris_id Pesanan seed, serta tanggal dan keterangan Biaya operasional, lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan
+// qris_id Pesanan dan Top up seed, serta tanggal dan keterangan Biaya operasional, lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan
 // Pengaturan toko hanya diisi selama masih kosong. Data yang sudah ada tidak diubah, jadi perubahan pemilik
 // selama UAT tetap tersimpan. Akibatnya Pesanan Selesai seed yang dibuat sebelum T60, tanpa voucher, tetap
 // tanpa voucher; kosongkan database lokal lalu jalankan ulang seed untuk mendapat Pesanan Selesai dengan HEMAT5.
@@ -30,6 +30,7 @@ import { tempelItemStok } from "@/domain/item-stok";
 import { emailBaku } from "@/domain/kesamaan-email";
 import { namaKategoriDipakai } from "@/domain/nama-kategori";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
+import { nomorTopUp } from "@/domain/nomor-top-up";
 import { rapikanNomorWhatsapp } from "@/domain/nomor-whatsapp";
 import { potonganVoucher } from "@/domain/potongan-voucher";
 import type { StatusPesanan } from "@/domain/status-pesanan";
@@ -49,6 +50,8 @@ import {
   itemStok,
   pesanan,
   riwayatStatusPesanan,
+  riwayatStatusTopUp,
+  topUp,
   user,
   varian,
   voucher,
@@ -450,6 +453,7 @@ type RingkasanSeed = {
   pengaturanToko: number;
   biayaOperasional: number;
   saldo: number;
+  topUp: number;
 };
 
 /** Menghentikan seed dengan pesan yang menyebut sebabnya dan langkah berikutnya. */
@@ -981,6 +985,106 @@ async function isiSaldo(ringkasan: RingkasanSeed) {
 }
 
 /**
+ * Top up seed milik member@miwe.example dari persiapan M5 di docs/UAT.md (▶ Keputusan 2026-11-20). [CONTOH] Kode unik
+ * Top up Bermasalah Rp 123 mengikuti Total bayar Rp 50.123 = Nominal top up + Kode unik (PRD §15.3).
+ */
+const TOP_UP_SEED: {
+  qrisId: string;
+  nominalTopUp: number;
+  kodeUnik: number;
+  nominalDiterima: number;
+  status: "Berhasil" | "Bermasalah";
+  menitLalu: number;
+}[] = [
+  {
+    qrisId: "seed-uat-top-up-berhasil",
+    nominalTopUp: 100_000,
+    kodeUnik: 77,
+    nominalDiterima: 100_077,
+    status: "Berhasil",
+    menitLalu: 150,
+  },
+  {
+    qrisId: "seed-uat-top-up-bermasalah",
+    nominalTopUp: 50_000,
+    kodeUnik: 123,
+    nominalDiterima: 50_000,
+    status: "Bermasalah",
+    menitLalu: 120,
+  },
+];
+
+/** Pelaku pembuatan Top up di Riwayat status Top up, sama dengan top-up.ts (PRD §15.4). */
+const PELAKU_MEMBER = "Member";
+
+/**
+ * Membuat Top up seed yang belum ada, dikenali dari qris_id-nya. Setiap Top up mencatat Riwayat status seperti Top up
+ * sungguhan: Menunggu Pembayaran oleh Member saat dibuat, lalu status akhirnya oleh kabar pembayaran Qrispy dua menit
+ * kemudian, beserta waktu bayar, nominal diterima, dan Biaya transaksi dari Pengaturan toko saat itu (PRD §15.5).
+ *
+ * Top up seed hanya catatan di menu Top up dasbor admin: saldo dan Riwayat saldo Member tidak diubah, supaya saldo
+ * seed tetap seperti persiapan M5, yaitu Rp 100.000 dengan satu baris "Saldo awal seed".
+ */
+async function isiTopUp(sekarang: number, ringkasan: RingkasanSeed) {
+  const email = MEMBER_SEED.aktif.email;
+  const [member] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, emailBaku(email)));
+  if (!member) gagal(`Member seed ${email} tidak ada.`, JALANKAN_ULANG);
+
+  for (const t of TOP_UP_SEED) {
+    const [ada] = await db
+      .select({ id: topUp.id })
+      .from(topUp)
+      .where(eq(topUp.qrisId, t.qrisId));
+    if (ada) continue;
+
+    const dibuat = new Date(sekarang - t.menitLalu * 60_000);
+    const dibayar = new Date(dibuat.getTime() + 2 * 60_000);
+    const totalBayar = t.nominalTopUp + t.kodeUnik;
+    const biaya = biayaTransaksi({
+      totalBayar,
+      ...(await bacaPengaturanBiayaTransaksi()),
+    });
+    await db.transaction(async (tx) => {
+      const [{ id }] = await tx
+        .insert(topUp)
+        .values({
+          nomorTopUp: nomorTopUp(randomBytes(6)),
+          userId: member.id,
+          nominalTopUp: t.nominalTopUp,
+          kodeUnik: t.kodeUnik,
+          totalBayar,
+          qrisId: t.qrisId,
+          kedaluwarsaPada: new Date(dibuat.getTime() + 15 * 60_000),
+          gambarQr: GAMBAR_QR_SEED,
+          status: t.status,
+          waktuBayar: dibayar,
+          nominalDiterima: t.nominalDiterima,
+          biayaTransaksi: biaya.biayaTransaksi,
+        })
+        .returning({ id: topUp.id });
+      await tx.insert(riwayatStatusTopUp).values([
+        {
+          topUpId: id,
+          waktu: dibuat,
+          status: "Menunggu Pembayaran",
+          pelaku: PELAKU_MEMBER,
+        },
+        {
+          topUpId: id,
+          waktu: dibayar,
+          status: t.status,
+          pelaku: PELAKU_KABAR_PEMBAYARAN,
+        },
+      ]);
+    });
+    ringkasan.topUp++;
+  }
+}
+
+/**
  * Mengisi database dengan data seed UAT yang belum ada. Hasilnya jumlah data yang baru dibuat. Melempar
  * galat yang menyebut sebabnya bila ada data seed yang ditolak.
  */
@@ -1005,6 +1109,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
     pengaturanToko: 0,
     biayaOperasional: 0,
     saldo: 0,
+    topUp: 0,
   };
   // Admin yang emailnya sudah dipakai dilewati.
   if ((await buatAdmin(ADMIN_SEED)).hasil === "dibuat") ringkasan.admin++;
@@ -1018,6 +1123,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
   await isiPesanan(kunci.kunci, sekarang, ringkasan);
   await isiBiayaOperasional(sekarang, ringkasan);
   await isiSaldo(ringkasan);
+  await isiTopUp(sekarang, ringkasan);
 
   // Pengaturan toko hanya diisi selama masih kosong, supaya isian pemilik tidak tertimpa.
   const pengaturan = await bacaPengaturanToko();

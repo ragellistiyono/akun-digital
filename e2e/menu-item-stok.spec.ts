@@ -186,6 +186,7 @@ test("menu samping menampilkan Item stok tepat di bawah Produk dan membuka menu 
     "Laporan keuangan",
     /^Pesanan/,
     "Member",
+    "Top up",
     "Kategori",
     "Produk",
     "Item stok",

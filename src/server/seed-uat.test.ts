@@ -63,6 +63,8 @@ async function jumlahData() {
     "voucher",
     "biaya_operasional",
     "riwayat_saldo",
+    "top_up",
+    "riwayat_status_top_up",
   ] as const;
   const jumlah: Record<string, number> = {};
   for (const nama of tabel) {
@@ -506,6 +508,52 @@ describe("pnpm db:seed di database kosong", () => {
     expect((await saldoDan("nonaktif@miwe.example")).saldo).toBe(20000);
   });
 
+  // Issue T79 (docs/UAT.md ▶ Keputusan 2026-11-20, Persiapan M5) [CONTOH]: satu Top up Berhasil milik
+  // member@miwe.example (Rp 100.000, Kode unik Rp 77, Total bayar Rp 100.077) dan satu Top up Bermasalah (Rp 50.000,
+  // Total bayar Rp 50.123, nominal diterima Rp 50.000). Saldo seed tetap seperti Persiapan M5 di atas.
+  it("member@miwe.example punya satu Top up Berhasil Rp 100.000 dan satu Top up Bermasalah Rp 50.000 yang terlihat di menu Top up", async () => {
+    const { daftarTopUp, bacaDetailTopUp } = await import("./top-up-admin");
+
+    const { topUp } = await daftarTopUp({ cari: "member@miwe.example" });
+    expect(
+      topUp.map(({ email, nominalTopUp, totalBayar, status }) => ({
+        email,
+        nominalTopUp,
+        totalBayar,
+        status,
+      })),
+    ).toEqual([
+      {
+        email: "member@miwe.example",
+        nominalTopUp: 50000,
+        totalBayar: 50123,
+        status: "Bermasalah",
+      },
+      {
+        email: "member@miwe.example",
+        nominalTopUp: 100000,
+        totalBayar: 100077,
+        status: "Berhasil",
+      },
+    ]);
+
+    const berhasil = await bacaDetailTopUp(topUp[1].nomorTopUp);
+    expect(berhasil?.rincian).toEqual({
+      nominalTopUp: 100000,
+      kodeUnik: 77,
+      totalBayar: 100077,
+    });
+    const bermasalah = await bacaDetailTopUp(topUp[0].nomorTopUp);
+    expect(bermasalah?.rincian.kodeUnik).toBe(123);
+    expect(bermasalah?.pembayaran?.nominalDiterima).toBe(50000);
+    expect(
+      bermasalah?.riwayat.map(({ status, pelaku }) => ({ status, pelaku })),
+    ).toEqual([
+      { status: "Menunggu Pembayaran", pelaku: "Member" },
+      { status: "Bermasalah", pelaku: "Qrispy" },
+    ]);
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan
@@ -525,6 +573,8 @@ describe("pnpm db:seed di database kosong", () => {
       voucher: 6,
       biaya_operasional: 1,
       riwayat_saldo: 2,
+      top_up: 2,
+      riwayat_status_top_up: 4,
       berkas: 8,
     });
 
@@ -532,4 +582,42 @@ describe("pnpm db:seed di database kosong", () => {
 
     expect(await jumlahData()).toEqual(sebelum);
   }, 120_000);
+
+  // Issue T79, UAT-O5 langkah 2 (PRD §15.9): "Tambahkan ke saldo" untuk Top up Bermasalah seed. Berjalan terakhir,
+  // karena mengubah data seed.
+  it('"Tambahkan ke saldo" untuk Top up Bermasalah seed menjadikannya Berhasil, menambah saldo Rp 50.000, dan mencatat satu baris Riwayat saldo', async () => {
+    const { daftarTopUp, selesaikanTopUpBermasalah, bacaDetailTopUp } =
+      await import("./top-up-admin");
+    const { bacaSaldoMember, riwayatSaldoMember } = await import("./saldo");
+
+    const {
+      topUp: [bermasalah],
+    } = await daftarTopUp({
+      status: "Bermasalah",
+      cari: "member@miwe.example",
+    });
+    const detail = await bacaDetailTopUp(bermasalah.nomorTopUp);
+    if (!detail) throw new Error("Top up Bermasalah seed tidak ditemukan.");
+    // Saldo seed member@miwe.example Rp 100.000 (Persiapan M5).
+    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(100000);
+
+    expect(
+      await selesaikanTopUpBermasalah({
+        topUpId: detail.id,
+        cara: "tambahkan-ke-saldo",
+      }),
+    ).toEqual({ hasil: "diselesaikan" });
+
+    expect((await bacaDetailTopUp(bermasalah.nomorTopUp))?.status).toBe(
+      "Berhasil",
+    );
+    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(150000);
+    const { baris } = await riwayatSaldoMember({
+      idMember: detail.member.id,
+      halaman: 1,
+    });
+    expect(
+      baris.filter(({ rujukan }) => rujukan === bermasalah.nomorTopUp),
+    ).toEqual([expect.objectContaining({ jenis: "Top up", nominal: 50000 })]);
+  });
 });
