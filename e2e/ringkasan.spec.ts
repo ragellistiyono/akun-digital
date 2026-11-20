@@ -229,17 +229,31 @@ test("kartu Pesanan Selesai, Pesanan Menunggu Pembayaran, dan Member aktif membu
     page.getByRole("heading", { level: 1, name: "Member" }),
   ).toBeVisible();
 
-  // Kartu uang dan kartu Item stok belum bisa diketuk (PRD §13).
+  // Kartu Item stok belum bisa diketuk (PRD §13).
   await page.goto("/admin/ringkasan");
+  for (const nama of ["Item stok Tersedia", "Item stok Terkirim"]) {
+    await expect(kartu(page, nama).getByRole("link")).toHaveCount(0);
+  }
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4: kartu 1 sampai 4 membuka Laporan keuangan.
+test("kartu Pendapatan, Total Harga modal, Laba kotor, dan Laba bersih membuka Laporan keuangan", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+
   for (const nama of [
     "Pendapatan",
     "Total Harga modal",
     "Laba kotor",
     "Laba bersih",
-    "Item stok Tersedia",
-    "Item stok Terkirim",
   ]) {
-    await expect(kartu(page, nama).getByRole("link")).toHaveCount(0);
+    await page.goto("/admin/ringkasan");
+    await kartu(page, nama).getByRole("link").click();
+    await expect(page).toHaveURL("/admin/laporan");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Laporan keuangan" }),
+    ).toBeVisible();
   }
 });
 

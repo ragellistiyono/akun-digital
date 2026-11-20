@@ -23,6 +23,7 @@ import { tanggalWibDariIsian, waktuWib } from "@/server/zona-waktu-toko";
 
 import { BarisTautan } from "./_components/baris-tautan";
 import { FormSaringanLaporan } from "./_components/form-saringan-laporan";
+import { GrafikBatangMendatar } from "./_components/grafik-batang-mendatar";
 import { GrafikPeriode } from "./_components/grafik-periode";
 import { labelKelompok } from "./_components/label-kelompok";
 import { ALAMAT_LAPORAN } from "./alamat";
@@ -243,8 +244,9 @@ function RincianAngka({
 type Grafik = Awaited<ReturnType<typeof grafikLaporan>>;
 
 /**
- * Grafik per kelompok periode (PRD §14.7): Pendapatan dan jumlah Pesanan Selesai berupa batang, serta Laba kotor
- * (garis utuh) dan Laba bersih (garis putus-putus). Semuanya mengikuti saringan rentang, Kategori, dan Produk.
+ * Lima grafik Laporan keuangan (PRD §14.7): Pendapatan dan jumlah Pesanan Selesai per kelompok periode berupa
+ * batang, Laba kotor (garis utuh) dan Laba bersih (garis putus-putus), lalu Produk terlaris dan Pendapatan per
+ * Kategori berupa batang mendatar. Semuanya mengikuti saringan rentang, Kategori, dan Produk.
  */
 function GrafikLaporan({ grafik }: { grafik: Grafik }) {
   const kelompok = grafik.kelompok.map((k) => labelKelompok(grafik.periode, k));
@@ -298,6 +300,26 @@ function GrafikLaporan({ grafik }: { grafik: Grafik }) {
             gaya: "utuh",
           },
         ]}
+      />
+      <GrafikBatangMendatar
+        judul="Produk terlaris"
+        batang="pesananSelesai"
+        baris={grafik.produkTerlaris.map((p) => ({
+          kunci: p.produkId,
+          nama: p.namaProduk,
+          pesananSelesai: p.pesananSelesai,
+          pendapatan: p.pendapatan,
+        }))}
+      />
+      <GrafikBatangMendatar
+        judul="Pendapatan per Kategori"
+        batang="pendapatan"
+        baris={grafik.pendapatanPerKategori.map((k) => ({
+          kunci: k.kategoriId,
+          nama: k.namaKategori,
+          pesananSelesai: k.pesananSelesai,
+          pendapatan: k.pendapatan,
+        }))}
       />
     </section>
   );
@@ -529,9 +551,8 @@ function IsiTabel({
 }
 
 // Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, dan periode, rincian
-// angka sampai Laba bersih, grafik per kelompok periode (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan
-// periode Harian dan rentang awalnya. Grafik Produk terlaris dan Pendapatan per Kategori menyusul. Halaman ini
-// belum ditautkan dari menu samping maupun Ringkasan (PRD §13 ▶ Keputusan 2026-11-20).
+// angka sampai Laba bersih, lima grafik (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan periode Harian
+// dan rentang awalnya, dan dibuka dari menu samping serta kartu uang Ringkasan (PRD §11.1, §9.2).
 export default async function HalamanLaporanKeuangan({
   searchParams,
 }: PageProps<"/admin/laporan">) {

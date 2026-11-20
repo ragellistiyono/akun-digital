@@ -5,13 +5,14 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { tambahBiayaOperasional } from "./biaya-operasional";
 import { db, koneksi } from "./db";
-import { produk, varian } from "./db/schema";
+import { kategori, produk, varian } from "./db/schema";
 import {
   grafikLaporan,
   pilihanSaringanLaporan,
   rincianLaporan,
   tabelPesananLaporan,
 } from "./laporan-keuangan";
+import goldenProdukTerlaris from "../../tests/golden/produk-terlaris.json";
 import { sisipkanKategori, sisipkanProduk } from "./uji-katalog";
 import { sisipkanPesanan } from "./uji-pesanan";
 
@@ -479,5 +480,178 @@ describe("grafikLaporan (PRD §14.6, §14.7)", () => {
       labaKotor: -10000,
       labaBersih: -14900,
     });
+  });
+
+  it("dengan 12 Produk terjual, Produk terlaris hanya memuat 10 Produk dengan urutan dan Pendapatan fixture, Pesanan dijumlahkan dari semua Varian", async () => {
+    const kategoriId = await sisipkanKategori({
+      nama: `Terlaris ${randomUUID().slice(0, 8)}`,
+    });
+    const [kasus] = goldenProdukTerlaris.kasus;
+    // Fixture memuat 11 Produk. Produk ke-12 punya 1 Pesanan Selesai dengan Pendapatan di bawah semua Produk
+    // ber-1 Pesanan di fixture, jadi menurut PRD §14.7 urutannya di bawah 10 besar dan hasilnya tetap fixture.
+    const pesananSelesai = [
+      ...kasus.input.pesananSelesai,
+      { produk: "Produk kedua belas", varian: "1 Bulan", totalBayar: 10000 },
+    ];
+    // Satu Produk per nama, dengan Varian-nya masing-masing.
+    const varianPerProduk = new Map<string, Set<string>>();
+    for (const p of pesananSelesai) {
+      varianPerProduk.set(
+        p.produk,
+        (varianPerProduk.get(p.produk) ?? new Set()).add(p.varian),
+      );
+    }
+    expect(varianPerProduk.size).toBe(12);
+    const idVarian = new Map<string, string>();
+    for (const [nama, semuaVarian] of varianPerProduk) {
+      const produkId = await sisipkanProduk({
+        nama,
+        kategoriId,
+        varian: [...semuaVarian].map((v) => ({ nama: v, hargaJual: 50000 })),
+      });
+      for (const v of await db
+        .select({ id: varian.id, nama: varian.nama })
+        .from(varian)
+        .where(eq(varian.produkId, produkId))) {
+        idVarian.set(`${nama}|${v.nama}`, v.id);
+      }
+    }
+    for (const [i, p] of pesananSelesai.entries()) {
+      await sisipkanPesanan({
+        varianId: idVarian.get(`${p.produk}|${p.varian}`)!,
+        status: "Selesai",
+        rincian: {
+          hargaJual: p.totalBayar,
+          potonganVoucher: 0,
+          kodeUnik: 0,
+          totalBayar: p.totalBayar,
+        },
+        biayaTransaksi: 0,
+        waktuBayar: new Date(
+          `2032-11-10T08:${String(i).padStart(2, "0")}:00+07:00`,
+        ),
+      });
+    }
+    // Bukan Pesanan Selesai, dan Pesanan Selesai di luar rentang: tidak dihitung.
+    await sisipkanPesanan({
+      varianId: idVarian.get("WeTV VIP|1 Bulan")!,
+      status: "Bermasalah",
+      waktuBayar: new Date("2032-11-10T12:00:00+07:00"),
+    });
+    await sisipkanPesanan({
+      varianId: idVarian.get("WeTV VIP|1 Bulan")!,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-11-11T00:00:00+07:00"),
+    });
+
+    const grafik = await grafikLaporan({
+      periode: "Harian",
+      dari: "2032-11-10",
+      sampai: "2032-11-10",
+      kategoriId,
+    });
+
+    expect(
+      grafik.produkTerlaris.map(
+        ({ namaProduk, pesananSelesai, pendapatan }) => ({
+          produk: namaProduk,
+          pesananSelesai,
+          pendapatan,
+        }),
+      ),
+    ).toEqual(kasus.output.terlaris);
+  });
+
+  it("jumlah Pendapatan per Kategori sama dengan Pendapatan rincian angka, Kategori tanpa Pesanan Selesai dalam rentang tidak tampil, dan saringan Kategori atau Produk ikut berlaku", async () => {
+    const besar = await produkUji({ nama: "Kategori besar" });
+    const besarLain = await produkUji({ nama: "Kategori besar lain" });
+    const kecil = await produkUji({ nama: "Kategori kecil" });
+    const kosong = await produkUji({ nama: "Kategori kosong" });
+    // Kategori besar: contoh PRD §14.5 (Rp 230.632) di dua Produk, satu tanpa Harga modal.
+    await sisipkanContohPrd(besar.varianId, "2032-12-01");
+    await sisipkanPesanan({
+      varianId: besarLain.varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-12-01T22:00:00+07:00"),
+    });
+    // Kategori kecil: satu Pesanan Selesai Rp 45.123.
+    await sisipkanPesanan({
+      varianId: kecil.varianId,
+      status: "Selesai",
+      hargaModal: 35000,
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-12-01T10:00:00+07:00"),
+    });
+    // Kategori kosong: hanya Pesanan Bermasalah dalam rentang, dan Pesanan Selesai sehari sesudahnya.
+    await sisipkanPesanan({
+      varianId: kosong.varianId,
+      status: "Bermasalah",
+      waktuBayar: new Date("2032-12-01T11:00:00+07:00"),
+    });
+    await sisipkanPesanan({
+      varianId: kosong.varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2032-12-02T00:00:00+07:00"),
+    });
+    // Produk kedua dipindah ke Kategori Produk pertama: Pesanan-nya ikut Kategori itu.
+    const [{ kategoriId: kategoriBesar }] = await db
+      .select({ kategoriId: produk.kategoriId })
+      .from(produk)
+      .where(eq(produk.id, besar.produkId));
+    await db
+      .update(produk)
+      .set({ kategoriId: kategoriBesar })
+      .where(eq(produk.id, besarLain.produkId));
+    const [{ nama: namaKategoriBesar }] = await db
+      .select({ nama: kategori.nama })
+      .from(kategori)
+      .where(eq(kategori.id, kategoriBesar));
+
+    const saringan = {
+      periode: "Harian" as const,
+      dari: "2032-12-01",
+      sampai: "2032-12-01",
+    };
+    const grafik = await grafikLaporan(saringan);
+    const rincian = await rincianLaporan(saringan);
+
+    expect(
+      grafik.pendapatanPerKategori.map(
+        ({ namaKategori, pendapatan, pesananSelesai }) => ({
+          namaKategori,
+          pendapatan,
+          pesananSelesai,
+        }),
+      ),
+    ).toEqual([
+      {
+        namaKategori: namaKategoriBesar,
+        pendapatan: 275755,
+        pesananSelesai: 4,
+      },
+      {
+        namaKategori: expect.stringMatching(/^Streaming /),
+        pendapatan: 45123,
+        pesananSelesai: 1,
+      },
+    ]);
+    expect(rincian.pendapatan).toBe(320878);
+    expect(
+      grafik.pendapatanPerKategori.reduce((n, k) => n + k.pendapatan, 0),
+    ).toBe(rincian.pendapatan);
+
+    const perProduk = await grafikLaporan({
+      ...saringan,
+      produkId: besarLain.produkId,
+    });
+    expect(
+      perProduk.pendapatanPerKategori.map((k) => [k.kategoriId, k.pendapatan]),
+    ).toEqual([[kategoriBesar, 45123]]);
+    expect(
+      perProduk.produkTerlaris.map((p) => [p.produkId, p.pesananSelesai]),
+    ).toEqual([[besarLain.produkId, 1]]);
   });
 });

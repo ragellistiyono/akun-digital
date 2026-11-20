@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ChartColumn,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -28,6 +29,7 @@ type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 // Isi menu bertambah bersama halaman dasbor admin di tiket berikutnya (PRD §9).
 const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/ringkasan", label: "Ringkasan", ikon: LayoutDashboard },
+  { href: "/admin/laporan", label: "Laporan keuangan", ikon: ChartColumn },
   { href: "/admin/pesanan", label: "Pesanan", ikon: ReceiptText },
   { href: "/admin/member", label: "Member", ikon: Users },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
