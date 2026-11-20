@@ -218,6 +218,11 @@ Saat menempel banyak baris:
 - Di bawah kotak tempel tampil "N baris akan diproses", yang berubah langsung saat Admin menempel atau mengetik, sebelum menekan simpan. N adalah jumlah baris yang tidak kosong. Baris kosong dan baris yang hanya berisi spasi tidak dihitung, karena keduanya diabaikan saat disimpan. Dengan begitu N sama dengan jumlah tersimpan ditambah jumlah ditolak. Contoh lengkapnya ada di `tests/golden/hitungan-baris-tempel.json`.
 - Kotak tempel di halaman Varian (§9.7) tetap ada dan ikut menampilkan hitungan yang sama. Form satu Item stok tetap hanya ada di halaman Varian.
 
+▶ Keputusan 2026-11-20 (#224): Menu Item stok
+- Contoh satu baris tempelan berupa nama kolom Format Item stok yang disambung `|`, misalnya `Email|Password|Profil`.
+- Di daftar Varian, status Aktif atau Nonaktif adalah status Varian itu sendiri. Bila Produknya nonaktif, baris itu juga diberi teks "Produk nonaktif".
+- Saat menu dibuka tanpa Varian terpilih, halaman hanya menampilkan pilihan Varian, petunjuk, dan daftar Varian. Keterangan Varian dan kotak tempel muncul setelah Admin memilih Varian, supaya Item stok tidak tertempel ke Varian yang salah.
+
 ### 4.3 Satu Item stok untuk satu Pesanan
 
 - Setiap Item stok dikirim ke tepat satu Pesanan, lalu tidak bisa dipakai lagi.
@@ -722,6 +727,10 @@ Ringkasan hanya berupa angka, tanpa grafik.
   - kartu 11 tetap seperti sekarang.
 - Contoh hitungan kartu uang ada di `tests/golden/laba.json`.
 
+▶ Keputusan 2026-11-20 (#224):
+- Seperti kartu lama (▶ Keputusan 2026-11-17, #174), setiap kartu baru punya satu kalimat keterangan tentang cara hitungnya, yang diambil dari teks PRD. Contoh kartu Item stok Tersedia: "Item stok yang bisa dibeli sekarang, di Varian aktif dari Produk aktif. Item stok Ditahan tidak dihitung."
+- Peringatan Pesanan tanpa Harga modal tampil satu kali untuk kartu 2 sampai 4. Letaknya diatur `docs/DESIGN.md`.
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -974,6 +983,10 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 - Saat Admin mengisi Harga modal sebuah Varian untuk pertama kalinya, semua Pesanan Varian itu yang tercatat tanpa Harga modal ikut memakai nilai itu, apa pun statusnya. Perubahan Harga modal sesudahnya hanya berlaku untuk Pesanan baru.
 - Contoh: Netflix Premium 1 Bulan sudah punya 40 Pesanan Selesai sebelum fitur ini tayang. Pada 25 November Admin mengisi Harga modal Rp 35.000, sehingga ke-40 Pesanan itu tercatat dengan Harga modal Rp 35.000. Pada 1 Desember Admin mengubahnya menjadi Rp 37.000. Ke-40 Pesanan tadi tetap Rp 35.000, dan hanya Pesanan yang dibuat sesudahnya yang memakai Rp 37.000. Contoh lengkapnya ada di `tests/golden/harga-modal-pesanan.json`.
 
+▶ Keputusan 2026-11-20 (#224):
+- Selama Harga jual atau Harga modal di form Varian masih kosong atau ditolak, baris laba berbunyi "Laba kotor per Pesanan: —".
+- Di daftar Varian, Varian tanpa Harga modal menampilkan "—" di Harga modal dan juga di Laba kotor per Pesanan.
+
 ### 14.2 Laba kotor
 
 - Laba kotor sebuah Pesanan = Harga jual − Harga modal. Jumlah barangnya selalu 1, karena satu Pesanan berisi satu Item stok (§5.1).
@@ -1009,6 +1022,8 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 - Pesanan yang sudah dibayar sebelum fitur ini tayang dihitung sekali dengan nilai awal.
 - Pemilik mencocokkan kedua nilai itu dengan potongan yang tampil di saldo Qrispy, lalu mengubahnya di pengaturan toko bila berbeda.
 
+▶ Keputusan 2026-11-20 (#224): Pesan penolakan kedua isian Biaya transaksi mengikuti pola pesan Ambang stok menipis dan Harga modal. Setiap pesan menyebut sebabnya, misalnya isian kosong, persen di luar 0 sampai 10, atau lebih dari 2 angka di belakang koma, lalu langkah berikutnya.
+
 ### 14.4 Biaya operasional
 
 - Biaya operasional adalah biaya toko di luar Harga modal dan Biaya transaksi, misalnya sewa server, domain, atau iklan.
@@ -1024,6 +1039,11 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
   - total Biaya operasional bulan itu;
   - daftar biaya bulan itu, diurutkan menurut tanggal dengan yang terbaru di atas.
 - Biaya operasional dikurangkan dari Laba bersih menurut tanggalnya (§14.5).
+
+▶ Keputusan 2026-11-20 (#224): Teks halaman Biaya operasional mengikuti pola halaman Voucher:
+- tombol tambah berbunyi "Tambah biaya";
+- total ditulis "Total Biaya operasional <Bulan Tahun>", misalnya "Total Biaya operasional November 2026";
+- panel hapus berjudul "Hapus Biaya operasional", dengan penegasan "Hapus Biaya operasional "<keterangan>"? Biaya ini terhapus dan tidak bisa dikembalikan."
 
 ### 14.5 Laba bersih
 
@@ -1055,6 +1075,8 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 - Saat saringan Produk atau Kategori aktif di Laporan keuangan, Biaya operasional tidak dikurangkan, karena biaya itu bukan milik Produk tertentu. Baris Biaya operasional diganti keterangan "Laba bersih ini belum dikurangi Biaya operasional, karena saringan Produk atau Kategori sedang aktif."
 - Laba kotor dan Laba bersih boleh negatif, dan ditulis dengan tanda minus, misalnya "−Rp 12.500".
 - Contoh lengkapnya ada di `tests/golden/laba.json`.
+
+▶ Keputusan 2026-11-20 (#224): Saat saringan Produk atau Kategori aktif, baris "− Biaya operasional" dihapus dari rincian angka, dan keterangan "Laba bersih ini belum dikurangi Biaya operasional, …" tampil sebagai catatan di atas rincian, seperti diatur `docs/DESIGN.md`.
 
 ### 14.6 Laporan keuangan
 
@@ -1103,6 +1125,8 @@ Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, 
   4. **Produk terlaris:** paling banyak 10 Produk dengan Pesanan Selesai terbanyak dalam rentang, dijumlahkan dari semua Variannya, berupa batang mendatar dengan Pendapatan setiap Produk di sebelahnya. Bila jumlah Pesanan Selesai-nya sama, Produk dengan Pendapatan lebih besar ditaruh lebih atas, lalu nama Produk dari A sampai Z. Contohnya ada di `tests/golden/produk-terlaris.json`.
   5. **Pendapatan per Kategori:** Pendapatan setiap Kategori dalam rentang, berupa batang mendatar beserta jumlah Pesanan Selesai-nya, dengan Pendapatan terbesar di atas. Kategori tanpa Pesanan Selesai dalam rentang itu tidak tampil.
 - Grafik 1, 3, 4, dan 5 menghitung semua Pesanan Selesai, termasuk yang belum punya Harga modal, sama seperti Pendapatan. Grafik 2 mengikuti §14.2 dan §14.5.
+
+▶ Keputusan 2026-11-20 (#224): Bila tidak ada Pesanan Selesai dalam saringan, grafik 4 dan 5 tetap tampil, dan kartunya berbunyi "Belum ada Pesanan Selesai dalam rentang ini.", sama dengan pesan tabel (§14.8).
 
 ### 14.8 Tabel Pesanan di Laporan keuangan
 
