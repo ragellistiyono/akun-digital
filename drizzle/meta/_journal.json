@@ -176,6 +176,13 @@
       "when": 1795159065670,
       "tag": "0024_harga_modal",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795161085376,
+      "tag": "0025_biaya_transaksi",
+      "breakpoints": true
     }
   ]
 }

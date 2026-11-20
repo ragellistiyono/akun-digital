@@ -17,6 +17,11 @@ import { crc32, deflateSync } from "node:zlib";
 
 import { and, eq } from "drizzle-orm";
 
+import {
+  biayaTransaksi,
+  MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL,
+  PERSEN_BIAYA_TRANSAKSI_AWAL,
+} from "@/domain/biaya-transaksi";
 import { periksaFormatItemStok } from "@/domain/format-item-stok";
 import { periksaHargaModal } from "@/domain/harga-modal";
 import { periksaIsianVoucher } from "@/domain/isian-voucher";
@@ -47,7 +52,11 @@ import { bacaKunciItemStok, sidikJariItemStok } from "./enkripsi-item-stok";
 import { unggahFotoProduk } from "./foto-produk";
 import { tempelItemStokVarian } from "./item-stok";
 import { buatKategori, daftarKategori } from "./kategori";
-import { bacaPengaturanToko, simpanPengaturanToko } from "./pengaturan-toko";
+import {
+  bacaPengaturanBiayaTransaksi,
+  bacaPengaturanToko,
+  simpanPengaturanToko,
+} from "./pengaturan-toko";
 import { bacaProduk, buatProduk, daftarProduk } from "./produk";
 import { daftarVarian, tambahVarian } from "./varian";
 import { buatVoucher, type SyaratVoucher } from "./voucher";
@@ -810,6 +819,12 @@ async function isiPesanan(
         : 0,
       kodeUnik: p.kodeUnik,
     });
+    // Semua Pesanan seed sudah dibayar, jadi Biaya transaksi-nya dicatat dari Pengaturan toko saat itu, seperti
+    // pemroses kabar pembayaran (PRD §14.3).
+    const biaya = biayaTransaksi({
+      totalBayar: rincian.totalBayar,
+      ...(await bacaPengaturanBiayaTransaksi()),
+    });
     await db.transaction(async (tx) => {
       const [{ id }] = await tx
         .insert(pesanan)
@@ -825,6 +840,7 @@ async function isiPesanan(
           potonganVoucher: rincian.potonganVoucher,
           kodeUnik: rincian.kodeUnik,
           totalBayar: rincian.totalBayar,
+          biayaTransaksi: biaya.biayaTransaksi,
           qrisId: p.qrisId,
           kedaluwarsaPada: new Date(dibuat.getTime() + 15 * 60_000),
           gambarQr: GAMBAR_QR_SEED,
@@ -927,10 +943,14 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
         PERBAIKI_DATA_SEED,
       );
     }
-    await simpanPengaturanToko({
-      ...PENGATURAN_TOKO,
-      nomorWhatsapp: nomor.nomor,
-    });
+    // Biaya transaksi memakai nilai awal PRD §14.3.
+    await simpanPengaturanToko(
+      { ...PENGATURAN_TOKO, nomorWhatsapp: nomor.nomor },
+      {
+        persen: PERSEN_BIAYA_TRANSAKSI_AWAL,
+        minimalTotalBayar: MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL,
+      },
+    );
     ringkasan.pengaturanToko++;
   }
   return ringkasan;

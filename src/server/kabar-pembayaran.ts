@@ -3,6 +3,7 @@
 // src/domain/kabar-pembayaran.ts; perpindahan status yang boleh ada di src/domain/status-pesanan.ts.
 import { and, eq } from "drizzle-orm";
 
+import { biayaTransaksi } from "@/domain/biaya-transaksi";
 import { hasilKabarPembayaran } from "@/domain/kabar-pembayaran";
 import { perpindahanStatusPesanan } from "@/domain/status-pesanan";
 
@@ -16,6 +17,7 @@ import {
 } from "./db/schema";
 import { bacaStokVarian } from "./item-stok";
 import { jadwalkanEmailPesananSelesai } from "./pekerjaan-latar";
+import { bacaPengaturanBiayaTransaksi } from "./pengaturan-toko";
 import { qrispyAktif, type Qrispy, type StatusQris } from "./qrispy";
 
 /** Pelaku perubahan status karena kabar pembayaran di Riwayat status Pesanan. */
@@ -50,7 +52,10 @@ type HasilProsesKabar =
  * - Item stok yang dikirim menjadi Terkirim, mencatat Pesanan penerimanya, dan mencatat nama kolom
  *   Format Item stok yang berlaku saat itu (PRD §4.1).
  * - Item stok yang dilepas kembali Tersedia tanpa Pesanan, supaya bisa ditahan Pesanan lain.
- * - Pesanan mencatat waktu bayar, dan Riwayat status Pesanan mendapat satu baris baru.
+ * - Pesanan mencatat waktu bayar dan Biaya transaksi-nya (PRD §14.3), yang dihitung biayaTransaksi dari Total
+ *   bayar dan Pengaturan toko saat itu, termasuk bila Pesanan menjadi Bermasalah. Kabar berulang tidak
+ *   menghitungnya ulang, jadi pengaturan yang diubah sesudahnya tidak mengubah Pesanan ini.
+ * - Riwayat status Pesanan mendapat satu baris baru.
  * - Pesanan yang menjadi Selesai mendapat satu pekerjaan email "Pesanan selesai" (PRD §6.3), yang ikut
  *   tersimpan bersama transaksi ini dan dikirim pekerja latar sesudahnya, di luar transaksi ini.
  *
@@ -145,9 +150,17 @@ export async function prosesKabarPembayaran(
         .set({ status: "Tersedia", pesananId: null })
         .where(eq(itemStok.id, ditahan.id));
     }
+    const biaya = biayaTransaksi({
+      totalBayar: dibayar.totalBayar,
+      ...(await bacaPengaturanBiayaTransaksi(tx)),
+    });
     await tx
       .update(pesanan)
-      .set({ status: hasil.statusBaru, waktuBayar })
+      .set({
+        status: hasil.statusBaru,
+        waktuBayar,
+        biayaTransaksi: biaya.biayaTransaksi,
+      })
       .where(eq(pesanan.id, dibayar.id));
     await tx.insert(riwayatStatusPesanan).values({
       pesananId: dibayar.id,

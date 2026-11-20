@@ -419,6 +419,32 @@ describe("pnpm db:seed di database kosong", () => {
     for (const satu of semuaPesanan) expect(satu.hargaModal).toBe(35000);
   });
 
+  // Issue T68 (PRD §14.3): Pengaturan toko memakai nilai awal Biaya transaksi, dan Pesanan seed yang sudah dibayar
+  // punya Biaya transaksi. Total bayar ketiganya (Rp 45.123, Rp 50.200, dan Rp 50.345) di bawah minimal
+  // Rp 100.000, jadi Biaya transaksinya Rp 0, bukan kosong.
+  it("Pengaturan toko memakai persen 0,7 dan minimal Rp 100.000, dan setiap Pesanan seed tercatat dengan Biaya transaksi Rp 0", async () => {
+    const { bacaPengaturanBiayaTransaksi } = await import("./pengaturan-toko");
+    const { db } = await import("./db");
+    const { pesanan } = await import("./db/schema");
+
+    expect(await bacaPengaturanBiayaTransaksi()).toEqual({
+      persen: 0.7,
+      minimalTotalBayar: 100000,
+    });
+    const semuaPesanan = await db
+      .select({
+        totalBayar: pesanan.totalBayar,
+        biayaTransaksi: pesanan.biayaTransaksi,
+      })
+      .from(pesanan)
+      .orderBy(pesanan.totalBayar);
+    expect(semuaPesanan).toEqual([
+      { totalBayar: 45123, biayaTransaksi: 0 },
+      { totalBayar: 50200, biayaTransaksi: 0 },
+      { totalBayar: 50345, biayaTransaksi: 0 },
+    ]);
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
     // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan

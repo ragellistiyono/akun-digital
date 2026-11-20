@@ -482,3 +482,25 @@ test("Halaman Pesanan yang tercatat dengan Harga modal Rp 35.000 tidak memuat Ha
     await expect(isi(page)).not.toContainText(nominal);
   }
 });
+
+// Issue T68 (PRD §9.5 ▶ Keputusan 2026-11-20, §14): Pembeli tidak pernah melihat Biaya transaksi. Rp 316 adalah
+// Biaya transaksi Total bayar Rp 45.123 dengan persen 0,7 dan minimal Rp 0.
+test("Halaman Pesanan yang tercatat dengan Biaya transaksi Rp 316 tidak memuat Biaya transaksi", async ({
+  page,
+}) => {
+  const { tautan } = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    biayaTransaksi: 316,
+    itemStok: {
+      status: "Terkirim",
+      nilai: [`akun-${randomUUID()}@contoh.id`, "Senja-7419", "Profil 3"],
+      formatSaatTerkirim: ["Email", "Password", "Profil"],
+    },
+  });
+  await page.goto(`/pesanan/${tautan}`);
+
+  await harapkanRincianContoh(page);
+  await expect(isi(page)).not.toContainText(/biaya/i);
+  await expect(isi(page)).not.toContainText("Rp 316");
+});

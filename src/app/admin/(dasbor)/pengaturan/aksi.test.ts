@@ -1,12 +1,22 @@
 import { headers } from "next/headers";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { koneksi } from "@/server/db";
 import {
+  bacaPengaturanBiayaTransaksi,
   bacaPengaturanToko,
   simpanPengaturanToko,
 } from "@/server/pengaturan-toko";
 import { arahKe, cookieAdminBaru } from "@/server/uji-admin";
+import { kunciPengaturanToko } from "@/server/uji-pengaturan-toko";
 
 import { aksiSimpanPengaturanToko } from "./aksi";
 
@@ -21,10 +31,20 @@ const PENGATURAN_AWAL = {
   ambangStokMenipis: 5,
 };
 
+/** Nilai awal Biaya transaksi (PRD §14.3). */
+const BIAYA_TRANSAKSI_AWAL = { persen: 0.7, minimalTotalBayar: 100000 };
+
+/** Isian Biaya transaksi nilai awal, seperti yang tampil di form. */
+const ISIAN_BIAYA_AWAL = {
+  persenBiayaTransaksi: "0,7",
+  minimalBiayaTransaksi: "100.000",
+};
+
 /** Isian form seperti yang dikirim browser: semua nilainya teks. */
 const ISIAN_AWAL = {
   ...PENGATURAN_AWAL,
   ambangStokMenipis: "5",
+  ...ISIAN_BIAYA_AWAL,
 };
 
 function sebagaiPengunjung(kepala: Headers) {
@@ -41,11 +61,20 @@ const keadaanAwal = () => ({
   nilai: { ...ISIAN_AWAL },
 });
 
+// Pengaturan toko berlaku untuk seluruh toko, dan test Biaya transaksi di src/server/kabar-pembayaran.test.ts
+// juga mengubahnya, jadi berkas ini memegang kunci Pengaturan toko selama berjalan.
+let lepasKunci: () => Promise<void>;
+beforeAll(async () => {
+  lepasKunci = await kunciPengaturanToko();
+});
+
 beforeEach(async () => {
-  await simpanPengaturanToko(PENGATURAN_AWAL);
+  await simpanPengaturanToko(PENGATURAN_AWAL, BIAYA_TRANSAKSI_AWAL);
 });
 
 afterAll(async () => {
+  await simpanPengaturanToko(PENGATURAN_AWAL, BIAYA_TRANSAKSI_AWAL);
+  await lepasKunci();
   await koneksi.end();
 });
 
@@ -80,6 +109,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
         syaratKetentuan: "Pasal satu.\r\nPasal dua.",
         kebijakanPrivasi: "Data dipakai untuk Pesanan.",
         ambangStokMenipis: "3",
+        ...ISIAN_BIAYA_AWAL,
       }),
     );
 
@@ -89,7 +119,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
       kebijakanPrivasi: "Data dipakai untuk Pesanan.",
     };
     expect(keadaan).toEqual({
-      nilai: { ...tersimpan, ambangStokMenipis: "3" },
+      nilai: { ...tersimpan, ambangStokMenipis: "3", ...ISIAN_BIAYA_AWAL },
       tersimpan: true,
     });
     expect(await bacaPengaturanToko()).toEqual({
@@ -138,6 +168,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
         syaratKetentuan: "Syarat baru.",
         kebijakanPrivasi: "Kebijakan baru.",
         ambangStokMenipis: "3",
+        ...ISIAN_BIAYA_AWAL,
       };
 
       const keadaan = await aksiSimpanPengaturanToko(
@@ -206,6 +237,7 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
         syaratKetentuan: "Syarat baru.",
         kebijakanPrivasi: "Kebijakan baru.",
         ambangStokMenipis: ambang,
+        ...ISIAN_BIAYA_AWAL,
       };
 
       const keadaan = await aksiSimpanPengaturanToko(
@@ -241,4 +273,143 @@ describe("menyimpan Pengaturan toko (PRD §9.8)", () => {
     });
     expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
   });
+
+  // PRD §9.8 ▶ Keputusan 2026-11-20, §14.3, UAT-N2, dan tests/golden/isian-biaya-transaksi.json.
+  for (const { isian, tersimpan, tampil } of [
+    {
+      isian: { persenBiayaTransaksi: "1", minimalBiayaTransaksi: "0" },
+      tersimpan: { persen: 1, minimalTotalBayar: 0 },
+      tampil: { persenBiayaTransaksi: "1", minimalBiayaTransaksi: "0" },
+    },
+    {
+      isian: {
+        persenBiayaTransaksi: " 0,75 ",
+        minimalBiayaTransaksi: "250000",
+      },
+      tersimpan: { persen: 0.75, minimalTotalBayar: 250000 },
+      tampil: {
+        persenBiayaTransaksi: "0,75",
+        minimalBiayaTransaksi: "250.000",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "10", minimalBiayaTransaksi: "Rp 1.000" },
+      tersimpan: { persen: 10, minimalTotalBayar: 1000 },
+      tampil: { persenBiayaTransaksi: "10", minimalBiayaTransaksi: "1.000" },
+    },
+  ]) {
+    it(`Admin menyimpan persen biaya transaksi "${isian.persenBiayaTransaksi}" dan minimal Total bayar "${isian.minimalBiayaTransaksi}"`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+
+      const keadaan = await aksiSimpanPengaturanToko(
+        keadaanAwal(),
+        formulir({ ...ISIAN_AWAL, ...isian }),
+      );
+
+      expect(keadaan).toEqual({
+        nilai: { ...ISIAN_AWAL, ...tampil },
+        tersimpan: true,
+      });
+      expect(await bacaPengaturanBiayaTransaksi()).toEqual(tersimpan);
+      expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
+    });
+  }
+
+  for (const { isian, galat } of [
+    {
+      isian: { persenBiayaTransaksi: "10,01" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi hanya boleh 0 sampai 10. Tulis angka di rentang itu, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "0,755" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi paling banyak 2 angka di belakang koma, misalnya 0,75. Hapus angka berikutnya, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "-0,1" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi hanya boleh 0 sampai 10. Tulis angka di rentang itu, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: " " },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi belum diisi. Tulis persennya, misalnya 0,7, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "0.7" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi tidak terbaca sebagai angka. Tulis angkanya saja dengan koma desimal, misalnya 0,7, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "0,7%" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi tidak terbaca sebagai angka. Tulis angkanya saja dengan koma desimal, misalnya 0,7, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { minimalBiayaTransaksi: "-1" },
+      galat: {
+        minimalBiayaTransaksi:
+          "Minimal Total bayar kurang dari Rp 0. Isi minimal Rp 0, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { minimalBiayaTransaksi: "1.000,5" },
+      galat: {
+        minimalBiayaTransaksi:
+          "Minimal Total bayar harus rupiah bulat, tanpa sen. Hapus angka di belakang koma, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { minimalBiayaTransaksi: "" },
+      galat: {
+        minimalBiayaTransaksi:
+          "Minimal Total bayar belum diisi. Ketik rupiahnya, misalnya 100.000, atau 0 bila semua Pesanan dikenai biaya, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { minimalBiayaTransaksi: "seratus ribu" },
+      galat: {
+        minimalBiayaTransaksi:
+          "Minimal Total bayar tidak terbaca sebagai rupiah. Ketik angkanya saja, misalnya 100000 atau 100.000, lalu simpan lagi.",
+      },
+    },
+    {
+      isian: { persenBiayaTransaksi: "11", minimalBiayaTransaksi: "-5" },
+      galat: {
+        persenBiayaTransaksi:
+          "Persen biaya transaksi hanya boleh 0 sampai 10. Tulis angka di rentang itu, lalu simpan lagi.",
+        minimalBiayaTransaksi:
+          "Minimal Total bayar kurang dari Rp 0. Isi minimal Rp 0, lalu simpan lagi.",
+      },
+    },
+  ]) {
+    it(`isian Biaya transaksi ${JSON.stringify(isian)} ditolak dengan pesan, dan pengaturan toko tidak berubah`, async () => {
+      sebagaiPengunjung(await cookieAdminBaru());
+      const dikirim = { ...ISIAN_AWAL, ambangStokMenipis: "3", ...isian };
+
+      const keadaan = await aksiSimpanPengaturanToko(
+        keadaanAwal(),
+        formulir(dikirim),
+      );
+
+      expect(keadaan).toEqual({ nilai: dikirim, galat });
+      expect(await bacaPengaturanBiayaTransaksi()).toEqual(
+        BIAYA_TRANSAKSI_AWAL,
+      );
+      expect(await bacaPengaturanToko()).toEqual(PENGATURAN_AWAL);
+    });
+  }
 });

@@ -8,6 +8,7 @@ import {
   check,
   index,
   integer,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -17,6 +18,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import {
+  MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL,
+  PERSEN_BIAYA_TRANSAKSI_AWAL,
+} from "../../domain/biaya-transaksi";
 import { JENIS_CAKUPAN, JENIS_POTONGAN } from "../../domain/isian-voucher";
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
@@ -276,8 +281,34 @@ export const pengaturanToko = pgTable(
     ambangStokMenipis: integer("ambang_stok_menipis")
       .default(AMBANG_STOK_MENIPIS_AWAL)
       .notNull(),
+    // Biaya transaksi (PRD §14.3): persen 0 sampai 10 dengan paling banyak 2 angka di belakang koma, dan
+    // minimal Total bayar yang dikenai biaya dalam rupiah bulat. Keduanya diperiksa
+    // periksaIsianBiayaTransaksi sebelum disimpan.
+    persenBiayaTransaksi: numeric("persen_biaya_transaksi", {
+      precision: 4,
+      scale: 2,
+      mode: "number",
+    })
+      .default(PERSEN_BIAYA_TRANSAKSI_AWAL)
+      .notNull(),
+    minimalTotalBayarBiayaTransaksi: bigint(
+      "minimal_total_bayar_biaya_transaksi",
+      { mode: "number" },
+    )
+      .default(MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL)
+      .notNull(),
   },
-  (tabel) => [check("pengaturan_toko_satu_baris", sql`${tabel.id} = 1`)],
+  (tabel) => [
+    check("pengaturan_toko_satu_baris", sql`${tabel.id} = 1`),
+    check(
+      "pengaturan_toko_persen_biaya_transaksi_rentang",
+      sql`${tabel.persenBiayaTransaksi} between 0 and 10`,
+    ),
+    check(
+      "pengaturan_toko_minimal_biaya_transaksi_tidak_negatif",
+      sql`${tabel.minimalTotalBayarBiayaTransaksi} >= 0`,
+    ),
+  ],
 );
 
 // Status Pesanan (GLOSSARY, PRD §5.7).
@@ -295,6 +326,8 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // dihapus (PRD §8.8), jadi rujukannya restrict.
 // Harga modal Varian juga dicatat saat checkout (PRD §14.1), dan null bila Varian itu belum punya Harga modal.
 // Pesanan tanpa Harga modal ikut diisi saat Harga modal Varian-nya diisi untuk pertama kalinya (ubahVarian).
+// Biaya transaksi (PRD §14.3) dihitung dan dicatat saat kabar pembayaran diproses, dari Pengaturan toko saat
+// itu, dan null selama Pesanan belum dibayar. Pengaturan yang diubah sesudahnya tidak mengubahnya.
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -307,6 +340,7 @@ export const pesanan = pgTable(
       .references(() => varian.id, { onDelete: "restrict" }),
     hargaJual: integer("harga_jual").notNull(),
     hargaModal: bigint("harga_modal", { mode: "number" }),
+    biayaTransaksi: integer("biaya_transaksi"),
     potonganVoucher: integer("potongan_voucher").notNull(),
     kodeUnik: integer("kode_unik").notNull(),
     totalBayar: integer("total_bayar").notNull(),

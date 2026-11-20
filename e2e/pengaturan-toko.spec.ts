@@ -86,6 +86,48 @@ async function simpan(page: Page) {
   );
 }
 
+// Issue T68, UAT-N2 langkah 1 dan 2 (PRD §9.8 ▶ Keputusan 2026-11-20, §14.3): isian Biaya transaksi berisi nilai
+// awal, lalu persen di luar aturan ditolak dengan pesan. Test ini berjalan pertama di berkas ini, dan tidak ada
+// berkas e2e lain yang mengubah isian Biaya transaksi, jadi nilai yang tampil masih nilai awal.
+test("isian Biaya transaksi menampilkan nilai awal 0,7 dan 100.000, lalu persen 10,01 dan 0,755 ditolak dengan pesan", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  await bukaPengaturanToko(page);
+
+  const persen = page.getByLabel("Persen biaya transaksi");
+  const minimal = page.getByLabel("Minimal Total bayar yang dikenai biaya");
+  await expect(persen).toHaveValue("0,7");
+  await expect(minimal).toHaveValue("100.000");
+
+  for (const { isian, pesan } of [
+    {
+      isian: "10,01",
+      pesan:
+        "Persen biaya transaksi hanya boleh 0 sampai 10. Tulis angka di rentang itu, lalu simpan lagi.",
+    },
+    {
+      isian: "0,755",
+      pesan:
+        "Persen biaya transaksi paling banyak 2 angka di belakang koma, misalnya 0,75. Hapus angka berikutnya, lalu simpan lagi.",
+    },
+  ]) {
+    await persen.fill(isian);
+    await page.getByRole("button", { name: "Simpan" }).click();
+
+    await expect(persen).toHaveAttribute("aria-invalid", "true");
+    await expect(persen).toHaveAccessibleDescription(pesan);
+    // Isian tetap berisi ketikan Admin supaya mudah diperbaiki.
+    await expect(persen).toHaveValue(isian);
+    await expect(page.getByRole("status")).toHaveText("");
+  }
+
+  // Penolakan tidak menyimpan apa pun.
+  await page.reload();
+  await expect(persen).toHaveValue("0,7");
+  await expect(minimal).toHaveValue("100.000");
+});
+
 test("setelah Admin mengubah nomor WhatsApp, tombol WhatsApp di tab Akun membuka wa.me dengan nomor baru", async ({
   page,
   context,

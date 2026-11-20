@@ -39,6 +39,25 @@ export function FormPengaturan({ awal }: { awal: KeadaanFormPengaturan }) {
           inputMode="numeric"
         />
       </div>
+      {/* Biaya transaksi (PRD §14.3): dua isian pendek berdampingan di layar lebar. */}
+      <div className="grid items-start gap-6 sm:grid-cols-2">
+        <IsianTeks
+          nama="persenBiayaTransaksi"
+          label="Persen biaya transaksi"
+          nilaiAwal={keadaan.nilai.persenBiayaTransaksi}
+          galat={keadaan.galat?.persenBiayaTransaksi}
+          bantuan="Potongan Qrispy atas setiap pembayaran, untuk menghitung laba. Angka 0 sampai 10 dengan koma desimal, paling banyak 2 angka di belakang koma, misalnya 0,7. Tidak tampil ke Pembeli."
+          inputMode="decimal"
+        />
+        <IsianTeks
+          nama="minimalBiayaTransaksi"
+          label="Minimal Total bayar yang dikenai biaya"
+          nilaiAwal={keadaan.nilai.minimalBiayaTransaksi}
+          galat={keadaan.galat?.minimalBiayaTransaksi}
+          bantuan="Pesanan dengan Total bayar di bawah angka ini tidak dikenai biaya transaksi. Rupiah bulat, minimal 0, misalnya 100.000. Isi 0 bila semua Pesanan dikenai biaya."
+          inputMode="numeric"
+        />
+      </div>
       <IsianTeks
         nama="syaratKetentuan"
         label="Syarat & Ketentuan"
