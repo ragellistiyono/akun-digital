@@ -2,12 +2,12 @@ import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type Page } from "@playwright/test";
-import { eq } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 
 // DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi data ini masuk ke database app_test, yang
 // dipakai bersama test lain yang berjalan bersamaan.
 import { db } from "../src/server/db";
-import { varian } from "../src/server/db/schema";
+import { pesanan, varian } from "../src/server/db/schema";
 import { jumlahPesananBermasalah } from "../src/server/daftar-pesanan";
 import { sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
@@ -15,12 +15,13 @@ import { sisipkanPesanan } from "../src/server/uji-pesanan";
 const PASSWORD = "sandi-uji-admin-123";
 
 // Produk [CONTOH] dengan akhiran unik per run.
+let produkId = "";
 let varianId = "";
 
 test.beforeAll(async () => {
-  const produkId = await sisipkanProduk({
+  produkId = await sisipkanProduk({
     nama: `Ringkasan ${randomUUID().slice(0, 8)}`,
-    varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+    varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 5 }],
   });
   [{ id: varianId }] = await db
     .select({ id: varian.id })
@@ -92,31 +93,267 @@ test("kartu Pesanan Bermasalah menampilkan jumlah Pesanan Bermasalah saat ini, d
   ).toBeVisible();
 });
 
-// PRD §9.2 dan UAT-I1: Ringkasan menampilkan kartu Pendapatan dan Pesanan Selesai hari ini dan bulan ini,
-// hanya berupa angka tanpa grafik.
-test("Ringkasan menampilkan Pendapatan dan Pesanan Selesai hari ini dan bulan ini sebagai angka, tanpa grafik", async ({
+/** Urutan kartu PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4. */
+const URUTAN_KARTU = [
+  "Pendapatan",
+  "Total Harga modal",
+  "Laba kotor",
+  "Laba bersih",
+  "Pesanan Selesai",
+  "Pesanan Menunggu Pembayaran",
+  "Pesanan Bermasalah",
+  "Member aktif",
+  "Item stok Tersedia",
+  "Item stok Terkirim",
+  "Varian stok menipis",
+];
+
+const kartu = (page: Page, nama: string) =>
+  page.getByRole("main").getByRole("article", { name: nama, exact: true });
+
+/** Angka dari teks kartu: "Rp 1.234" menjadi 1234, "−Rp 500" menjadi −500, dan "12" menjadi 12. */
+const angkaDariTeks = (teks: string | null) => {
+  const negatif = (teks ?? "").startsWith("−");
+  const angka = Number((teks ?? "").replace(/[^\d]/g, ""));
+  return negatif ? -angka : angka;
+};
+
+/** Angka hari ini di kartu tiga angka, yaitu angka besar pertama. */
+const hariIniDi = async (page: Page, nama: string) =>
+  angkaDariTeks(
+    await kartu(page, nama).getByRole("definition").first().textContent(),
+  );
+
+/** Angka di kartu satu angka. */
+const angkaDi = async (page: Page, nama: string) =>
+  angkaDariTeks(await kartu(page, nama).getByText(/^\d+$/).textContent());
+
+/** N di peringatan Pesanan Selesai tanpa Harga modal, atau 0 bila peringatannya tidak tampil. */
+const PERINGATAN =
+  /^(\d+) Pesanan Selesai belum dihitung labanya, karena Harga modal Varian-nya belum diisi\.$/;
+async function nPeringatan(page: Page) {
+  const catatan = page.getByRole("main").getByRole("note");
+  if ((await catatan.count()) === 0) return 0;
+  const teks = (await catatan.textContent())?.trim() ?? "";
+  const cocok = PERINGATAN.exec(teks);
+  expect(cocok, teks).not.toBeNull();
+  return Number(cocok?.[1]);
+}
+
+/** Jumlah Pesanan Selesai yang sudah dibayar tanpa Harga modal di database, sepanjang waktu. */
+async function jumlahSelesaiTanpaHargaModal() {
+  const [{ jumlah }] = await db
+    .select({ jumlah: count() })
+    .from(pesanan)
+    .where(
+      and(
+        eq(pesanan.status, "Selesai"),
+        isNotNull(pesanan.waktuBayar),
+        isNull(pesanan.hargaModal),
+      ),
+    );
+  return jumlah;
+}
+
+// PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4: 11 kartu dengan urutan PRD. Kartu uang dan kartu Pesanan Selesai
+// menampilkan hari ini, bulan ini, dan sepanjang waktu. Ringkasan hanya berupa angka, tanpa grafik.
+test("Ringkasan menampilkan 11 kartu dengan urutan PRD, kartu uang dan Pesanan Selesai bertiga angka, tanpa grafik", async ({
   page,
 }) => {
   await masukSebagaiAdmin(page);
 
-  for (const nama of ["Pendapatan", "Pesanan Selesai"]) {
-    const kartu = page.getByRole("article", { name: nama, exact: true });
-    await expect(kartu.getByRole("term")).toHaveText(["Hari ini", "Bulan ini"]);
-  }
-  await expect(
-    page.getByRole("article", { name: "Pendapatan" }).getByRole("definition"),
-  ).toHaveText([/^Rp \d[\d.]*$/, /^Rp \d[\d.]*$/]);
   await expect(
     page
-      .getByRole("article", { name: "Pesanan Selesai", exact: true })
-      .getByRole("definition"),
-  ).toHaveText([/^\d+$/, /^\d+$/]);
+      .getByRole("main")
+      .getByRole("article")
+      .getByRole("heading", { level: 2 }),
+  ).toHaveText(URUTAN_KARTU);
+
+  for (const nama of [
+    "Pendapatan",
+    "Total Harga modal",
+    "Laba kotor",
+    "Laba bersih",
+  ]) {
+    await expect(kartu(page, nama).getByRole("term")).toHaveText([
+      "Hari ini",
+      "Bulan ini",
+      "Sepanjang waktu",
+    ]);
+    await expect(kartu(page, nama).getByRole("definition")).toHaveText([
+      /^−?Rp \d[\d.]*$/,
+      /^−?Rp \d[\d.]*$/,
+      /^−?Rp \d[\d.]*$/,
+    ]);
+  }
+  await expect(kartu(page, "Pesanan Selesai").getByRole("term")).toHaveText([
+    "Hari ini",
+    "Bulan ini",
+    "Sepanjang waktu",
+  ]);
+  await expect(
+    kartu(page, "Pesanan Selesai").getByRole("definition"),
+  ).toHaveText([/^\d+$/, /^\d+$/, /^\d+$/]);
+  await expect(kartu(page, "Member aktif")).toContainText(
+    /dari \d+ Member terdaftar/,
+  );
 
   // Tidak ada grafik: tidak ada kanvas, gambar, atau SVG yang tidak disembunyikan dari pembaca layar.
   const isi = page.getByRole("main");
   await expect(isi.locator("canvas")).toHaveCount(0);
   await expect(isi.getByRole("img")).toHaveCount(0);
   await expect(isi.locator('svg:not([aria-hidden="true"])')).toHaveCount(0);
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4: kartu Pesanan Selesai dan Menunggu Pembayaran membuka daftar
+// Pesanan yang tersaring ke status itu, dan kartu Member aktif membuka daftar Member.
+test("kartu Pesanan Selesai, Pesanan Menunggu Pembayaran, dan Member aktif membuka halaman tujuannya", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  const status = page.getByRole("main").getByLabel("Status");
+
+  await kartu(page, "Pesanan Selesai").getByRole("link").click();
+  await expect(page).toHaveURL("/admin/pesanan?status=Selesai");
+  await expect(status).toHaveValue("Selesai");
+
+  await page.goto("/admin/ringkasan");
+  await kartu(page, "Pesanan Menunggu Pembayaran").getByRole("link").click();
+  await expect(page).toHaveURL("/admin/pesanan?status=Menunggu+Pembayaran");
+  await expect(status).toHaveValue("Menunggu Pembayaran");
+
+  await page.goto("/admin/ringkasan");
+  await kartu(page, "Member aktif").getByRole("link").click();
+  await expect(page).toHaveURL("/admin/member");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Member" }),
+  ).toBeVisible();
+
+  // Kartu uang dan kartu Item stok belum bisa diketuk (PRD §13).
+  await page.goto("/admin/ringkasan");
+  for (const nama of [
+    "Pendapatan",
+    "Total Harga modal",
+    "Laba kotor",
+    "Laba bersih",
+    "Item stok Tersedia",
+    "Item stok Terkirim",
+  ]) {
+    await expect(kartu(page, nama).getByRole("link")).toHaveCount(0);
+  }
+});
+
+// UAT-N3 dan PRD §14.2: Pesanan Selesai tanpa Harga modal menambah Pendapatan tetapi tidak Laba kotor, dan
+// peringatan menyebut jumlah Pesanan Selesai tanpa Harga modal sepanjang waktu. Test lain yang berjalan bersamaan
+// bisa menambah Pesanan yang dibayar di sela bacaan, jadi bagian itu diulang bila angkanya terganggu.
+test("Pesanan Selesai tanpa Harga modal menambah Pendapatan tetapi tidak Laba kotor, dan peringatannya tampil dengan N yang benar", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+
+  await expect(async () => {
+    await page.goto("/admin/ringkasan");
+    const pendapatanSebelum = await hariIniDi(page, "Pendapatan");
+    const labaKotorSebelum = await hariIniDi(page, "Laba kotor");
+    const nSebelum = await nPeringatan(page);
+
+    // Varian uji belum punya Harga modal, jadi Pesanan ini tercatat tanpa Harga modal.
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      rincian: {
+        hargaJual: 20000,
+        potonganVoucher: 0,
+        kodeUnik: 321,
+        totalBayar: 20321,
+      },
+      biayaTransaksi: 0,
+      waktuBayar: new Date(),
+    });
+    await page.reload();
+
+    expect((await hariIniDi(page, "Pendapatan")) - pendapatanSebelum).toBe(
+      20321,
+    );
+    expect(await hariIniDi(page, "Laba kotor")).toBe(labaKotorSebelum);
+    expect(await nPeringatan(page)).toBe(nSebelum + 1);
+  }).toPass({ timeout: 30_000 });
+
+  // N sama dengan jumlah Pesanan Selesai tanpa Harga modal di database, dibaca saat jumlah itu tidak berubah.
+  await expect(async () => {
+    const sebelum = await jumlahSelesaiTanpaHargaModal();
+    await page.goto("/admin/ringkasan");
+    const n = await nPeringatan(page);
+    const sesudah = await jumlahSelesaiTanpaHargaModal();
+
+    expect(sesudah).toBe(sebelum);
+    expect(n).toBe(sebelum);
+    expect(n).toBeGreaterThanOrEqual(1);
+  }).toPass({ timeout: 30_000 });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20, kartu 6, dan UAT-N4: checkout tanpa membayar menambah Pesanan Menunggu
+// Pembayaran 1, dan membatalkan Pesanan itu mengembalikannya. Test lain yang berjalan bersamaan juga membuat
+// dan menutup Pesanan Menunggu Pembayaran, jadi kartu dibandingkan dengan jumlah Pesanan Menunggu Pembayaran
+// lain di database, yang dibaca sebelum dan sesudah halaman dimuat, dan bagian itu diulang bila terganggu.
+test("Pesanan Menunggu Pembayaran bertambah 1 setelah checkout tanpa membayar, lalu kembali seperti semula setelah Pesanan itu dibatalkan", async ({
+  page,
+  browser,
+}) => {
+  // Tiga pembacaan kartu yang masing-masing bisa diulang, ditambah checkout dan pembatalan.
+  test.setTimeout(120_000);
+  const email = `budi-${randomUUID()}@example.test`;
+  const menungguLain = async () => {
+    const [{ jumlah }] = await db
+      .select({ jumlah: count() })
+      .from(pesanan)
+      .where(
+        and(
+          eq(pesanan.status, "Menunggu Pembayaran"),
+          ne(pesanan.email, email),
+        ),
+      );
+    return jumlah;
+  };
+  const kartuSamaDengan = async (tambahan: number) => {
+    await expect(async () => {
+      const sebelum = await menungguLain();
+      await page.goto("/admin/ringkasan");
+      const diKartu = await angkaDi(page, "Pesanan Menunggu Pembayaran");
+      const sesudah = await menungguLain();
+
+      expect(sesudah).toBe(sebelum);
+      expect(diKartu).toBe(sebelum + tambahan);
+    }).toPass({ timeout: 30_000 });
+  };
+  await masukSebagaiAdmin(page);
+  await kartuSamaDengan(0);
+
+  // Pembeli checkout sampai Halaman bayar tanpa membayar.
+  const konteksPembeli = await browser.newContext();
+  const pembeli = await konteksPembeli.newPage();
+  // Produk uji hanya punya satu Varian, jadi Varian itu sudah terpilih.
+  await pembeli.goto(`/produk/${produkId}`);
+  await pembeli.getByRole("button", { name: /^Beli/ }).click();
+  await pembeli.getByRole("textbox", { name: "Email" }).fill(email);
+  await pembeli.getByRole("button", { name: "Bayar dengan QRIS" }).click();
+  await expect(
+    pembeli.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+
+  await kartuSamaDengan(1);
+
+  // Pembeli membatalkan Pesanan itu.
+  await pembeli
+    .getByRole("main")
+    .getByRole("button", { name: "Batalkan" })
+    .click();
+  await expect(
+    pembeli.getByRole("main").getByText("Dibatalkan", { exact: true }),
+  ).toBeVisible();
+
+  await kartuSamaDengan(0);
+  await konteksPembeli.close();
 });
 
 // UAT-I1 dan PRD §9.2 (▶ Keputusan 2026-11-17): jumlah di kartu Member aktif sama dengan jumlah Member

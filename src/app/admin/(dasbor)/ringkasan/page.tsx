@@ -3,94 +3,216 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { rupiah } from "@/lib/rupiah";
+import { rupiahBertanda } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { jumlahPesananBermasalah } from "@/server/daftar-pesanan";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
-import { angkaMemberAktif, angkaRingkasan } from "@/server/ringkasan";
+import {
+  angkaItemStok,
+  angkaMemberAktif,
+  angkaRingkasan,
+  jumlahPesananMenungguPembayaran,
+} from "@/server/ringkasan";
 import { daftarStokMenipis } from "@/server/stok-menipis";
 
 import { DaftarStokMenipis } from "./_components/daftar-stok-menipis";
 
 const KELAS_JUDUL_PANEL = "garis-gelombang text-[28px] leading-[1.2]";
 
-const KELAS_KARTU = "kartu flex flex-col gap-2 p-4";
+const KELAS_KARTU = "kartu flex h-full flex-col gap-2 p-4";
+
+/** Kartu yang bisa diketuk: bayangannya naik saat disorot, seperti kartu Pesanan Bermasalah. */
+const KELAS_KARTU_TAUTAN =
+  "transition-shadow duration-100 hover:shadow-coret-sedang motion-reduce:transition-none";
 
 /**
- * Lebar kartu di grid Ringkasan. Di ponsel satu kolom. Mulai 640 px dua kolom, dengan kartu terakhir selebar
- * dua kolom supaya tidak ada lubang. Mulai 1200 px grid enam lajur: dua kartu hari ini dan bulan ini masing-masing
- * setengah baris, lalu tiga kartu satu angka masing-masing sepertiga baris. Kartu sebaris sama tinggi karena
- * grid meregangkannya. Varian `min-[…px]` dipakai, bukan `sm:`, karena `sm:` (rem) tersusun sesudah `lebar:`
- * (px) di CSS hasil Tailwind dan akan menimpanya.
+ * Grid kartu Ringkasan. Di ponsel satu kolom, mulai 640 px dua kolom, dan mulai 1200 px tiga kolom. Kartu
+ * terakhir selebar dua kolom, supaya baris terakhir penuh di dua dan tiga kolom (11 kartu). Kartu sebaris sama
+ * tinggi karena grid meregangkannya. Varian `min-[…px]` dipakai, bukan `sm:`, karena `sm:` (rem) tersusun sesudah
+ * `lebar:` (px) di CSS hasil Tailwind dan akan menimpanya.
  */
 const KELAS_GRID_KARTU =
-  "grid gap-4 min-[640px]:grid-cols-2 min-[1200px]:grid-cols-6";
-const KELAS_SETENGAH_BARIS = "min-[1200px]:col-span-3";
-const KELAS_SEPERTIGA_BARIS = "min-[1200px]:col-span-2";
+  "grid gap-4 min-[640px]:grid-cols-2 min-[1200px]:grid-cols-3";
 const KELAS_KARTU_TERAKHIR = "min-[640px]:col-span-2";
 
 /** Judul kartu angka (h2): spidol Kalam, lebih kecil daripada judul bagian. */
-const KELAS_JUDUL_KARTU = "text-[20px]";
+const KELAS_JUDUL_KARTU = "flex items-center gap-2 text-[20px]";
 
 /** Angka kartu: spidol Kalam besar. */
 const KELAS_ANGKA =
-  "font-spidol text-[32px] leading-none font-bold tabular-nums";
+  "font-spidol text-[32px] leading-none font-bold tabular-nums break-words";
 
 const KELAS_KETERANGAN = "text-[15px] text-pensil-redup";
 
-/** Daftar Pesanan yang sudah disaring ke status Bermasalah (PRD §9.2 ▶ Keputusan 2026-11-17, §9.5). */
-const ALAMAT_PESANAN_BERMASALAH = "/admin/pesanan?status=Bermasalah";
+/** Daftar Pesanan yang sudah disaring ke status itu (PRD §9.2, §9.5). */
+const alamatPesananBerstatus = (status: string) =>
+  `/admin/pesanan?${new URLSearchParams({ status })}`;
 
-/** Kartu angka dengan dua nilai, hari ini dan bulan ini, beserta keterangan asal angkanya. */
-function KartuHariIniBulanIni({
+/** Nilai kartu: teks yang tampil dan apakah nilainya negatif, yang ditulis dengan warna `aksi` (DESIGN.md). */
+type NilaiKartu = { teks: string; negatif: boolean };
+
+const nilaiJumlah = (jumlah: number): NilaiKartu => ({
+  teks: String(jumlah),
+  negatif: false,
+});
+
+/** Nominal rupiah, dengan tanda minus untuk nilai negatif, misalnya "−Rp 12.500" (PRD §14.5). */
+const nilaiRupiah = (nominal: number): NilaiKartu => ({
+  teks: rupiahBertanda(nominal),
+  negatif: nominal < 0,
+});
+
+/** Isi kartu: tautan selebar kartu bila kartunya bisa diketuk, atau kotak biasa. */
+function IsiKartu({ href, children }: { href?: string; children: ReactNode }) {
+  return href === undefined ? (
+    <div className={KELAS_KARTU}>{children}</div>
+  ) : (
+    <Link href={href} className={cn(KELAS_KARTU, KELAS_KARTU_TAUTAN)}>
+      {children}
+    </Link>
+  );
+}
+
+/** Judul kartu, dengan panah kecil bila kartunya bisa diketuk. */
+function JudulKartu({
+  id,
+  judul,
+  bisaDiketuk,
+}: {
+  id: string;
+  judul: string;
+  bisaDiketuk: boolean;
+}) {
+  return (
+    <h2 id={id} className={KELAS_JUDUL_KARTU}>
+      {judul}
+      {bisaDiketuk && (
+        <ChevronRight
+          aria-hidden="true"
+          className="ml-auto size-5 shrink-0"
+          strokeWidth={2.5}
+        />
+      )}
+    </h2>
+  );
+}
+
+/**
+ * Kartu dengan tiga angka (DESIGN.md "Rincian angka Laporan keuangan dan kartu Ringkasan"): angka hari ini
+ * paling besar, lalu bulan ini dan sepanjang waktu di bawahnya sebagai baris kecil berlabel.
+ */
+function KartuTigaAngka({
   id,
   judul,
   hariIni,
   bulanIni,
+  sepanjangWaktu,
   keterangan,
+  href,
 }: {
   id: string;
   judul: string;
-  hariIni: string;
-  bulanIni: string;
+  hariIni: NilaiKartu;
+  bulanIni: NilaiKartu;
+  sepanjangWaktu: NilaiKartu;
   keterangan: ReactNode;
+  href?: string;
 }) {
+  const warna = ({ negatif }: NilaiKartu) => (negatif ? "text-aksi" : "");
   return (
-    <article
-      aria-labelledby={id}
-      className={cn(KELAS_KARTU, KELAS_SETENGAH_BARIS)}
-    >
-      <h2 id={id} className={KELAS_JUDUL_KARTU}>
-        {judul}
-      </h2>
-      <dl className="grid grid-cols-2 gap-4">
-        {[
-          ["Hari ini", hariIni],
-          ["Bulan ini", bulanIni],
-        ].map(([label, nilai]) => (
-          <div key={label} className="flex min-w-0 flex-col-reverse gap-2">
-            <dt className={KELAS_KETERANGAN}>{label}</dt>
-            <dd className={`${KELAS_ANGKA} break-words`}>{nilai}</dd>
+    <article aria-labelledby={id}>
+      <IsiKartu href={href}>
+        <JudulKartu id={id} judul={judul} bisaDiketuk={href !== undefined} />
+        <dl className="flex flex-col gap-1">
+          <div className="flex min-w-0 flex-col-reverse gap-2 pb-1">
+            <dt className={KELAS_KETERANGAN}>Hari ini</dt>
+            <dd className={cn(KELAS_ANGKA, warna(hariIni))}>{hariIni.teks}</dd>
           </div>
-        ))}
-      </dl>
-      <p className={KELAS_KETERANGAN}>{keterangan}</p>
+          {[
+            { label: "Bulan ini", nilai: bulanIni },
+            { label: "Sepanjang waktu", nilai: sepanjangWaktu },
+          ].map(({ label, nilai }) => (
+            <div
+              key={label}
+              className="flex min-w-0 items-baseline justify-between gap-4 border-t border-dashed border-pensil-redup pt-1 text-[17px]"
+            >
+              <dt>{label}</dt>
+              <dd
+                className={cn(
+                  "text-right tabular-nums break-words",
+                  warna(nilai),
+                )}
+              >
+                {nilai.teks}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className={KELAS_KETERANGAN}>{keterangan}</p>
+      </IsiKartu>
     </article>
   );
 }
 
-// Halaman depan dasbor admin (PRD §9.2): kartu angka dengan urutan PRD §9.2, lalu daftar Stok menipis di
-// bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik.
+/** Kartu dengan satu angka, beserta keterangan asal angkanya. */
+function KartuSatuAngka({
+  id,
+  judul,
+  angka,
+  tambahan,
+  keterangan,
+  href,
+  className,
+}: {
+  id: string;
+  judul: string;
+  angka: number;
+  tambahan?: ReactNode;
+  keterangan: ReactNode;
+  href?: string;
+  className?: string;
+}) {
+  return (
+    <article aria-labelledby={id} className={className}>
+      <IsiKartu href={href}>
+        <JudulKartu id={id} judul={judul} bisaDiketuk={href !== undefined} />
+        <p className={KELAS_ANGKA}>{angka}</p>
+        {tambahan}
+        <p className={KELAS_KETERANGAN}>{keterangan}</p>
+      </IsiKartu>
+    </article>
+  );
+}
+
+// Halaman depan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20): 11 kartu angka dengan urutan PRD, lalu daftar
+// Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu uang dan
+// kartu Item stok belum bisa diketuk; tautannya dipasang bersama Laporan keuangan dan menu Item stok (PRD §13).
 export default async function HalamanRingkasan() {
   await wajibSesiAdmin(await headers());
   const { ambangStokMenipis } = await bacaPengaturanToko();
-  const [angka, memberAktif, bermasalah, stokMenipis] = await Promise.all([
-    angkaRingkasan(),
-    angkaMemberAktif(),
-    jumlahPesananBermasalah(),
-    daftarStokMenipis({ ambang: ambangStokMenipis }),
-  ]);
+  const [angka, menunggu, bermasalah, member, itemStok, stokMenipis] =
+    await Promise.all([
+      angkaRingkasan(),
+      jumlahPesananMenungguPembayaran(),
+      jumlahPesananBermasalah(),
+      angkaMemberAktif(),
+      angkaItemStok(),
+      daftarStokMenipis({ ambang: ambangStokMenipis }),
+    ]);
+  const { hariIni, bulanIni, sepanjangWaktu } = angka;
+  // Hari ini dan bulan ini termasuk di dalam sepanjang waktu, jadi N sepanjang waktu mencakup keduanya.
+  const tanpaHargaModal = sepanjangWaktu.pesananTanpaHargaModal;
+  const uang = (
+    ambil: (laba: typeof hariIni) => number,
+  ): Pick<
+    Parameters<typeof KartuTigaAngka>[0],
+    "hariIni" | "bulanIni" | "sepanjangWaktu"
+  > => ({
+    hariIni: nilaiRupiah(ambil(hariIni)),
+    bulanIni: nilaiRupiah(ambil(bulanIni)),
+    sepanjangWaktu: nilaiRupiah(ambil(sepanjangWaktu)),
+  });
 
   return (
     <>
@@ -98,51 +220,78 @@ export default async function HalamanRingkasan() {
         <h1>Ringkasan</h1>
       </div>
 
+      {/* Peringatan untuk kartu Total Harga modal, Laba kotor, dan Laba bersih, sekali saja, sebagai catatan
+          post-it di atas kartu (DESIGN.md "Rincian angka Laporan keuangan dan kartu Ringkasan"). */}
+      {tanpaHargaModal > 0 && (
+        <p
+          role="note"
+          className="kartu kartu-postit mb-4 flex items-start gap-2 p-4 text-[17px]"
+        >
+          <TriangleAlert
+            aria-hidden="true"
+            className="mt-0.5 size-5 shrink-0"
+            strokeWidth={2.5}
+          />
+          {tanpaHargaModal} Pesanan Selesai belum dihitung labanya, karena Harga
+          modal Varian-nya belum diisi.
+        </p>
+      )}
+
       <div className={KELAS_GRID_KARTU}>
-        <KartuHariIniBulanIni
+        <KartuTigaAngka
           id="kartu-pendapatan"
           judul="Pendapatan"
-          hariIni={rupiah(angka.hariIni.pendapatan.pendapatan)}
-          bulanIni={rupiah(angka.bulanIni.pendapatan.pendapatan)}
+          {...uang((laba) => laba.pendapatan)}
           keterangan="Jumlah Total bayar Pesanan Selesai menurut waktu pembayaran (WIB), termasuk Kode unik. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung."
         />
 
-        <KartuHariIniBulanIni
-          id="kartu-pesanan-selesai"
-          judul="Pesanan Selesai"
-          hariIni={String(angka.hariIni.pesananSelesai.jumlah)}
-          bulanIni={String(angka.bulanIni.pesananSelesai.jumlah)}
-          keterangan="Dihitung menurut waktu pembayaran (WIB), bukan waktu Pesanan dibuat."
+        <KartuTigaAngka
+          id="kartu-total-harga-modal"
+          judul="Total Harga modal"
+          {...uang((laba) => laba.totalHargaModal)}
+          keterangan="Jumlah Harga modal Pesanan Selesai yang punya Harga modal, menurut waktu pembayaran (WIB)."
         />
 
-        <article
-          aria-labelledby="kartu-member-aktif"
-          className={cn(KELAS_KARTU, KELAS_SEPERTIGA_BARIS)}
-        >
-          <h2 id="kartu-member-aktif" className={KELAS_JUDUL_KARTU}>
-            Member aktif
-          </h2>
-          <p className={KELAS_ANGKA}>{memberAktif.jumlah}</p>
-          <p className={KELAS_KETERANGAN}>
-            Member yang sudah diverifikasi dan tidak nonaktif, sama dengan
-            Member berstatus Aktif di daftar Member. Pendaftar tidak dihitung.
-          </p>
-        </article>
+        <KartuTigaAngka
+          id="kartu-laba-kotor"
+          judul="Laba kotor"
+          {...uang((laba) => laba.labaKotor)}
+          keterangan="Harga jual − Harga modal, dari Pesanan Selesai yang punya Harga modal."
+        />
+
+        <KartuTigaAngka
+          id="kartu-laba-bersih"
+          judul="Laba bersih"
+          {...uang((laba) => laba.labaBersih)}
+          keterangan="Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional bertanggal dalam rentang itu."
+        />
+
+        <KartuTigaAngka
+          id="kartu-pesanan-selesai"
+          judul="Pesanan Selesai"
+          hariIni={nilaiJumlah(hariIni.pesananSelesai)}
+          bulanIni={nilaiJumlah(bulanIni.pesananSelesai)}
+          sepanjangWaktu={nilaiJumlah(sepanjangWaktu.pesananSelesai)}
+          keterangan="Dihitung menurut waktu pembayaran (WIB), bukan waktu Pesanan dibuat."
+          href={alamatPesananBerstatus("Selesai")}
+        />
+
+        <KartuSatuAngka
+          id="kartu-pesanan-menunggu-pembayaran"
+          judul="Pesanan Menunggu Pembayaran"
+          angka={menunggu.jumlah}
+          keterangan="Pesanan yang berstatus Menunggu Pembayaran saat ini."
+          href={alamatPesananBerstatus("Menunggu Pembayaran")}
+        />
 
         {/* Satu-satunya kartu yang perlu tindakan: berwarna `st-masalah` dan berbayangan tegas. Kartu ini tegak
             tanpa paku payung, karena dasbor admin tidak memakai hiasan dan rotasi (DESIGN.md Navigation). */}
-        <article
-          aria-labelledby="kartu-pesanan-bermasalah"
-          className={KELAS_SEPERTIGA_BARIS}
-        >
+        <article aria-labelledby="kartu-pesanan-bermasalah">
           <Link
-            href={ALAMAT_PESANAN_BERMASALAH}
+            href={alamatPesananBerstatus("Bermasalah")}
             className="kartu flex h-full flex-col gap-2 border-st-masalah bg-st-masalah-bg p-4 text-st-masalah shadow-coret transition-shadow duration-100 hover:shadow-coret-sedang motion-reduce:transition-none"
           >
-            <h2
-              id="kartu-pesanan-bermasalah"
-              className={`flex items-center gap-2 ${KELAS_JUDUL_KARTU}`}
-            >
+            <h2 id="kartu-pesanan-bermasalah" className={KELAS_JUDUL_KARTU}>
               <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-coret-bulat border-2 border-current">
                 <TriangleAlert
                   aria-hidden="true"
@@ -164,23 +313,40 @@ export default async function HalamanRingkasan() {
           </Link>
         </article>
 
-        <article
-          aria-labelledby="kartu-stok-menipis"
-          className={cn(
-            KELAS_KARTU,
-            KELAS_SEPERTIGA_BARIS,
-            KELAS_KARTU_TERAKHIR,
-          )}
-        >
-          <h2 id="kartu-stok-menipis" className={KELAS_JUDUL_KARTU}>
-            Varian stok menipis
-          </h2>
-          <p className={KELAS_ANGKA}>{stokMenipis.varian.length}</p>
-          <p className={KELAS_KETERANGAN}>
-            Varian aktif dengan Stok Varian {stokMenipis.ambang} atau kurang,
-            sesuai Ambang stok menipis di Pengaturan toko.
-          </p>
-        </article>
+        <KartuSatuAngka
+          id="kartu-member-aktif"
+          judul="Member aktif"
+          angka={member.jumlah}
+          tambahan={
+            <p className="text-[17px]">
+              dari {member.terdaftar.jumlah} Member terdaftar
+            </p>
+          }
+          keterangan="Member yang sudah diverifikasi dan tidak nonaktif, sama dengan Member berstatus Aktif di daftar Member. Pendaftar tidak dihitung."
+          href="/admin/member"
+        />
+
+        <KartuSatuAngka
+          id="kartu-item-stok-tersedia"
+          judul="Item stok Tersedia"
+          angka={itemStok.tersedia.jumlah}
+          keterangan="Item stok yang bisa dibeli sekarang, di Varian aktif dari Produk aktif. Item stok Ditahan tidak dihitung."
+        />
+
+        <KartuSatuAngka
+          id="kartu-item-stok-terkirim"
+          judul="Item stok Terkirim"
+          angka={itemStok.terkirim.jumlah}
+          keterangan="Semua Item stok yang sudah Terkirim, sepanjang waktu."
+        />
+
+        <KartuSatuAngka
+          id="kartu-stok-menipis"
+          judul="Varian stok menipis"
+          angka={stokMenipis.varian.length}
+          keterangan={`Varian aktif dengan Stok Varian ${stokMenipis.ambang} atau kurang, sesuai Ambang stok menipis di Pengaturan toko.`}
+          className={KELAS_KARTU_TERAKHIR}
+        />
       </div>
 
       <section aria-labelledby="judul-stok-menipis" className="mt-8">

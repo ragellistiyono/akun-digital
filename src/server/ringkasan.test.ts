@@ -1,21 +1,28 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { buatAdmin } from "./auth/buat-admin";
+import { tambahBiayaOperasional } from "./biaya-operasional";
 import { db, koneksi } from "./db";
 import { pendaftar, user, varian } from "./db/schema";
 import { selesaikanPesananBermasalah } from "./penyelesaian-bermasalah";
-import { angkaMemberAktif, angkaRingkasan } from "./ringkasan";
+import {
+  angkaItemStok,
+  angkaMemberAktif,
+  angkaRingkasan,
+  jumlahPesananMenungguPembayaran,
+} from "./ringkasan";
 import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test (.env.ci), yang dipakai bersama test lain. Test lain membuat
-// Pesanan yang dibayar sekitar waktu nyata atau November 2026, jadi setiap test di sini memakai "sekarang"
-// pada bulan tersendiri di tahun 2031, supaya hari ini dan bulan ini hanya memuat Pesanan test itu.
+// Pesanan yang dibayar dan Biaya operasional bertanggal sekitar waktu nyata atau November 2026, jadi setiap test
+// di sini memakai "sekarang" pada bulan tersendiri di tahun 2031, supaya hari ini dan bulan ini hanya memuat
+// Pesanan dan Biaya operasional test itu.
 let varianId = "";
 
 beforeAll(async () => {
@@ -41,7 +48,7 @@ const rincian = (hargaJual: number, kodeUnik: number) => ({
   totalBayar: hargaJual + kodeUnik,
 });
 
-describe("angkaRingkasan (PRD §9.2, §9.3)", () => {
+describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
   it("Pendapatan hari ini adalah jumlah Total bayar Pesanan Selesai yang dibayar hari ini menurut WIB, termasuk Kode unik, tanpa Pesanan Bermasalah dan Dana Dikembalikan", async () => {
     // Contoh PRD §9.3: Total bayar Rp 45.123, Rp 50.010, dan Rp 135.499, ditambah Pesanan Bermasalah Rp 50.200.
     for (const [status, harga, kodeUnik, dibayar] of [
@@ -67,10 +74,10 @@ describe("angkaRingkasan (PRD §9.2, §9.3)", () => {
       sekarang: new Date("2031-07-15T22:00:00+07:00"),
     });
 
-    expect(angka.hariIni.pendapatan.pendapatan).toBe(230632);
-    expect(angka.hariIni.pesananSelesai.jumlah).toBe(3);
-    expect(angka.bulanIni.pendapatan.pendapatan).toBe(240632);
-    expect(angka.bulanIni.pesananSelesai.jumlah).toBe(4);
+    expect(angka.hariIni.pendapatan).toBe(230632);
+    expect(angka.hariIni.pesananSelesai).toBe(3);
+    expect(angka.bulanIni.pendapatan).toBe(240632);
+    expect(angka.bulanIni.pesananSelesai).toBe(4);
   });
 
   it("Pesanan yang dibuat kemarin pukul 23.58 WIB dan dibayar hari ini pukul 00.01 WIB terhitung hari ini", async () => {
@@ -86,8 +93,8 @@ describe("angkaRingkasan (PRD §9.2, §9.3)", () => {
       sekarang: new Date("2031-08-20T08:00:00+07:00"),
     });
 
-    expect(angka.hariIni.pendapatan.pendapatan).toBe(45123);
-    expect(angka.hariIni.pesananSelesai.jumlah).toBe(1);
+    expect(angka.hariIni.pendapatan).toBe(45123);
+    expect(angka.hariIni.pesananSelesai).toBe(1);
   });
 
   it("Pesanan Bermasalah yang diselesaikan Admin dihitung pada tanggal pembayarannya, bukan tanggal Admin menyelesaikannya", async () => {
@@ -111,10 +118,156 @@ describe("angkaRingkasan (PRD §9.2, §9.3)", () => {
       sekarang: new Date("2031-09-10T12:00:00+07:00"),
     });
 
-    expect(tanggalBayar.hariIni.pendapatan.pendapatan).toBe(45123);
-    expect(tanggalBayar.hariIni.pesananSelesai.jumlah).toBe(1);
-    expect(tanggalDiselesaikan.hariIni.pendapatan.pendapatan).toBe(0);
-    expect(tanggalDiselesaikan.hariIni.pesananSelesai.jumlah).toBe(0);
+    expect(tanggalBayar.hariIni.pendapatan).toBe(45123);
+    expect(tanggalBayar.hariIni.pesananSelesai).toBe(1);
+    expect(tanggalDiselesaikan.hariIni.pendapatan).toBe(0);
+    expect(tanggalDiselesaikan.hariIni.pesananSelesai).toBe(0);
+  });
+
+  it("contoh PRD §14.5: tiga Pesanan Selesai hari ini dan Biaya operasional Rp 10.000 bertanggal hari ini", async () => {
+    for (const [
+      hargaJual,
+      potonganVoucher,
+      kodeUnik,
+      totalBayar,
+      hargaModal,
+      biayaTransaksi,
+      dibayar,
+    ] of [
+      [50000, 5000, 123, 45123, 35000, 0, "2031-10-15T09:00:00+07:00"],
+      [50000, 0, 10, 50010, 35000, 0, "2031-10-15T13:30:00+07:00"],
+      [135000, 0, 499, 135499, 100000, 949, "2031-10-15T20:45:00+07:00"],
+    ] as const) {
+      await sisipkanPesanan({
+        varianId,
+        status: "Selesai",
+        rincian: { hargaJual, potonganVoucher, kodeUnik, totalBayar },
+        hargaModal,
+        biayaTransaksi,
+        waktuBayar: new Date(dibayar),
+      });
+    }
+    await tambahBiayaOperasional({
+      tanggal: "2031-10-15",
+      keterangan: `Iklan ${randomUUID().slice(0, 8)}`,
+      nominal: 10000,
+    });
+
+    const { hariIni } = await angkaRingkasan({
+      sekarang: new Date("2031-10-15T22:00:00+07:00"),
+    });
+
+    expect(hariIni.pendapatan).toBe(230632);
+    expect(hariIni.totalHargaModal).toBe(170000);
+    expect(hariIni.labaKotor).toBe(65000);
+    expect(hariIni.labaBersih).toBe(49683);
+  });
+
+  it("Biaya operasional bertanggal bulan lalu mengurangi Laba bersih sepanjang waktu, tetapi tidak Laba bersih bulan ini", async () => {
+    // Satu Pesanan Selesai bulan ini: Laba kotor Rp 15.000, Kode unik Rp 100, tanpa potongan dan Biaya transaksi.
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      rincian: rincian(50000, 100),
+      hargaModal: 35000,
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2031-12-05T10:00:00+07:00"),
+    });
+    const bulanLalu = await tambahBiayaOperasional({
+      tanggal: "2031-11-30",
+      keterangan: `Sewa server ${randomUUID().slice(0, 8)}`,
+      nominal: 7000,
+    });
+    const bulanIni = await tambahBiayaOperasional({
+      tanggal: "2031-12-01",
+      keterangan: `Domain ${randomUUID().slice(0, 8)}`,
+      nominal: 1000,
+    });
+
+    const angka = await angkaRingkasan({
+      sekarang: new Date("2031-12-10T08:00:00+07:00"),
+    });
+
+    // Rp 15.000 + Rp 100 − Rp 1.000: biaya bulan lalu tidak dikurangkan.
+    expect(angka.bulanIni.biayaOperasional).toBe(1000);
+    expect(angka.bulanIni.labaBersih).toBe(14100);
+    const dikurangkanSepanjangWaktu =
+      angka.sepanjangWaktu.biayaOperasionalDihitung.map((b) => b.id);
+    expect(dikurangkanSepanjangWaktu).toContain(bulanLalu.id);
+    expect(dikurangkanSepanjangWaktu).toContain(bulanIni.id);
+  });
+});
+
+describe("jumlahPesananMenungguPembayaran (PRD §9.2)", () => {
+  it("menghitung Pesanan yang berstatus Menunggu Pembayaran saat ini", async () => {
+    const menunggu = await sisipkanPesanan({
+      varianId,
+      status: "Menunggu Pembayaran",
+    });
+    const dibatalkan = await sisipkanPesanan({
+      varianId,
+      status: "Dibatalkan",
+    });
+
+    const hasil = await jumlahPesananMenungguPembayaran();
+
+    const dihitung = hasil.dihitung.map((p) => p.id);
+    expect(dihitung).toContain(menunggu.id);
+    expect(dihitung).not.toContain(dibatalkan.id);
+    expect(hasil.jumlah).toBe(hasil.dihitung.length);
+  });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20, kartu 9 dan 10. Database dipakai bersama test lain, jadi test ini memeriksa
+// kelompok Item stok yang dihitung (bahan hitungnya) untuk Varian test ini saja.
+describe("angkaItemStok (PRD §9.2)", () => {
+  it("Item stok Tersedia tidak menghitung Item stok Ditahan, Item stok di Varian nonaktif, maupun Item stok di Produk nonaktif", async () => {
+    const akhiran = randomUUID().slice(0, 8);
+    const produkAktif = await sisipkanProduk({
+      nama: `Item stok aktif ${akhiran}`,
+      varian: [
+        {
+          nama: "1 Bulan",
+          hargaJual: 50000,
+          Tersedia: 2,
+          Ditahan: 1,
+          Terkirim: 3,
+        },
+        {
+          nama: "3 Bulan",
+          hargaJual: 135000,
+          aktif: false,
+          Tersedia: 4,
+          Terkirim: 1,
+        },
+      ],
+    });
+    const produkNonaktif = await sisipkanProduk({
+      nama: `Item stok nonaktif ${akhiran}`,
+      aktif: false,
+      varian: [{ nama: "1 Bulan", hargaJual: 50000, Tersedia: 5, Terkirim: 2 }],
+    });
+    const varianTest = await db
+      .select({ id: varian.id, nama: varian.nama, produkId: varian.produkId })
+      .from(varian)
+      .where(inArray(varian.produkId, [produkAktif, produkNonaktif]));
+    const idVarian = (produkId: string, nama: string) =>
+      varianTest.find((v) => v.produkId === produkId && v.nama === nama)?.id;
+    const milikTest = (k: { varianId: string }) =>
+      varianTest.some((v) => v.id === k.varianId);
+
+    const { tersedia, terkirim } = await angkaItemStok();
+
+    expect(
+      tersedia.dihitung
+        .filter(milikTest)
+        .map((k) => ({ varianId: k.varianId, jumlah: k.jumlah })),
+    ).toEqual([{ varianId: idVarian(produkAktif, "1 Bulan"), jumlah: 2 }]);
+    expect(
+      terkirim.dihitung
+        .filter(milikTest)
+        .reduce((jumlah, k) => jumlah + k.jumlah, 0),
+    ).toBe(6);
   });
 });
 
@@ -167,5 +320,36 @@ describe("angkaMemberAktif (PRD §2.3, §9.2)", () => {
     const memberAktif = await angkaMemberAktif();
 
     expect(memberAktif.dihitung.map((member) => member.email)).toContain(email);
+  });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20, kartu 8: "dari N Member terdaftar".
+describe("Member terdaftar (PRD §9.2)", () => {
+  it("menghitung Member aktif dan nonaktif, tetapi tidak menghitung Pendaftar", async () => {
+    const akhiran = randomUUID();
+    const aktif = `terdaftar-aktif-${akhiran}@mail.com`;
+    const nonaktif = `terdaftar-nonaktif-${akhiran}@mail.com`;
+    const calon = `terdaftar-pendaftar-${akhiran}@mail.com`;
+    await sisipkanMember({ email: aktif, password: "sandi-uji-member-123" });
+    await sisipkanMember({ email: nonaktif, password: "sandi-uji-member-123" });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, nonaktif));
+    await ubahStatusMember({ idMember: id, nonaktif: true });
+    await db.insert(pendaftar).values({
+      email: calon,
+      password: "hash-uji",
+      kodeVerifikasi: "123456",
+      kodeDikirimPada: new Date(),
+    });
+
+    const { terdaftar } = await angkaMemberAktif();
+
+    const dihitung = terdaftar.dihitung.map((member) => member.email);
+    expect(dihitung).toContain(aktif);
+    expect(dihitung).toContain(nonaktif);
+    expect(dihitung).not.toContain(calon);
+    expect(terdaftar.jumlah).toBe(terdaftar.dihitung.length);
   });
 });
