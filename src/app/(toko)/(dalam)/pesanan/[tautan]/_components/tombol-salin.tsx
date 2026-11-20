@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, CopyCheck, type LucideIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -16,7 +16,52 @@ const LAMA_TERSALIN_MS = 1_600;
  * tombol tetap "Salin".
  */
 export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
-  // Berapa kali kolom ini berhasil disalin sejak tombol terakhir kembali menjadi "Salin".
+  return (
+    <TombolSalinTeks
+      teks={nilai}
+      ikon={Copy}
+      label="Salin"
+      labelTersalin="Tersalin"
+      namaAksesibel={`Salin ${nama}`}
+      pengumuman={`${nama} tersalin`}
+    />
+  );
+}
+
+/**
+ * Tombol "Salin semua" di kepala kartu Item stok (PRD §6.1 ▶ Keputusan 2026-11-20, DESIGN.md "Blok Item stok
+ * dan tombol Salin"): ikon CopyCheck dan label "Salin semua". Teks yang disalin dihitung modul domain
+ * (teksSalinSemua). Umpan baliknya sama dengan tombol Salin per kolom, dengan label "Semua tersalin".
+ */
+export function TombolSalinSemua({ teks }: { teks: string }) {
+  return (
+    <TombolSalinTeks
+      teks={teks}
+      ikon={CopyCheck}
+      label="Salin semua"
+      labelTersalin="Semua tersalin"
+      pengumuman="Semua kolom Item stok tersalin"
+    />
+  );
+}
+
+function TombolSalinTeks({
+  teks,
+  ikon,
+  label,
+  labelTersalin,
+  namaAksesibel,
+  pengumuman,
+}: {
+  teks: string;
+  ikon: LucideIcon;
+  label: string;
+  labelTersalin: string;
+  /** Nama tombol bagi pembaca layar, bila berbeda dari labelnya. */
+  namaAksesibel?: string;
+  pengumuman: string;
+}) {
+  // Berapa kali teks ini berhasil disalin sejak tombol terakhir kembali ke labelnya.
   const [salinan, setSalinan] = useState(0);
   const tersalin = salinan > 0;
 
@@ -28,7 +73,7 @@ export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
 
   const salin = async () => {
     try {
-      await navigator.clipboard.writeText(nilai);
+      await navigator.clipboard.writeText(teks);
     } catch {
       // Clipboard tidak tersedia atau izinnya ditolak: tombol tidak berpura-pura sudah menyalin.
       return;
@@ -36,13 +81,13 @@ export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
     setSalinan((jumlah) => jumlah + 1);
   };
 
-  const Ikon = tersalin ? Check : Copy;
+  const Ikon = tersalin ? Check : ikon;
   return (
     <>
       <button
         type="button"
         onClick={salin}
-        aria-label={`Salin ${nama}`}
+        aria-label={namaAksesibel}
         className={cn(
           "tombol tombol-kedua tombol-kecil shrink-0",
           // Warna "Tersalin" adalah utilitas, jadi tetap menang atas warna hover tombol kedua.
@@ -54,10 +99,10 @@ export function TombolSalin({ nama, nilai }: { nama: string; nilai: string }) {
           strokeWidth={2.5}
           className="size-[18px] shrink-0"
         />
-        {tersalin ? "Tersalin" : "Salin"}
+        {tersalin ? labelTersalin : label}
       </button>
       <span role="status" className="sr-only">
-        {tersalin ? `${nama} tersalin` : ""}
+        {tersalin ? pengumuman : ""}
       </span>
     </>
   );
