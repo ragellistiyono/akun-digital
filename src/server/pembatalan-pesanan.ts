@@ -25,10 +25,11 @@ type HasilBatalkanPesanan =
   | { hasil: "gagal" };
 
 /**
- * Meminta pembatalan QRIS ke Qrispy. Bila Qrispy menolak atau tidak menjawab, status QRIS itu ditanyakan
- * (ADR-0004); status yang juga gagal ditanyakan menjadi null. Kegagalannya dicatat di log.
+ * Meminta pembatalan QRIS ke Qrispy, untuk Pesanan maupun Top up (PRD §5.8, §15.3). Bila Qrispy menolak atau tidak
+ * menjawab, status QRIS itu ditanyakan (ADR-0004); status yang juga gagal ditanyakan menjadi null. Kegagalannya
+ * dicatat di log.
  */
-async function mintaPembatalanQris(
+export async function mintaPembatalanQris(
   qrispy: Qrispy,
   qrisId: string,
 ): Promise<
@@ -51,7 +52,7 @@ async function mintaPembatalanQris(
     };
   } catch (galat) {
     console.error(
-      `Status QRIS ${qrisId} gagal ditanyakan ke Qrispy setelah pembatalannya ditolak, jadi Pesanan tetap Menunggu Pembayaran.`,
+      `Status QRIS ${qrisId} gagal ditanyakan ke Qrispy setelah pembatalannya ditolak, jadi Pesanan atau Top up-nya tetap Menunggu Pembayaran.`,
       galat,
     );
     return { pembatalanQris: "ditolak", status: null };

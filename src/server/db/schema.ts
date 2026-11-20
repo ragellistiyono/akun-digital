@@ -26,6 +26,7 @@ import {
 import { JENIS_CAKUPAN, JENIS_POTONGAN } from "../../domain/isian-voucher";
 import { STATUS_ITEM_STOK } from "../../domain/item-stok";
 import { STATUS_PESANAN } from "../../domain/status-pesanan";
+import { STATUS_TOP_UP } from "../../domain/status-top-up";
 import { AMBANG_STOK_MENIPIS_AWAL } from "../../domain/stok-menipis";
 import { JENIS_RIWAYAT_SALDO } from "../../domain/ubah-saldo-admin";
 
@@ -524,4 +525,57 @@ export const riwayatSaldo = pgTable(
       sql`${tabel.saldoSesudah} >= 0`,
     ),
   ],
+);
+
+// Status Top up (PRD §15.4).
+export const statusTopUp = pgEnum("status_top_up", STATUS_TOP_UP);
+
+// Top up (PRD §15.3, §15.4): penambahan saldo oleh Member sendiri, dibayar dengan QRIS Qrispy. Total bayar = Nominal
+// top up + Kode unik dari Qrispy. Setiap Member hanya boleh punya satu Top up Menunggu Pembayaran; indeks unik
+// sebagian menjaganya di database. Waktu bayar, nominal diterima, dan Biaya transaksi diisi saat kabar pembayarannya
+// diproses (PRD §15.5).
+export const topUp = pgTable(
+  "top_up",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    nomorTopUp: text("nomor_top_up").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    nominalTopUp: integer("nominal_top_up").notNull(),
+    kodeUnik: integer("kode_unik").notNull(),
+    totalBayar: integer("total_bayar").notNull(),
+    qrisId: text("qris_id").notNull(),
+    kedaluwarsaPada: instan("kedaluwarsa_pada").notNull(),
+    /** Gambar QR dari Qrispy sebagai data URL PNG (qris_image_base64). */
+    gambarQr: text("gambar_qr").notNull(),
+    status: statusTopUp("status").notNull(),
+    waktuBayar: instan("waktu_bayar"),
+    nominalDiterima: integer("nominal_diterima"),
+    biayaTransaksi: integer("biaya_transaksi"),
+  },
+  (tabel) => [
+    uniqueIndex("top_up_nomor_top_up_unik").on(tabel.nomorTopUp),
+    uniqueIndex("top_up_qris_id_unik").on(tabel.qrisId),
+    uniqueIndex("top_up_satu_menunggu_per_member")
+      .on(tabel.userId)
+      .where(sql`${tabel.status} = 'Menunggu Pembayaran'`),
+    index("top_up_user_id_idx").on(tabel.userId),
+  ],
+);
+
+// Riwayat status Top up (PRD §15.4): satu baris untuk setiap perubahan status beserta pelakunya, yaitu "Member",
+// "Qrispy", "Sistem", atau "Admin".
+export const riwayatStatusTopUp = pgTable(
+  "riwayat_status_top_up",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    topUpId: uuid("top_up_id")
+      .notNull()
+      .references(() => topUp.id, { onDelete: "cascade" }),
+    waktu: instan("waktu").notNull(),
+    status: statusTopUp("status").notNull(),
+    pelaku: text("pelaku").notNull(),
+  },
+  (tabel) => [index("riwayat_status_top_up_top_up_id_idx").on(tabel.topUpId)],
 );

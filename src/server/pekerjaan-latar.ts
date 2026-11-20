@@ -1,5 +1,5 @@
 // Pekerjaan latar dengan pg-boss (ADR-0001), di PostgreSQL yang sama dengan aplikasi dan tanpa Redis:
-// kedaluwarsa Pesanan (PRD §5.8) dan email "Pesanan selesai" (PRD §6.3, §6.4).
+// kedaluwarsa Pesanan (PRD §5.8), kedaluwarsa Top up (PRD §15.3), dan email "Pesanan selesai" (PRD §6.3, §6.4).
 // pg-boss menyimpan antrean pekerjaannya di skema `pgboss` miliknya sendiri, yang dibuat atau dimigrasi
 // pg-boss saat pertama kali dimulai, terpisah dari tabel aplikasi yang dikelola Drizzle.
 //
@@ -22,11 +22,17 @@ import {
   tandaiEmailGagal,
 } from "./email-pesanan-selesai";
 import { prosesKedaluwarsaPesanan } from "./kedaluwarsa-pesanan";
+import { prosesKedaluwarsaTopUp } from "./kedaluwarsa-top-up";
 
 /** Antrean pekerjaan kedaluwarsa Pesanan (PRD §5.8): satu pekerjaan untuk setiap Pesanan. */
 const ANTREAN_KEDALUWARSA_PESANAN = "kedaluwarsa-pesanan";
 
 type DataKedaluwarsaPesanan = { pesananId: string };
+
+/** Antrean pekerjaan kedaluwarsa Top up (PRD §15.3, mengikuti §5.8): satu pekerjaan untuk setiap Top up. */
+const ANTREAN_KEDALUWARSA_TOP_UP = "kedaluwarsa-top-up";
+
+type DataKedaluwarsaTopUp = { topUpId: string };
 
 /** Antrean pekerjaan email "Pesanan selesai" (PRD §6.3): satu pekerjaan untuk setiap kiriman. */
 const ANTREAN_EMAIL_PESANAN_SELESAI = "email-pesanan-selesai";
@@ -72,14 +78,16 @@ async function mulaiPgBoss() {
   });
   await boss.start();
   // Pekerjaan yang gagal, misalnya karena database sesaat tidak terjangkau, dicoba lagi dengan jeda yang
-  // makin panjang. Pekerjaan kedaluwarsa aman diulang, karena Pesanan yang sudah tidak Menunggu
+  // makin panjang. Pekerjaan kedaluwarsa aman diulang, karena Pesanan atau Top up yang sudah tidak Menunggu
   // Pembayaran tidak diubah lagi.
-  await boss.createQueue(ANTREAN_KEDALUWARSA_PESANAN, {
+  const opsiAntreanKedaluwarsa = {
     retryLimit: 10,
     retryDelay: 5,
     retryBackoff: true,
     retryDelayMax: 300,
-  });
+  };
+  await boss.createQueue(ANTREAN_KEDALUWARSA_PESANAN, opsiAntreanKedaluwarsa);
+  await boss.createQueue(ANTREAN_KEDALUWARSA_TOP_UP, opsiAntreanKedaluwarsa);
   // Email yang gagal terkirim, misalnya karena Resend sesaat tidak menjawab atau membatasi kiriman, dicoba
   // lagi 5 kali dengan jeda mulai 30 detik yang makin panjang sampai 10 menit, sehingga percobaan terakhir
   // terjadi sekitar 15–25 menit setelah percobaan pertama (PRD §6.4).
@@ -126,6 +134,35 @@ export async function jadwalKedaluwarsaPesanan(pesananId: string) {
   const pekerjaan = await boss.findJobs<DataKedaluwarsaPesanan>(
     ANTREAN_KEDALUWARSA_PESANAN,
     { data: { pesananId } },
+  );
+  return pekerjaan.map(({ startAfter }) => startAfter);
+}
+
+/**
+ * Menjadwalkan pekerjaan kedaluwarsa sebuah Top up pada waktu kedaluwarsanya (PRD §15.3, ADR-0004). Bila
+ * transaksi Drizzle diberikan, pekerjaan itu ikut tersimpan atau batal bersama transaksi itu.
+ */
+export async function jadwalkanKedaluwarsaTopUp(
+  { topUpId, kedaluwarsaPada }: { topUpId: string; kedaluwarsaPada: Date },
+  tx?: DrizzleTransactionLike,
+) {
+  const boss = await pgBoss();
+  await boss.send(
+    ANTREAN_KEDALUWARSA_TOP_UP,
+    { topUpId } satisfies DataKedaluwarsaTopUp,
+    {
+      startAfter: kedaluwarsaPada,
+      db: tx === undefined ? undefined : fromDrizzle(tx, sql),
+    },
+  );
+}
+
+/** Waktu mulai setiap pekerjaan kedaluwarsa yang pernah dijadwalkan untuk Top up itu. */
+export async function jadwalKedaluwarsaTopUp(topUpId: string) {
+  const boss = await pgBoss();
+  const pekerjaan = await boss.findJobs<DataKedaluwarsaTopUp>(
+    ANTREAN_KEDALUWARSA_TOP_UP,
+    { data: { topUpId } },
   );
   return pekerjaan.map(({ startAfter }) => startAfter);
 }
@@ -234,8 +271,39 @@ async function kerjakanKedaluwarsaPesanan(
 }
 
 /**
- * Mulai menjalankan pekerjaan latar di proses ini, yaitu pekerjaan kedaluwarsa Pesanan dan email "Pesanan
- * selesai". Pemanggilan berikutnya di proses yang sama memakai pekerja yang sudah berjalan.
+ * Menjalankan satu pekerjaan kedaluwarsa Top up, sama seperti kedaluwarsa Pesanan: bila waktu kedaluwarsanya
+ * belum tercapai menurut jam aplikasi, pekerjaannya dijadwalkan ulang pada waktu itu, dan pekerjaan yang gagal
+ * dicatat di log lalu dicoba lagi oleh pg-boss.
+ */
+async function kerjakanKedaluwarsaTopUp(
+  pekerjaan: Job<DataKedaluwarsaTopUp>,
+): Promise<JobResult> {
+  const { topUpId } = pekerjaan.data;
+  try {
+    const hasil = await prosesKedaluwarsaTopUp(topUpId);
+    if (hasil.hasil === "belum-kedaluwarsa") {
+      await jadwalkanKedaluwarsaTopUp({
+        topUpId,
+        kedaluwarsaPada: hasil.kedaluwarsaPada,
+      });
+    }
+    return { id: pekerjaan.id, status: "completed", output: hasil };
+  } catch (galat) {
+    console.error(
+      `Pekerjaan kedaluwarsa Top up ${topUpId} gagal, jadi Top up itu belum berubah. pg-boss mencobanya lagi; bila terus gagal, periksa galat di bawah ini.`,
+      galat,
+    );
+    return {
+      id: pekerjaan.id,
+      status: "failed",
+      output: { galat: String(galat) },
+    };
+  }
+}
+
+/**
+ * Mulai menjalankan pekerjaan latar di proses ini, yaitu pekerjaan kedaluwarsa Pesanan, kedaluwarsa Top up, dan
+ * email "Pesanan selesai". Pemanggilan berikutnya di proses yang sama memakai pekerja yang sudah berjalan.
  */
 export function jalankanPekerjaanLatar() {
   const berjalan = (wadah.__pekerjaanLatarBerjalan ??= mulaiPekerja());
@@ -249,18 +317,30 @@ export function jalankanPekerjaanLatar() {
 
 async function mulaiPekerja() {
   const boss = await pgBoss();
+  const opsiPekerjaKedaluwarsa = {
+    pollingIntervalSeconds: JEDA_CARI_PEKERJAAN_DETIK,
+    batchSize: PEKERJAAN_SEKALI_AMBIL,
+    burstWhenBatchFull: true,
+    perJobResults: true,
+  } as const;
   await boss.work<DataKedaluwarsaPesanan>(
     ANTREAN_KEDALUWARSA_PESANAN,
-    {
-      pollingIntervalSeconds: JEDA_CARI_PEKERJAAN_DETIK,
-      batchSize: PEKERJAAN_SEKALI_AMBIL,
-      burstWhenBatchFull: true,
-      perJobResults: true,
-    },
+    opsiPekerjaKedaluwarsa,
     async (semua) => {
       const hasil: JobResult[] = [];
       for (const pekerjaan of semua) {
         hasil.push(await kerjakanKedaluwarsaPesanan(pekerjaan));
+      }
+      return hasil;
+    },
+  );
+  await boss.work<DataKedaluwarsaTopUp>(
+    ANTREAN_KEDALUWARSA_TOP_UP,
+    opsiPekerjaKedaluwarsa,
+    async (semua) => {
+      const hasil: JobResult[] = [];
+      for (const pekerjaan of semua) {
+        hasil.push(await kerjakanKedaluwarsaTopUp(pekerjaan));
       }
       return hasil;
     },

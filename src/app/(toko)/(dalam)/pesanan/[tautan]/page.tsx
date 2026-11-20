@@ -1,7 +1,5 @@
-import { Download } from "lucide-react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -24,10 +22,14 @@ import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 import { BlokItemStok } from "./_components/blok-item-stok";
 import { FormBatalkan } from "./_components/form-batalkan";
 import { HapusTandaSudahDibayar } from "./_components/hapus-tanda-sudah-dibayar";
-import { KartuSenja } from "./_components/kartu-senja";
+import {
+  KerangkaHalamanBayar,
+  TombolSimpanQr,
+} from "./_components/kerangka-halaman-bayar";
 import { PanelBuatAkun } from "./_components/panel-buat-akun";
 import { PantauStatusPesanan } from "./_components/pantau-status";
 import { TANDA_SUDAH_DIBAYAR } from "./_components/tanda-sudah-dibayar";
+import { aksiBatalkanPesanan } from "./aksi";
 
 /** Panel (DESIGN.md "Cards / Containers"): padding 16 px, dan 24 px di layar lebar yang kolomnya lebih lapang. */
 const PANEL = "kartu p-4 lebar:p-6";
@@ -127,15 +129,11 @@ function AjakanDiBawahItemStok({
   return null;
 }
 
-// Halaman bayar (PRD §5.6) selama Pesanan Menunggu Pembayaran: kartu senja dengan hitung mundur QRIS dan
-// Total bayar, gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, rincian nominal yang
-// dicatat di Pesanan (PRD §5.5), dan tombol "Batalkan" (PRD §5.8) serta "Simpan gambar QR" di bilah lekat.
-// Gambar QR adalah benda utama halaman ini, jadi ia tampil besar di tengah kartunya (DESIGN.md "Tata letak
-// halaman", Halaman bayar): 240 px di ponsel dan 288 px di layar lebar. Di layar lebar halaman menjadi dua
-// kolom: kartu QR lekat di kiri, lalu kartu senja dan ringkasan Pesanan bertumpuk di kanan. Urutan
-// isinya di halaman tetap kartu senja, QR, lalu ringkasan, jadi di ponsel dan bagi pembaca layar urutannya
-// sama. Halaman bayar menanyakan status ke server toko secara berkala, dan begitu statusnya berubah,
-// halaman dibuat ulang tanpa dimuat ulang menjadi Halaman Pesanan.
+// Halaman bayar (PRD §5.6) selama Pesanan Menunggu Pembayaran, dalam kerangka Halaman bayar bersama: kartu senja,
+// gambar QR, lalu Nomor Pesanan dalam huruf mono dengan pil status, rincian nominal yang dicatat di Pesanan (PRD
+// §5.5), dan tombol "Batalkan" (PRD §5.8) serta "Simpan gambar QR" di bilah lekat. Halaman bayar menanyakan status
+// ke server toko secara berkala, dan begitu statusnya berubah, halaman dibuat ulang tanpa dimuat ulang menjadi
+// Halaman Pesanan.
 function HalamanBayar({
   pesanan,
   tautan,
@@ -144,75 +142,37 @@ function HalamanBayar({
   tautan: string;
 }) {
   return (
-    <>
-      <h1 className="mt-4">Pembayaran</h1>
-      <div className="mt-6 grid items-start gap-8 lebar:grid-cols-2 lebar:gap-x-12 lebar:gap-y-6 lebar:[grid-template-areas:'qr_senja'_'qr_ringkasan']">
-        <div className="min-w-0 lebar:[grid-area:senja]">
-          <KartuSenja
-            kedaluwarsaPada={pesanan.kedaluwarsaPada.getTime()}
-            sekarang={pesanan.dibacaPada.getTime()}
-            totalBayar={rupiah(pesanan.rincian.totalBayar)}
-          />
-        </div>
-
-        {/* Kartu QR berselotip, selebar kolom, dengan QR di tengahnya. Gambar QR-nya sendiri tidak diberi tepi
-            coretan maupun diputar, dan selalu duduk di alas putih, juga di mode gelap, supaya pola dan zona
-            tenangnya tetap terbaca pemindai. Jarak 32 px di ponsel memberi ruang bagi selotip yang menonjol
-            12 px di atas kartu. Di layar lebar kartu ini lekat di bawah bilah atas, sejajar dengan kartu senja,
-            jadi QR tetap terlihat saat ringkasan di kanan digulir. */}
-        <div className="min-w-0 lebar:sticky lebar:top-24 lebar:[grid-area:qr]">
-          <div className="kartu kartu-tegas selotip relative flex items-center justify-center p-6 lebar:p-8">
-            <div className="bg-white p-3">
-              <Image
-                unoptimized
-                src={pesanan.gambarQr}
-                alt={`QRIS Pesanan ${pesanan.nomorPesanan}`}
-                width={288}
-                height={288}
-                className="block aspect-square w-60 max-w-full [image-rendering:pixelated] lebar:w-72"
-              />
-            </div>
+    <KerangkaHalamanBayar
+      kedaluwarsaPada={pesanan.kedaluwarsaPada}
+      dibacaPada={pesanan.dibacaPada}
+      totalBayar={rupiah(pesanan.rincian.totalBayar)}
+      gambarQr={pesanan.gambarQr}
+      altQr={`QRIS Pesanan ${pesanan.nomorPesanan}`}
+      pemantau={<PantauStatusPesanan tautan={tautan} status={pesanan.status} />}
+    >
+      <section aria-label="Pesanan" className={PANEL}>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className={KELAS_LABEL_NOMOR}>Nomor Pesanan</p>
+            <p className="font-mono text-xl font-bold tracking-[0.01em]">
+              {pesanan.nomorPesanan}
+            </p>
           </div>
-          <PantauStatusPesanan tautan={tautan} status={pesanan.status} />
+          <PilStatusPesanan status={pesanan.status} />
         </div>
-
-        {/* Ringkasan Pesanan: antarpanel 16 px, dan tombolnya 24 px di bawah rincian (bilah lekat menjadi blok
-            biasa dengan jarak atas 24 px di layar lebar). */}
-        <div className="min-w-0 lebar:[grid-area:ringkasan]">
-          <section aria-label="Pesanan" className={PANEL}>
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className={KELAS_LABEL_NOMOR}>Nomor Pesanan</p>
-                <p className="font-mono text-xl font-bold tracking-[0.01em]">
-                  {pesanan.nomorPesanan}
-                </p>
-              </div>
-              <PilStatusPesanan status={pesanan.status} />
-            </div>
-            <ProdukDanVarian pesanan={pesanan} />
-          </section>
-          <PanelRincian rincian={pesanan.rincian} className="mt-4" />
-          <FormBatalkan tautan={tautan}>
-            {/* Gambar QR Pesanan ini diunduh sebagai PNG, supaya Pembeli di ponsel bisa membukanya dari
-                aplikasi e-wallet (PRD §5.6). */}
-            <a
-              href={pesanan.gambarQr}
-              download={`QRIS-${pesanan.nomorPesanan}.png`}
-              // Padding samping 16 px dan, di layar sempit, huruf 18 px, supaya "Batalkan" dan tombol ini muat
-              // berdampingan di lebar 360 px tanpa terpotong.
-              className="tombol px-4 whitespace-nowrap max-[399px]:text-lg"
-            >
-              <Download
-                aria-hidden="true"
-                strokeWidth={2.5}
-                className="size-5 shrink-0"
-              />
-              Simpan gambar QR
-            </a>
-          </FormBatalkan>
-        </div>
-      </div>
-    </>
+        <ProdukDanVarian pesanan={pesanan} />
+      </section>
+      <PanelRincian rincian={pesanan.rincian} className="mt-4" />
+      <FormBatalkan
+        aksiBatalkan={aksiBatalkanPesanan}
+        isian={{ nama: "tautan", nilai: tautan }}
+      >
+        <TombolSimpanQr
+          gambarQr={pesanan.gambarQr}
+          namaBerkas={`QRIS-${pesanan.nomorPesanan}.png`}
+        />
+      </FormBatalkan>
+    </KerangkaHalamanBayar>
   );
 }
 
