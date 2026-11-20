@@ -7,8 +7,8 @@
 // disimpan terenkripsi seperti Item stok yang ditempel Admin (PRD §12).
 //
 // Seed boleh dijalankan ulang tanpa menggandakan data. Data seed yang sudah ada dikenali dari email Admin dan
-// Member, nama Kategori, nama Produk, nama Varian di Produknya, isi Item stok di Variannya, kode Voucher, dan
-// qris_id Pesanan seed, lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan
+// Member, nama Kategori, nama Produk, nama Varian di Produknya, isi Item stok di Variannya, kode Voucher,
+// qris_id Pesanan seed, serta tanggal dan keterangan Biaya operasional, lalu dilewati. Foto contoh hanya diunggah ke Produk yang belum punya foto, dan
 // Pengaturan toko hanya diisi selama masih kosong. Data yang sudah ada tidak diubah, jadi perubahan pemilik
 // selama UAT tetap tersimpan. Akibatnya Pesanan Selesai seed yang dibuat sebelum T60, tanpa voucher, tetap
 // tanpa voucher; kosongkan database lokal lalu jalankan ulang seed untuk mendapat Pesanan Selesai dengan HEMAT5.
@@ -17,6 +17,7 @@ import { crc32, deflateSync } from "node:zlib";
 
 import { and, eq } from "drizzle-orm";
 
+import { periksaIsianBiayaOperasional } from "@/domain/biaya-operasional";
 import {
   biayaTransaksi,
   MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL,
@@ -39,6 +40,10 @@ import { auth } from "./auth/auth";
 import { buatAdmin } from "./auth/buat-admin";
 import { tulisAkun } from "./auth/sisipkan-akun";
 import { BATAS_UKURAN_GAMBAR_MB } from "./berkas-unggahan";
+import {
+  daftarBiayaOperasional,
+  tambahBiayaOperasional,
+} from "./biaya-operasional";
 import { db } from "./db";
 import {
   itemStok,
@@ -60,6 +65,7 @@ import {
 import { bacaProduk, buatProduk, daftarProduk } from "./produk";
 import { daftarVarian, tambahVarian } from "./varian";
 import { buatVoucher, type SyaratVoucher } from "./voucher";
+import { tanggalIsianWib } from "./zona-waktu-toko";
 
 /**
  * Admin seed. Password-nya sengaja ditulis di sini supaya pemilik bisa login saat UAT (docs/UAT.md,
@@ -441,6 +447,7 @@ type RingkasanSeed = {
   foto: number;
   pesanan: number;
   pengaturanToko: number;
+  biayaOperasional: number;
 };
 
 /** Menghentikan seed dengan pesan yang menyebut sebabnya dan langkah berikutnya. */
@@ -892,6 +899,42 @@ async function isiPesanan(
   }
 }
 
+/** Biaya operasional seed dari persiapan M4 di docs/UAT.md (▶ Keputusan 2026-11-20). [CONTOH] */
+const BIAYA_OPERASIONAL_SEED = { keterangan: "Sewa server", nominal: 150_000 };
+
+/**
+ * Mencatat Biaya operasional "Sewa server" bertanggal 1 pada bulan seed dijalankan menurut zona waktu toko, bila
+ * bulan itu belum punya biaya dengan keterangan yang sama. Isiannya diperiksa periksaIsianBiayaOperasional lebih
+ * dulu, seperti Server Action form Biaya operasional.
+ */
+async function isiBiayaOperasional(sekarang: number, ringkasan: RingkasanSeed) {
+  const hariIni = tanggalIsianWib(new Date(sekarang));
+  const bulan = hariIni.slice(0, 7);
+  const tanggal = `${bulan}-01`;
+  const periksa = periksaIsianBiayaOperasional({
+    hariIni,
+    tanggal,
+    ...BIAYA_OPERASIONAL_SEED,
+  });
+  if (!periksa.valid || periksa.keteranganTersimpan === null) {
+    gagal(
+      `Biaya operasional seed "${BIAYA_OPERASIONAL_SEED.keterangan}" ditolak aturan isian Biaya operasional PRD §14.4.`,
+      PERBAIKI_DATA_SEED,
+    );
+  }
+  const keterangan = periksa.keteranganTersimpan;
+  const { biaya } = await daftarBiayaOperasional(bulan);
+  if (biaya.some((b) => b.tanggal === tanggal && b.keterangan === keterangan)) {
+    return;
+  }
+  await tambahBiayaOperasional({
+    tanggal,
+    keterangan,
+    nominal: BIAYA_OPERASIONAL_SEED.nominal,
+  });
+  ringkasan.biayaOperasional++;
+}
+
 /**
  * Mengisi database dengan data seed UAT yang belum ada. Hasilnya jumlah data yang baru dibuat. Melempar
  * galat yang menyebut sebabnya bila ada data seed yang ditolak.
@@ -915,6 +958,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
     foto: 0,
     pesanan: 0,
     pengaturanToko: 0,
+    biayaOperasional: 0,
   };
   // Admin yang emailnya sudah dipakai dilewati.
   if ((await buatAdmin(ADMIN_SEED)).hasil === "dibuat") ringkasan.admin++;
@@ -926,6 +970,7 @@ export async function isiSeedUat(): Promise<RingkasanSeed> {
   }
   await isiVoucher(sekarang, ringkasan);
   await isiPesanan(kunci.kunci, sekarang, ringkasan);
+  await isiBiayaOperasional(sekarang, ringkasan);
 
   // Pengaturan toko hanya diisi selama masih kosong, supaya isian pemilik tidak tertimpa.
   const pengaturan = await bacaPengaturanToko();

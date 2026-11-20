@@ -183,6 +183,13 @@
       "when": 1795161085376,
       "tag": "0025_biaya_transaksi",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795162558935,
+      "tag": "0026_biaya_operasional",
+      "breakpoints": true
     }
   ]
 }
