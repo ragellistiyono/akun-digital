@@ -8,7 +8,11 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { db, koneksi } from "@/server/db";
 import { itemStok, varian as tabelVarian } from "@/server/db/schema";
 import { bukaItemStok } from "@/server/enkripsi-item-stok";
-import { bacaStokVarian, daftarItemStokVarian } from "@/server/item-stok";
+import {
+  bacaStokVarian,
+  daftarItemStokVarian,
+  daftarVarianItemStok,
+} from "@/server/item-stok";
 import { buatKategori, daftarKategori } from "@/server/kategori";
 import { buatProduk, daftarProduk } from "@/server/produk";
 import { arahKe, cookieAdminBaru, tidakDitemukan } from "@/server/uji-admin";
@@ -289,6 +293,46 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
       ).rejects.toSatisfy(tidakDitemukan);
     });
   }
+});
+
+describe("menu Item stok (PRD §4.2 ▶ Keputusan 2026-11-20)", () => {
+  it("Varian nonaktif tampil Nonaktif di daftar Varian, dan Item stok tetap bisa ditempel ke Varian itu", async () => {
+    const produkId = await sisipkanProduk({
+      nama: namaUnik("Uji Nonaktif"),
+      formatItemStok: ["Kode"],
+      varian: [{ nama: "Paket Lama", hargaJual: 20_000, aktif: false }],
+    });
+    const [{ id: varianId }] = await db
+      .select({ id: tabelVarian.id })
+      .from(tabelVarian)
+      .where(eq(tabelVarian.produkId, produkId));
+    const barisDaftar = async () =>
+      (await daftarVarianItemStok()).find((v) => v.varianId === varianId);
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    expect(await barisDaftar()).toMatchObject({
+      varianAktif: false,
+      stok: { jumlahPerStatus: { Tersedia: 0, Ditahan: 0, Terkirim: 0 } },
+    });
+
+    const keadaan = await aksiTempelItemStok(
+      keadaanTempelKosong(),
+      formulir({
+        produkId,
+        varianId,
+        teks: "KODE-NONAKTIF-1\nKODE-NONAKTIF-2",
+      }),
+    );
+
+    expect(keadaan.hasil).toEqual({
+      ringkasan: "2 tersimpan, 0 ditolak",
+      ditolak: [],
+    });
+    expect(await barisDaftar()).toMatchObject({
+      varianAktif: false,
+      stok: { jumlahPerStatus: { Tersedia: 2, Ditahan: 0, Terkirim: 0 } },
+    });
+  });
 });
 
 describe("form satu Item stok (PRD §4.2)", () => {

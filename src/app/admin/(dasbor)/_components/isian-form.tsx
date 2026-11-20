@@ -14,7 +14,8 @@ export const KELAS_TOMBOL_GARIS = "tombol tombol-kedua";
 /**
  * Isian teks satu baris atau beberapa baris, dengan label di atas dan keterangan di bawah. `id` hanya
  * perlu diisi bila halaman memuat lebih dari satu isian dengan `nama` yang sama. `mono` dipakai untuk
- * isian nilai Item stok, yang ditulis dengan JetBrains Mono (DESIGN.md Typography).
+ * isian nilai Item stok, yang ditulis dengan JetBrains Mono (DESIGN.md Typography). `onChange` menerima isi
+ * isian setiap kali Admin mengetik atau menempel, tanpa membuat isiannya terkendali.
  */
 export function IsianTeks({
   nama,
@@ -27,6 +28,7 @@ export function IsianTeks({
   inputMode,
   autoFocus,
   mono = false,
+  onChange,
 }: {
   nama: string;
   id?: string;
@@ -38,6 +40,7 @@ export function IsianTeks({
   inputMode?: "numeric" | "decimal" | "email";
   autoFocus?: boolean;
   mono?: boolean;
+  onChange?: (nilai: string) => void;
 }) {
   const idKeterangan = `${id}-keterangan`;
   const atribut = {
@@ -48,6 +51,10 @@ export function IsianTeks({
     spellCheck: mono ? false : undefined,
     "aria-invalid": galat ? true : undefined,
     "aria-describedby": galat || bantuan ? idKeterangan : undefined,
+    onChange: onChange
+      ? (event: { currentTarget: { value: string } }) =>
+          onChange(event.currentTarget.value)
+      : undefined,
   };
   return (
     <div className="flex flex-col gap-2">

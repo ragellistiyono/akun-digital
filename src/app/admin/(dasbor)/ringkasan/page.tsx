@@ -16,6 +16,7 @@ import {
 } from "@/server/ringkasan";
 import { daftarStokMenipis } from "@/server/stok-menipis";
 
+import { ALAMAT_ITEM_STOK } from "../item-stok/alamat";
 import { ALAMAT_LAPORAN } from "../laporan/alamat";
 import { DaftarStokMenipis } from "./_components/daftar-stok-menipis";
 
@@ -188,7 +189,7 @@ function KartuSatuAngka({
 
 // Halaman depan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20): 11 kartu angka dengan urutan PRD, lalu daftar
 // Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu uang membuka
-// Laporan keuangan. Kartu Item stok belum bisa diketuk; tautannya dipasang bersama menu Item stok (PRD §13).
+// Laporan keuangan, dan kartu Item stok membuka menu Item stok.
 export default async function HalamanRingkasan() {
   await wajibSesiAdmin(await headers());
   const { ambangStokMenipis } = await bacaPengaturanToko();
@@ -336,6 +337,7 @@ export default async function HalamanRingkasan() {
           judul="Item stok Tersedia"
           angka={itemStok.tersedia.jumlah}
           keterangan="Item stok yang bisa dibeli sekarang, di Varian aktif dari Produk aktif. Item stok Ditahan tidak dihitung."
+          href={ALAMAT_ITEM_STOK}
         />
 
         <KartuSatuAngka
@@ -343,6 +345,7 @@ export default async function HalamanRingkasan() {
           judul="Item stok Terkirim"
           angka={itemStok.terkirim.jumlah}
           keterangan="Semua Item stok yang sudah Terkirim, sepanjang waktu."
+          href={ALAMAT_ITEM_STOK}
         />
 
         <KartuSatuAngka

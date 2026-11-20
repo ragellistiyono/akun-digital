@@ -7,6 +7,7 @@ import {
   LogOut,
   Menu,
   Package,
+  PackageOpen,
   ReceiptText,
   Settings,
   TicketPercent,
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 import { aksiKeluarAdmin } from "../../aksi";
 import { MerekAdmin } from "../../_components/merek-admin";
+import { ALAMAT_ITEM_STOK } from "../item-stok/alamat";
 
 type TautanMenu = { href: string; label: string; ikon: LucideIcon };
 
@@ -34,6 +36,7 @@ const TAUTAN_MENU: TautanMenu[] = [
   { href: "/admin/member", label: "Member", ikon: Users },
   { href: "/admin/kategori", label: "Kategori", ikon: LayoutGrid },
   { href: "/admin/produk", label: "Produk", ikon: Package },
+  { href: ALAMAT_ITEM_STOK, label: "Item stok", ikon: PackageOpen },
   { href: "/admin/voucher", label: "Voucher", ikon: TicketPercent },
   { href: "/admin/pengaturan", label: "Pengaturan toko", ikon: Settings },
 ];
