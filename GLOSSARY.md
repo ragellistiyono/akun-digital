@@ -166,6 +166,36 @@ _Avoid_: limit per user, kuota per orang
 Produk atau Kategori tempat sebuah Voucher boleh dipakai, atau semua Produk.
 _Avoid_: target voucher, produk berlaku
 
+### Keuangan
+
+**Harga modal**:
+Biaya yang dikeluarkan toko untuk mendapat satu Item stok sebuah Varian, yang dicatat di Pesanan saat checkout.
+_Avoid_: HPP, harga pokok, harga beli, harga dasar, modal (tanpa keterangan), cost
+
+**Total Harga modal**:
+Jumlah Harga modal Pesanan Selesai yang punya Harga modal dalam suatu rentang waktu.
+_Avoid_: modal terjual, harga modal terjual, total modal
+
+**Laba kotor**:
+Harga jual dikurangi Harga modal, untuk satu Pesanan atau dijumlahkan dari Pesanan Selesai dalam suatu rentang waktu.
+_Avoid_: untung, keuntungan, keuntungan kotor, profit, margin, gross profit
+
+**Biaya transaksi**:
+Potongan Qrispy atas pembayaran sebuah Pesanan, yang dihitung toko dari persen dan minimal Total bayar di Pengaturan toko.
+_Avoid_: MDR, fee, biaya Qrispy, biaya admin, biaya layanan
+
+**Biaya operasional**:
+Biaya toko di luar Harga modal dan Biaya transaksi, misalnya sewa server atau iklan, yang dicatat Admin per tanggal.
+_Avoid_: pengeluaran, beban, expense, biaya lain-lain
+
+**Laba bersih**:
+Laba kotor dikurangi potongan voucher, ditambah Kode unik, lalu dikurangi Biaya transaksi dan Biaya operasional dalam suatu rentang waktu.
+_Avoid_: untung bersih, keuntungan bersih, net profit, laba (tanpa keterangan)
+
+**Laporan keuangan**:
+Halaman dasbor admin berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang, yang bisa disaring per Kategori dan Produk.
+_Avoid_: laporan (tanpa keterangan), dashboard keuangan, statistik, analitik
+
 ### Toko
 
 **Dasbor admin**:
@@ -181,7 +211,7 @@ Halaman depan dasbor admin yang berisi kartu angka dan daftar Stok menipis.
 _Avoid_: dashboard, statistik, laporan
 
 **Pengaturan toko**:
-Isian yang diubah Admin untuk nomor WhatsApp, Ambang stok menipis, dan teks halaman Syarat & Ketentuan serta Kebijakan Privasi.
+Isian yang diubah Admin untuk nomor WhatsApp, Ambang stok menipis, Biaya transaksi, dan teks halaman Syarat & Ketentuan serta Kebijakan Privasi.
 _Avoid_: settings, konfigurasi
 
 **Zona waktu toko**:

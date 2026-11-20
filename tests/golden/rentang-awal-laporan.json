@@ -1,0 +1,151 @@
+{
+  "aturan": "Rentang awal Laporan keuangan per periode",
+  "prd": "§14.6",
+  "keterangan": "Tanggal mulai dan akhir dalam zona waktu toko (WIB), keduanya ikut dihitung. Akhir selalu hari ini. Harian: 30 hari terakhir. Mingguan: Senin dari 12 minggu terakhir, termasuk minggu berjalan. Bulanan: tanggal 1 dari 12 bulan terakhir, termasuk bulan berjalan. Tahunan: 1 Januari tahun waktu bayar Pesanan Selesai pertama, atau tahun berjalan bila belum ada.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: Harian",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Harian",
+        "pesananSelesaiPertamaDibayarPada": "2026-11-11T09:00:00+07:00"
+      },
+      "output": {
+        "mulai": "2026-10-22",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Contoh PRD: Mingguan",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Mingguan",
+        "pesananSelesaiPertamaDibayarPada": "2026-11-11T09:00:00+07:00"
+      },
+      "output": {
+        "mulai": "2026-08-31",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Contoh PRD: Bulanan",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Bulanan",
+        "pesananSelesaiPertamaDibayarPada": "2026-11-11T09:00:00+07:00"
+      },
+      "output": {
+        "mulai": "2025-12-01",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Contoh PRD: Tahunan",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Tahunan",
+        "pesananSelesaiPertamaDibayarPada": "2026-11-11T09:00:00+07:00"
+      },
+      "output": {
+        "mulai": "2026-01-01",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Tahunan sejak tahun Pesanan Selesai pertama",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Tahunan",
+        "pesananSelesaiPertamaDibayarPada": "2025-03-05T08:00:00+07:00"
+      },
+      "output": {
+        "mulai": "2025-01-01",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Tahunan tanpa Pesanan Selesai",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Tahunan",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-01-01",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Tahun Pesanan pertama menurut WIB",
+      "input": {
+        "sekarang": "2026-11-20T10:00:00+07:00",
+        "periode": "Tahunan",
+        "pesananSelesaiPertamaDibayarPada": "2025-12-31T17:30:00Z"
+      },
+      "output": {
+        "mulai": "2026-01-01",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Hari ini menurut WIB, bukan UTC",
+      "input": {
+        "sekarang": "2026-11-19T18:00:00Z",
+        "periode": "Harian",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-10-22",
+        "akhir": "2026-11-20"
+      }
+    },
+    {
+      "nama": "Harian melewati akhir bulan",
+      "input": {
+        "sekarang": "2026-03-01T08:00:00+07:00",
+        "periode": "Harian",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-01-31",
+        "akhir": "2026-03-01"
+      }
+    },
+    {
+      "nama": "Mingguan pada hari Senin",
+      "input": {
+        "sekarang": "2026-11-16T08:00:00+07:00",
+        "periode": "Mingguan",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-08-31",
+        "akhir": "2026-11-16"
+      }
+    },
+    {
+      "nama": "Mingguan pada hari Minggu",
+      "input": {
+        "sekarang": "2026-11-22T23:00:00+07:00",
+        "periode": "Mingguan",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-08-31",
+        "akhir": "2026-11-22"
+      }
+    },
+    {
+      "nama": "Bulanan melewati tahun",
+      "input": {
+        "sekarang": "2027-01-15T08:00:00+07:00",
+        "periode": "Bulanan",
+        "pesananSelesaiPertamaDibayarPada": null
+      },
+      "output": {
+        "mulai": "2026-02-01",
+        "akhir": "2027-01-15"
+      }
+    }
+  ]
+}

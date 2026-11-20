@@ -1,0 +1,71 @@
+{
+  "aturan": "Teks tombol Salin semua",
+  "prd": "§6.1",
+  "keterangan": "Satu baris untuk setiap kolom, dengan urutan kolom Format Item stok, dalam bentuk \"Nama kolom: isi\". Baris dipisah \\n tanpa baris baru di akhir. Item stok Terkirim memakai nama kolom saat terkirim (§4.1).",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password",
+          "Profil"
+        ],
+        "isi": [
+          "budi@mail.com",
+          "rahasia123",
+          "Profil 2"
+        ]
+      },
+      "output": {
+        "teks": "Email: budi@mail.com\nPassword: rahasia123\nProfil: Profil 2"
+      }
+    },
+    {
+      "nama": "Satu kolom",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "isi": [
+          "ABCD-EFGH-IJKL"
+        ]
+      },
+      "output": {
+        "teks": "Kode: ABCD-EFGH-IJKL"
+      }
+    },
+    {
+      "nama": "Isi yang memuat titik dua dan tanda pisah",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password"
+        ],
+        "isi": [
+          "andi@mail.com",
+          "a:b|c"
+        ]
+      },
+      "output": {
+        "teks": "Email: andi@mail.com\nPassword: a:b|c"
+      }
+    },
+    {
+      "nama": "Item stok dengan kolom lama memakai nama kolom saat terkirim",
+      "input": {
+        "kolom": [
+          "Username",
+          "PIN"
+        ],
+        "isi": [
+          "andi01",
+          "4321"
+        ]
+      },
+      "output": {
+        "teks": "Username: andi01\nPIN: 4321"
+      }
+    }
+  ]
+}

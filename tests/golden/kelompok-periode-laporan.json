@@ -1,0 +1,275 @@
+{
+  "aturan": "Kelompok periode grafik Laporan keuangan",
+  "prd": "§14.6, §14.7",
+  "keterangan": "Tanggal dalam zona waktu toko (WIB), mulai dan akhir ikut dihitung. Minggu dihitung Senin sampai Minggu. Bulan dan tahun mengikuti kalender. Kelompok pertama dan terakhir hanya berisi tanggal di dalam rentang. Setiap kelompok tetap ada walaupun tanpa Pesanan Selesai (nilainya 0).",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: Mingguan dipotong di kedua ujung",
+      "input": {
+        "periode": "Mingguan",
+        "mulai": "2026-11-04",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-11-04",
+            "akhir": "2026-11-08"
+          },
+          {
+            "mulai": "2026-11-09",
+            "akhir": "2026-11-15"
+          },
+          {
+            "mulai": "2026-11-16",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Harian",
+      "input": {
+        "periode": "Harian",
+        "mulai": "2026-11-18",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-11-18",
+            "akhir": "2026-11-18"
+          },
+          {
+            "mulai": "2026-11-19",
+            "akhir": "2026-11-19"
+          },
+          {
+            "mulai": "2026-11-20",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Mingguan Senin sampai Minggu penuh",
+      "input": {
+        "periode": "Mingguan",
+        "mulai": "2026-11-09",
+        "akhir": "2026-11-22"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-11-09",
+            "akhir": "2026-11-15"
+          },
+          {
+            "mulai": "2026-11-16",
+            "akhir": "2026-11-22"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Mingguan satu hari",
+      "input": {
+        "periode": "Mingguan",
+        "mulai": "2026-11-20",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-11-20",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Rentang awal Mingguan 12 minggu",
+      "input": {
+        "periode": "Mingguan",
+        "mulai": "2026-08-31",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-08-31",
+            "akhir": "2026-09-06"
+          },
+          {
+            "mulai": "2026-09-07",
+            "akhir": "2026-09-13"
+          },
+          {
+            "mulai": "2026-09-14",
+            "akhir": "2026-09-20"
+          },
+          {
+            "mulai": "2026-09-21",
+            "akhir": "2026-09-27"
+          },
+          {
+            "mulai": "2026-09-28",
+            "akhir": "2026-10-04"
+          },
+          {
+            "mulai": "2026-10-05",
+            "akhir": "2026-10-11"
+          },
+          {
+            "mulai": "2026-10-12",
+            "akhir": "2026-10-18"
+          },
+          {
+            "mulai": "2026-10-19",
+            "akhir": "2026-10-25"
+          },
+          {
+            "mulai": "2026-10-26",
+            "akhir": "2026-11-01"
+          },
+          {
+            "mulai": "2026-11-02",
+            "akhir": "2026-11-08"
+          },
+          {
+            "mulai": "2026-11-09",
+            "akhir": "2026-11-15"
+          },
+          {
+            "mulai": "2026-11-16",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Bulanan dipotong di kedua ujung",
+      "input": {
+        "periode": "Bulanan",
+        "mulai": "2026-10-15",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-10-15",
+            "akhir": "2026-10-31"
+          },
+          {
+            "mulai": "2026-11-01",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Rentang awal Bulanan 12 bulan",
+      "input": {
+        "periode": "Bulanan",
+        "mulai": "2025-12-01",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2025-12-01",
+            "akhir": "2025-12-31"
+          },
+          {
+            "mulai": "2026-01-01",
+            "akhir": "2026-01-31"
+          },
+          {
+            "mulai": "2026-02-01",
+            "akhir": "2026-02-28"
+          },
+          {
+            "mulai": "2026-03-01",
+            "akhir": "2026-03-31"
+          },
+          {
+            "mulai": "2026-04-01",
+            "akhir": "2026-04-30"
+          },
+          {
+            "mulai": "2026-05-01",
+            "akhir": "2026-05-31"
+          },
+          {
+            "mulai": "2026-06-01",
+            "akhir": "2026-06-30"
+          },
+          {
+            "mulai": "2026-07-01",
+            "akhir": "2026-07-31"
+          },
+          {
+            "mulai": "2026-08-01",
+            "akhir": "2026-08-31"
+          },
+          {
+            "mulai": "2026-09-01",
+            "akhir": "2026-09-30"
+          },
+          {
+            "mulai": "2026-10-01",
+            "akhir": "2026-10-31"
+          },
+          {
+            "mulai": "2026-11-01",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Bulanan melewati Februari",
+      "input": {
+        "periode": "Bulanan",
+        "mulai": "2026-01-31",
+        "akhir": "2026-03-01"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2026-01-31",
+            "akhir": "2026-01-31"
+          },
+          {
+            "mulai": "2026-02-01",
+            "akhir": "2026-02-28"
+          },
+          {
+            "mulai": "2026-03-01",
+            "akhir": "2026-03-01"
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Tahunan",
+      "input": {
+        "periode": "Tahunan",
+        "mulai": "2025-06-01",
+        "akhir": "2026-11-20"
+      },
+      "output": {
+        "kelompok": [
+          {
+            "mulai": "2025-06-01",
+            "akhir": "2025-12-31"
+          },
+          {
+            "mulai": "2026-01-01",
+            "akhir": "2026-11-20"
+          }
+        ]
+      }
+    }
+  ]
+}

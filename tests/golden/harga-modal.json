@@ -1,0 +1,115 @@
+{
+  "aturan": "Isian Harga modal dan Laba kotor per Pesanan di form Varian",
+  "prd": "§14.1",
+  "keterangan": "Harga modal wajib, rupiah bulat, minimal Rp 0, tanpa batas maksimum, dan boleh lebih besar dari Harga jual. Harga jual tidak memengaruhi keabsahan Harga modal, hanya dipakai untuk Laba kotor per Pesanan (Harga jual − Harga modal). labaKotorPerPesanan null bila Harga modal tidak sah.",
+  "kasus": [
+    {
+      "nama": "Harga modal biasa",
+      "input": {
+        "hargaModal": 35000,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": 15000
+      }
+    },
+    {
+      "nama": "Harga modal Rp 0 untuk Item stok gratis",
+      "input": {
+        "hargaModal": 0,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": 50000
+      }
+    },
+    {
+      "nama": "Contoh pemilik",
+      "input": {
+        "hargaModal": 800,
+        "hargaJual": 1000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": 200
+      }
+    },
+    {
+      "nama": "Harga modal sama dengan Harga jual",
+      "input": {
+        "hargaModal": 50000,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": 0
+      }
+    },
+    {
+      "nama": "Harga modal lebih besar dari Harga jual tetap diterima",
+      "input": {
+        "hargaModal": 60000,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": -10000
+      }
+    },
+    {
+      "nama": "Tidak dibatasi maksimum",
+      "input": {
+        "hargaModal": 1000000,
+        "hargaJual": 499000
+      },
+      "output": {
+        "valid": true,
+        "alasan": null,
+        "labaKotorPerPesanan": -501000
+      }
+    },
+    {
+      "nama": "Kosong ditolak",
+      "input": {
+        "hargaModal": null,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-modal-kosong",
+        "labaKotorPerPesanan": null
+      }
+    },
+    {
+      "nama": "Negatif ditolak",
+      "input": {
+        "hargaModal": -1,
+        "hargaJual": 50000
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-modal-negatif",
+        "labaKotorPerPesanan": null
+      }
+    },
+    {
+      "nama": "Bukan rupiah bulat ditolak",
+      "input": {
+        "hargaModal": 800.5,
+        "hargaJual": 1000
+      },
+      "output": {
+        "valid": false,
+        "alasan": "harga-modal-bukan-rupiah-bulat",
+        "labaKotorPerPesanan": null
+      }
+    }
+  ]
+}

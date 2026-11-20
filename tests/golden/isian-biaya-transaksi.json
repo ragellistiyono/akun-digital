@@ -1,0 +1,151 @@
+{
+  "aturan": "Isian Biaya transaksi di pengaturan toko",
+  "prd": "§9.8, §14.3",
+  "keterangan": "Persen biaya transaksi: 0 sampai 10, paling banyak 2 angka di belakang koma. Minimal Total bayar: rupiah bulat, minimal Rp 0. Setiap isian diperiksa sendiri, jadi alasan keduanya bisa muncul bersamaan.",
+  "kasus": [
+    {
+      "nama": "Nilai awal",
+      "input": {
+        "persen": 0.7,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": true,
+        "alasanPersen": null,
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Dua desimal",
+      "input": {
+        "persen": 0.75,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": true,
+        "alasanPersen": null,
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Persen 0 dan minimal Rp 0",
+      "input": {
+        "persen": 0,
+        "minimalTotalBayar": 0
+      },
+      "output": {
+        "valid": true,
+        "alasanPersen": null,
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Persen tepat 10",
+      "input": {
+        "persen": 10,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": true,
+        "alasanPersen": null,
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Persen di atas 10",
+      "input": {
+        "persen": 10.01,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": "persen-di-luar-rentang",
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Persen negatif",
+      "input": {
+        "persen": -0.1,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": "persen-di-luar-rentang",
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Tiga desimal",
+      "input": {
+        "persen": 0.755,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": "persen-lebih-dari-2-desimal",
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Persen kosong",
+      "input": {
+        "persen": null,
+        "minimalTotalBayar": 100000
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": "persen-kosong",
+        "alasanMinimal": null
+      }
+    },
+    {
+      "nama": "Minimal negatif",
+      "input": {
+        "persen": 0.7,
+        "minimalTotalBayar": -1
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": null,
+        "alasanMinimal": "minimal-negatif"
+      }
+    },
+    {
+      "nama": "Minimal bukan rupiah bulat",
+      "input": {
+        "persen": 0.7,
+        "minimalTotalBayar": 1000.5
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": null,
+        "alasanMinimal": "minimal-bukan-rupiah-bulat"
+      }
+    },
+    {
+      "nama": "Minimal kosong",
+      "input": {
+        "persen": 0.7,
+        "minimalTotalBayar": null
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": null,
+        "alasanMinimal": "minimal-kosong"
+      }
+    },
+    {
+      "nama": "Keduanya salah",
+      "input": {
+        "persen": 11,
+        "minimalTotalBayar": -5
+      },
+      "output": {
+        "valid": false,
+        "alasanPersen": "persen-di-luar-rentang",
+        "alasanMinimal": "minimal-negatif"
+      }
+    }
+  ]
+}
