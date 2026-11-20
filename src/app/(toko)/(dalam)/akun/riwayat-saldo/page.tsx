@@ -79,12 +79,10 @@ export default async function HalamanRiwayatSaldo({
       </Link>
       <h1 className="mt-2">Riwayat saldo</h1>
       {topUpBerhasil !== null && (
-        <div role="status" className="kartu mt-4 p-4">
-          <p className="max-w-[65ch]">
-            Top up {rupiah(topUpBerhasil)} berhasil. Saldo sekarang{" "}
-            {rupiah(saldo?.saldo ?? 0)}.
-          </p>
-        </div>
+        <p role="status" className="mt-4 max-w-[65ch] text-st-selesai">
+          Top up {rupiah(topUpBerhasil)} berhasil. Saldo sekarang{" "}
+          {rupiah(saldo?.saldo ?? 0)}.
+        </p>
       )}
       <p className="mt-2 mb-6 font-spidol text-[22px] font-bold tabular-nums">
         Saldo {rupiah(saldo?.saldo ?? 0)}

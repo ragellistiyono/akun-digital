@@ -8,6 +8,7 @@ import { z } from "zod";
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
+import { STATUS_PESANAN } from "@/domain/status-pesanan";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { bacaAjakanHalamanPesanan } from "@/server/ajakan-halaman-pesanan";
@@ -152,6 +153,7 @@ function HalamanBayar({
         <PantauStatus
           alamatStatus={`/pesanan/${tautan}/status`}
           status={pesanan.status}
+          statusSah={STATUS_PESANAN}
         />
       }
     >

@@ -5,6 +5,7 @@ import { connection } from "next/server";
 
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import { nomorTopUpSah } from "@/domain/nomor-top-up";
+import { STATUS_TOP_UP } from "@/domain/status-top-up";
 import { rupiah } from "@/lib/rupiah";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { cekStatusPembayaranTopUp } from "@/server/kabar-pembayaran-top-up";
@@ -147,6 +148,7 @@ export default async function HalamanBayarTopUp({
         <PantauStatus
           alamatStatus={`/akun/top-up/${topUp.nomorTopUp}/status`}
           status={topUp.status}
+          statusSah={STATUS_TOP_UP}
         />
       }
     >
