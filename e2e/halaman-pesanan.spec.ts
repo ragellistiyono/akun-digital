@@ -47,6 +47,11 @@ test.use({ viewport: { width: 390, height: 800 } });
 const isi = (page: Page) => page.getByRole("main");
 const blokItemStok = (page: Page) =>
   isi(page).getByRole("region", { name: "Item stok Anda" });
+/** Tombol "Salin semua", yang namanya menjadi "Semua tersalin" sesaat setelah diketuk. */
+const tombolSalinSemua = (page: Page) =>
+  blokItemStok(page).getByRole("button", {
+    name: /^(Salin semua|Semua tersalin)$/,
+  });
 
 /** Pesanan Selesai dengan Item stok Terkirim berformat `Kode`. Hasilnya Tautan dan Nomor Pesanan-nya. */
 function pesananSelesaiKode(kode: string) {
@@ -190,9 +195,11 @@ test("Halaman Pesanan Selesai dikepalai Nomor Pesanan dalam huruf mono 30 px, di
     /JetBrains/,
   );
   await expect(isi(page).getByText("Selesai", { exact: true })).toBeVisible();
-  await expect(
-    blokItemStok(page).getByRole("button", { name: /^Salin / }),
-  ).toHaveCount(3);
+  for (const nama of ["Email", "Password", "Profil"]) {
+    await expect(
+      blokItemStok(page).getByRole("button", { name: `Salin ${nama}` }),
+    ).toBeVisible();
+  }
   await expect(
     blokItemStok(page).getByText("Senja-7419", { exact: true }),
   ).toBeVisible();
@@ -239,6 +246,96 @@ test('tombol Salin berubah menjadi "Tersalin" dengan ikon Check dan warna st-sel
   await page.clock.runFor(1);
   await expect(salin).toHaveText("Salin");
   await expect(salin.locator("svg.lucide-copy")).toBeVisible();
+});
+
+// UAT-N10, PRD §6.1 ▶ Keputusan 2026-11-20, DESIGN.md "Blok Item stok dan tombol Salin": tombol "Salin
+// semua" di kepala kartu Item stok menyalin satu baris "Nama kolom: isi" per kolom menurut urutan kolom. Isi
+// Item stok-nya berbeda dari test lain di Varian ini, karena Item stok kembar dalam satu Varian ditolak.
+test('tombol "Salin semua" di kepala kartu Item stok menyalin satu baris per kolom, menjadi "Semua tersalin" selama 1,6 detik, dan tombol Salin per kolom tetap berfungsi', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const { tautan } = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    itemStok: {
+      status: "Terkirim",
+      nilai: ["salin.semua@contoh.id", "Senja-2048", "Profil 4"],
+      formatSaatTerkirim: ["Email", "Password", "Profil"],
+    },
+  });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.clock.install();
+  await page.goto(`/pesanan/${tautan}`);
+  await page.clock.pauseAt(Date.now() + 60_000);
+  const salinSemua = tombolSalinSemua(page);
+  await expect(salinSemua).toHaveText("Salin semua");
+  await expect(salinSemua.locator("svg.lucide-copy-check")).toBeVisible();
+
+  // Rata kanan sejajar judul "Item stok Anda".
+  const judul = await blokItemStok(page)
+    .getByRole("heading", { name: "Item stok Anda" })
+    .boundingBox();
+  const tombol = await salinSemua.boundingBox();
+  expect(judul && tombol).toBeTruthy();
+  expect(tombol!.x).toBeGreaterThan(judul!.x + judul!.width);
+  expect(tombol!.y).toBeLessThan(judul!.y + judul!.height);
+  expect(tombol!.y + tombol!.height).toBeGreaterThan(judul!.y);
+
+  await salinSemua.click();
+  await expect(salinSemua).toHaveText("Semua tersalin");
+  await expect(salinSemua.locator("svg.lucide-check")).toBeVisible();
+  await expect(salinSemua).toHaveCSS(
+    "background-color",
+    warnaDesain("st-selesai-bg", "terang"),
+  );
+  await expect(salinSemua).toHaveCSS(
+    "color",
+    warnaDesain("st-selesai", "terang"),
+  );
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Email: salin.semua@contoh.id\nPassword: Senja-2048\nProfil: Profil 4",
+  );
+
+  await page.clock.runFor(1_599);
+  await expect(salinSemua).toHaveText("Semua tersalin");
+  await page.clock.runFor(1);
+  await expect(salinSemua).toHaveText("Salin semua");
+
+  const salinPassword = blokItemStok(page).getByRole("button", {
+    name: "Salin Password",
+  });
+  await salinPassword.click();
+  await expect(salinPassword).toHaveText("Tersalin");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Senja-2048",
+  );
+});
+
+// PRD §4.1 dan §6.1: Item stok yang Terkirim dengan kolom lama disalin dengan nama kolom saat Terkirim,
+// meskipun Format Item stok Produknya sekarang `Email`, `Password`, `Profil`.
+test('"Salin semua" untuk Item stok Terkirim dengan kolom lama memakai nama kolom saat Terkirim', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const { tautan } = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    itemStok: {
+      status: "Terkirim",
+      nilai: ["andi01", "4321"],
+      formatSaatTerkirim: ["Username", "PIN"],
+    },
+  });
+  await page.goto(`/pesanan/${tautan}`);
+
+  await tombolSalinSemua(page).click();
+  await expect(tombolSalinSemua(page)).toHaveText("Semua tersalin");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "Username: andi01\nPIN: 4321",
+  );
 });
 
 // PRD §11.1: lebar 360 px tanpa gulir ke samping, juga untuk nilai Item stok yang panjang.

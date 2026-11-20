@@ -149,7 +149,7 @@ test("Member melihat Pesanan semua status miliknya, termasuk Pesanan Tamu dengan
 });
 
 // PRD §7.4 ▶ Keputusan 2026-11-17, UAT-G7 langkah 2.
-test("baris Pesanan Selesai membuka Halaman Pesanan dengan Item stok dan tombol Salin", async ({
+test('baris Pesanan Selesai membuka Halaman Pesanan dengan Item stok, tombol Salin, dan tombol "Salin semua"', async ({
   page,
 }) => {
   const email = await masukSebagaiMemberBaru(page);
@@ -174,6 +174,10 @@ test("baris Pesanan Selesai membuka Halaman Pesanan dengan Item stok dan tombol 
   await expect(blokItemStok).toContainText("KODE-RIWAYAT-1");
   await expect(
     blokItemStok.getByRole("button", { name: "Salin Kode" }),
+  ).toBeVisible();
+  // PRD §6.1 ▶ Keputusan 2026-11-20: Riwayat membuka halaman yang sama, jadi "Salin semua" juga ada.
+  await expect(
+    blokItemStok.getByRole("button", { name: "Salin semua" }),
   ).toBeVisible();
 });
 
