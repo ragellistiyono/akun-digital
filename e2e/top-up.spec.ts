@@ -199,8 +199,8 @@ test("Tamu dan Member lain tidak bisa membuka Halaman bayar Top up milik orang l
   );
 });
 
-// PRD §13 ▶ Keputusan 2026-11-20 (#226), urutan tayang M5 langkah 2: Halaman Top up belum ditautkan.
-test("tidak ada tautan ke Halaman Top up dari halaman toko mana pun", async ({
+// UAT-O3 langkah 1 dan 3, PRD §15.10 (issue T79): tombol "Top up" dan "Lanjutkan bayar" di tab Akun.
+test('tab Akun menampilkan tombol "Top up", lalu selama Top up menunggu tampil "Top up Rp 10.000 menunggu pembayaran" dengan tombol "Lanjutkan bayar" yang membuka Halaman bayar Top up', async ({
   page,
 }) => {
   const { email } = await memberBaru();
@@ -208,17 +208,37 @@ test("tidak ada tautan ke Halaman Top up dari halaman toko mana pun", async ({
   await isiLogin(page, email);
   await expect(page).toHaveURL("/riwayat");
 
-  for (const alamat of [
-    "/",
-    "/kategori",
-    "/riwayat",
-    "/akun",
-    "/akun/riwayat-saldo",
-  ]) {
-    await page.goto(alamat);
-    await expect(page.getByRole("main")).toBeVisible();
-    await expect(page.locator(`a[href^="${ALAMAT_TOP_UP}"]`)).toHaveCount(0);
-  }
+  await page.goto("/akun");
+  const kotak = isi(page).getByRole("region", { name: "Saldo", exact: true });
+  await expect(kotak).not.toContainText("menunggu pembayaran");
+  await expect(
+    kotak.getByRole("link", { name: "Lanjutkan bayar" }),
+  ).toHaveCount(0);
+  await kotak.getByRole("link", { name: "Top up", exact: true }).click();
+  await expect(page).toHaveURL(ALAMAT_TOP_UP);
+
+  await formTopUp(page).getByLabel("Nominal top up").fill("10000");
+  await formTopUp(page)
+    .getByRole("button", { name: "Bayar dengan QRIS" })
+    .click();
+  await expect(page).toHaveURL(/\/akun\/top-up\/TOPUP-[A-Z2-9]{6}$/);
+  const halamanBayar = page.url();
+
+  await page.goto("/akun");
+  await expect(kotak).toContainText("Top up Rp 10.000 menunggu pembayaran");
+  await kotak.getByRole("link", { name: "Lanjutkan bayar" }).click();
+  await expect(page).toHaveURL(halamanBayar);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+
+  // Setelah dibatalkan, tulisan menunggu hilang.
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+  await expect(page).toHaveURL("/akun");
+  await expect(kotak).not.toContainText("menunggu pembayaran");
+  await expect(
+    kotak.getByRole("link", { name: "Lanjutkan bayar" }),
+  ).toHaveCount(0);
 });
 
 /** Saldo Member itu dan baris Riwayat saldo-nya, langsung dari database. */

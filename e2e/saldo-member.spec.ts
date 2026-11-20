@@ -143,7 +143,10 @@ test("Admin menambah dan mengurangi saldo Member dengan penegasan di tempat, lal
   await page.goto("/akun");
   const kotak = isi(page).getByRole("region", { name: "Saldo", exact: true });
   await expect(kotak).toContainText("Saldo Rp 3.000");
-  await expect(kotak.getByRole("button", { name: "Top up" })).toHaveCount(0);
+  await expect(kotak.getByRole("link", { name: "Top up" })).toHaveAttribute(
+    "href",
+    "/akun/top-up",
+  );
   await kotak.getByRole("link", { name: "Riwayat saldo" }).click();
 
   await expect(page).toHaveURL("/akun/riwayat-saldo");

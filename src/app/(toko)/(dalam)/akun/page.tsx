@@ -1,4 +1,4 @@
-import { History } from "lucide-react";
+import { History, Plus, QrCode } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { connection } from "next/server";
@@ -7,6 +7,7 @@ import { rupiah } from "@/lib/rupiah";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { bacaSaldoMember } from "@/server/saldo";
+import { bacaTopUpMenunggu } from "@/server/top-up";
 
 import { TombolWhatsApp } from "../../_components/tombol-whatsapp";
 import { TombolMasukDaftar } from "../../_components/tombol-masuk-daftar";
@@ -15,13 +16,12 @@ import { KontrolMode } from "./_components/kontrol-mode";
 import { aksiKeluarMember } from "./aksi";
 
 // Tab Akun (PRD §11.1). Member yang login melihat emailnya, form ganti password (T46, PRD §7.6), dan
-// tombol "Keluar" (T41). Di antara email dan form ganti password ada kotak "Saldo Rp X" dengan tautan "Riwayat
-// saldo" (PRD §15.10); tombol "Top up" belum dipasang (PRD §13 ▶ Keputusan 2026-11-20, urutan tayang M5 langkah
-// 1). Email tidak bisa diganti dan tidak ada hapus akun (PRD §7.6). Tamu melihat tombol "Masuk" dan "Daftar"
-// (PRD §11.1 ▶ Keputusan 2026-11-17). Setelahnya ada bagian "Tampilan" dengan pilihan
-// mode, untuk Tamu dan Member (PRD §11.3 ▶ Keputusan 2026-11-18), lalu tombol WhatsApp. Tautan Syarat &
-// Ketentuan dan Kebijakan Privasi tidak diulang di sini karena footer toko sudah menampilkannya tepat di
-// bawah (PRD §11.1 ▶ Keputusan 2026-11-20).
+// tombol "Keluar" (T41). Di antara email dan form ganti password ada kotak "Saldo Rp X" dengan tombol "Top up",
+// tautan "Riwayat saldo", dan Top up yang menunggu pembayaran bila ada (PRD §15.10). Email tidak bisa diganti dan
+// tidak ada hapus akun (PRD §7.6). Tamu melihat tombol "Masuk" dan "Daftar" (PRD §11.1 ▶ Keputusan 2026-11-17).
+// Setelahnya ada bagian "Tampilan" dengan pilihan mode, untuk Tamu dan Member (PRD §11.3 ▶ Keputusan 2026-11-18),
+// lalu tombol WhatsApp. Tautan Syarat & Ketentuan dan Kebijakan Privasi tidak diulang di sini karena footer toko
+// sudah menampilkannya tepat di bawah (PRD §11.1 ▶ Keputusan 2026-11-20).
 //
 // Tata letak Fokus (DESIGN.md Tata letak halaman): satu kolom 560 px di tengah dengan judul di dalamnya.
 // Kartu dan tombol selebar kolom, antarbagian 24 px dan antarkartu dalam bagian Member 16 px.
@@ -65,24 +65,48 @@ export default async function HalamanAkun() {
   );
 }
 
-/** Kotak "Saldo Rp X" Member yang login, dengan tautan ke Riwayat saldo-nya (PRD §15.10). */
+/**
+ * Kotak "Saldo Rp X" Member yang login (PRD §15.10), dengan tombol "Top up" yang membuka Halaman Top up dan tautan
+ * "Riwayat saldo". Selama Member punya Top up Menunggu Pembayaran, kotak ini juga menampilkan "Top up Rp X menunggu
+ * pembayaran" dengan tombol "Lanjutkan bayar" yang membuka Halaman bayar Top up itu.
+ */
 async function KotakSaldo({ idMember }: { idMember: string }) {
-  const saldo = await bacaSaldoMember(idMember);
+  const [saldo, menunggu] = await Promise.all([
+    bacaSaldoMember(idMember),
+    bacaTopUpMenunggu(idMember),
+  ]);
   return (
-    <section
-      aria-label="Saldo"
-      className="kartu flex flex-wrap items-center justify-between gap-4 p-5"
-    >
+    <section aria-label="Saldo" className="kartu flex flex-col gap-4 p-5">
       <p className="font-spidol text-[22px] leading-snug font-bold tabular-nums">
         Saldo {rupiah(saldo?.saldo ?? 0)}
       </p>
-      <Link
-        href="/akun/riwayat-saldo"
-        className="tombol tombol-kecil tombol-kedua"
-      >
-        <History aria-hidden="true" className="size-5" strokeWidth={2.5} />
-        Riwayat saldo
-      </Link>
+      {menunggu && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-coret-md border-2 border-dashed border-pensil p-3">
+          <p className="text-[17px]">
+            Top up {rupiah(menunggu.nominalTopUp)} menunggu pembayaran
+          </p>
+          <Link
+            href={`/akun/top-up/${menunggu.nomorTopUp}`}
+            className="tombol tombol-kecil"
+          >
+            <QrCode aria-hidden="true" className="size-5" strokeWidth={2.5} />
+            Lanjutkan bayar
+          </Link>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-3">
+        <Link href="/akun/top-up" className="tombol tombol-kecil">
+          <Plus aria-hidden="true" className="size-5" strokeWidth={2.5} />
+          Top up
+        </Link>
+        <Link
+          href="/akun/riwayat-saldo"
+          className="tombol tombol-kecil tombol-kedua"
+        >
+          <History aria-hidden="true" className="size-5" strokeWidth={2.5} />
+          Riwayat saldo
+        </Link>
+      </div>
     </section>
   );
 }

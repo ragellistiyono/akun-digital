@@ -69,6 +69,20 @@ async function topUpMenunggu(
   return baris?.nomorTopUp ?? null;
 }
 
+/**
+ * Nomor Top up dan Nominal top up dari Top up Menunggu Pembayaran milik Member itu, untuk kotak saldo di tab Akun
+ * (PRD §15.10), atau null bila tidak ada. Setiap Member paling banyak punya satu (PRD §15.3).
+ */
+export async function bacaTopUpMenunggu(idMember: string) {
+  const [baris] = await db
+    .select({ nomorTopUp: topUp.nomorTopUp, nominalTopUp: topUp.nominalTopUp })
+    .from(topUp)
+    .where(
+      and(eq(topUp.userId, idMember), eq(topUp.status, "Menunggu Pembayaran")),
+    );
+  return baris ?? null;
+}
+
 export type HasilBuatTopUp =
   | { hasil: "ditolak"; alasan: AlasanIsianTopUp }
   /** Member masih punya Top up Menunggu Pembayaran; Top up baru tidak dibuat. */

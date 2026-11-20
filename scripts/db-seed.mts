@@ -16,7 +16,7 @@ try {
     [
       "Data seed UAT selesai. Data seed yang sudah ada dilewati. Baru dibuat:",
       `- ${dibuat.admin} Admin, ${dibuat.member} Member, ${dibuat.kategori} Kategori, ${dibuat.produk} Produk, ${dibuat.varian} Varian, ${dibuat.foto} foto;`,
-      `- ${dibuat.itemStok} Item stok, ${dibuat.voucher} Voucher, ${dibuat.pesanan} Pesanan, ${dibuat.biayaOperasional} Biaya operasional, dan ${dibuat.saldo} saldo awal Member;`,
+      `- ${dibuat.itemStok} Item stok, ${dibuat.voucher} Voucher, ${dibuat.pesanan} Pesanan, ${dibuat.biayaOperasional} Biaya operasional, ${dibuat.saldo} saldo awal Member, dan ${dibuat.topUp} Top up;`,
       `- Pengaturan toko: ${dibuat.pengaturanToko === 1 ? "diisi" : "tidak diubah, karena sudah terisi"}.`,
       `Login di /admin sebagai ${ADMIN_SEED.email}, dan di halaman Masuk sebagai ${MEMBER_SEED.aktif.email} (aktif) atau ${MEMBER_SEED.nonaktif.email} (nonaktif). Password-nya ada di src/server/seed-uat.ts.`,
     ].join("\n"),
