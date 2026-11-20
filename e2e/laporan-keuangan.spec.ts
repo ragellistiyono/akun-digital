@@ -14,7 +14,7 @@ import { sisipkanKategori, sisipkanProduk } from "../src/server/uji-katalog";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
 import { tanggalIsianWib, tanggalWib } from "../src/server/zona-waktu-toko";
 
-// Laporan keuangan (T71, T72, PRD §14.5, §14.6, §14.7, §14.8, UAT-N6, UAT-N7, UAT-N8).
+// Laporan keuangan (T71, T72, T73, PRD §11.1, §14.5, §14.6, §14.7, §14.8, UAT-N6, UAT-N7, UAT-N8).
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 const PASSWORD = "sandi-uji-admin-123";
 const ALAMAT = "/admin/laporan";
@@ -159,15 +159,17 @@ test("memilih Kategori membatasi pilihan Produk, dan saringan Kategori atau Prod
   // Produk nonaktif ikut muncul.
   await expect(
     page
-      .getByLabel("Produk")
+      .getByLabel("Produk", { exact: true })
       .getByRole("option", { name: `${nonaktif.namaProduk} (nonaktif)` }),
   ).toHaveCount(1);
 
-  await page.getByLabel("Kategori").selectOption({
+  await page.getByLabel("Kategori", { exact: true }).selectOption({
     label: streaming.namaKategori,
   });
 
-  const opsiProduk = page.getByLabel("Produk").getByRole("option");
+  const opsiProduk = page
+    .getByLabel("Produk", { exact: true })
+    .getByRole("option");
   await expect(opsiProduk).toHaveText(["Semua", streaming.namaProduk]);
 
   await page.getByRole("button", { name: "Tampilkan" }).click();
@@ -183,12 +185,18 @@ test("memilih Kategori membatasi pilihan Produk, dan saringan Kategori atau Prod
   ).toHaveCount(0);
 
   // Produk tanpa Kategori.
-  await page.getByLabel("Kategori").selectOption({ label: "Semua" });
-  await page.getByLabel("Produk").selectOption({ label: lain.namaProduk });
+  await page
+    .getByLabel("Kategori", { exact: true })
+    .selectOption({ label: "Semua" });
+  await page
+    .getByLabel("Produk", { exact: true })
+    .selectOption({ label: lain.namaProduk });
   await page.getByRole("button", { name: "Tampilkan" }).click();
 
   await expect(page).toHaveURL(new RegExp(`produk=${lain.produkId}`));
-  await expect(page.getByLabel("Produk")).toHaveValue(lain.produkId);
+  await expect(page.getByLabel("Produk", { exact: true })).toHaveValue(
+    lain.produkId,
+  );
   await expect(isi(page).getByRole("note")).toHaveText(
     KETERANGAN_BIAYA_OPERASIONAL,
   );
@@ -221,9 +229,6 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
     waktuBayar: new Date(sekarang - 60 * 1000),
   });
   await masukSebagaiAdmin(page);
-
-  // Menu samping dan Ringkasan belum menaut ke Laporan keuangan (PRD §13 ▶ Keputusan 2026-11-20).
-  await expect(page.locator(`a[href^="${ALAMAT}"]`)).toHaveCount(0);
 
   await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}`);
 
@@ -303,7 +308,9 @@ test("tabel tanpa Pesanan Selesai dalam saringan menampilkan pesan PRD §14.8", 
   await page.goto(`${ALAMAT}?produk=${katalog.produkId}`);
 
   await expect(
-    isi(page).getByText("Belum ada Pesanan Selesai dalam rentang ini."),
+    isi(page)
+      .getByRole("region", { name: "Pesanan Selesai" })
+      .getByText("Belum ada Pesanan Selesai dalam rentang ini."),
   ).toBeVisible();
 });
 
@@ -382,6 +389,96 @@ test("di lebar 360 px, grafik 30 hari bergulir di dalam kartunya dan halaman tid
       return wadah !== null && wadah.scrollWidth > wadah.clientWidth;
     });
   expect(bergulirDiKartu).toBe(true);
+  const lebarHalaman = await page.evaluate(
+    () => document.documentElement.scrollWidth,
+  );
+  expect(lebarHalaman).toBeLessThanOrEqual(360);
+});
+
+// PRD §11.1 ▶ Keputusan 2026-11-20 dan UAT-N6 langkah 1: "Laporan keuangan" tepat di bawah Ringkasan di menu samping.
+test("menu samping menampilkan Laporan keuangan tepat di bawah Ringkasan, dan mengetuknya membuka Laporan keuangan", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await masukSebagaiAdmin(page);
+
+  const menu = page.getByRole("navigation", { name: "Menu admin" });
+  const tautan = await menu.getByRole("link").allTextContents();
+  expect(tautan.slice(0, 2).map((t) => t.trim())).toEqual([
+    "Ringkasan",
+    "Laporan keuangan",
+  ]);
+
+  await menu.getByRole("link", { name: "Laporan keuangan" }).click();
+  await expect(page).toHaveURL(ALAMAT);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Laporan keuangan" }),
+  ).toBeVisible();
+  await expect(
+    menu.getByRole("link", { name: "Laporan keuangan" }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+// PRD §14.7 grafik 4 dan 5, UAT-N7: Produk terlaris urut jumlah Pesanan Selesai dengan Pendapatan di sebelahnya,
+// dan Pendapatan per Kategori. Di lebar 360 px halaman tidak bergulir ke samping, juga dengan nama Produk panjang.
+test("di lebar 360 px, Produk terlaris dan Pendapatan per Kategori tampil dengan nilainya tanpa halaman bergulir ke samping (UAT-N7)", async ({
+  page,
+}) => {
+  const katalog = await katalogUji({ awalan: "Terlaris" });
+  const akhiran = randomUUID().slice(0, 8);
+  const namaPanjang = `Produk dengan nama yang sangat panjang sekali ${akhiran}`;
+  const produkPanjang = await sisipkanProduk({
+    nama: namaPanjang,
+    kategoriId: katalog.kategoriId,
+    varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
+  });
+  const [{ id: varianPanjang }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkPanjang));
+  const sekarang = Date.now();
+  // Produk pertama: 2 Pesanan Selesai Rp 45.123 (rincian contoh PRD §5.5). Produk bernama panjang: 1 Pesanan.
+  for (const [varianId, menit] of [
+    [katalog.varianId, 3],
+    [katalog.varianId, 2],
+    [varianPanjang, 1],
+  ] as const) {
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date(sekarang - menit * 60 * 1000),
+    });
+  }
+  await page.setViewportSize({ width: 360, height: 800 });
+  await masukSebagaiAdmin(page);
+
+  await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}`);
+
+  const terlaris = grafik(page, "Produk terlaris");
+  const baris = terlaris
+    .getByRole("list", { name: "Grafik Produk terlaris" })
+    .getByRole("button");
+  await expect(baris).toHaveCount(2);
+  await expect(baris.nth(0)).toHaveAccessibleName(
+    `${katalog.namaProduk} · 2 Pesanan · Rp 90.246`,
+  );
+  await expect(baris.nth(1)).toHaveAccessibleName(
+    `${namaPanjang} · 1 Pesanan · Rp 45.123`,
+  );
+  await baris.nth(1).click();
+  await expect(terlaris.getByRole("status")).toHaveText(
+    `${namaPanjang} · 1 Pesanan · Rp 45.123`,
+  );
+
+  const perKategori = grafik(page, "Pendapatan per Kategori")
+    .getByRole("list", { name: "Grafik Pendapatan per Kategori" })
+    .getByRole("button");
+  await expect(perKategori).toHaveCount(1);
+  await expect(perKategori).toHaveAccessibleName(
+    `${katalog.namaKategori} · 3 Pesanan · Rp 135.369`,
+  );
+
   const lebarHalaman = await page.evaluate(
     () => document.documentElement.scrollWidth,
   );

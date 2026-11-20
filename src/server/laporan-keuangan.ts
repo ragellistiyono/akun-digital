@@ -1,7 +1,8 @@
 // Laporan keuangan di dasbor admin (PRD §14.5, §14.6, §14.8): rincian angka dan tabel Pesanan Selesai dalam
-// saringan rentang tanggal WIB, Kategori, dan Produk, serta grafik per kelompok periode (§14.7). Aturan hitungnya
-// ada di src/domain/laba.ts, src/domain/harga-modal.ts, src/domain/rentang-awal-laporan.ts, dan
-// src/domain/kelompok-periode-laporan.ts.
+// saringan rentang tanggal WIB, Kategori, dan Produk, serta grafik per kelompok periode, Produk terlaris, dan
+// Pendapatan per Kategori (§14.7). Aturan hitungnya ada di src/domain/laba.ts, src/domain/harga-modal.ts,
+// src/domain/rentang-awal-laporan.ts, src/domain/kelompok-periode-laporan.ts, src/domain/produk-terlaris.ts, dan
+// src/domain/pendapatan-per-kategori.ts.
 import {
   and,
   asc,
@@ -20,6 +21,9 @@ import {
 import { labaKotor } from "@/domain/harga-modal";
 import { kelompokPeriodeLaporan } from "@/domain/kelompok-periode-laporan";
 import { laba } from "@/domain/laba";
+import { pesananSelesaiDibayar } from "@/domain/pendapatan";
+import { pendapatanPerKategori } from "@/domain/pendapatan-per-kategori";
+import { produkTerlaris } from "@/domain/produk-terlaris";
 import type { PeriodeLaporan } from "@/domain/rentang-awal-laporan";
 
 import { db } from "./db";
@@ -66,7 +70,7 @@ const syaratKatalog = ({ kategoriId, produkId }: SaringanLaporan) => [
 
 /**
  * Bahan hitung Laporan keuangan dalam saringan itu: Pesanan yang dibayar dalam rentang dan saringan Kategori atau
- * Produk, Biaya operasional bertanggal dalam rentang, dan apakah Biaya operasional dikurangkan. Saat saringan
+ * Produk, beserta Produk dan Kategori Produk-nya saat ini, Biaya operasional bertanggal dalam rentang, dan apakah Biaya operasional dikurangkan. Saat saringan
  * Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (PRD §14.5). Yang memutuskan Pesanan mana yang
  * dihitung adalah fungsi domain laba.
  */
@@ -85,10 +89,15 @@ async function bahanLaporan(saringan: SaringanLaporan) {
         totalBayar: pesanan.totalBayar,
         hargaModal: pesanan.hargaModal,
         biayaTransaksi: pesanan.biayaTransaksi,
+        produkId: produk.id,
+        namaProduk: produk.nama,
+        kategoriId: kategori.id,
+        namaKategori: kategori.nama,
       })
       .from(pesanan)
       .innerJoin(varian, eq(pesanan.varianId, varian.id))
       .innerJoin(produk, eq(varian.produkId, produk.id))
+      .innerJoin(kategori, eq(produk.kategoriId, kategori.id))
       .where(
         and(
           gte(pesanan.waktuBayar, rentang.mulai),
@@ -137,11 +146,18 @@ export async function rincianLaporan(saringan: SaringanLaporan) {
  * - Laba kotor dan Laba bersih (grafik 2) mengikuti §14.2 dan §14.5, dengan Biaya operasional dikurangkan pada
  *   kelompok yang memuat tanggalnya, kecuali saat saringan Kategori atau Produk aktif.
  * Kelompok tanpa Pesanan Selesai bernilai 0.
+ *
+ * Grafik Produk terlaris dan Pendapatan per Kategori (grafik 4 dan 5) dihitung dari semua Pesanan Selesai dalam
+ * saringan itu, termasuk yang belum punya Harga modal, oleh fungsi domain produkTerlaris dan pendapatanPerKategori.
  */
 export async function grafikLaporan(
   saringan: SaringanLaporan & { periode: PeriodeLaporan },
 ) {
   const bahan = await bahanLaporan(saringan);
+  const selesai = pesananSelesaiDibayar({
+    rentang: bahan.rentang,
+    pesanan: bahan.pesanan,
+  });
   const { kelompok } = kelompokPeriodeLaporan({
     periode: saringan.periode,
     mulai: saringan.dari,
@@ -161,6 +177,24 @@ export async function grafikLaporan(
         labaBersih: angka.labaBersih,
       };
     }),
+    produkTerlaris: produkTerlaris({ pesananSelesai: selesai }).terlaris.map(
+      ({ produkId, namaProduk, pesananSelesai, pendapatan }) => ({
+        produkId,
+        namaProduk,
+        pesananSelesai,
+        pendapatan,
+      }),
+    ),
+    pendapatanPerKategori: pendapatanPerKategori({
+      pesananSelesai: selesai,
+    }).kategori.map(
+      ({ kategoriId, namaKategori, pesananSelesai, pendapatan }) => ({
+        kategoriId,
+        namaKategori,
+        pesananSelesai,
+        pendapatan,
+      }),
+    ),
   };
 }
 

@@ -16,6 +16,7 @@ import {
 } from "@/server/ringkasan";
 import { daftarStokMenipis } from "@/server/stok-menipis";
 
+import { ALAMAT_LAPORAN } from "../laporan/alamat";
 import { DaftarStokMenipis } from "./_components/daftar-stok-menipis";
 
 const KELAS_JUDUL_PANEL = "garis-gelombang text-[28px] leading-[1.2]";
@@ -186,8 +187,8 @@ function KartuSatuAngka({
 }
 
 // Halaman depan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20): 11 kartu angka dengan urutan PRD, lalu daftar
-// Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu uang dan
-// kartu Item stok belum bisa diketuk; tautannya dipasang bersama Laporan keuangan dan menu Item stok (PRD §13).
+// Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu uang membuka
+// Laporan keuangan. Kartu Item stok belum bisa diketuk; tautannya dipasang bersama menu Item stok (PRD §13).
 export default async function HalamanRingkasan() {
   await wajibSesiAdmin(await headers());
   const { ambangStokMenipis } = await bacaPengaturanToko();
@@ -242,6 +243,7 @@ export default async function HalamanRingkasan() {
           id="kartu-pendapatan"
           judul="Pendapatan"
           {...uang((laba) => laba.pendapatan)}
+          href={ALAMAT_LAPORAN}
           keterangan="Jumlah Total bayar Pesanan Selesai menurut waktu pembayaran (WIB), termasuk Kode unik. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung."
         />
 
@@ -249,6 +251,7 @@ export default async function HalamanRingkasan() {
           id="kartu-total-harga-modal"
           judul="Total Harga modal"
           {...uang((laba) => laba.totalHargaModal)}
+          href={ALAMAT_LAPORAN}
           keterangan="Jumlah Harga modal Pesanan Selesai yang punya Harga modal, menurut waktu pembayaran (WIB)."
         />
 
@@ -256,6 +259,7 @@ export default async function HalamanRingkasan() {
           id="kartu-laba-kotor"
           judul="Laba kotor"
           {...uang((laba) => laba.labaKotor)}
+          href={ALAMAT_LAPORAN}
           keterangan="Harga jual − Harga modal, dari Pesanan Selesai yang punya Harga modal."
         />
 
@@ -263,6 +267,7 @@ export default async function HalamanRingkasan() {
           id="kartu-laba-bersih"
           judul="Laba bersih"
           {...uang((laba) => laba.labaBersih)}
+          href={ALAMAT_LAPORAN}
           keterangan="Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional bertanggal dalam rentang itu."
         />
 
