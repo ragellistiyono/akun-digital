@@ -78,6 +78,7 @@ async function bukaVarianBaru(page: Page) {
   const form = bagianVarian.getByRole("form", { name: "Tambah Varian" });
   await form.getByLabel("Nama").fill("1 Bulan");
   await form.getByLabel("Harga jual").fill("50.000");
+  await form.getByLabel("Harga modal").fill("35.000");
   await form.getByRole("button", { name: "Simpan Varian" }).click();
   await expect(form).toHaveCount(0);
 

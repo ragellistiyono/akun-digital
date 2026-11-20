@@ -18,6 +18,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { and, eq } from "drizzle-orm";
 
 import { periksaFormatItemStok } from "@/domain/format-item-stok";
+import { periksaHargaModal } from "@/domain/harga-modal";
 import { periksaIsianVoucher } from "@/domain/isian-voucher";
 import { tempelItemStok } from "@/domain/item-stok";
 import { emailBaku } from "@/domain/kesamaan-email";
@@ -39,6 +40,7 @@ import {
   pesanan,
   riwayatStatusPesanan,
   user,
+  varian,
   voucher,
 } from "./db/schema";
 import { bacaKunciItemStok, sidikJariItemStok } from "./enkripsi-item-stok";
@@ -81,6 +83,11 @@ type VarianSeed = {
   nama: string;
   hargaJual: number;
   hargaNormal: number | null;
+  /**
+   * Harga modal dari persiapan M4 di docs/UAT.md (▶ Keputusan 2026-11-20), atau null untuk Varian yang meniru
+   * Varian sebelum fitur Harga modal tayang (PRD §14.1).
+   */
+  hargaModal: number | null;
   /** Item stok Tersedia, satu baris per Item stok dengan kolom dipisah | seperti tempelan Admin. */
   itemStok: string[];
 };
@@ -127,6 +134,7 @@ const PRODUK: ProdukSeed[] = [
         nama: "1 Bulan",
         hargaJual: 50000,
         hargaNormal: 75000,
+        hargaModal: 35000,
         // Dua login Netflix yang dipakai bersama, masing-masing lima profil: satu Item stok untuk satu
         // profil (PRD §4.3).
         itemStok: ["a", "b"].flatMap((login) =>
@@ -141,6 +149,7 @@ const PRODUK: ProdukSeed[] = [
         nama: "3 Bulan",
         hargaJual: 135000,
         hargaNormal: null,
+        hargaModal: 100000,
         itemStok: berurut(
           4,
           (nomor) => `netflix-c@miwe.example|sandi-contoh-c|Profil ${nomor}`,
@@ -160,11 +169,18 @@ const PRODUK: ProdukSeed[] = [
     formatItemStok: ["Email", "Password"],
     warnaFoto: [235, 201, 103], // matahari
     varian: [
-      { nama: "1 Bulan", hargaJual: 20000, hargaNormal: null, itemStok: [] },
+      {
+        nama: "1 Bulan",
+        hargaJual: 20000,
+        hargaNormal: null,
+        hargaModal: 14000,
+        itemStok: [],
+      },
       {
         nama: "3 Bulan",
         hargaJual: 55000,
         hargaNormal: null,
+        hargaModal: 40000,
         itemStok: berurut(
           3,
           (nomor) => `youtube-${nomor}@miwe.example|sandi-contoh-yt-${nomor}`,
@@ -184,7 +200,13 @@ const PRODUK: ProdukSeed[] = [
     formatItemStok: ["Email", "Password"],
     warnaFoto: [237, 144, 101], // persik
     varian: [
-      { nama: "1 Bulan", hargaJual: 25000, hargaNormal: null, itemStok: [] },
+      {
+        nama: "1 Bulan",
+        hargaJual: 25000,
+        hargaNormal: null,
+        hargaModal: 18000,
+        itemStok: [],
+      },
     ],
   },
   {
@@ -202,6 +224,8 @@ const PRODUK: ProdukSeed[] = [
         nama: "Standar",
         hargaJual: 1000,
         hargaNormal: null,
+        // Sengaja tanpa Harga modal, supaya UAT-N3 bisa menguji pengisian Harga modal pertama.
+        hargaModal: null,
         itemStok: berurut(
           10,
           (nomor) => `UJIBAYAR-CONTOH-${String(nomor).padStart(2, "0")}`,
@@ -630,13 +654,30 @@ async function isiVarian(
         PERBAIKI_DATA_SEED,
       );
     }
-    await tambahVarian({
+    const isian = {
       produkId,
       nama: v.nama,
       hargaJual: v.hargaJual,
       hargaNormal: v.hargaNormal,
       aktif: true,
-    });
+    };
+    if (v.hargaModal === null) {
+      // Form Varian dan tambahVarian selalu meminta Harga modal, jadi Varian tanpa Harga modal, seperti
+      // Varian yang dibuat sebelum fitur ini tayang, ditulis langsung.
+      await db.insert(varian).values(isian);
+    } else {
+      const modal = periksaHargaModal({
+        hargaModal: v.hargaModal,
+        hargaJual: v.hargaJual,
+      });
+      if (!modal.valid) {
+        gagal(
+          `Harga modal Varian "${p.nama} ${v.nama}" ditolak aturan Harga modal PRD §14.1 dengan alasan ${modal.alasan}.`,
+          PERBAIKI_DATA_SEED,
+        );
+      }
+      await tambahVarian({ ...isian, hargaModal: v.hargaModal });
+    }
     ringkasan.varian++;
   }
 
@@ -779,6 +820,8 @@ async function isiPesanan(
           email: p.email,
           varianId: dipesan.id,
           hargaJual: rincian.hargaJual,
+          // Harga modal Varian saat Pesanan dibuat, seperti checkout (PRD §14.1).
+          hargaModal: dipesan.hargaModal,
           potonganVoucher: rincian.potonganVoucher,
           kodeUnik: rincian.kodeUnik,
           totalBayar: rincian.totalBayar,

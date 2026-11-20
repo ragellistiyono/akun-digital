@@ -6,6 +6,10 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 
 import {
+  periksaHargaModal,
+  type AlasanHargaModalDitolak,
+} from "@/domain/harga-modal";
+import {
   HARGA_JUAL_MAKSIMUM,
   HARGA_JUAL_MINIMUM,
   periksaHarga,
@@ -15,7 +19,12 @@ import { rupiah, rupiahDariTeks } from "@/lib/rupiah";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { hapusVarian, tambahVarian, ubahVarian } from "@/server/varian";
 
-type GalatVarian = { nama?: string; hargaJual?: string; hargaNormal?: string };
+type GalatVarian = {
+  nama?: string;
+  hargaJual?: string;
+  hargaNormal?: string;
+  hargaModal?: string;
+};
 
 /**
  * Isian form Varian yang dikembalikan ke form, apa adanya, beserta pesan galatnya. `tersimpan` menandai
@@ -25,6 +34,7 @@ export type KeadaanFormVarian = {
   nama: string;
   hargaJual: string;
   hargaNormal: string;
+  hargaModal: string;
   aktif: boolean;
   galat?: GalatVarian;
   tersimpan?: true;
@@ -40,6 +50,7 @@ function bacaIsian(formData: FormData) {
     nama: teks("nama"),
     hargaJual: teks("hargaJual"),
     hargaNormal: teks("hargaNormal"),
+    hargaModal: teks("hargaModal"),
     // Kotak centang hanya terkirim bila dicentang.
     aktif: formData.get("aktif") === "on",
   };
@@ -105,6 +116,39 @@ const HargaNormal = z
     return nilai;
   });
 
+/**
+ * Harga modal dari isian (PRD §14.1): null bila kosong, supaya periksaHargaModal menolaknya sebagai kosong.
+ * Tanda minus di depan angka ikut dibaca, supaya Harga modal negatif ditolak periksaHargaModal dengan pesan
+ * minimal Rp 0, bukan sebagai teks yang tidak terbaca.
+ */
+const HargaModal = z
+  .string()
+  .trim()
+  .transform((teks, ctx) => {
+    if (teks === "") return null;
+    const negatif = /^[-−]/.test(teks);
+    const nilai = rupiahDariTeks(negatif ? teks.slice(1).trimStart() : teks);
+    if (nilai === null) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Harga modal tidak terbaca sebagai rupiah. Ketik angkanya saja, misalnya 35000 atau 35.000.",
+      });
+      return z.NEVER;
+    }
+    // Harga modal tidak dibatasi maksimum (PRD §14.1), tetapi angka di atas batas ini tidak bisa disimpan
+    // persis sampai rupiah terakhir.
+    if (nilai > Number.MAX_SAFE_INTEGER) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          "Harga modal terlalu besar untuk disimpan. Periksa lagi angkanya.",
+      });
+      return z.NEVER;
+    }
+    return negatif ? -nilai : nilai;
+  });
+
 const PESAN_BUKAN_RUPIAH_BULAT =
   "harus rupiah bulat, tanpa sen. Hapus angka di belakang koma.";
 
@@ -133,21 +177,45 @@ function galatHarga(
   }
 }
 
+/** Pesan penolakan Harga modal dari periksaHargaModal, di bawah isian Harga modal (PRD §14.1). */
+function galatHargaModal(alasan: AlasanHargaModalDitolak) {
+  switch (alasan) {
+    case "harga-modal-kosong":
+      return "Harga modal belum diisi. Ketik Harga modal dalam rupiah, misalnya 35.000, atau 0 bila Item stok didapat tanpa biaya.";
+    case "harga-modal-negatif":
+      return "Harga modal kurang dari Rp 0. Isi Harga modal minimal Rp 0.";
+    case "harga-modal-bukan-rupiah-bulat":
+      return `Harga modal ${PESAN_BUKAN_RUPIAH_BULAT}`;
+  }
+}
+
 /**
  * Memeriksa isian form Varian. Nama dan harga yang kosong atau tidak terbaca disebut sekaligus. Aturan
  * harganya diperiksa periksaHarga di domain begitu Harga jual terbaca sebagai rupiah, dan periksaHarga
- * memberi satu alasan penolakan harga.
+ * memberi satu alasan penolakan harga. Harga modal diperiksa periksaHargaModal begitu terbaca, terlepas dari
+ * Harga jual, karena Harga jual tidak memengaruhi keabsahannya.
  */
 function periksaIsian(isian: ReturnType<typeof bacaIsian>) {
   const nama = Nama.safeParse(isian.nama);
   const hargaJual = HargaJual.safeParse(isian.hargaJual);
   const hargaNormal = HargaNormal.safeParse(isian.hargaNormal);
+  const hargaModal = HargaModal.safeParse(isian.hargaModal);
 
   let galat: GalatVarian = {};
   if (!nama.success) galat.nama = nama.error.issues[0].message;
   if (!hargaJual.success) galat.hargaJual = hargaJual.error.issues[0].message;
   if (!hargaNormal.success) {
     galat.hargaNormal = hargaNormal.error.issues[0].message;
+  }
+  if (!hargaModal.success) {
+    galat.hargaModal = hargaModal.error.issues[0].message;
+  } else {
+    const modal = periksaHargaModal({
+      hargaModal: hargaModal.data,
+      // Harga jual hanya dipakai untuk Laba kotor per Pesanan, yang tidak dibutuhkan di sini.
+      hargaJual: hargaJual.success ? hargaJual.data : 0,
+    });
+    if (!modal.valid) galat.hargaModal = galatHargaModal(modal.alasan);
   }
   if (hargaJual.success) {
     const harga = periksaHarga({
@@ -163,6 +231,8 @@ function periksaIsian(isian: ReturnType<typeof bacaIsian>) {
     !nama.success ||
     !hargaJual.success ||
     !hargaNormal.success ||
+    !hargaModal.success ||
+    hargaModal.data === null ||
     Object.keys(galat).length > 0
   ) {
     return { sah: false, galat } as const;
@@ -173,6 +243,7 @@ function periksaIsian(isian: ReturnType<typeof bacaIsian>) {
       nama: nama.data,
       hargaJual: hargaJual.data,
       hargaNormal: hargaNormal.data,
+      hargaModal: hargaModal.data,
       aktif: isian.aktif,
     },
   } as const;
@@ -197,6 +268,7 @@ export async function aksiTambahVarian(
     nama: "",
     hargaJual: "",
     hargaNormal: "",
+    hargaModal: "",
     aktif: true,
     tersimpan: true,
   };

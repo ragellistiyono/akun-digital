@@ -241,6 +241,7 @@ type HasilBuatPesanan =
 
 const QRIS_GAGAL = { hasil: "qris-gagal" } as const;
 const STOK_HABIS = { hasil: "stok-habis" } as const;
+const TIDAK_DIJUAL = { hasil: "tidak-dijual" } as const;
 
 /** Hasil transaksi checkout bila Voucher yang dipakai atau potongannya berubah sejak QRIS diminta. */
 const VOUCHER_BERUBAH = { hasil: "voucher-berubah" } as const;
@@ -266,9 +267,10 @@ const kodeVoucherDiisi = (kode: string | null) =>
  * - Bila `kodeVoucher` diisi, Voucher itu dinilai nilaiVoucherCheckout dengan `email` dan `member` (Pembeli
  *   login sebagai Member). Voucher yang ditolak menolak checkout dengan pesan penolakannya, tanpa QRIS maupun
  *   Pesanan; Pesanan tidak pernah dibuat tanpa Voucher bila kodenya diisi (PRD §8.7 ▶ Keputusan 2026-11-17).
- * - Harga jual dan potongan voucher dicatat saat checkout, beserta id dan kode Voucher yang dipakai. Qrispy
- *   diminta Harga jual − potongan voucher. Kode unik, Total bayar, waktu kedaluwarsa, dan gambar QR diambil
- *   dari QRIS yang diterbitkan Qrispy, dengan Nomor Pesanan sebagai payment_reference.
+ * - Harga jual, Harga modal Varian (null bila belum ada, PRD §14.1), dan potongan voucher dicatat saat
+ *   checkout, beserta id dan kode Voucher yang dipakai. Qrispy diminta Harga jual − potongan voucher. Kode
+ *   unik, Total bayar, waktu kedaluwarsa, dan gambar QR diambil dari QRIS yang diterbitkan Qrispy, dengan
+ *   Nomor Pesanan sebagai payment_reference.
  * - Bila Qrispy gagal, atau nominal QRIS-nya tidak cocok (periksaTagihanQris), QRIS itu dibatalkan dan
  *   tidak ada Pesanan yang tersisa.
  * - Pesanan, baris pertama Riwayat status Pesanan, Penahanan satu Item stok Tersedia dari Varian itu
@@ -388,6 +390,18 @@ export async function buatPesanan(
           return VOUCHER_BERUBAH;
         }
 
+        // Harga modal Varian saat ini dicatat di Pesanan, atau null bila Varian itu belum punya Harga modal
+        // (PRD §14.1). Baris Varian dikunci FOR SHARE sampai Pesanan tersimpan, sebelum Item stok seperti
+        // urutan kunci pengisian Item stok dan hapus Varian, supaya isi pertama Harga modal yang disimpan
+        // bersamaan (ubahVarian) tidak melewatkan Pesanan ini. Varian yang terhapus selagi checkout menunggu
+        // kunci ini tidak dijual lagi.
+        const [harga] = await tx
+          .select({ hargaModal: varian.hargaModal })
+          .from(varian)
+          .where(eq(varian.id, varianId))
+          .for("share");
+        if (!harga) return TIDAK_DIJUAL;
+
         // Penahanan Item stok (PRD §5.3). Item stok yang sedang dikunci checkout lain dilewati, supaya
         // dua checkout bersamaan tidak pernah menahan Item stok yang sama. Bila Item stok terakhirnya
         // sedang dikunci checkout lain yang belum selesai, checkout ini ditolak karena stok habis.
@@ -412,6 +426,7 @@ export async function buatPesanan(
             email,
             varianId,
             hargaJual,
+            hargaModal: harga.hargaModal,
             potonganVoucher,
             kodeUnik: tagihan.rincian.kodeUnik,
             totalBayar: tagihan.rincian.totalBayar,

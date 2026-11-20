@@ -208,6 +208,8 @@ export const produk = pgTable(
 // opsional dalam rupiah bulat. Aturan harganya diperiksa periksaHarga di domain. Harga normal tidak
 // dibatasi maksimum, jadi disimpan sebagai bigint. Varian tidak ada tanpa Produknya, jadi ikut
 // terhapus bersama Produk (T29).
+// Harga modal (PRD §14.1) diperiksa periksaHargaModal dan juga tidak dibatasi maksimum, jadi bigint. Kolom ini
+// null hanya untuk Varian yang dibuat sebelum fitur Harga modal tayang; form Varian selalu mengisinya.
 export const varian = pgTable(
   "varian",
   {
@@ -218,6 +220,7 @@ export const varian = pgTable(
     nama: text("nama").notNull(),
     hargaJual: integer("harga_jual").notNull(),
     hargaNormal: bigint("harga_normal", { mode: "number" }),
+    hargaModal: bigint("harga_modal", { mode: "number" }),
     aktif: boolean("aktif").default(true).notNull(),
   },
   (tabel) => [index("varian_produk_id_idx").on(tabel.produkId)],
@@ -290,6 +293,8 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // Pesanan yang memakai Voucher mencatat rujukan ke Voucher itu beserta kodenya (PRD §8.8 ▶ Keputusan
 // 2026-11-17); keduanya null untuk Pesanan tanpa Voucher. Voucher yang pernah tercatat di Pesanan tidak bisa
 // dihapus (PRD §8.8), jadi rujukannya restrict.
+// Harga modal Varian juga dicatat saat checkout (PRD §14.1), dan null bila Varian itu belum punya Harga modal.
+// Pesanan tanpa Harga modal ikut diisi saat Harga modal Varian-nya diisi untuk pertama kalinya (ubahVarian).
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -301,6 +306,7 @@ export const pesanan = pgTable(
       .notNull()
       .references(() => varian.id, { onDelete: "restrict" }),
     hargaJual: integer("harga_jual").notNull(),
+    hargaModal: bigint("harga_modal", { mode: "number" }),
     potonganVoucher: integer("potongan_voucher").notNull(),
     kodeUnik: integer("kode_unik").notNull(),
     totalBayar: integer("total_bayar").notNull(),

@@ -336,3 +336,25 @@ test("di lebar 360 px, Halaman Produk tidak bisa digulir ke samping", async ({
     expect(await bisaDigulirKeSamping(page)).toBe(false);
   }
 });
+
+// Issue T67 (PRD §14, UAT-N1): Harga modal dan laba hanya terlihat oleh Admin.
+test("Halaman Produk tidak memuat Harga modal maupun Laba kotor Varian-nya", async ({
+  page,
+}) => {
+  const produkId = await sisipkanProduk({
+    nama: `Disney Premium ${akhiran}`,
+    kategoriId: id.streaming,
+    varian: [
+      { nama: "1 Bulan", hargaJual: 50000, hargaModal: 35000, Tersedia: 1 },
+      { nama: "3 Bulan", hargaJual: 135000, hargaModal: 100000, Tersedia: 1 },
+    ],
+  });
+  await page.goto(alamat(produkId));
+  const isi = page.getByRole("main");
+
+  await expect(isi).toContainText("Rp 50.000");
+  await expect(isi).not.toContainText(/modal|laba/i);
+  for (const nominal of ["Rp 35.000", "Rp 100.000", "Rp 15.000"]) {
+    await expect(isi).not.toContainText(nominal);
+  }
+});

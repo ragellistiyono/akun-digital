@@ -173,7 +173,7 @@ describe("hapusProduk", () => {
     await checkout.sudahMenahan;
 
     const hapus = hapusProduk(produkId);
-    // Penghapusan menunggu kunci Item stok yang dipegang checkout.
+    // Penghapusan menunggu kunci Varian yang dipegang checkout.
     expect(await selesaiDalam(hapus, 300)).toBe(false);
     checkout.lanjutkan();
     await checkout.selesai;

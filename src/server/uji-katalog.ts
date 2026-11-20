@@ -17,6 +17,7 @@ type VarianUji = {
   nama: string;
   hargaJual: number;
   hargaNormal?: number;
+  hargaModal?: number;
   aktif?: boolean;
 } & Partial<Record<StatusItemStok, number>>;
 
@@ -104,6 +105,7 @@ export async function sisipkanProduk({
         nama: v.nama,
         hargaJual: v.hargaJual,
         hargaNormal: v.hargaNormal ?? null,
+        hargaModal: v.hargaModal ?? null,
         aktif: v.aktif ?? true,
       })
       .returning({ id: varian.id });

@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { sisipkanProduk } from "../src/server/uji-katalog";
+
 const PASSWORD = "sandi-uji-admin-123";
 
 // Daftar Produk dan daftar Kategori di dasbor admin memuat semua baris. app_test lokal bisa berisi
@@ -86,11 +88,19 @@ const barisVarian = (bagian: Locator, nama: string) =>
 /** Mengisi form Varian lalu memilih Simpan Varian. Isian yang tidak disebut dibiarkan. */
 async function simpanVarian(
   form: Locator,
-  isian: { nama?: string; hargaJual?: string; hargaNormal?: string },
+  isian: {
+    nama?: string;
+    hargaJual?: string;
+    hargaModal?: string;
+    hargaNormal?: string;
+  },
 ) {
   if (isian.nama !== undefined) await form.getByLabel("Nama").fill(isian.nama);
   if (isian.hargaJual !== undefined) {
     await form.getByLabel("Harga jual").fill(isian.hargaJual);
+  }
+  if (isian.hargaModal !== undefined) {
+    await form.getByLabel("Harga modal").fill(isian.hargaModal);
   }
   if (isian.hargaNormal !== undefined) {
     await form.getByLabel("Harga normal").fill(isian.hargaNormal);
@@ -124,6 +134,7 @@ test("Harga normal Rp 135.000 untuk Harga jual Rp 135.000 ditolak, Harga jual Rp
   await simpanVarian(formTambah, {
     nama: "1 Bulan",
     hargaJual: "50.000",
+    hargaModal: "35.000",
     hargaNormal: "75.000",
   });
   await expect(formTambah).toHaveCount(0);
@@ -133,7 +144,11 @@ test("Harga normal Rp 135.000 untuk Harga jual Rp 135.000 ditolak, Harga jual Rp
   await expect(satuBulan.getByText("Aktif", { exact: true })).toBeVisible();
 
   await bagian.getByRole("button", { name: "Tambah Varian" }).click();
-  await simpanVarian(formTambah, { nama: "3 Bulan", hargaJual: "135.000" });
+  await simpanVarian(formTambah, {
+    nama: "3 Bulan",
+    hargaJual: "135.000",
+    hargaModal: "100.000",
+  });
   const tigaBulan = barisVarian(bagian, "3 Bulan");
   await expect(
     tigaBulan.getByText("Rp 135.000", { exact: true }),
@@ -160,7 +175,11 @@ test("Harga normal Rp 135.000 untuk Harga jual Rp 135.000 ditolak, Harga jual Rp
 
   // UAT-C4 langkah 3 dan 4 di form Tambah Varian.
   await bagian.getByRole("button", { name: "Tambah Varian" }).click();
-  await simpanVarian(formTambah, { nama: "1 Tahun", hargaJual: "999" });
+  await simpanVarian(formTambah, {
+    nama: "1 Tahun",
+    hargaJual: "999",
+    hargaModal: "0",
+  });
   await expect(
     formTambah.getByText(
       "Harga jual kurang dari Rp 1.000. Isi Harga jual minimal Rp 1.000.",
@@ -210,6 +229,7 @@ test("Admin menonaktifkan Varian, lalu mengaktifkannya kembali", async ({
   await simpanVarian(bagian.getByRole("form", { name: "Tambah Varian" }), {
     nama: "1 Bulan",
     hargaJual: "50.000",
+    hargaModal: "35.000",
   });
   const satuBulan = barisVarian(bagian, "1 Bulan");
   await expect(satuBulan.getByText("Aktif", { exact: true })).toBeVisible();
@@ -241,4 +261,113 @@ test("Admin menonaktifkan Varian, lalu mengaktifkannya kembali", async ({
   await formUbah.getByRole("button", { name: "Simpan Varian" }).click();
   await expect(satuBulan.getByText("Aktif", { exact: true })).toBeVisible();
   await expect(satuBulan.getByText("Nonaktif", { exact: true })).toHaveCount(0);
+});
+
+test("Harga modal kosong dan −1 ditolak dengan pesan di bawah isian, sedangkan 0, 35000, dan 60000 diterima, dengan Laba kotor per Pesanan yang berubah langsung (UAT-N1)", async ({
+  page,
+}) => {
+  await masukSebagaiAdmin(page);
+  const bagian = await bukaProdukBaru(page);
+  const formTambah = bagian.getByRole("form", { name: "Tambah Varian" });
+  const labaKotor = (form: Locator) =>
+    form.getByText(/^Laba kotor per Pesanan:/);
+
+  // Langkah 1 dan 2: Harga modal kosong, lalu −1, ditolak dengan pesan di bawah isian Harga modal.
+  await bagian.getByRole("button", { name: "Tambah Varian" }).click();
+  await simpanVarian(formTambah, { nama: "1 Bulan", hargaJual: "50000" });
+  const isianModal = formTambah.getByLabel("Harga modal");
+  await expect(isianModal).toHaveAttribute("aria-invalid", "true");
+  await expect(isianModal).toHaveAccessibleDescription(
+    "Harga modal belum diisi. Ketik Harga modal dalam rupiah, misalnya 35.000, atau 0 bila Item stok didapat tanpa biaya.",
+  );
+  await simpanVarian(formTambah, { hargaModal: "-1" });
+  await expect(isianModal).toHaveAccessibleDescription(
+    "Harga modal kurang dari Rp 0. Isi Harga modal minimal Rp 0.",
+  );
+  await expect(barisVarian(bagian, "1 Bulan")).toHaveCount(0);
+
+  // Laba kotor per Pesanan berubah langsung saat Harga modal diketik, sebelum disimpan.
+  await isianModal.fill("35000");
+  await expect(labaKotor(formTambah)).toHaveText(
+    "Laba kotor per Pesanan: Rp 15.000",
+  );
+  await isianModal.fill("60000");
+  await expect(labaKotor(formTambah)).toHaveText(
+    "Laba kotor per Pesanan: −Rp 10.000",
+  );
+  // Juga saat Harga jual diketik.
+  await formTambah.getByLabel("Harga jual").fill("70000");
+  await expect(labaKotor(formTambah)).toHaveText(
+    "Laba kotor per Pesanan: Rp 10.000",
+  );
+  await formTambah.getByLabel("Harga jual").fill("50000");
+
+  // Rp 0 diterima.
+  await simpanVarian(formTambah, { hargaModal: "0" });
+  await expect(formTambah).toHaveCount(0);
+  const satuBulan = barisVarian(bagian, "1 Bulan");
+  await expect(satuBulan.getByText("Harga modal Rp 0")).toBeVisible();
+
+  // Langkah 3 dan 4: 35000 diterima, lalu 60000 diterima dengan laba negatif.
+  const formUbah = bagian.getByRole("form", { name: "Ubah Varian 1 Bulan" });
+  for (const [hargaModal, laba] of [
+    ["35000", "Rp 15.000"],
+    ["60000", "−Rp 10.000"],
+    ["35000", "Rp 15.000"],
+  ] as const) {
+    await satuBulan
+      .getByRole("button", { name: "Ubah Varian 1 Bulan" })
+      .click();
+    await formUbah.getByLabel("Harga modal").fill(hargaModal);
+    await expect(labaKotor(formUbah)).toHaveText(
+      `Laba kotor per Pesanan: ${laba}`,
+    );
+    await formUbah.getByRole("button", { name: "Simpan Varian" }).click();
+    await expect(formUbah).toHaveCount(0);
+    await expect(
+      satuBulan.getByText(`Laba kotor per Pesanan ${laba}`),
+    ).toBeVisible();
+  }
+
+  // Langkah 5: daftar Varian menampilkan Harga jual, Harga modal, dan Laba kotor per Pesanan.
+  await page.reload();
+  await expect(satuBulan.getByText("Rp 50.000", { exact: true })).toBeVisible();
+  await expect(satuBulan.getByText("Harga modal Rp 35.000")).toBeVisible();
+  await expect(
+    satuBulan.getByText("Laba kotor per Pesanan Rp 15.000"),
+  ).toBeVisible();
+});
+
+test("Varian lama tanpa Harga modal tampil dengan tanda —, dan harus diisi Harga modal-nya saat disimpan (PRD §14.1)", async ({
+  page,
+}) => {
+  const nama = `Uji Bayar ${randomUUID().slice(0, 8)}`;
+  const produkId = await sisipkanProduk({
+    nama,
+    varian: [{ nama: "Standar", hargaJual: 1000 }],
+  });
+  await masukSebagaiAdmin(page);
+  await page.goto(`/admin/produk/${produkId}`);
+  const bagian = page.getByRole("region", { name: "Varian" });
+  const standar = barisVarian(bagian, "Standar");
+  await expect(standar.getByText("Harga modal —")).toBeVisible();
+  await expect(standar.getByText("Laba kotor per Pesanan —")).toBeVisible();
+
+  await standar.getByRole("button", { name: "Ubah Varian Standar" }).click();
+  const formUbah = bagian.getByRole("form", { name: "Ubah Varian Standar" });
+  await expect(formUbah.getByLabel("Harga modal")).toHaveValue("");
+  await expect(formUbah.getByText(/^Laba kotor per Pesanan:/)).toHaveText(
+    "Laba kotor per Pesanan: —",
+  );
+  await formUbah.getByRole("button", { name: "Simpan Varian" }).click();
+  await expect(formUbah.getByLabel("Harga modal")).toHaveAccessibleDescription(
+    "Harga modal belum diisi. Ketik Harga modal dalam rupiah, misalnya 35.000, atau 0 bila Item stok didapat tanpa biaya.",
+  );
+
+  await simpanVarian(formUbah, { hargaModal: "800" });
+  await expect(formUbah).toHaveCount(0);
+  await expect(standar.getByText("Harga modal Rp 800")).toBeVisible();
+  await expect(
+    standar.getByText("Laba kotor per Pesanan Rp 200"),
+  ).toBeVisible();
 });

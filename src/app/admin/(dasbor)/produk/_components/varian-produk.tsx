@@ -4,11 +4,17 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
+import { labaKotor, periksaHargaModal } from "@/domain/harga-modal";
 import {
   HARGA_JUAL_MAKSIMUM,
   HARGA_JUAL_MINIMUM,
 } from "@/domain/validasi-harga";
-import { angkaRupiah, rupiah } from "@/lib/rupiah";
+import {
+  angkaRupiah,
+  rupiah,
+  rupiahBertanda,
+  rupiahDariTeks,
+} from "@/lib/rupiah";
 
 import { IsianTeks, KotakCentang } from "../../_components/isian-form";
 import { PenegasanHapus } from "../../_components/penegasan-hapus";
@@ -25,15 +31,42 @@ type Varian = {
   nama: string;
   hargaJual: number;
   hargaNormal: number | null;
+  hargaModal: number | null;
   aktif: boolean;
 };
 
 /** Tombol kecil 40 px untuk aksi kedua di baris Varian (kelas `tombol-kecil` di globals.css). */
 const KELAS_TOMBOL_KECIL = "tombol tombol-kedua tombol-kecil";
 
+/** Laba kotor untuk ditampilkan: "Rp X", "−Rp X" bila negatif, atau "—" bila belum bisa dihitung. */
+const teksLabaKotor = (laba: number | null) =>
+  laba === null ? "—" : rupiahBertanda(laba);
+
+/**
+ * Laba kotor per Pesanan dari teks isian Harga jual dan Harga modal yang sedang diketik (PRD §14.1), menurut
+ * periksaHargaModal. Null bila salah satunya belum terbaca sebagai rupiah, atau Harga modal-nya ditolak.
+ */
+function labaKotorKetikan({
+  hargaJual,
+  hargaModal,
+}: {
+  hargaJual: string;
+  hargaModal: string;
+}) {
+  const jual = rupiahDariTeks(hargaJual.trim());
+  const modal = rupiahDariTeks(hargaModal.trim());
+  if (jual === null || modal === null) return null;
+  return periksaHargaModal({ hargaJual: jual, hargaModal: modal })
+    .labaKotorPerPesanan;
+}
+
 /**
  * Form Varian untuk menambah (tanpa `varian`) atau mengubah Varian yang sudah ada. Setelah Varian
  * tersimpan, atau saat Admin memilih Batal, form ditutup lewat `onSelesai`.
+ *
+ * "Laba kotor per Pesanan" di bawah isian Harga modal berubah langsung saat Harga jual atau Harga modal
+ * diketik (PRD §14.1). Setelah server menjawab, misalnya dengan pesan penolakan, isian kembali ke nilai
+ * jawabannya, jadi Laba kotor-nya ikut dihitung ulang dari nilai itu.
  */
 function FormVarian({
   produkId,
@@ -62,11 +95,31 @@ function FormVarian({
           hargaJual: angkaRupiah(varian.hargaJual),
           hargaNormal:
             varian.hargaNormal === null ? "" : angkaRupiah(varian.hargaNormal),
+          hargaModal:
+            varian.hargaModal === null ? "" : angkaRupiah(varian.hargaModal),
           aktif: varian.aktif,
         }
-      : { nama: "", hargaJual: "", hargaNormal: "", aktif: true },
+      : {
+          nama: "",
+          hargaJual: "",
+          hargaNormal: "",
+          hargaModal: "",
+          aktif: true,
+        },
   );
   const galat = keadaan.galat;
+  const [ketikan, setKetikan] = useState({
+    keadaan,
+    hargaJual: keadaan.hargaJual,
+    hargaModal: keadaan.hargaModal,
+  });
+  if (ketikan.keadaan !== keadaan) {
+    setKetikan({
+      keadaan,
+      hargaJual: keadaan.hargaJual,
+      hargaModal: keadaan.hargaModal,
+    });
+  }
   // Halaman bisa memuat beberapa form Varian sekaligus, jadi setiap isian diberi id sendiri.
   const awalan = varian ? `varian-${varian.id}` : "varian-baru";
 
@@ -76,6 +129,18 @@ function FormVarian({
       noValidate
       aria-labelledby={`${awalan}-judul`}
       className="flex flex-col gap-6"
+      onChange={(peristiwa) => {
+        const isian = peristiwa.target;
+        if (
+          isian instanceof HTMLInputElement &&
+          (isian.name === "hargaJual" || isian.name === "hargaModal")
+        ) {
+          setKetikan((sebelumnya) => ({
+            ...sebelumnya,
+            [isian.name]: isian.value,
+          }));
+        }
+      }}
     >
       <input type="hidden" name="produkId" value={produkId} />
       {varian && <input type="hidden" name="id" value={varian.id} />}
@@ -94,7 +159,7 @@ function FormVarian({
         autoFocus
       />
 
-      {/* Harga jual dan Harga normal berdampingan bila panel Varian cukup lebar. */}
+      {/* Harga jual dan Harga modal berdampingan bila panel Varian cukup lebar, lalu Harga normal. */}
       <div className="grid items-start gap-6 @md:grid-cols-2">
         <IsianTeks
           nama="hargaJual"
@@ -105,6 +170,21 @@ function FormVarian({
           bantuan={`Rupiah bulat dari ${rupiah(HARGA_JUAL_MINIMUM)} sampai ${rupiah(HARGA_JUAL_MAKSIMUM)}, misalnya 50.000.`}
           inputMode="numeric"
         />
+
+        <div className="flex flex-col gap-2">
+          <IsianTeks
+            nama="hargaModal"
+            id={`${awalan}-harga-modal`}
+            label="Harga modal"
+            nilaiAwal={keadaan.hargaModal}
+            galat={galat?.hargaModal}
+            bantuan="Biaya toko untuk mendapat satu Item stok. Rupiah bulat, minimal 0, misalnya 35.000. Tidak tampil ke Pembeli."
+            inputMode="numeric"
+          />
+          <p aria-live="polite" className="font-spidol text-[17px] font-bold">
+            Laba kotor per Pesanan: {teksLabaKotor(labaKotorKetikan(ketikan))}
+          </p>
+        </div>
 
         <IsianTeks
           nama="hargaNormal"
@@ -177,6 +257,13 @@ function BarisVarian({
             Harga normal {rupiah(varian.hargaNormal)}
           </span>
         )}
+        <span className="text-[15px] text-pensil-redup">
+          Harga modal{" "}
+          {varian.hargaModal === null ? "—" : rupiah(varian.hargaModal)}
+        </span>
+        <span className="text-[15px] text-pensil-redup">
+          Laba kotor per Pesanan {teksLabaKotor(labaKotor(varian).labaKotor)}
+        </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <PilAktif aktif={varian.aktif} />
@@ -211,9 +298,10 @@ function BarisVarian({
 }
 
 /**
- * Varian di halaman Ubah Produk (PRD §3.2, §3.5, §3.7): daftar Varian beserta Harga jual, Harga
- * normal, dan keadaannya, form tambah dan ubah, serta tautan ke halaman Varian untuk mengisi Item
- * stok. Setiap Varian langsung tersimpan, terpisah dari tombol Simpan di form Produk.
+ * Varian di halaman Ubah Produk (PRD §3.2, §3.5, §3.7, §14.1): daftar Varian beserta Harga jual, Harga
+ * normal, Harga modal, Laba kotor per Pesanan, dan keadaannya ("—" untuk Varian tanpa Harga modal), form
+ * tambah dan ubah, serta tautan ke halaman Varian untuk mengisi Item stok. Setiap Varian langsung tersimpan,
+ * terpisah dari tombol Simpan di form Produk.
  */
 export function VarianProduk({
   produkId,

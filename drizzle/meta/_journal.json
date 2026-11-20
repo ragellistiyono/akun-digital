@@ -169,6 +169,13 @@
       "when": 1794930029856,
       "tag": "0023_batas_ganti_password",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795159065670,
+      "tag": "0024_harga_modal",
+      "breakpoints": true
     }
   ]
 }

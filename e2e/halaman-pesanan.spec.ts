@@ -459,3 +459,26 @@ test("setiap pil status menampilkan warna, ikon, dan label sesuai DESIGN.md bagi
     await harapkanPil(pil, latar, teks, "gelap");
   }
 });
+
+// Issue T67 (PRD §9.5 ▶ Keputusan 2026-11-20, §14): Pembeli tidak pernah melihat Harga modal maupun laba.
+test("Halaman Pesanan yang tercatat dengan Harga modal Rp 35.000 tidak memuat Harga modal maupun Laba kotor", async ({
+  page,
+}) => {
+  const { tautan } = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    hargaModal: 35000,
+    itemStok: {
+      status: "Terkirim",
+      nilai: [`akun-${randomUUID()}@contoh.id`, "Senja-7419", "Profil 3"],
+      formatSaatTerkirim: ["Email", "Password", "Profil"],
+    },
+  });
+  await page.goto(`/pesanan/${tautan}`);
+
+  await harapkanRincianContoh(page);
+  await expect(isi(page)).not.toContainText(/modal|laba/i);
+  for (const nominal of ["Rp 35.000", "Rp 15.000"]) {
+    await expect(isi(page)).not.toContainText(nominal);
+  }
+});
