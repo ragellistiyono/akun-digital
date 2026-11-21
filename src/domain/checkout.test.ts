@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { batasPesananMenunggu } from "./batas-pesanan-menunggu";
+import { bayarSaldo } from "./bayar-saldo";
 import { hasilCheckout } from "./checkout";
 
 // PRD §3.7, §5.2 ▶ Keputusan 2026-11-17 langkah 1–5, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
@@ -216,6 +217,82 @@ describe("hasilCheckout", () => {
         stokVarian: 8,
         memberNonaktif: false,
         voucher: hemat5Dipakai,
+      }),
+    ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
+  });
+
+  // PRD §5.2 ▶ Keputusan 2026-11-20 (issue 226) langkah 6 dan §15.7. Contoh PRD §15.7: saldo Rp 40.000, Harga jual
+  // Rp 50.000 tanpa Voucher, jadi kurang Rp 10.000.
+  const saldoKurang = bayarSaldo({
+    saldo: 40000,
+    hargaJual: 50000,
+    potonganVoucher: 0,
+  });
+
+  it("Member yang memilih Saldo dengan saldo Rp 40.000 untuk Harga jual Rp 50.000 ditolak karena saldo tidak cukup", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: null,
+        saldo: saldoKurang,
+      }),
+    ).toEqual({ hasil: "saldo-kurang", saldo: 40000, harusDibayar: 50000 });
+  });
+
+  it("Pesanan menunggu didahulukan sebelum saldo yang tidak cukup", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "andi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: null,
+        saldo: saldoKurang,
+      }),
+    ).toEqual({ hasil: "pesanan-menunggu", pesananMenunggu: pesananAndi });
+  });
+
+  it("Voucher yang ditolak didahulukan sebelum saldo yang tidak cukup", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: sudahBerakhir,
+        saldo: saldoKurang,
+      }),
+    ).toMatchObject({ hasil: "voucher-ditolak" });
+  });
+
+  it("saldo Rp 50.000 dengan HEMAT5 untuk Harga jual Rp 50.000 cukup, jadi Pesanan boleh dibuat", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: netflixSatuBulan,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 8,
+        memberNonaktif: false,
+        voucher: hemat5Dipakai,
+        saldo: bayarSaldo({
+          saldo: 50000,
+          hargaJual: 50000,
+          potonganVoucher: 5000,
+        }),
       }),
     ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
   });

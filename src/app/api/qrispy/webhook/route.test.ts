@@ -28,6 +28,7 @@ import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 
 import { POST } from "./route";
+import { kolomQris } from "@/server/uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci, yang dipakai bersama test lain. Setiap test
 // membuat Pesanannya sendiri lewat checkout dengan Qrispy tiruan; data Produknya bertanda [CONTOH].
@@ -101,7 +102,7 @@ async function checkout() {
     })
     .from(pesanan)
     .where(eq(pesanan.tautan, hasil.tautan));
-  return dibuat;
+  return { ...dibuat, qrisId: kolomQris(dibuat.qrisId) };
 }
 
 type Dipesan = Awaited<ReturnType<typeof checkout>>;

@@ -52,7 +52,8 @@ type PesananDibaca = NonNullable<
 /**
  * Rincian nominal yang dicatat di Pesanan (PRD §5.5). Pesanan yang memakai Voucher menulis kode Voucher-nya di
  * baris potongan, misalnya "Potongan voucher (HEMAT5)"; Pesanan tanpa Voucher menulis "Potongan voucher"
- * (PRD §8.8 ▶ Keputusan 2026-11-17).
+ * (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar dengan saldo tidak punya baris Kode unik, dan di bawah
+ * rinciannya tertulis "Dibayar dengan saldo" (PRD §15.7).
  */
 function PanelRincian({
   rincian,
@@ -73,13 +74,20 @@ function PanelRincian({
                 ? rupiah(0)
                 : `− ${rupiah(rincian.potonganVoucher)}`,
           },
-          { label: "Kode unik", nilai: rupiah(rincian.kodeUnik) },
+          ...(rincian.metode === "Saldo"
+            ? []
+            : [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]),
         ]}
         total={{
           label: "Total bayar",
           nilai: rupiah(rincian.totalBayar),
         }}
       />
+      {rincian.metode === "Saldo" && (
+        <p className="mt-3 text-[16px] text-pensil-redup">
+          Dibayar dengan saldo
+        </p>
+      )}
     </section>
   );
 }
@@ -137,17 +145,20 @@ function AjakanDiBawahItemStok({
 // Halaman Pesanan.
 function HalamanBayar({
   pesanan,
+  qris,
   tautan,
 }: {
   pesanan: PesananDibaca;
+  /** Gambar QR dan waktu kedaluwarsa QRIS Pesanan itu. */
+  qris: { gambarQr: string; kedaluwarsaPada: Date };
   tautan: string;
 }) {
   return (
     <KerangkaHalamanBayar
-      kedaluwarsaPada={pesanan.kedaluwarsaPada}
+      kedaluwarsaPada={qris.kedaluwarsaPada}
       dibacaPada={pesanan.dibacaPada}
       totalBayar={rupiah(pesanan.rincian.totalBayar)}
-      gambarQr={pesanan.gambarQr}
+      gambarQr={qris.gambarQr}
       altQr={`QRIS Pesanan ${pesanan.nomorPesanan}`}
       pemantau={
         <PantauStatus
@@ -175,7 +186,7 @@ function HalamanBayar({
         isian={{ nama: "tautan", nilai: tautan }}
       >
         <TombolSimpanQr
-          gambarQr={pesanan.gambarQr}
+          gambarQr={qris.gambarQr}
           namaBerkas={`QRIS-${pesanan.nomorPesanan}.png`}
         />
       </FormBatalkan>
@@ -326,11 +337,19 @@ export default async function HalamanTautanPesanan({
           emailMemberLogin:
             (await bacaSesiMember(await headers()))?.user.email ?? null,
         });
+  // Pesanan Menunggu Pembayaran selalu Pesanan QRIS; Pesanan yang dibayar dengan saldo langsung Selesai (PRD §15.7).
+  const { gambarQr, kedaluwarsaPada } = pesanan;
   return (
     <>
       {setelahPembatalanSudahDibayar && <HapusTandaSudahDibayar />}
-      {pesanan.status === "Menunggu Pembayaran" ? (
-        <HalamanBayar pesanan={pesanan} tautan={tautan.data} />
+      {pesanan.status === "Menunggu Pembayaran" &&
+      gambarQr !== null &&
+      kedaluwarsaPada !== null ? (
+        <HalamanBayar
+          pesanan={pesanan}
+          qris={{ gambarQr, kedaluwarsaPada }}
+          tautan={tautan.data}
+        />
       ) : (
         <HalamanPesanan
           pesanan={pesanan}

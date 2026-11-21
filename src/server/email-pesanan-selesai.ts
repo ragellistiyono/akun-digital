@@ -34,7 +34,8 @@ type BahanEmailPesananSelesai = Pick<
 
 /**
  * Baris rincian nominal (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris potongannya
- * menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17).
+ * menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar dengan saldo
+ * tidak punya baris Kode unik (PRD §15.7).
  */
 function barisRincian({
   hargaJual,
@@ -42,6 +43,7 @@ function barisRincian({
   kodeVoucher,
   kodeUnik,
   totalBayar,
+  metode,
 }: PesananSelesai["rincian"]) {
   return [
     { label: "Harga jual", nilai: rupiah(hargaJual) },
@@ -49,10 +51,15 @@ function barisRincian({
       label: labelPotonganVoucher(kodeVoucher),
       nilai: potonganVoucher === 0 ? rupiah(0) : `− ${rupiah(potonganVoucher)}`,
     },
-    { label: "Kode unik", nilai: rupiah(kodeUnik) },
+    ...(metode === "Saldo"
+      ? []
+      : [{ label: "Kode unik", nilai: rupiah(kodeUnik) }]),
     { label: "Total bayar", nilai: rupiah(totalBayar) },
   ];
 }
+
+/** Tulisan di bawah rincian Pesanan yang dibayar dengan saldo (PRD §15.7). */
+const DIBAYAR_DENGAN_SALDO = "Dibayar dengan saldo";
 
 /**
  * Isi email "Pesanan selesai" dalam bahasa Indonesia, sebagai teks biasa dan HTML. HTML-nya tanpa warna:
@@ -66,6 +73,8 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
   const keteranganTautan =
     "Buka Pesanan ini kapan saja tanpa login lewat Tautan Pesanan berikut:";
   const rincian = barisRincian(bahan.rincian);
+  const keteranganSaldo =
+    bahan.rincian.metode === "Saldo" ? [DIBAYAR_DENGAN_SALDO] : [];
   const footer = footerWhatsapp(bahan.nomorWhatsapp);
 
   const teks = [
@@ -80,6 +89,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
     "",
     "Rincian pembayaran",
     ...rincian.map(({ label, nilai }) => `${label}: ${nilai}`),
+    ...keteranganSaldo,
     "",
     keteranganTautan,
     bahan.alamatPesanan,
@@ -105,6 +115,9 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
         `<tr><td style="padding:4px 16px 4px 0">${aman(label)}</td><td style="padding:4px 0;text-align:right">${aman(nilai)}</td></tr>`,
     ),
     `</table>`,
+    ...keteranganSaldo.map(
+      (keterangan) => `<p style="margin:0 0 16px">${aman(keterangan)}</p>`,
+    ),
     `<p style="margin:0 0 4px">${aman(keteranganTautan)}</p>`,
     `<p style="margin:0 0 16px"><a href="${aman(bahan.alamatPesanan)}" style="word-break:break-all">${aman(bahan.alamatPesanan)}</a></p>`,
     ...footer.html,

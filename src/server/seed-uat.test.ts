@@ -304,6 +304,7 @@ describe("pnpm db:seed di database kosong", () => {
       kodeVoucher: "HEMAT5",
       kodeUnik: 123,
       totalBayar: 45123,
+      metode: "QRIS",
     });
     expect(detail?.itemStok).not.toBeNull();
   });

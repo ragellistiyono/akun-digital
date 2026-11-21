@@ -41,7 +41,7 @@ const NomorDariAlamat = z.string().refine(nomorPesananSah);
 
 type DetailPesanan = NonNullable<Awaited<ReturnType<typeof bacaDetailPesanan>>>;
 
-/** Email dan Produk beserta Varian Pesanan itu. */
+/** Email, Produk beserta Varian, dan Metode Pesanan itu (PRD §9.5 ▶ Keputusan 2026-11-20). */
 function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
   return (
     <section aria-label="Pesanan" className={PANEL}>
@@ -56,6 +56,10 @@ function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
             <span className="font-spidol font-bold">{pesanan.namaProduk}</span>{" "}
             <span className="text-pensil-redup">· {pesanan.namaVarian}</span>
           </dd>
+        </div>
+        <div>
+          <dt className="text-base text-pensil-redup">Metode</dt>
+          <dd>{pesanan.metode}</dd>
         </div>
       </dl>
     </section>
@@ -106,8 +110,9 @@ function RincianLaba({ laba }: { laba: DetailPesanan["laba"] }) {
 
 /**
  * Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris
- * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Di bawahnya ada
- * Harga modal dan Laba kotor Pesanan itu.
+ * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar
+ * dengan saldo tidak punya baris Kode unik, dan di bawah rinciannya tertulis "Dibayar dengan saldo" (PRD §9.5 ▶
+ * Keputusan 2026-11-20). Di bawahnya ada Harga modal dan Laba kotor Pesanan itu.
  */
 function PanelRincian({
   rincian,
@@ -128,10 +133,17 @@ function PanelRincian({
                 ? rupiah(0)
                 : `− ${rupiah(rincian.potonganVoucher)}`,
           },
-          { label: "Kode unik", nilai: rupiah(rincian.kodeUnik) },
+          ...(rincian.metode === "Saldo"
+            ? []
+            : [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]),
         ]}
         total={{ label: "Total bayar", nilai: rupiah(rincian.totalBayar) }}
       />
+      {rincian.metode === "Saldo" && (
+        <p className="mt-3 text-[16px] text-pensil-redup">
+          Dibayar dengan saldo
+        </p>
+      )}
       <RincianLaba laba={laba} />
     </section>
   );

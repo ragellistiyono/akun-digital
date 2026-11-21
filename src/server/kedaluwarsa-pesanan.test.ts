@@ -16,7 +16,7 @@ import { buatPesanan } from "./pesanan";
 import type { Qrispy } from "./qrispy";
 import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
-import { sisipkanPesanan } from "./uji-pesanan";
+import { kolomQris, sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dan Qrispy tiruan dari .env.ci, yang dipakai bersama test lain.
 // Setiap test membuat Produk dan Pesanannya sendiri lewat checkout. Waktu kedaluwarsa dan jamnya diambil
@@ -91,7 +91,7 @@ async function checkout(varianId: string, qrispy: Qrispy) {
     })
     .from(pesanan)
     .where(eq(pesanan.tautan, hasil.tautan));
-  return { ...dibuat, tautan: hasil.tautan };
+  return { ...dibuat, qrisId: kolomQris(dibuat.qrisId), tautan: hasil.tautan };
 }
 
 /** Status Pesanan itu langsung dari database. */

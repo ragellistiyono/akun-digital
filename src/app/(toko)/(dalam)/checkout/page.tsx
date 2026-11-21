@@ -10,7 +10,8 @@ import { FormCheckout } from "./_components/form-checkout";
 
 // Form checkout (PRD §5.2) untuk Varian yang dipilih di Halaman Produk (`/checkout?varianId=…`). Varian
 // yang tidak bisa dibeli (PRD §3.7) menampilkan halaman tidak ditemukan. Bila Member sedang login,
-// isian emailnya sudah terisi email Member dan tidak bisa diubah.
+// isian emailnya sudah terisi email Member dan tidak bisa diubah, dan ia bisa memilih membayar dengan saldonya
+// (PRD §15.7). Tamu hanya melihat QRIS.
 //
 // Alamat kembali dari tautan Masuk di pesan Voucher khusus Member membawa kode voucher yang tadi diketik
 // (`&kodeVoucher=…`), supaya isian kode sudah berisi kode itu setelah login (PRD §8.7 ▶ Keputusan 2026-11-17).
@@ -25,10 +26,10 @@ export default async function HalamanCheckout({
   if (!varianId.success) notFound();
   const kodeVoucher = z.string().catch("").parse(parameter.kodeVoucher);
 
-  const [checkout, sesiMember] = await Promise.all([
-    bacaCheckout(varianId.data),
-    bacaSesiMember(await headers()),
-  ]);
+  const sesiMember = await bacaSesiMember(await headers());
+  const checkout = await bacaCheckout(varianId.data, {
+    idMember: sesiMember?.user.id ?? null,
+  });
   if (!checkout) notFound();
 
   return (

@@ -115,16 +115,20 @@ export async function prosesKedaluwarsaPesanan(
   ) {
     return { hasil: "tidak-berubah" };
   }
-  const { kedaluwarsaPada } = dipesan;
+  // Hanya Pesanan QRIS yang bisa Kedaluwarsa; Pesanan yang dibayar dengan saldo langsung Selesai (PRD §15.7).
+  const { qrisId, kedaluwarsaPada } = dipesan;
+  if (qrisId === null || kedaluwarsaPada === null) {
+    return { hasil: "tidak-berubah" };
+  }
   if (!kedaluwarsaPesanan({ kedaluwarsaPada, sekarang }).kedaluwarsa) {
     return { hasil: "belum-kedaluwarsa", kedaluwarsaPada };
   }
 
-  const status = await tanyaStatusQris(qrispy ?? qrispyAktif(), dipesan.qrisId);
+  const status = await tanyaStatusQris(qrispy ?? qrispyAktif(), qrisId);
   if (status?.paymentStatus === "paid") {
     await prosesKabarPembayaran(
       {
-        qrisId: dipesan.qrisId,
+        qrisId,
         nominalDiterima: status.amount,
         waktuBayar: status.paidAt,
       },

@@ -15,6 +15,7 @@ import type { Qrispy } from "./qrispy";
 import { qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
 import { buatVoucher, type SyaratVoucher } from "./voucher";
+import { kolomQris } from "./uji-pesanan";
 
 // Test integrasi checkout dengan Voucher (T57, PRD §5.2 ▶ Keputusan 2026-11-17, §5.5, §8.3–§8.8, UAT-H1–UAT-H4)
 // dengan database app_test dari .env.ci. Database itu dipakai bersama test lain, jadi setiap Produk, email,
@@ -202,6 +203,7 @@ describe("buatPesanan dengan Voucher yang diterima (PRD §5.5, §8.3, UAT-H1)", 
       kodeVoucher: hemat5.kode,
       kodeUnik: 123,
       totalBayar: 45123,
+      metode: "QRIS",
     });
   });
 
@@ -522,7 +524,7 @@ describe("pembayaran telat untuk Pesanan dengan Voucher (PRD §5.9, §8.6)", () 
     });
 
     await prosesKabarPembayaran({
-      qrisId,
+      qrisId: kolomQris(qrisId),
       // Harga jual Rp 50.000 − potongan voucher Rp 5.000 + Kode unik Rp 123.
       nominalDiterima: 45123,
       waktuBayar: new Date("2026-11-11T10:20:00+07:00"),

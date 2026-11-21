@@ -165,3 +165,16 @@ export function checkoutTertahan(varianId: string) {
   });
   return { sudahMenahan, lanjutkan, selesai };
 }
+
+/**
+ * Kolom QRIS Pesanan (qris_id, waktu kedaluwarsa, atau gambar QR) yang pasti terisi, karena Pesanan QRIS selalu punya
+ * QRIS. Kolom itu hanya null untuk Pesanan yang dibayar dengan saldo (PRD §15.7), jadi nilai null menggagalkan test.
+ */
+export function kolomQris<T>(nilai: T | null): T {
+  if (nilai === null) {
+    throw new Error(
+      "Kolom QRIS Pesanan ini null, padahal test ini memakai Pesanan QRIS. Periksa metode Pesanan yang dibuat test.",
+    );
+  }
+  return nilai;
+}

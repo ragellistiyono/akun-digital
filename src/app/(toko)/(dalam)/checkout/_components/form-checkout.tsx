@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
 
+import type { BayarSaldo, Metode } from "@/domain/bayar-saldo";
 import { kodeBaku } from "@/domain/kode-voucher";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,79 @@ const KELAS_LABEL = "text-[17px] leading-tight";
  * `permukaan`, supaya kontrasnya cukup.
  */
 const KELAS_TAUTAN = "text-pulpen underline decoration-2 underline-offset-4";
+
+/**
+ * Pilihan Metode untuk Member (PRD §15.7), dengan tampilan kartu radio seperti Pilihan Varian (DESIGN.md "Pilihan
+ * Varian"): "Saldo (Rp X)" dan "QRIS". Pilihan Saldo yang saldonya kurang bergaris putus-putus, beropasitas 60%,
+ * tidak bisa dipilih, dan di bawahnya tertulis "Saldo kurang Rp X. Top up dulu." dengan kata "Top up" menaut ke
+ * halaman Top up. Kecukupan saldo dan selisihnya datang dari server (bayarSaldo).
+ */
+function PilihanMetode({
+  saldo,
+  metode,
+  pilih,
+}: {
+  saldo: BayarSaldo;
+  metode: Metode;
+  pilih: (metode: Metode) => void;
+}) {
+  const pilihan: { nilai: Metode; label: string; bisaDipilih: boolean }[] = [
+    {
+      nilai: "Saldo",
+      label: `Saldo (${rupiah(saldo.saldo)})`,
+      bisaDipilih: saldo.saldoCukup,
+    },
+    { nilai: "QRIS", label: "QRIS", bisaDipilih: true },
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <p id="judul-metode" className={KELAS_LABEL}>
+        Bayar dengan
+      </p>
+      <div
+        role="radiogroup"
+        aria-labelledby="judul-metode"
+        className="grid gap-3"
+      >
+        {pilihan.map(({ nilai, label, bisaDipilih }) => (
+          <div key={nilai} className="flex flex-col gap-2">
+            <label
+              // Garis terpilih 3 px diimbangi padding 13 px, supaya isinya tidak bergeser saat dipilih.
+              className={cn(
+                "grid grid-cols-[28px_minmax(0,1fr)] items-center gap-3 rounded-coret-md border-2 border-pensil bg-permukaan p-3.5 transition-[border-color,background-color,box-shadow] duration-100 ease-out motion-reduce:transition-none has-checked:border-[3px] has-checked:border-pulpen has-checked:bg-postit has-checked:p-[13px] has-checked:text-teks-postit has-checked:shadow-coret-kecil",
+                bisaDipilih
+                  ? "cursor-pointer hover:border-pulpen"
+                  : "cursor-not-allowed border-dashed opacity-60",
+              )}
+            >
+              <input
+                type="radio"
+                name="metode"
+                value={nilai}
+                checked={metode === nilai}
+                disabled={!bisaDipilih}
+                onChange={() => pilih(nilai)}
+                className="grid size-7 cursor-pointer appearance-none place-items-center rounded-coret-bulat border-2 border-pensil before:size-3.5 before:scale-0 before:rounded-coret-bulat before:bg-teks-postit checked:border-teks-postit checked:before:scale-100 disabled:cursor-not-allowed disabled:border-dashed"
+              />
+              <span className="text-[18px] [overflow-wrap:anywhere]">
+                {label}
+              </span>
+            </label>
+            {nilai === "Saldo" && !bisaDipilih && (
+              <p className="text-[16px] text-pensil-redup">
+                Saldo kurang {rupiah(saldo.kurang)}.{" "}
+                <Link href="/akun/top-up" className={KELAS_TAUTAN}>
+                  Top up
+                </Link>{" "}
+                dulu.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Hasil tombol "Pakai" beserta keadaan form saat tombol itu ditekan. Keadaan itu menentukan mana yang lebih baru:
@@ -66,6 +140,12 @@ type PakaiVoucher = {
  *
  * Bila Member sedang login (`emailMember`), isian email sudah berisi email Member dan tidak bisa diubah
  * (PRD §5.2). Server tetap memakai email dari sesi Member, bukan dari isian ini.
+ *
+ * Member juga memilih Metode, Saldo atau QRIS (PRD §15.7); Tamu (`checkout.saldo` null) hanya membayar dengan QRIS.
+ * Kecukupan saldo diambil dari hasil "Pakai" yang diterima, atau dari Checkout tanpa Voucher bila belum ada, jadi
+ * kecukupannya ikut berubah setiap kali hasil "Pakai" mengubah potongan. Pilihan awalnya Saldo bila saldo cukup dan
+ * QRIS bila tidak; pilihan yang ditekan Pembeli dipertahankan selama saldonya cukup. Dengan Saldo, rincian berisi
+ * Harga jual, potongan voucher, dan Total bayar tanpa Kode unik, dan tombolnya "Bayar Rp X dengan saldo".
  */
 export function FormCheckout({
   checkout,
@@ -96,6 +176,14 @@ export function FormCheckout({
       ? pakai.hasil
       : null;
   const voucherDipakai = hasilPakai?.diterima ? hasilPakai : null;
+
+  const [metodeDitekan, setMetodeDitekan] = useState<Metode | null>(null);
+  const saldo = voucherDipakai ? voucherDipakai.saldo : checkout.saldo;
+  const metode: Metode =
+    saldo === null || !saldo.saldoCukup
+      ? "QRIS"
+      : (metodeDitekan ?? saldo.pilihanAwal);
+  const bayarSaldo = metode === "Saldo" ? saldo : null;
   const penolakanVoucher =
     !pakaiLebihBaru && keadaan.galat?.kodeVoucher
       ? {
@@ -244,6 +332,14 @@ export function FormCheckout({
             )}
           </div>
         </div>
+
+        {saldo && (
+          <PilihanMetode
+            saldo={saldo}
+            metode={metode}
+            pilih={setMetodeDitekan}
+          />
+        )}
       </div>
 
       <div className="min-w-0 lebar:sticky lebar:top-24">
@@ -260,26 +356,38 @@ export function FormCheckout({
                     nilai: `− ${rupiah(voucherDipakai.potonganVoucher)}`,
                   }
                 : { label: "Potongan voucher", nilai: rupiah(0) },
-              {
-                label: "Kode unik",
-                nilai: "Rp 1–499, dari Qrispy",
-                redup: true,
-              },
+              ...(bayarSaldo
+                ? []
+                : [
+                    {
+                      label: "Kode unik",
+                      nilai: "Rp 1–499, dari Qrispy",
+                      redup: true,
+                    },
+                  ]),
             ]}
-            total={{
-              label: "Perkiraan bayar",
-              // Nilai ini boleh patah baris di antara kedua bagiannya di layar sempit.
-              nilai: (
-                <span className="whitespace-normal">
-                  <span className="whitespace-nowrap">
-                    {rupiah(
-                      voucherDipakai?.perkiraanBayar ?? checkout.perkiraanBayar,
-                    )}
-                  </span>{" "}
-                  <span className="whitespace-nowrap">+ Kode unik</span>
-                </span>
-              ),
-            }}
+            total={
+              bayarSaldo
+                ? {
+                    label: "Total bayar",
+                    nilai: rupiah(bayarSaldo.harusDibayar),
+                  }
+                : {
+                    label: "Perkiraan bayar",
+                    // Nilai ini boleh patah baris di antara kedua bagiannya di layar sempit.
+                    nilai: (
+                      <span className="whitespace-normal">
+                        <span className="whitespace-nowrap">
+                          {rupiah(
+                            voucherDipakai?.perkiraanBayar ??
+                              checkout.perkiraanBayar,
+                          )}
+                        </span>{" "}
+                        <span className="whitespace-nowrap">+ Kode unik</span>
+                      </span>
+                    ),
+                  }
+            }
           />
         </section>
         <p className="mt-4 text-[15px] text-pensil-redup">
@@ -299,7 +407,13 @@ export function FormCheckout({
         )}
         <BilahLekat>
           <button type="submit" disabled={sedangMemproses} className="tombol">
-            {sedangMemproses ? "Membuat QRIS…" : "Bayar dengan QRIS"}
+            {bayarSaldo
+              ? sedangMemproses
+                ? "Membayar…"
+                : `Bayar ${rupiah(bayarSaldo.harusDibayar)} dengan saldo`
+              : sedangMemproses
+                ? "Membuat QRIS…"
+                : "Bayar dengan QRIS"}
           </button>
         </BilahLekat>
       </div>

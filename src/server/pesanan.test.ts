@@ -32,7 +32,7 @@ import { qrispyTiruan } from "./qrispy-tiruan";
 import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
-import { sisipkanPesanan } from "./uji-pesanan";
+import { kolomQris, sisipkanPesanan } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci. Database ini dipakai bersama test lain dan run
 // sebelumnya, jadi setiap test memakai email dan nama Produk yang unik. Data Produknya mengikuti persiapan
@@ -227,6 +227,7 @@ describe("buatPesanan (PRD §5.1, ADR-0004)", () => {
         kodeVoucher: null,
         kodeUnik: 123,
         totalBayar: 50123,
+        metode: "QRIS",
       },
       itemStok: null,
       dibacaPada: expect.any(Date),
@@ -1001,7 +1002,7 @@ describe("buatPesanan dengan email Member nonaktif", () => {
     const [{ qrisId }] = await pesananDenganEmail(budi.email);
 
     await prosesKabarPembayaran({
-      qrisId,
+      qrisId: kolomQris(qrisId),
       // Harga jual Rp 50.000 + Kode unik Rp 123 dari Qrispy tiruan di atas.
       nominalDiterima: 50123,
       waktuBayar: new Date("2026-11-11T10:05:00+07:00"),
@@ -1038,7 +1039,7 @@ describe("bacaPesananLewatTautan (PRD §6.1, §6.2)", () => {
     if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
     const [{ qrisId }] = await pesananDenganEmail(email);
     await prosesKabarPembayaran({
-      qrisId,
+      qrisId: kolomQris(qrisId),
       nominalDiterima: 50123,
       waktuBayar: new Date("2026-11-11T10:05:00+07:00"),
     });
@@ -1097,6 +1098,8 @@ describe("bacaCheckout", () => {
       namaVarian: "3 Bulan",
       hargaJual: 135000,
       perkiraanBayar: 135000,
+      // Tamu tidak bisa membayar dengan saldo (PRD §15.7).
+      saldo: null,
     });
   });
 

@@ -10,6 +10,7 @@ import { bayarQrisTiruan, qrispyTiruan } from "@/server/qrispy-tiruan";
 import { sisipkanProduk } from "@/server/uji-katalog";
 
 import { GET } from "./route";
+import { kolomQris } from "@/server/uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci (QRISPY_MODE=tiruan), yang dipakai bersama test
 // lain. Setiap test membuat Pesanannya sendiri lewat checkout dengan Qrispy tiruan; data Produknya
@@ -41,7 +42,7 @@ async function checkout() {
     })
     .from(pesanan)
     .where(eq(pesanan.tautan, hasil.tautan));
-  return dibuat;
+  return { ...dibuat, qrisId: kolomQris(dibuat.qrisId) };
 }
 
 function tanyaStatus(tautan: string) {

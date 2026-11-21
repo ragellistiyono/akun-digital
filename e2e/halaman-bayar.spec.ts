@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../src/server/db";
 import { pesanan } from "../src/server/db/schema";
 import { sisipkanProduk } from "../src/server/uji-katalog";
+import { kolomQris } from "../src/server/uji-pesanan";
 
 // Produk bertanda [CONTOH] dengan akhiran unik per run. Namanya bukan Netflix, supaya tidak mengubah
 // hasil pencarian "netflix" di cari-kategori-beranda.spec.ts yang berjalan bersamaan.
@@ -52,7 +53,12 @@ async function checkoutSampaiHalamanBayar(page: Page) {
     })
     .from(pesanan)
     .where(eq(pesanan.email, email));
-  return dipesan;
+  return {
+    ...dipesan,
+    qrisId: kolomQris(dipesan.qrisId),
+    kedaluwarsaPada: kolomQris(dipesan.kedaluwarsaPada),
+    gambarQr: kolomQris(dipesan.gambarQr),
+  };
 }
 
 const isi = (page: Page) => page.getByRole("main");

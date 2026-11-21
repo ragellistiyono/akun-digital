@@ -133,11 +133,13 @@ export async function batalkanPesanan(
   ) {
     return { hasil: "tidak-bisa-dibatalkan", status: dipesan.status };
   }
+  // Pesanan yang dibayar dengan saldo tidak punya QRIS dan tidak bisa dibatalkan (PRD §15.7).
+  const { qrisId } = dipesan;
+  if (qrisId === null) {
+    return { hasil: "tidak-bisa-dibatalkan", status: dipesan.status };
+  }
 
-  const jawaban = await mintaPembatalanQris(
-    qrispy ?? qrispyAktif(),
-    dipesan.qrisId,
-  );
+  const jawaban = await mintaPembatalanQris(qrispy ?? qrispyAktif(), qrisId);
   const statusQris =
     jawaban.pembatalanQris === "ditolak" ? jawaban.status : null;
   const { akibat } = hasilPembatalanPesanan(
@@ -161,7 +163,7 @@ export async function batalkanPesanan(
       if (statusQris?.paymentStatus === "paid") {
         await prosesKabarPembayaran(
           {
-            qrisId: dipesan.qrisId,
+            qrisId,
             nominalDiterima: statusQris.amount,
             waktuBayar: statusQris.paidAt,
           },

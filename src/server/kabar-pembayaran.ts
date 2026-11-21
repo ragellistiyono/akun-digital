@@ -221,14 +221,16 @@ export async function cekStatusPembayaran(
         eq(pesanan.status, "Menunggu Pembayaran"),
       ),
     );
-  if (!menunggu || !ambilGiliranCek(menunggu.id, sekarang)) return;
+  // Pesanan Menunggu Pembayaran selalu Pesanan QRIS; Pesanan yang dibayar dengan saldo tidak punya QRIS (PRD §15.7).
+  const qrisId = menunggu?.qrisId;
+  if (!menunggu || !qrisId || !ambilGiliranCek(menunggu.id, sekarang)) return;
 
   let status: StatusQris;
   try {
-    status = await (qrispy ?? qrispyAktif()).cekStatusQris(menunggu.qrisId);
+    status = await (qrispy ?? qrispyAktif()).cekStatusQris(qrisId);
   } catch (galat) {
     console.error(
-      `Status QRIS ${menunggu.qrisId} gagal ditanyakan ke Qrispy. Status ditanyakan lagi paling cepat 15 detik kemudian.`,
+      `Status QRIS ${qrisId} gagal ditanyakan ke Qrispy. Status ditanyakan lagi paling cepat 15 detik kemudian.`,
       galat,
     );
     return;
@@ -237,7 +239,7 @@ export async function cekStatusPembayaran(
 
   await prosesKabarPembayaran(
     {
-      qrisId: menunggu.qrisId,
+      qrisId,
       nominalDiterima: status.amount,
       waktuBayar: status.paidAt,
     },
