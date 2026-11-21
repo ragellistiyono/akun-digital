@@ -44,6 +44,9 @@ afterAll(async () => {
 
 const WAKTU_BAYAR = new Date("2026-11-21T10:05:00+07:00");
 const SEKARANG = new Date("2026-11-21T10:05:02+07:00");
+// Top up dibuat pada waktu tetap sebelum WAKTU_BAYAR, supaya urutan Riwayat status tidak bergantung pada tanggal
+// test dijalankan.
+const WAKTU_DIBUAT = new Date("2026-11-21T10:00:00+07:00");
 
 /** Qrispy tiruan yang menerbitkan QRIS dengan Kode unik itu. */
 function qrispyKodeUnik(kodeUnik: number) {
@@ -76,7 +79,7 @@ async function topUpMenunggu({
     .where(eq(user.email, email));
   const hasil = await buatTopUp(
     { idMember, nominal: String(nominalTopUp) },
-    { qrispy },
+    { qrispy, sekarang: WAKTU_DIBUAT },
   );
   if (hasil.hasil !== "dibuat") throw new Error(`Top up gagal: ${hasil.hasil}`);
   const [dibuat] = await db
