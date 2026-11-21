@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
+import type { Metode } from "@/domain/bayar-saldo";
 import type { StatusItemStok } from "@/domain/item-stok";
 import { nomorPesanan } from "@/domain/nomor-pesanan";
 import type { StatusPesanan } from "@/domain/status-pesanan";
@@ -33,7 +34,9 @@ const RINCIAN_CONTOH_PRD = {
  * Rp 123, dan Total bayar Rp 45.123. Waktu kedaluwarsanya 15 menit lagi, email dan Nomor Pesanan-nya acak,
  * dan waktu bayar, Harga modal, serta Biaya transaksi-nya kosong, kecuali diatur lain. Bila `dibuatPada` diberikan, baris pertama Riwayat status Pesanan ikut ditulis
  * seperti saat checkout, yaitu Menunggu Pembayaran oleh Pembeli pada waktu itu. Bila `voucher` diberikan,
- * Pesanan itu mencatat Voucher dan kodenya. Hasilnya id, Tautan Pesanan, dan Nomor Pesanan-nya.
+ * Pesanan itu mencatat Voucher dan kodenya. Pesanan bermetode Saldo tidak punya QRIS, waktu kedaluwarsa, dan gambar
+ * QR (PRD §15.7); Kode unik-nya diambil dari `rincian`, yang harus Rp 0. Hasilnya id, Tautan Pesanan, dan Nomor
+ * Pesanan-nya.
  */
 export async function sisipkanPesanan({
   varianId,
@@ -49,6 +52,7 @@ export async function sisipkanPesanan({
   hargaModal = null,
   biayaTransaksi = null,
   voucher,
+  metode = "QRIS",
 }: {
   varianId: string;
   status: StatusPesanan;
@@ -63,7 +67,9 @@ export async function sisipkanPesanan({
   hargaModal?: number | null;
   biayaTransaksi?: number | null;
   voucher?: { id: string; kode: string };
+  metode?: Metode;
 }) {
+  const qris = metode === "QRIS";
   const tautan = randomBytes(32).toString("base64url");
   const [{ id }] = await db
     .insert(pesanan)
@@ -75,9 +81,10 @@ export async function sisipkanPesanan({
       ...rincian,
       hargaModal,
       biayaTransaksi,
-      qrisId: randomUUID(),
-      kedaluwarsaPada,
-      gambarQr: "data:image/png;base64,iVBORw0KGgo=",
+      metode,
+      qrisId: qris ? randomUUID() : null,
+      kedaluwarsaPada: qris ? kedaluwarsaPada : null,
+      gambarQr: qris ? "data:image/png;base64,iVBORw0KGgo=" : null,
       status,
       waktuBayar,
       emailGagal,

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { jumlahMemberAktif, jumlahMemberTerdaftar } from "./member-aktif";
+import {
+  jumlahMemberAktif,
+  jumlahMemberTerdaftar,
+  totalSaldoMember,
+} from "./member-aktif";
 
 // PRD §2.3 ▶ Keputusan 2026-11-17 dan §9.2: Member aktif adalah Member yang sudah diverifikasi dan tidak
 // nonaktif. Pendaftar belum menjadi Member, jadi tidak pernah masuk `semuaMember`. Data Member sintetis.
@@ -43,5 +47,27 @@ describe("jumlahMemberTerdaftar", () => {
 
     expect(hasil.jumlah).toBe(3);
     expect(hasil.dihitung).toEqual([budi, andi, sari]);
+  });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20: Total saldo Member adalah jumlah saldo semua Member saat ini, aktif maupun
+// nonaktif. Data Member sintetis.
+describe("totalSaldoMember", () => {
+  it("Member aktif dengan saldo Rp 30.000 dan Member nonaktif dengan saldo Rp 20.000: Total saldo Member Rp 50.000", () => {
+    const budi = { email: "budi@mail.com", nonaktif: false, saldo: 30000 };
+    const andi = { email: "andi@mail.com", nonaktif: true, saldo: 20000 };
+    const sari = { email: "sari@mail.com", nonaktif: false, saldo: 0 };
+
+    const hasil = totalSaldoMember({ semuaMember: [budi, andi, sari] });
+
+    expect(hasil.total).toBe(50000);
+    expect(hasil.dihitung).toEqual([budi, andi, sari]);
+  });
+
+  it("tanpa Member, Total saldo Member Rp 0", () => {
+    expect(totalSaldoMember({ semuaMember: [] })).toEqual({
+      total: 0,
+      dihitung: [],
+    });
   });
 });

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { METODE } from "@/domain/bayar-saldo";
+
 import { ALAMAT_LAPORAN } from "../alamat";
 
 type PilihanKategori = { id: string; nama: string };
@@ -18,12 +20,12 @@ const KELAS_KOLOM = "flex min-w-0 flex-col gap-2";
 const KELAS_LABEL = "text-[17px] leading-tight";
 
 /**
- * Form saringan rentang tanggal, Kategori, dan Produk Laporan keuangan (PRD §14.6), dikirim sebagai GET ke alamat
- * Laporan keuangan. Memilih Kategori langsung membatasi pilihan Produk ke Kategori itu, dan Produk yang tidak ada
+ * Form saringan rentang tanggal, Kategori, Produk, dan Metode Laporan keuangan (PRD §14.6), dikirim sebagai GET ke
+ * alamat Laporan keuangan. Metode bisa Semua (awal), QRIS, atau Saldo (§14.6 ▶ Keputusan 2026-11-20). Memilih Kategori langsung membatasi pilihan Produk ke Kategori itu, dan Produk yang tidak ada
  * di Kategori itu dilepas. Produk boleh dipilih tanpa Kategori, dan Produk nonaktif ikut tampil dengan tanda
  * "(nonaktif)". Periode dan kata cari ikut dikirim apa adanya.
  *
- * Susunan: di ponsel setiap isian sebaris penuh, mulai 640 px dua kolom, dan mulai 1200 px keempat isian sebaris
+ * Susunan: di ponsel setiap isian sebaris penuh, mulai 640 px dua kolom, dan mulai 1200 px kelima isian sebaris
  * bersama tombolnya. Varian `min-[…px]` dipakai, bukan `sm:`, supaya urutannya di CSS tetap menaik bersama
  * `lebar:` (px).
  */
@@ -33,6 +35,7 @@ export function FormSaringanLaporan({
   sampai,
   kategoriId,
   produkId,
+  metode,
   cari,
   semuaKategori,
   semuaProduk,
@@ -42,6 +45,7 @@ export function FormSaringanLaporan({
   sampai: string;
   kategoriId: string | undefined;
   produkId: string | undefined;
+  metode: string | undefined;
   cari: string | undefined;
   semuaKategori: readonly PilihanKategori[];
   semuaProduk: readonly PilihanProduk[];
@@ -58,7 +62,7 @@ export function FormSaringanLaporan({
       action={ALAMAT_LAPORAN}
       role="search"
       aria-label="Saring Laporan keuangan"
-      className="kartu grid items-end gap-4 p-4 min-[640px]:grid-cols-2 min-[1200px]:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
+      className="kartu grid items-end gap-4 p-4 min-[640px]:grid-cols-2 min-[1200px]:grid-cols-[repeat(5,minmax(0,1fr))_auto]"
     >
       <input type="hidden" name="periode" value={periode} />
       {cari !== undefined && <input type="hidden" name="cari" value={cari} />}
@@ -131,6 +135,24 @@ export function FormSaringanLaporan({
           {pilihanProduk.map((p) => (
             <option key={p.id} value={p.id}>
               {p.aktif ? p.nama : `${p.nama} (nonaktif)`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className={KELAS_KOLOM}>
+        <label htmlFor="metode" className={KELAS_LABEL}>
+          Metode
+        </label>
+        <select
+          id="metode"
+          name="metode"
+          defaultValue={metode ?? ""}
+          className={KELAS_ISIAN}
+        >
+          <option value="">Semua</option>
+          {METODE.map((m) => (
+            <option key={m} value={m}>
+              {m}
             </option>
           ))}
         </select>

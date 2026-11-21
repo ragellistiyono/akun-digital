@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { tambahBiayaOperasional } from "./biaya-operasional";
 import { db, koneksi } from "./db";
-import { kategori, produk, varian } from "./db/schema";
+import { kategori, produk, user, varian } from "./db/schema";
 import {
   grafikLaporan,
   pilihanSaringanLaporan,
@@ -14,12 +14,14 @@ import {
 } from "./laporan-keuangan";
 import goldenProdukTerlaris from "../../tests/golden/produk-terlaris.json";
 import { sisipkanKategori, sisipkanProduk } from "./uji-katalog";
+import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
+import { sisipkanTopUp } from "./uji-top-up";
 
 // Test integrasi dengan database app_test (.env.ci), yang dipakai bersama test lain. Test lain membuat Pesanan
 // yang dibayar dan Biaya operasional bertanggal sekitar waktu nyata, November 2026, atau tahun 2031, jadi setiap
-// test di sini memakai rentang pada tanggal tersendiri di tahun 2032, atau menyaring ke Produk dan Kategori-nya
-// sendiri.
+// test di sini memakai rentang pada tanggal tersendiri di tahun 2032 (Top up: 2033, di bulan yang tidak dipakai test
+// Ringkasan), atau menyaring ke Produk dan Kategori-nya sendiri.
 
 afterAll(async () => {
   await koneksi.end();
@@ -84,6 +86,115 @@ async function sisipkanContohPrd(varianId: string, tanggal: string) {
     });
   }
 }
+
+/** Id Member baru dengan email unik, pemilik Top up uji. */
+async function memberUji() {
+  const email = `laporan-${randomUUID()}@mail.com`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  return id;
+}
+
+/** Top up Berhasil contoh PRD §15.8: Nominal top up Rp 150.000, Kode unik Rp 200, Biaya transaksi Rp 1.052. */
+const topUpContohPrd = async (waktuBayar: string) =>
+  sisipkanTopUp({
+    userId: await memberUji(),
+    status: "Berhasil",
+    nominalTopUp: 150000,
+    kodeUnik: 200,
+    biayaTransaksi: 1052,
+    waktuBayar: new Date(waktuBayar),
+  });
+
+/** Pesanan saldo Selesai contoh PRD §15.8: Harga jual Rp 50.000 tanpa Voucher, Harga modal Rp 35.000. */
+const pesananSaldoContohPrd = (varianId: string, waktuBayar: string) =>
+  sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    metode: "Saldo",
+    rincian: {
+      hargaJual: 50000,
+      potonganVoucher: 0,
+      kodeUnik: 0,
+      totalBayar: 50000,
+    },
+    hargaModal: 35000,
+    biayaTransaksi: 0,
+    waktuBayar: new Date(waktuBayar),
+  });
+
+// PRD §14.5 dan §14.6 ▶ Keputusan 2026-11-20, §15.8: Top up dan saringan Metode. Angkanya dari
+// tests/golden/laba-top-up.json.
+describe("rincianLaporan dengan Top up dan saringan Metode (PRD §14.5, §14.6, §15.8)", () => {
+  it("contoh PRD §14.5 ditambah satu Top up Berhasil memberi Laba bersih Rp 48.831, sedangkan Pendapatan tetap Rp 230.632 dan Top up Bermasalah tidak dihitung", async () => {
+    const { varianId } = await produkUji();
+    await sisipkanContohPrd(varianId, "2033-02-10");
+    await tambahBiayaOperasional({
+      tanggal: "2033-02-10",
+      keterangan: `Iklan ${randomUUID().slice(0, 8)}`,
+      nominal: 10000,
+    });
+    await topUpContohPrd("2033-02-10T10:00:00+07:00");
+    await sisipkanTopUp({
+      userId: await memberUji(),
+      status: "Bermasalah",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2033-02-10T11:00:00+07:00"),
+    });
+
+    const rincian = await rincianLaporan({
+      dari: "2033-02-10",
+      sampai: "2033-02-10",
+    });
+
+    expect(rincian).toMatchObject({
+      pendapatan: 230632,
+      biayaOperasional: 10000,
+      kodeUnikTopUp: 200,
+      biayaTransaksiTopUp: 1052,
+      labaBersih: 48831,
+      topUpBerhasil: { jumlah: 1, nominal: 150000 },
+    });
+  });
+
+  it("saringan Metode QRIS dan Saldo hanya menghitung Pesanan bermetode itu, tanpa Biaya operasional dan Top up", async () => {
+    const { varianId } = await produkUji();
+    await sisipkanContohPrd(varianId, "2033-03-10");
+    await pesananSaldoContohPrd(varianId, "2033-03-10T10:20:00+07:00");
+    await tambahBiayaOperasional({
+      tanggal: "2033-03-10",
+      keterangan: `Iklan ${randomUUID().slice(0, 8)}`,
+      nominal: 10000,
+    });
+    await topUpContohPrd("2033-03-10T10:00:00+07:00");
+    const rentang = { dari: "2033-03-10", sampai: "2033-03-10" };
+
+    const qris = await rincianLaporan({ ...rentang, metode: "QRIS" });
+    const saldo = await rincianLaporan({ ...rentang, metode: "Saldo" });
+
+    expect(qris).toMatchObject({
+      pendapatan: 230632,
+      pesananSelesai: 3,
+      biayaOperasional: null,
+      kodeUnikTopUp: null,
+      biayaTransaksiTopUp: null,
+      labaBersih: 59683,
+      topUpBerhasil: null,
+    });
+    expect(saldo).toMatchObject({
+      pendapatan: 50000,
+      pesananSelesai: 1,
+      biayaOperasional: null,
+      kodeUnikTopUp: null,
+      biayaTransaksiTopUp: null,
+      labaBersih: 15000,
+      topUpBerhasil: null,
+    });
+  });
+});
 
 describe("rincianLaporan (PRD §14.5, §14.6)", () => {
   it("rentang satu hari yang berisi contoh PRD §14.5 menghasilkan angka contoh itu sampai Laba bersih Rp 49.683", async () => {
@@ -240,11 +351,13 @@ describe("tabelPesananLaporan (PRD §14.8)", () => {
     expect(kedua.pesanan[0].waktuBayar).toEqual(
       new Date("2032-06-06T08:00:00+07:00"),
     );
-    // Kolom PRD §14.8, dengan rincian contoh PRD §5.5 dari sisipkanPesanan.
+    // Kolom PRD §14.8 dan Metode (§14.6 ▶ Keputusan 2026-11-20), dengan rincian contoh PRD §5.5 dari
+    // sisipkanPesanan.
     expect(Object.keys(kedua.pesanan[0]).sort()).toEqual(
       [
         "nomorPesanan",
         "waktuBayar",
+        "metode",
         "namaProduk",
         "namaVarian",
         "hargaJual",
@@ -304,6 +417,44 @@ describe("tabelPesananLaporan (PRD §14.8)", () => {
       labaKotor: null,
     });
     expect(tanpaHasil.jumlah).toBe(0);
+  });
+});
+
+// PRD §14.6 ▶ Keputusan 2026-11-20: saringan Metode membatasi tabel, dan tabel punya kolom Metode.
+describe("tabelPesananLaporan dengan Metode (PRD §14.6, §14.8)", () => {
+  it("memuat Metode setiap Pesanan, dan saringan Metode Saldo hanya memuat Pesanan saldo", async () => {
+    const { produkId, varianId } = await produkUji();
+    const qris = await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2033-05-05T09:00:00+07:00"),
+    });
+    const saldo = await pesananSaldoContohPrd(
+      varianId,
+      "2033-05-05T10:00:00+07:00",
+    );
+    const saringan = { dari: "2033-05-05", sampai: "2033-05-05", produkId };
+
+    const semua = await tabelPesananLaporan(saringan);
+    const hanyaSaldo = await tabelPesananLaporan({
+      ...saringan,
+      metode: "Saldo",
+    });
+
+    expect(
+      semua.pesanan.map(({ nomorPesanan, metode }) => ({
+        nomorPesanan,
+        metode,
+      })),
+    ).toEqual([
+      { nomorPesanan: saldo.nomorPesanan, metode: "Saldo" },
+      { nomorPesanan: qris.nomorPesanan, metode: "QRIS" },
+    ]);
+    expect(hanyaSaldo.pesanan.map((p) => p.nomorPesanan)).toEqual([
+      saldo.nomorPesanan,
+    ]);
+    expect(hanyaSaldo.jumlah).toBe(1);
   });
 });
 
@@ -450,6 +601,24 @@ describe("grafikLaporan (PRD §14.6, §14.7)", () => {
       { mulai: "2032-10-18", akhir: "2032-10-22", labaKotor: 0, labaBersih: 0 },
     ]);
     expect(perProduk.kelompok.map((k) => k.labaBersih)).toEqual([0, 59683, 0]);
+  });
+
+  it("Kode unik Top up ditambahkan dan Biaya transaksi Top up dikurangkan pada kelompok yang memuat waktu bayar Top up, kecuali saat saringan Metode aktif", async () => {
+    const { varianId } = await produkUji();
+    await sisipkanContohPrd(varianId, "2033-04-10");
+    await topUpContohPrd("2033-04-11T10:00:00+07:00");
+    const saringan = {
+      periode: "Harian" as const,
+      dari: "2033-04-10",
+      sampai: "2033-04-12",
+    };
+
+    const semua = await grafikLaporan(saringan);
+    const qris = await grafikLaporan({ ...saringan, metode: "QRIS" });
+
+    // 11 April: 200 − 1.052 = −852 (tests/golden/laba-top-up.json, "Hanya Top up tanpa Pesanan").
+    expect(semua.kelompok.map((k) => k.labaBersih)).toEqual([59683, -852, 0]);
+    expect(qris.kelompok.map((k) => k.labaBersih)).toEqual([59683, 0, 0]);
   });
 
   it("Laba negatif tetap negatif di kelompoknya", async () => {

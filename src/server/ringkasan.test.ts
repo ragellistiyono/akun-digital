@@ -12,12 +12,16 @@ import {
   angkaItemStok,
   angkaMemberAktif,
   angkaRingkasan,
+  angkaTotalSaldoMember,
   jumlahPesananMenungguPembayaran,
+  jumlahTopUpBermasalah,
 } from "./ringkasan";
+import { ubahSaldoOlehAdmin } from "./saldo";
 import { ubahStatusMember } from "./status-member";
 import { sisipkanProduk } from "./uji-katalog";
 import { sisipkanMember } from "./uji-member";
 import { sisipkanPesanan } from "./uji-pesanan";
+import { sisipkanTopUp } from "./uji-top-up";
 
 // Test integrasi dengan database app_test (.env.ci), yang dipakai bersama test lain. Test lain membuat
 // Pesanan yang dibayar dan Biaya operasional bertanggal sekitar waktu nyata atau November 2026, jadi setiap test
@@ -195,6 +199,130 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       angka.sepanjangWaktu.biayaOperasionalDihitung.map((b) => b.id);
     expect(dikurangkanSepanjangWaktu).toContain(bulanLalu.id);
     expect(dikurangkanSepanjangWaktu).toContain(bulanIni.id);
+  });
+});
+
+/** Member baru dengan email unik berawalan itu, beserta id-nya. */
+async function memberBaru(awalan: string) {
+  const email = `${awalan}-${randomUUID()}@mail.com`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  return { email, id };
+}
+
+// PRD §9.2 ▶ Keputusan 2026-11-20 dan §15.8: kartu Laba bersih ikut menghitung Kode unik Top up dan Biaya
+// transaksi Top up, sedangkan Nominal top up tidak masuk Pendapatan. Test ini memakai bulan tersendiri di tahun 2033.
+describe("angkaRingkasan dengan Top up (PRD §9.2, §15.8)", () => {
+  it("contoh PRD §15.8: satu Pesanan saldo dan satu Top up Berhasil hari ini memberi Laba bersih Rp 14.148, Pendapatan tetap Rp 50.000, dan Top up Bermasalah tidak dihitung", async () => {
+    const { id: userId } = await memberBaru("laba-top-up");
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      metode: "Saldo",
+      rincian: rincian(50000, 0),
+      hargaModal: 35000,
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2033-01-15T10:20:00+07:00"),
+    });
+    const berhasil = await sisipkanTopUp({
+      userId,
+      status: "Berhasil",
+      nominalTopUp: 150000,
+      kodeUnik: 200,
+      biayaTransaksi: 1052,
+      waktuBayar: new Date("2033-01-15T10:00:00+07:00"),
+    });
+    const bermasalah = await sisipkanTopUp({
+      userId,
+      status: "Bermasalah",
+      nominalTopUp: 50000,
+      kodeUnik: 123,
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2033-01-15T11:00:00+07:00"),
+    });
+
+    const angka = await angkaRingkasan({
+      sekarang: new Date("2033-01-15T22:00:00+07:00"),
+    });
+
+    for (const rentang of [angka.hariIni, angka.bulanIni]) {
+      expect(rentang.pendapatan).toBe(50000);
+      expect(rentang.kodeUnikTopUp).toBe(200);
+      expect(rentang.biayaTransaksiTopUp).toBe(1052);
+      expect(rentang.labaBersih).toBe(14148);
+      expect(rentang.topUpBerhasil).toEqual({ jumlah: 1, nominal: 150000 });
+    }
+    const topUpSepanjangWaktu = angka.sepanjangWaktu.topUpDihitung.map(
+      (t) => t.id,
+    );
+    expect(topUpSepanjangWaktu).toContain(berhasil.id);
+    expect(topUpSepanjangWaktu).not.toContain(bermasalah.id);
+  });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20, kartu 9: jumlah saldo semua Member, aktif maupun nonaktif. Database dipakai
+// bersama test lain, jadi test ini memeriksa Member yang dihitung (bahan hitungnya) lewat email unik.
+describe("angkaTotalSaldoMember (PRD §9.2, §15.1)", () => {
+  it("menghitung saldo Member aktif dan Member nonaktif, tetapi tidak Admin", async () => {
+    const aktif = await memberBaru("saldo-aktif");
+    const nonaktif = await memberBaru("saldo-nonaktif");
+    const admin = `admin-${randomUUID()}@example.test`;
+    for (const [{ id }, nominal] of [
+      [aktif, "30000"],
+      [nonaktif, "20000"],
+    ] as const) {
+      expect(
+        (
+          await ubahSaldoOlehAdmin({
+            idMember: id,
+            aksi: "tambah",
+            nominal,
+            keterangan: "Saldo uji",
+          })
+        ).hasil,
+      ).toBe("diubah");
+    }
+    await ubahStatusMember({ idMember: nonaktif.id, nonaktif: true });
+    await buatAdmin({ email: admin, password: "sandi-uji-admin-123" });
+
+    const total = await angkaTotalSaldoMember();
+
+    expect(total.dihitung).toContainEqual({ email: aktif.email, saldo: 30000 });
+    expect(total.dihitung).toContainEqual({
+      email: nonaktif.email,
+      saldo: 20000,
+    });
+    expect(total.dihitung.map((m) => m.email)).not.toContain(admin);
+    expect(total.total).toBeGreaterThanOrEqual(50000);
+  });
+});
+
+// PRD §9.2 ▶ Keputusan 2026-11-20, kartu 10: jumlah Top up Bermasalah saat ini (§15.4).
+describe("jumlahTopUpBermasalah (PRD §9.2, §15.4)", () => {
+  it("menghitung Top up yang berstatus Bermasalah saat ini", async () => {
+    const { id: userId } = await memberBaru("top-up-bermasalah");
+    const bermasalah = await sisipkanTopUp({
+      userId,
+      status: "Bermasalah",
+      biayaTransaksi: 0,
+      waktuBayar: new Date(),
+    });
+    const berhasil = await sisipkanTopUp({
+      userId,
+      status: "Berhasil",
+      biayaTransaksi: 0,
+      waktuBayar: new Date(),
+    });
+
+    const hasil = await jumlahTopUpBermasalah();
+
+    const dihitung = hasil.dihitung.map((t) => t.id);
+    expect(dihitung).toContain(bermasalah.id);
+    expect(dihitung).not.toContain(berhasil.id);
+    expect(hasil.jumlah).toBe(hasil.dihitung.length);
   });
 });
 
