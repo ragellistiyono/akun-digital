@@ -162,7 +162,10 @@ function KartuTigaAngka({
   );
 }
 
-/** Kartu dengan satu angka, beserta keterangan asal angkanya. Angkanya jumlah, atau nominal rupiah yang sudah ditulis. */
+/**
+ * Kartu dengan satu angka, beserta keterangan asal angkanya. Angkanya jumlah, atau nominal rupiah yang sudah
+ * ditulis.
+ */
 function KartuSatuAngka({
   id,
   judul,

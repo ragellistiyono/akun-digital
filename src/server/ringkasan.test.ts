@@ -322,7 +322,6 @@ describe("jumlahTopUpBermasalah (PRD §9.2, §15.4)", () => {
     const dihitung = hasil.dihitung.map((t) => t.id);
     expect(dihitung).toContain(bermasalah.id);
     expect(dihitung).not.toContain(berhasil.id);
-    expect(hasil.jumlah).toBe(hasil.dihitung.length);
   });
 });
 

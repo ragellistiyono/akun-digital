@@ -21,7 +21,7 @@ import {
 import type { Metode } from "@/domain/bayar-saldo";
 import { labaKotor } from "@/domain/harga-modal";
 import { kelompokPeriodeLaporan } from "@/domain/kelompok-periode-laporan";
-import { laba, type SaringanMetode } from "@/domain/laba";
+import { laba, pesananMenurutMetode, type SaringanMetode } from "@/domain/laba";
 import { pesananSelesaiDibayar } from "@/domain/pendapatan";
 import { pendapatanPerKategori } from "@/domain/pendapatan-per-kategori";
 import { produkTerlaris } from "@/domain/produk-terlaris";
@@ -173,7 +173,8 @@ export async function rincianLaporan(saringan: SaringanLaporan) {
  * Kelompok tanpa Pesanan Selesai bernilai 0.
  *
  * Grafik Produk terlaris dan Pendapatan per Kategori (grafik 4 dan 5) dihitung dari semua Pesanan Selesai dalam
- * saringan itu, termasuk yang belum punya Harga modal, oleh fungsi domain produkTerlaris dan pendapatanPerKategori.
+ * saringan itu, termasuk saringan Metode (fungsi domain pesananMenurutMetode) dan termasuk yang belum punya Harga
+ * modal, oleh fungsi domain produkTerlaris dan pendapatanPerKategori.
  */
 export async function grafikLaporan(
   saringan: SaringanLaporan & { periode: PeriodeLaporan },
@@ -181,7 +182,7 @@ export async function grafikLaporan(
   const bahan = await bahanLaporan(saringan);
   const selesai = pesananSelesaiDibayar({
     rentang: bahan.rentang,
-    pesanan: bahan.pesanan,
+    pesanan: pesananMenurutMetode(bahan),
   });
   const { kelompok } = kelompokPeriodeLaporan({
     periode: saringan.periode,
@@ -238,8 +239,9 @@ function cocokPencarian(cari: string) {
 /**
  * Satu halaman tabel Pesanan Selesai Laporan keuangan (PRD §14.8): Pesanan Selesai yang dibayar dalam saringan
  * itu, termasuk saringan Metode, beserta Metode-nya (§14.6 ▶ Keputusan 2026-11-20), yang terbaru dibayar di atas, 50
- * per halaman, beserta jumlah semua Pesanan yang cocok dan jumlah halamannya. `cari` hanya menyaring tabel ini. Laba kotor setiap Pesanan dihitung domain, dan null bila Pesanan
- * itu belum punya Harga modal. Tabel tanpa Pesanan tetap punya satu halaman.
+ * per halaman, beserta jumlah semua Pesanan yang cocok dan jumlah halamannya. `cari` hanya menyaring tabel ini.
+ * Laba kotor setiap Pesanan dihitung domain, dan null bila Pesanan itu belum punya Harga modal. Tabel tanpa Pesanan
+ * tetap punya satu halaman.
  */
 export async function tabelPesananLaporan(
   saringan: SaringanLaporan & { cari?: string; halaman?: number },

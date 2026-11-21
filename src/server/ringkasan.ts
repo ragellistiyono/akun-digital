@@ -1,5 +1,5 @@
-// Kartu angka di Ringkasan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20, §9.3, §14.2, §14.5, §15.8). Aturannya ada
-// di src/domain/laba.ts, src/domain/rentang-waktu-toko.ts, src/domain/member-aktif.ts, dan
+// Kartu angka di Ringkasan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20, §9.3, §14.2, §14.5, §15.8). Aturannya
+// ada di src/domain/laba.ts, src/domain/rentang-waktu-toko.ts, src/domain/member-aktif.ts, dan
 // src/domain/jumlah-item-stok.ts.
 import { count, eq, isNotNull } from "drizzle-orm";
 

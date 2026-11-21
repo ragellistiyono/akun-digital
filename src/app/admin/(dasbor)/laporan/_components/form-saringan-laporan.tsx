@@ -21,9 +21,10 @@ const KELAS_LABEL = "text-[17px] leading-tight";
 
 /**
  * Form saringan rentang tanggal, Kategori, Produk, dan Metode Laporan keuangan (PRD §14.6), dikirim sebagai GET ke
- * alamat Laporan keuangan. Metode bisa Semua (awal), QRIS, atau Saldo (§14.6 ▶ Keputusan 2026-11-20). Memilih Kategori langsung membatasi pilihan Produk ke Kategori itu, dan Produk yang tidak ada
- * di Kategori itu dilepas. Produk boleh dipilih tanpa Kategori, dan Produk nonaktif ikut tampil dengan tanda
- * "(nonaktif)". Periode dan kata cari ikut dikirim apa adanya.
+ * alamat Laporan keuangan. Metode bisa Semua (awal), QRIS, atau Saldo (§14.6 ▶ Keputusan 2026-11-20). Memilih
+ * Kategori langsung membatasi pilihan Produk ke Kategori itu, dan Produk yang tidak ada di Kategori itu dilepas.
+ * Produk boleh dipilih tanpa Kategori, dan Produk nonaktif ikut tampil dengan tanda "(nonaktif)". Periode dan kata
+ * cari ikut dikirim apa adanya.
  *
  * Susunan: di ponsel setiap isian sebaris penuh, mulai 640 px dua kolom, dan mulai 1200 px kelima isian sebaris
  * bersama tombolnya. Varian `min-[…px]` dipakai, bukan `sm:`, supaya urutannya di CSS tetap menaik bersama

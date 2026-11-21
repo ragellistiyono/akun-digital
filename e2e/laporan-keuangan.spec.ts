@@ -16,7 +16,8 @@ import { sisipkanPesanan } from "../src/server/uji-pesanan";
 import { sisipkanTopUp } from "../src/server/uji-top-up";
 import { tanggalIsianWib, tanggalWib } from "../src/server/zona-waktu-toko";
 
-// Laporan keuangan (T71, T72, T73, T81, PRD §11.1, §14.5, §14.6, §14.7, §14.8, §15.8, UAT-N6, UAT-N7, UAT-N8, UAT-O9).
+// Laporan keuangan (T71, T72, T73, T81, PRD §11.1, §14.5, §14.6, §14.7, §14.8, §15.8, UAT-N6, UAT-N7, UAT-N8,
+// UAT-O9).
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 const PASSWORD = "sandi-uji-admin-123";
 const ALAMAT = "/admin/laporan";
@@ -632,4 +633,14 @@ test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan
     qris.nomorPesanan,
   ]);
   expect(await metodeTabel(page)).toEqual(["Saldo", "QRIS"]);
+
+  // Grafik 4 dan 5 juga mengikuti saringan Metode: dengan Metode Saldo hanya Pesanan saldo Rp 50.000 yang dihitung.
+  await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}&metode=Saldo`);
+  const terlarisSaldo = grafik(page, "Produk terlaris")
+    .getByRole("list", { name: "Grafik Produk terlaris" })
+    .getByRole("button");
+  await expect(terlarisSaldo).toHaveCount(1);
+  await expect(terlarisSaldo).toHaveAccessibleName(
+    `${katalog.namaProduk} · 1 Pesanan · Rp 50.000`,
+  );
 });

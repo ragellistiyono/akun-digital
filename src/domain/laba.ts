@@ -36,6 +36,23 @@ type TopUpLaba = {
 /** Saringan Metode Laporan keuangan (PRD §14.6 ▶ Keputusan 2026-11-20): Semua, QRIS, atau Saldo. */
 export type SaringanMetode = Metode | "Semua";
 
+/**
+ * Pesanan yang cocok dengan saringan Metode, dengan urutan input (PRD §14.6 ▶ Keputusan 2026-11-20): "Semua" memuat
+ * Pesanan QRIS dan Saldo, sedangkan QRIS atau Saldo hanya memuat Pesanan bermetode itu. Saringan ini membatasi
+ * rincian angka dan semua grafik Laporan keuangan.
+ */
+export function pesananMenurutMetode<P extends { metode: Metode }>({
+  metode,
+  pesanan,
+}: {
+  metode: SaringanMetode;
+  pesanan: readonly P[];
+}): readonly P[] {
+  return metode === "Semua"
+    ? pesanan
+    : pesanan.filter((p) => p.metode === metode);
+}
+
 const jumlahkan = <T>(daftar: readonly T[], nilai: (t: T) => number) =>
   daftar.reduce((jumlah, t) => jumlah + nilai(t), 0);
 
@@ -79,8 +96,7 @@ export function laba<
   biayaOperasional: readonly B[];
   topUp: readonly T[];
 }) {
-  const pesananMetode =
-    metode === "Semua" ? pesanan : pesanan.filter((p) => p.metode === metode);
+  const pesananMetode = pesananMenurutMetode({ metode, pesanan });
   const selesai = pendapatan({ rentang, pesanan: pesananMetode });
   const dihitung = selesai.dihitung.filter(
     (p): p is P & { hargaModal: number } => p.hargaModal !== null,

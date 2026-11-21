@@ -587,9 +587,9 @@ function IsiTabel({
   );
 }
 
-// Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, Metode, dan periode, rincian
-// angka sampai Laba bersih, lima grafik (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan periode Harian
-// dan rentang awalnya, dan dibuka dari menu samping serta kartu uang Ringkasan (PRD §11.1, §9.2).
+// Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, Metode, dan periode,
+// rincian angka sampai Laba bersih, lima grafik (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan periode
+// Harian dan rentang awalnya, dan dibuka dari menu samping serta kartu uang Ringkasan (PRD §11.1, §9.2).
 export default async function HalamanLaporanKeuangan({
   searchParams,
 }: PageProps<"/admin/laporan">) {

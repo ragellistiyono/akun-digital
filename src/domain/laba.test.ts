@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import golden from "../../tests/golden/laba.json";
 import goldenTopUp from "../../tests/golden/laba-top-up.json";
 import type { Metode } from "./bayar-saldo";
-import { laba } from "./laba";
+import { laba, pesananMenurutMetode } from "./laba";
 import type { StatusPesanan } from "./status-pesanan";
 import type { StatusTopUp } from "./status-top-up";
 
@@ -141,5 +141,35 @@ describe("laba dengan Pesanan saldo dan Top up", () => {
     expect(hasil.topUpDihitung.map((t) => t.totalBayar)).toEqual([
       150200, 120005,
     ]);
+  });
+});
+
+// PRD §14.6 ▶ Keputusan 2026-11-20: saringan Metode membatasi Pesanan di rincian angka, grafik, dan tabel.
+describe("pesananMenurutMetode", () => {
+  const kasus = goldenTopUp.kasus.find(
+    (k) => k.nama === "Saringan Metode Saldo",
+  );
+  if (!kasus) throw new Error("Kasus golden tidak ditemukan.");
+  const { pesanan } = inputInstanTopUp(kasus.input);
+
+  it("Saldo hanya memuat Pesanan saldo, dan QRIS hanya memuat Pesanan QRIS", () => {
+    expect(
+      pesananMenurutMetode({ metode: "Saldo", pesanan }).map(
+        (p) => p.totalBayar,
+      ),
+    ).toEqual([50000]);
+    expect(
+      pesananMenurutMetode({ metode: "QRIS", pesanan }).map(
+        (p) => p.totalBayar,
+      ),
+    ).toEqual([45123, 50010, 135499]);
+  });
+
+  it("Semua memuat Pesanan QRIS dan Saldo", () => {
+    expect(
+      pesananMenurutMetode({ metode: "Semua", pesanan }).map(
+        (p) => p.totalBayar,
+      ),
+    ).toEqual([45123, 50010, 135499, 50000]);
   });
 });

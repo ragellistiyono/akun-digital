@@ -621,6 +621,44 @@ describe("grafikLaporan (PRD §14.6, §14.7)", () => {
     expect(qris.kelompok.map((k) => k.labaBersih)).toEqual([59683, 0, 0]);
   });
 
+  it("saringan Metode Saldo dan QRIS membatasi Produk terlaris dan Pendapatan per Kategori ke Pesanan bermetode itu", async () => {
+    const kategoriId = await sisipkanKategori({
+      nama: `Metode grafik ${randomUUID().slice(0, 8)}`,
+    });
+    const viaQris = await produkUji({ nama: "Lewat QRIS", kategoriId });
+    const viaSaldo = await produkUji({ nama: "Lewat saldo", kategoriId });
+    // Rincian contoh PRD §5.5 dari sisipkanPesanan: Total bayar Rp 45.123.
+    await sisipkanPesanan({
+      varianId: viaQris.varianId,
+      status: "Selesai",
+      biayaTransaksi: 0,
+      waktuBayar: new Date("2033-06-06T09:00:00+07:00"),
+    });
+    await pesananSaldoContohPrd(viaSaldo.varianId, "2033-06-06T10:00:00+07:00");
+    const saringan = {
+      periode: "Harian" as const,
+      dari: "2033-06-06",
+      sampai: "2033-06-06",
+      kategoriId,
+    };
+
+    const saldo = await grafikLaporan({ ...saringan, metode: "Saldo" });
+    const qris = await grafikLaporan({ ...saringan, metode: "QRIS" });
+
+    expect(saldo.produkTerlaris.map((p) => [p.produkId, p.pendapatan])).toEqual(
+      [[viaSaldo.produkId, 50000]],
+    );
+    expect(
+      saldo.pendapatanPerKategori.map((k) => [k.kategoriId, k.pendapatan]),
+    ).toEqual([[kategoriId, 50000]]);
+    expect(qris.produkTerlaris.map((p) => [p.produkId, p.pendapatan])).toEqual([
+      [viaQris.produkId, 45123],
+    ]);
+    expect(
+      qris.pendapatanPerKategori.map((k) => [k.kategoriId, k.pendapatan]),
+    ).toEqual([[kategoriId, 45123]]);
+  });
+
   it("Laba negatif tetap negatif di kelompoknya", async () => {
     const { produkId, varianId } = await produkUji();
     // Contoh tests/golden/laba.json: Harga modal Rp 60.000 di atas Harga jual Rp 50.000.
