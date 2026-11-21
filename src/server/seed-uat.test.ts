@@ -471,13 +471,16 @@ describe("pnpm db:seed di database kosong", () => {
     expect(total).toBe(150000);
   });
 
-  // Issue T76 (docs/UAT.md ▶ Keputusan 2026-11-20, Persiapan M5): Saldo member@miwe.example Rp 100.000 dengan satu
-  // baris "Ditambah Admin" berketerangan "Saldo awal seed", dan Saldo nonaktif@miwe.example Rp 20.000 [CONTOH].
-  it('Saldo member@miwe.example Rp 100.000 dengan baris Riwayat saldo "Saldo awal seed", dan Saldo nonaktif@miwe.example Rp 20.000', async () => {
+  // Issue T76 (docs/UAT.md ▶ Keputusan 2026-11-20, Persiapan M5) dan issue T78-b (▶ Keputusan 2026-11-21, issue 240)
+  // [CONTOH]: Saldo member@miwe.example Rp 200.000, yaitu baris Top up +Rp 100.000 dengan Nomor Top up Berhasil seed
+  // di atas baris "Ditambah Admin" +Rp 100.000 berketerangan "Saldo awal seed", dan Saldo nonaktif@miwe.example
+  // Rp 20.000.
+  it('Saldo member@miwe.example Rp 200.000 dengan baris Top up seed di atas baris "Saldo awal seed", dan Saldo nonaktif@miwe.example Rp 20.000', async () => {
     const { eq } = await import("drizzle-orm");
     const { db } = await import("./db");
     const { user } = await import("./db/schema");
     const { riwayatSaldoMember } = await import("./saldo");
+    const { daftarTopUp } = await import("./top-up-admin");
     const saldoDan = async (email: string) => {
       const [{ id, saldo }] = await db
         .select({ id: user.id, saldo: user.saldo })
@@ -494,10 +497,19 @@ describe("pnpm db:seed di database kosong", () => {
         })),
       };
     };
+    const {
+      topUp: [berhasil],
+    } = await daftarTopUp({ status: "Berhasil", cari: "member@miwe.example" });
 
     expect(await saldoDan("member@miwe.example")).toEqual({
-      saldo: 100000,
+      saldo: 200000,
       riwayat: [
+        {
+          jenis: "Top up",
+          nominal: 100000,
+          saldoSesudah: 200000,
+          rujukan: berhasil.nomorTopUp,
+        },
         {
           jenis: "Ditambah Admin",
           nominal: 100000,
@@ -511,7 +523,7 @@ describe("pnpm db:seed di database kosong", () => {
 
   // Issue T79 (docs/UAT.md ▶ Keputusan 2026-11-20, Persiapan M5) [CONTOH]: satu Top up Berhasil milik
   // member@miwe.example (Rp 100.000, Kode unik Rp 77, Total bayar Rp 100.077) dan satu Top up Bermasalah (Rp 50.000,
-  // Total bayar Rp 50.123, nominal diterima Rp 50.000). Saldo seed tetap seperti Persiapan M5 di atas.
+  // Total bayar Rp 50.123, nominal diterima Rp 50.000).
   it("member@miwe.example punya satu Top up Berhasil Rp 100.000 dan satu Top up Bermasalah Rp 50.000 yang terlihat di menu Top up", async () => {
     const { daftarTopUp, bacaDetailTopUp } = await import("./top-up-admin");
 
@@ -573,7 +585,7 @@ describe("pnpm db:seed di database kosong", () => {
       pengaturan_toko: 1,
       voucher: 6,
       biaya_operasional: 1,
-      riwayat_saldo: 2,
+      riwayat_saldo: 3,
       top_up: 2,
       riwayat_status_top_up: 4,
       berkas: 8,
@@ -599,8 +611,8 @@ describe("pnpm db:seed di database kosong", () => {
     });
     const detail = await bacaDetailTopUp(bermasalah.nomorTopUp);
     if (!detail) throw new Error("Top up Bermasalah seed tidak ditemukan.");
-    // Saldo seed member@miwe.example Rp 100.000 (Persiapan M5).
-    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(100000);
+    // Saldo seed member@miwe.example Rp 200.000 (Persiapan M5, ▶ Keputusan 2026-11-21).
+    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(200000);
 
     expect(
       await selesaikanTopUpBermasalah({
@@ -612,7 +624,7 @@ describe("pnpm db:seed di database kosong", () => {
     expect((await bacaDetailTopUp(bermasalah.nomorTopUp))?.status).toBe(
       "Berhasil",
     );
-    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(150000);
+    expect((await bacaSaldoMember(detail.member.id))?.saldo).toBe(250000);
     const { baris } = await riwayatSaldoMember({
       idMember: detail.member.id,
       halaman: 1,

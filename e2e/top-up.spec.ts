@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 // jadi setiap test memakai Member dengan email unik.
 import { db } from "../src/server/db";
 import { riwayatSaldo, topUp, user } from "../src/server/db/schema";
+import { prosesKabarPembayaranTopUp } from "../src/server/kabar-pembayaran-top-up";
 import { buatTopUp } from "../src/server/top-up";
 import { sisipkanMember } from "../src/server/uji-member";
 
@@ -44,6 +45,8 @@ const formTopUp = (page: Page) =>
   isi(page).getByRole("form", { name: "Top up" });
 const rincian = (page: Page) =>
   isi(page).getByRole("region", { name: "Rincian pembayaran" });
+/** Pesan sekali tampil di Riwayat saldo (PRD §15.3). */
+const pesanStatus = (page: Page) => isi(page).getByRole("status");
 
 /** Top up itu langsung dari database. */
 async function bacaTopUp(nomorTopUp: string) {
@@ -286,10 +289,8 @@ test("Top up Rp 10.000 yang dibayar lewat Qrispy tiruan menambah saldo tepat Rp 
 
   // Status QRIS ditanyakan ke Qrispy paling sering sekali per 15 detik, dan sekali sudah ditanyakan saat halaman
   // dibuka (ADR-0004), jadi pembayarannya terbaca paling lambat sekitar 15 detik kemudian.
-  await expect(page).toHaveURL(`/akun/riwayat-saldo?top-up=${nomorTopUp}`, {
-    timeout: 25_000,
-  });
-  await expect(isi(page).getByRole("status")).toHaveText(
+  await expect(page).toHaveURL("/akun/riwayat-saldo", { timeout: 25_000 });
+  await expect(pesanStatus(page)).toHaveText(
     "Top up Rp 10.000 berhasil. Saldo sekarang Rp 10.000.",
   );
   await expect(isi(page)).toContainText(nomorTopUp);
@@ -300,10 +301,121 @@ test("Top up Rp 10.000 yang dibayar lewat Qrispy tiruan menambah saldo tepat Rp 
   });
   expect((await bacaTopUp(nomorTopUp)).status).toBe("Berhasil");
 
-  // Halaman bayar Top up yang dibuka lagi juga membawa Member ke Riwayat saldo, tanpa menambah saldo lagi.
+  // PRD §15.3 ▶ Keputusan 2026-11-21 (#240): pesan itu hanya muncul sekali. Riwayat saldo yang dimuat ulang atau
+  // dibuka lagi tidak menampilkannya.
+  await page.reload();
+  await expect(isi(page)).toContainText(nomorTopUp);
+  await expect(pesanStatus(page)).toHaveCount(0);
+  await page.goto("/akun");
+  await page.goto("/akun/riwayat-saldo");
+  await expect(isi(page)).toContainText(nomorTopUp);
+  await expect(pesanStatus(page)).toHaveCount(0);
+
+  // Halaman bayar Top up yang dibuka lagi membawa Member ke Riwayat saldo tanpa pesan itu, dan tanpa menambah saldo
+  // lagi.
   await page.goto(`${ALAMAT_TOP_UP}/${nomorTopUp}`);
-  await expect(page).toHaveURL(`/akun/riwayat-saldo?top-up=${nomorTopUp}`);
+  await expect(page).toHaveURL("/akun/riwayat-saldo");
+  await expect(isi(page)).toContainText(nomorTopUp);
+  await expect(pesanStatus(page)).toHaveCount(0);
   expect((await saldoDanRiwayat(id)).saldo).toBe(10000);
+});
+
+/** Pesan penjelas PRD §15.3 ▶ Keputusan 2026-11-21 (#240) setelah "Batalkan" untuk Top up yang sudah dibayar. */
+const PESAN_SUDAH_DIBAYAR =
+  "Pembayaran Anda sudah masuk, jadi Top up tidak dibatalkan.";
+
+/**
+ * Login sebagai Member baru, lalu membuat Top up Rp 10.000 sampai Halaman bayar Top up terbuka. Halaman itu tidak
+ * menanyakan statusnya ke server toko, supaya pembayaran yang dicatat test hanya terbaca lewat "Batalkan".
+ */
+async function bukaHalamanBayarTopUp(page: Page) {
+  const member = await memberBaru();
+  await page.route("**/akun/top-up/*/status", (rute) => rute.abort());
+  await page.goto("/masuk");
+  await isiLogin(page, member.email);
+  await expect(page).toHaveURL("/riwayat");
+  await page.goto(ALAMAT_TOP_UP);
+  await formTopUp(page).getByLabel("Nominal top up").fill("10000");
+  await formTopUp(page)
+    .getByRole("button", { name: "Bayar dengan QRIS" })
+    .click();
+  await expect(page).toHaveURL(/\/akun\/top-up\/TOPUP-[A-Z2-9]{6}$/);
+  const nomorTopUp = page.url().split("/").at(-1) ?? "";
+  return { ...member, nomorTopUp, ...(await bacaTopUp(nomorTopUp)) };
+}
+
+// PRD §15.3 ▶ Keputusan 2026-11-21 (#240) (issue T78-b).
+test("Batalkan yang ditolak Qrispy tiruan karena Top up sudah dibayar dengan nominal cukup membawa Member ke Riwayat saldo dengan pesan penjelas tanpa pesan berhasil, sekali saja, dan Top up Berhasil", async ({
+  page,
+  request,
+}) => {
+  const dibuka = await bukaHalamanBayarTopUp(page);
+  const respons = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId: dibuka.qrisId, amount: dibuka.totalBayar },
+  });
+  expect(respons.status()).toBe(200);
+
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+
+  await expect(page).toHaveURL("/akun/riwayat-saldo");
+  await expect(pesanStatus(page)).toHaveText(PESAN_SUDAH_DIBAYAR);
+  await expect(isi(page)).not.toContainText("berhasil. Saldo sekarang");
+  await expect(isi(page)).toContainText(dibuka.nomorTopUp);
+  expect((await bacaTopUp(dibuka.nomorTopUp)).status).toBe("Berhasil");
+  expect((await saldoDanRiwayat(dibuka.id)).saldo).toBe(10000);
+
+  await page.reload();
+  await expect(isi(page)).toContainText(dibuka.nomorTopUp);
+  await expect(pesanStatus(page)).toHaveCount(0);
+});
+
+// PRD §15.3 ▶ Keputusan 2026-11-21 (#240) (issue T78-b).
+test("Batalkan yang ditolak Qrispy tiruan karena Top up sudah dibayar dengan nominal kurang membawa Member ke Halaman Top up Bermasalah tanpa pesan penjelas", async ({
+  page,
+  request,
+}) => {
+  const dibuka = await bukaHalamanBayarTopUp(page);
+  const respons = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId: dibuka.qrisId, amount: 10000 },
+  });
+  expect(respons.status()).toBe(200);
+
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Top up" }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(`${ALAMAT_TOP_UP}/${dibuka.nomorTopUp}`);
+  await expect(isi(page)).toContainText(
+    "Pembayaran Anda sudah kami terima, tetapi saldo belum bertambah. Hubungi kami lewat WhatsApp.",
+  );
+  await expect(isi(page)).not.toContainText(PESAN_SUDAH_DIBAYAR);
+  expect((await bacaTopUp(dibuka.nomorTopUp)).status).toBe("Bermasalah");
+  expect((await saldoDanRiwayat(dibuka.id)).saldo).toBe(0);
+});
+
+// PRD §15.3 ▶ Keputusan 2026-11-21 (#240) (issue T78-b): pembayarannya tercatat sebelum "Batalkan" diproses.
+test("Batalkan untuk Top up yang sudah Berhasil menampilkan pesan penjelas yang sama, dan Top up tidak dibatalkan", async ({
+  page,
+}) => {
+  const dibuka = await bukaHalamanBayarTopUp(page);
+  expect(
+    await prosesKabarPembayaranTopUp({
+      qrisId: dibuka.qrisId,
+      nominalDiterima: dibuka.totalBayar,
+      waktuBayar: new Date(),
+    }),
+  ).toEqual({ hasil: "diproses" });
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Pembayaran" }),
+  ).toBeVisible();
+
+  await isi(page).getByRole("button", { name: "Batalkan" }).click();
+
+  await expect(page).toHaveURL("/akun/riwayat-saldo");
+  await expect(pesanStatus(page)).toHaveText(PESAN_SUDAH_DIBAYAR);
+  expect((await bacaTopUp(dibuka.nomorTopUp)).status).toBe("Berhasil");
+  expect((await saldoDanRiwayat(dibuka.id)).saldo).toBe(10000);
 });
 
 // PRD §15.4, §15.5 butir 2, dan pola Halaman Pesanan Bermasalah (§6.2) (issue T78).

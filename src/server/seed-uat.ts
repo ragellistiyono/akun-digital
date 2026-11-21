@@ -49,6 +49,7 @@ import { db } from "./db";
 import {
   itemStok,
   pesanan,
+  riwayatSaldo,
   riwayatStatusPesanan,
   riwayatStatusTopUp,
   topUp,
@@ -1022,8 +1023,11 @@ const PELAKU_MEMBER = "Member";
  * sungguhan: Menunggu Pembayaran oleh Member saat dibuat, lalu status akhirnya oleh kabar pembayaran Qrispy dua menit
  * kemudian, beserta waktu bayar, nominal diterima, dan Biaya transaksi dari Pengaturan toko saat itu (PRD §15.5).
  *
- * Top up seed hanya catatan di menu Top up dasbor admin: saldo dan Riwayat saldo Member tidak diubah, supaya saldo
- * seed tetap seperti persiapan M5, yaitu Rp 100.000 dengan satu baris "Saldo awal seed".
+ * Top up Berhasil seed juga menambah saldo Member sebesar Nominal top up-nya, dengan satu baris Riwayat saldo jenis
+ * Top up yang merujuk Nomor Top up-nya, seperti Top up Berhasil sungguhan (PRD §15.2; docs/UAT.md Persiapan M5
+ * ▶ Keputusan 2026-11-21, issue 240). Saldo awal seed sudah tercatat lebih dulu, jadi baris itu tampil di atas baris
+ * "Saldo awal seed", dan waktunya waktu seed dijalankan supaya baris terbaru tetap di atas. Top up Bermasalah seed tidak
+ * mengubah saldo. [CONTOH]
  */
 async function isiTopUp(sekarang: number, ringkasan: RingkasanSeed) {
   const email = MEMBER_SEED.aktif.email;
@@ -1047,11 +1051,12 @@ async function isiTopUp(sekarang: number, ringkasan: RingkasanSeed) {
       totalBayar,
       ...(await bacaPengaturanBiayaTransaksi()),
     });
+    const nomor = nomorTopUp(randomBytes(6));
     await db.transaction(async (tx) => {
       const [{ id }] = await tx
         .insert(topUp)
         .values({
-          nomorTopUp: nomorTopUp(randomBytes(6)),
+          nomorTopUp: nomor,
           userId: member.id,
           nominalTopUp: t.nominalTopUp,
           kodeUnik: t.kodeUnik,
@@ -1079,6 +1084,25 @@ async function isiTopUp(sekarang: number, ringkasan: RingkasanSeed) {
           pelaku: PELAKU_KABAR_PEMBAYARAN,
         },
       ]);
+      if (t.status !== "Berhasil") return;
+      const [{ saldo }] = await tx
+        .select({ saldo: user.saldo })
+        .from(user)
+        .where(eq(user.id, member.id))
+        .for("update");
+      const saldoSesudah = saldo + t.nominalTopUp;
+      await tx
+        .update(user)
+        .set({ saldo: saldoSesudah })
+        .where(eq(user.id, member.id));
+      await tx.insert(riwayatSaldo).values({
+        userId: member.id,
+        waktu: new Date(),
+        jenis: "Top up",
+        nominal: t.nominalTopUp,
+        saldoSesudah,
+        rujukan: nomor,
+      });
     });
     ringkasan.topUp++;
   }
