@@ -14,13 +14,24 @@ import {
 
 import { auth } from "@/server/auth/auth";
 import { db, koneksi } from "@/server/db";
-import { pesanan, user, varian, voucher } from "@/server/db/schema";
+import {
+  itemStok,
+  pesanan,
+  riwayatSaldo,
+  riwayatStatusPesanan,
+  user,
+  varian,
+  voucher,
+} from "@/server/db/schema";
+import { pekerjaanEmailPesananSelesai } from "@/server/pekerjaan-latar";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { qrispyTiruan } from "@/server/qrispy-tiruan";
+import { ubahSaldoOlehAdmin } from "@/server/saldo";
 import { ubahStatusMember } from "@/server/status-member";
 import { buatVoucher, type SyaratVoucher } from "@/server/voucher";
 import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
+import { checkoutTertahan } from "@/server/uji-pesanan";
 
 import { aksiCheckout, aksiPakaiVoucher } from "./aksi";
 
@@ -834,6 +845,8 @@ describe("checkout dengan kode voucher (PRD §8)", () => {
         hargaJual: 50000,
         potonganVoucher: 5000,
         perkiraanBayar: 45000,
+        // Tamu tidak bisa membayar dengan saldo (PRD §15.7).
+        saldo: null,
       });
     });
 
@@ -960,5 +973,317 @@ describe("checkout dengan kode voucher (PRD §8)", () => {
         khususMember: false,
       });
     });
+  });
+});
+
+// Bayar dengan saldo (T80, PRD §5.2 ▶ Keputusan 2026-11-20, §5.7, §15.7, UAT-O6, UAT-O7). Produk dan Voucher-nya
+// meniru persiapan bersama docs/UAT.md [CONTOH]: Uji Bayar Rp 1.000, Netflix Premium 1 Bulan Rp 50.000, dan HEMAT10
+// (10% maksimal Rp 10.000, minimal Harga jual Rp 50.000), dengan kode unik per test.
+describe("bayar dengan saldo (PRD §15.7)", () => {
+  const PASSWORD_MEMBER = "sandi-uji-member-123";
+
+  /** Member terverifikasi baru yang sedang login dengan saldo itu. Setelah ini, aksi membaca sesi Member itu. */
+  async function memberLoginDenganSaldo(saldo: number) {
+    const email = `member-${randomUUID()}@example.test`;
+    await sisipkanMember({ email, password: PASSWORD_MEMBER });
+    const [{ id }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    if (saldo > 0) {
+      await ubahSaldoOlehAdmin({
+        idMember: id,
+        aksi: "tambah",
+        nominal: String(saldo),
+        keterangan: "Saldo awal test",
+      });
+    }
+    const { headers: kepalaRespons } = await auth.api.signInEmail({
+      body: { email, password: PASSWORD_MEMBER },
+      returnHeaders: true,
+    });
+    const cookie = kepalaRespons
+      .getSetCookie()
+      .map((baris) => baris.split(";")[0])
+      .join("; ");
+    vi.mocked(headers).mockResolvedValue(new Headers({ cookie }));
+    return { email, id };
+  }
+
+  async function saldoMember(id: string) {
+    const [{ saldo }] = await db
+      .select({ saldo: user.saldo })
+      .from(user)
+      .where(eq(user.id, id));
+    return saldo;
+  }
+
+  function barisRiwayatSaldo(id: string) {
+    return db
+      .select({
+        jenis: riwayatSaldo.jenis,
+        nominal: riwayatSaldo.nominal,
+        saldoSesudah: riwayatSaldo.saldoSesudah,
+        rujukan: riwayatSaldo.rujukan,
+      })
+      .from(riwayatSaldo)
+      .where(eq(riwayatSaldo.userId, id))
+      .orderBy(riwayatSaldo.id);
+  }
+
+  async function varianBaru(nama: string, hargaJual: number, Tersedia = 10) {
+    const produkId = await sisipkanProduk({
+      nama: `${nama} ${randomUUID().slice(0, 8)}`,
+      varian: [{ nama: "1 Bulan", hargaJual, Tersedia }],
+    });
+    const [{ id }] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, produkId));
+    return id;
+  }
+
+  async function hemat10() {
+    const kode = `HEMAT10${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+    await buatVoucher({
+      kode,
+      jenisPotongan: "persen",
+      nilai: 10,
+      batasMaksimum: 10000,
+      kuotaVoucher: null,
+      batasPerEmail: 1,
+      minimalHargaJual: 50000,
+      mulai: null,
+      berakhir: null,
+      cakupan: { jenis: "semua" },
+      khususMember: false,
+      aktif: true,
+    });
+    return kode;
+  }
+
+  it("Member dengan saldo cukup membeli Uji Bayar dengan saldo: Pesanan langsung Selesai tanpa QRIS, Item stok Terkirim, saldo berkurang Rp 1.000, dan Riwayat saldo mencatat Pembelian dengan Nomor Pesanan", async () => {
+    const varianId = await varianBaru("Uji Bayar", 1000);
+    const member = await memberLoginDenganSaldo(5000);
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+    const alamat = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email: member.email, metode: "Saldo" }),
+    ).then(
+      () => null,
+      (galat: unknown) => alamatPengalihan(galat),
+    );
+
+    expect(alamat).toMatch(/^\/pesanan\/[A-Za-z0-9_-]{43}$/);
+    expect(buatQris).not.toHaveBeenCalled();
+    const [dibuat] = await db
+      .select()
+      .from(pesanan)
+      .where(eq(pesanan.email, member.email));
+    expect(dibuat).toMatchObject({
+      metode: "Saldo",
+      status: "Selesai",
+      hargaJual: 1000,
+      potonganVoucher: 0,
+      kodeUnik: 0,
+      biayaTransaksi: 0,
+      totalBayar: 1000,
+      qrisId: null,
+      kedaluwarsaPada: null,
+      gambarQr: null,
+    });
+    expect(alamat).toBe(`/pesanan/${dibuat.tautan}`);
+    expect(dibuat.waktuBayar).toBeInstanceOf(Date);
+    expect(
+      await db
+        .select({
+          waktu: riwayatStatusPesanan.waktu,
+          status: riwayatStatusPesanan.status,
+          pelaku: riwayatStatusPesanan.pelaku,
+        })
+        .from(riwayatStatusPesanan)
+        .where(eq(riwayatStatusPesanan.pesananId, dibuat.id)),
+    ).toEqual([
+      {
+        waktu: dibuat.waktuBayar,
+        status: "Selesai",
+        pelaku: "Pembeli (saldo)",
+      },
+    ]);
+    expect(
+      await db
+        .select({ status: itemStok.status })
+        .from(itemStok)
+        .where(eq(itemStok.pesananId, dibuat.id)),
+    ).toEqual([{ status: "Terkirim" }]);
+    expect(await saldoMember(member.id)).toBe(4000);
+    expect(await barisRiwayatSaldo(member.id)).toEqual([
+      expect.objectContaining({ jenis: "Ditambah Admin" }),
+      {
+        jenis: "Pembelian",
+        nominal: -1000,
+        saldoSesudah: 4000,
+        rujukan: dibuat.nomorPesanan,
+      },
+    ]);
+    expect(await pekerjaanEmailPesananSelesai(dibuat.id)).toHaveLength(1);
+  });
+
+  // UAT-O7 langkah 3: saldo Rp 45.000 kurang Rp 5.000 untuk Netflix Premium 1 Bulan, tetapi cukup dengan HEMAT10.
+  it("saldo Rp 45.000 dengan HEMAT10 membeli Netflix Premium 1 Bulan, dan saldo menjadi Rp 0", async () => {
+    const varianId = await varianBaru("Netflix Premium", 50000);
+    const kode = await hemat10();
+    const member = await memberLoginDenganSaldo(45000);
+
+    const alamat = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId,
+        email: member.email,
+        kodeVoucher: kode,
+        metode: "Saldo",
+      }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    expect(alamat).toMatch(/^\/pesanan\//);
+    expect(
+      await db
+        .select({
+          potonganVoucher: pesanan.potonganVoucher,
+          totalBayar: pesanan.totalBayar,
+          kodeVoucher: pesanan.kodeVoucher,
+        })
+        .from(pesanan)
+        .where(eq(pesanan.email, member.email)),
+    ).toEqual([
+      { potonganVoucher: 5000, totalBayar: 45000, kodeVoucher: kode },
+    ]);
+    expect(await saldoMember(member.id)).toBe(0);
+  });
+
+  // UAT-O7 langkah 4: batas Pesanan menunggu (PRD §5.4) berlaku juga untuk bayar dengan saldo.
+  it("Member yang masih punya Pesanan QRIS Menunggu Pembayaran diarahkan ke Pesanan itu saat membayar dengan saldo, dan saldo tidak berubah", async () => {
+    const member = await memberLoginDenganSaldo(100000);
+    const pertama = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await varianBaru("YouTube Premium", 35000),
+        email: member.email,
+        metode: "QRIS",
+      }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    const kedua = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await varianBaru("Netflix Premium", 50000),
+        email: member.email,
+        metode: "Saldo",
+      }),
+    ).catch((galat: unknown) => alamatPengalihan(galat));
+
+    expect(kedua).toBe(pertama);
+    expect(await saldoMember(member.id)).toBe(100000);
+    expect(await pesananDenganEmail(member.email)).toEqual([
+      { email: member.email, status: "Menunggu Pembayaran" },
+    ]);
+  });
+
+  // UAT-O7 langkah 2 dan 3: kecukupan saldo dihitung ulang setiap kali hasil "Pakai" mengubah potongan.
+  it("Pakai HEMAT10 dengan saldo Rp 45.000 untuk Netflix Premium 1 Bulan membuat saldo cukup untuk Rp 45.000", async () => {
+    const varianId = await varianBaru("Netflix Premium", 50000);
+    const kode = await hemat10();
+    await memberLoginDenganSaldo(45000);
+
+    const hasil = await aksiPakaiVoucher({ varianId, kode, email: "" });
+
+    expect(hasil).toMatchObject({
+      diterima: true,
+      potonganVoucher: 5000,
+      saldo: {
+        saldo: 45000,
+        harusDibayar: 45000,
+        saldoCukup: true,
+        kurang: 0,
+        pilihanAwal: "Saldo",
+      },
+    });
+  });
+
+  it("saldo yang dikurangi Admin sesaat sebelum membayar membuat Pesanan tidak dibuat, menampilkan pesan PRD, dan isian voucher tetap berisi", async () => {
+    const varianId = await varianBaru("Netflix Premium", 50000);
+    const kode = await hemat10();
+    const member = await memberLoginDenganSaldo(50000);
+    // Checkout dibuka dengan saldo Rp 50.000, lalu Admin mengurangi Rp 10.000 sebelum Member menekan bayar.
+    await ubahSaldoOlehAdmin({
+      idMember: member.id,
+      aksi: "kurangi",
+      nominal: "10000",
+      keterangan: "Pengembalian uang",
+    });
+    const kodeDiketik = kode.toLowerCase();
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId,
+        email: member.email,
+        kodeVoucher: kodeDiketik,
+        metode: "Saldo",
+      }),
+    );
+
+    expect(keadaan).toEqual({
+      email: member.email,
+      kodeVoucher: kodeDiketik,
+      galat: {
+        checkout:
+          "Saldo tidak cukup. Saldo Anda Rp 40.000, sedangkan yang harus dibayar Rp 45.000. Top up dulu atau bayar dengan QRIS.",
+      },
+    });
+    expect(await pesananDenganEmail(member.email)).toEqual([]);
+    expect(await saldoMember(member.id)).toBe(40000);
+  });
+
+  it("bila Item stok terakhir habis tepat saat Pesanan saldo dibuat, saldo tidak berubah dan Pesanan tidak dibuat", async () => {
+    const varianId = await varianBaru("Uji Bayar", 1000, 1);
+    const member = await memberLoginDenganSaldo(5000);
+    // Checkout lain sedang mengunci Item stok terakhir itu, jadi Stok Varian masih 1 saat pemeriksaan pertama.
+    const lain = checkoutTertahan(varianId);
+    await lain.sudahMenahan;
+
+    try {
+      const keadaan = await aksiCheckout(
+        keadaanAwal(),
+        formulir({ varianId, email: member.email, metode: "Saldo" }),
+      );
+      expect(keadaan.galat?.checkout).toBe(
+        "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
+      );
+    } finally {
+      lain.lanjutkan();
+      await lain.selesai;
+    }
+    expect(await pesananDenganEmail(member.email)).toEqual([]);
+    expect(await saldoMember(member.id)).toBe(5000);
+    expect(await barisRiwayatSaldo(member.id)).toHaveLength(1);
+  });
+
+  it("Tamu tidak bisa membayar dengan saldo", async () => {
+    const email = emailUnik();
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({
+        varianId: await varianBaru("Uji Bayar", 1000),
+        email,
+        metode: "Saldo",
+      }),
+    );
+
+    expect(keadaan.galat?.checkout).toBe(
+      "Bayar dengan saldo hanya untuk Member yang sedang login. Masuk dulu, atau bayar dengan QRIS.",
+    );
+    expect(await pesananDenganEmail(email)).toEqual([]);
   });
 });

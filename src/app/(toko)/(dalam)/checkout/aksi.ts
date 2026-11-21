@@ -4,11 +4,18 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { type BayarSaldo, METODE } from "@/domain/bayar-saldo";
 import { nominalTagihanQris } from "@/domain/total-bayar";
+import { rupiah } from "@/lib/rupiah";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
 import { nilaiVoucher } from "@/server/penilaian-voucher";
-import { buatPesanan, TautanPesanan } from "@/server/pesanan";
+import {
+  bacaBayarSaldo,
+  buatPesanan,
+  buatPesananSaldo,
+  TautanPesanan,
+} from "@/server/pesanan";
 import { jamWibDibulatkanKeAtas } from "@/server/zona-waktu-toko";
 
 export type KeadaanFormCheckout = {
@@ -54,6 +61,17 @@ const PESAN_STOK_HABIS =
 const PESAN_QRIS_GAGAL =
   "QRIS gagal dibuat, jadi Pesanan belum dibuat. Tekan Bayar dengan QRIS untuk mencoba lagi.";
 
+/** Pesan PRD §15.7 bila saldo ternyata kurang saat Pesanan dibuat. */
+const pesanSaldoKurang = (saldo: number, harusDibayar: number) =>
+  `Saldo tidak cukup. Saldo Anda ${rupiah(saldo)}, sedangkan yang harus dibayar ${rupiah(harusDibayar)}. Top up dulu atau bayar dengan QRIS.`;
+
+/** Pesan bila bayar dengan saldo dikirim tanpa sesi Member, misalnya karena sesinya berakhir saat Checkout terbuka. */
+const PESAN_SALDO_TANPA_MEMBER =
+  "Bayar dengan saldo hanya untuk Member yang sedang login. Masuk dulu, atau bayar dengan QRIS.";
+
+/** Metode yang dipilih di form. Isian yang tidak ada atau tidak dikenal berarti QRIS, satu-satunya pilihan Tamu. */
+const MetodeDipilih = z.enum(METODE).catch("QRIS");
+
 /** Pesan PRD §5.4 ▶ Keputusan 2026-11-11, tanpa tautan ke Pesanan itu dan tanpa tombol batal. */
 const pesanPesananMenunggu = (kedaluwarsaPada: Date) =>
   `Email ini masih punya Pesanan yang menunggu pembayaran sampai pukul ${jamWibDibulatkanKeAtas(kedaluwarsaPada)} WIB. Lanjutkan dari perangkat tempat Anda memesan, atau checkout lagi setelah waktu itu.`;
@@ -92,6 +110,11 @@ function tautanDiBrowser(isiCookie: string | undefined) {
  * Kode voucher yang diisi diperiksa saat Pesanan dibuat. Bila Voucher ditolak, Pesanan tidak dibuat, dan pesan
  * penolakannya tampil di isian kode voucher (PRD §8.7 ▶ Keputusan 2026-11-17). Isian kode selalu dikembalikan
  * apa adanya, supaya tetap berisi setelah checkout ditolak.
+ *
+ * Member yang memilih Metode Saldo membayar dengan saldonya (PRD §15.7): Pesanan langsung Selesai, lalu Pembeli
+ * diarahkan ke Tautan Pesanan, yang menampilkan Halaman Pesanan Selesai. Saldo yang ternyata kurang ditolak dengan
+ * pesan PRD §15.7. Hanya Member yang sedang login yang bisa membayar dengan saldo; kewenangan ini diperiksa di sini,
+ * bukan hanya dengan menyembunyikan pilihan Saldo dari Tamu.
  */
 export async function aksiCheckout(
   _sebelumnya: KeadaanFormCheckout,
@@ -122,13 +145,35 @@ export async function aksiCheckout(
     return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
   }
 
-  const hasil = await buatPesanan({
-    varianId: varianId.data,
-    email: masukanEmail.data,
-    tautanDiBrowser: tautanBrowserIni,
-    kodeVoucher,
-    member: sesiMember !== null,
-  });
+  const metode = MetodeDipilih.parse(formData.get("metode"));
+  if (metode === "Saldo" && !sesiMember) {
+    return { ...isian, galat: { checkout: PESAN_SALDO_TANPA_MEMBER } };
+  }
+
+  const hasil =
+    metode === "Saldo" && sesiMember
+      ? await buatPesananSaldo({
+          varianId: varianId.data,
+          idMember: sesiMember.user.id,
+          tautanDiBrowser: tautanBrowserIni,
+          kodeVoucher,
+        })
+      : await buatPesanan({
+          varianId: varianId.data,
+          email: masukanEmail.data,
+          tautanDiBrowser: tautanBrowserIni,
+          kodeVoucher,
+          member: sesiMember !== null,
+        });
+  if (hasil.hasil === "tidak-ada-member") {
+    return { ...isian, galat: { checkout: PESAN_SALDO_TANPA_MEMBER } };
+  }
+  if (hasil.hasil === "saldo-kurang") {
+    return {
+      ...isian,
+      galat: { checkout: pesanSaldoKurang(hasil.saldo, hasil.harusDibayar) },
+    };
+  }
   if (hasil.hasil === "tidak-dijual") {
     return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
   }
@@ -189,6 +234,11 @@ export type HasilPakaiVoucher =
       hargaJual: number;
       potonganVoucher: number;
       perkiraanBayar: number;
+      /**
+       * Bayar dengan saldo dengan potongan voucher yang baru (PRD §15.7), supaya kecukupan saldo dihitung ulang, atau
+       * null untuk Tamu.
+       */
+      saldo: BayarSaldo | null;
     }
   | { diterima: false; pesan: string; khususMember: boolean };
 
@@ -206,6 +256,8 @@ const MasukanPakaiVoucher = z.object({
  * - `email` adalah isi isian email saat "Pakai" ditekan. Bila masih kosong, Batas per email tidak diperiksa di
  *   sini, tetapi tetap diperiksa saat Pesanan dibuat.
  * - Hasil ini tidak menahan Voucher. Semua syarat diperiksa sekali lagi saat Pesanan dibuat (aksiCheckout).
+ * - Bila Member sedang login, Voucher yang diterima ikut membawa kecukupan saldonya dengan potongan yang baru
+ *   (PRD §15.7).
  */
 export async function aksiPakaiVoucher(
   masukan: unknown,
@@ -216,7 +268,10 @@ export async function aksiPakaiVoucher(
     return { diterima: false, pesan: PESAN_TIDAK_DIJUAL, khususMember: false };
   }
 
-  const hasil = await nilaiVoucher({ ...isian.data, kepala });
+  const [hasil, sesiMember] = await Promise.all([
+    nilaiVoucher({ ...isian.data, kepala }),
+    bacaSesiMember(kepala),
+  ]);
   if (hasil === null) {
     return { diterima: false, pesan: PESAN_TIDAK_DIJUAL, khususMember: false };
   }
@@ -234,5 +289,12 @@ export async function aksiPakaiVoucher(
     hargaJual: hasil.hargaJual,
     potonganVoucher: hasil.potonganVoucher,
     perkiraanBayar: nominal,
+    saldo:
+      sesiMember &&
+      (await bacaBayarSaldo({
+        idMember: sesiMember.user.id,
+        hargaJual: hasil.hargaJual,
+        potonganVoucher: hasil.potonganVoucher,
+      })),
   };
 }

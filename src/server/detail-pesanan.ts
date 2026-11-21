@@ -17,7 +17,8 @@ import { bacaItemStokTerkirim } from "./pesanan";
 
 /**
  * Detail Pesanan dengan Nomor Pesanan itu untuk dasbor admin (PRD §9.5): id, Nomor Pesanan, status, tanda
- * "Email gagal" (PRD §6.4), email, nama Produk dan Varian, rincian nominal yang dicatat di Pesanan
+ * "Email gagal" (PRD §6.4), email, Metode (QRIS atau Saldo, PRD §9.5 ▶ Keputusan 2026-11-20), nama Produk dan Varian,
+ * rincian nominal yang dicatat di Pesanan
  * (PRD §5.5) beserta kode Voucher-nya atau null bila tanpa Voucher, Harga modal yang tercatat di Pesanan dan
  * Laba kotor-nya menurut labaKotor (keduanya null bila Pesanan itu belum punya Harga modal, PRD §9.5 ▶ Keputusan
  * 2026-11-20), Biaya transaksi yang tercatat saat pembayarannya masuk (null selama belum dibayar, PRD §14.3),
@@ -42,6 +43,7 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
       kodeVoucher: pesanan.kodeVoucher,
       kodeUnik: pesanan.kodeUnik,
       totalBayar: pesanan.totalBayar,
+      metode: pesanan.metode,
     })
     .from(pesanan)
     .innerJoin(varian, eq(pesanan.varianId, varian.id))
@@ -67,11 +69,20 @@ export async function bacaDetailPesanan(nomorPesanan: string) {
     kodeVoucher,
     kodeUnik,
     totalBayar,
+    metode,
     ...lainnya
   } = baris;
   return {
     ...lainnya,
-    rincian: { hargaJual, potonganVoucher, kodeVoucher, kodeUnik, totalBayar },
+    metode,
+    rincian: {
+      hargaJual,
+      potonganVoucher,
+      kodeVoucher,
+      kodeUnik,
+      totalBayar,
+      metode,
+    },
     laba: { ...labaKotor({ hargaJual, hargaModal }), biayaTransaksi },
     itemStok: await bacaItemStokTerkirim(baris.id),
     riwayat,

@@ -23,7 +23,7 @@ import {
   tolakPembatalanTiruan,
 } from "@/server/qrispy-tiruan";
 import { sisipkanProduk } from "@/server/uji-katalog";
-import { sisipkanPesanan } from "@/server/uji-pesanan";
+import { kolomQris, sisipkanPesanan } from "@/server/uji-pesanan";
 
 import golden from "../../../../../../tests/golden/transisi-status-pesanan.json";
 
@@ -69,7 +69,7 @@ async function checkout(varianId: string) {
     })
     .from(pesanan)
     .where(eq(pesanan.tautan, hasil.tautan));
-  return { ...dibuat, tautan: hasil.tautan };
+  return { ...dibuat, qrisId: kolomQris(dibuat.qrisId), tautan: hasil.tautan };
 }
 
 /** Status dari fixture golden, yang harus salah satu status Pesanan (PRD §5.7). */

@@ -19,6 +19,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { METODE } from "../../domain/bayar-saldo";
 import {
   MINIMAL_TOTAL_BAYAR_BIAYA_TRANSAKSI_AWAL,
   PERSEN_BIAYA_TRANSAKSI_AWAL,
@@ -324,6 +325,9 @@ export const pengaturanToko = pgTable(
 // Status Pesanan (GLOSSARY, PRD §5.7).
 export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 
+// Metode sebuah Pesanan (GLOSSARY, PRD §9.5 ▶ Keputusan 2026-11-20): QRIS atau Saldo.
+export const metode = pgEnum("metode", METODE);
+
 // Pesanan (PRD §5.1): satu pembelian satu Varian. Harga jual dan potongan voucher dicatat saat checkout,
 // jadi perubahan harga sesudahnya tidak mengubah Pesanan ini. Kode unik, Total bayar, waktu kedaluwarsa,
 // dan gambar QR diambil dari QRIS yang diterbitkan Qrispy (ADR-0004); qris_id menautkan Pesanan ke QRIS
@@ -338,6 +342,9 @@ export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 // Pesanan tanpa Harga modal ikut diisi saat Harga modal Varian-nya diisi untuk pertama kalinya (ubahVarian).
 // Biaya transaksi (PRD §14.3) dihitung dan dicatat saat kabar pembayaran diproses, dari Pengaturan toko saat
 // itu, dan null selama Pesanan belum dibayar. Pengaturan yang diubah sesudahnya tidak mengubahnya.
+// Metode mencatat cara Pesanan dibayar; Pesanan yang dibuat sebelum bayar dengan saldo ada bermetode QRIS. Pesanan
+// yang dibayar dengan saldo (PRD §15.7) tidak punya QRIS, jadi qris_id, waktu kedaluwarsa, dan gambar QR-nya null,
+// sedangkan Kode unik dan Biaya transaksi-nya Rp 0. Pesanan QRIS selalu punya ketiganya.
 export const pesanan = pgTable(
   "pesanan",
   {
@@ -354,10 +361,11 @@ export const pesanan = pgTable(
     potonganVoucher: integer("potongan_voucher").notNull(),
     kodeUnik: integer("kode_unik").notNull(),
     totalBayar: integer("total_bayar").notNull(),
-    qrisId: text("qris_id").notNull(),
-    kedaluwarsaPada: instan("kedaluwarsa_pada").notNull(),
+    metode: metode("metode").default("QRIS").notNull(),
+    qrisId: text("qris_id"),
+    kedaluwarsaPada: instan("kedaluwarsa_pada"),
     /** Gambar QR dari Qrispy sebagai data URL PNG (qris_image_base64). */
-    gambarQr: text("gambar_qr").notNull(),
+    gambarQr: text("gambar_qr"),
     status: statusPesanan("status").notNull(),
     waktuBayar: instan("waktu_bayar"),
     emailGagal: boolean("email_gagal").default(false).notNull(),
@@ -375,6 +383,10 @@ export const pesanan = pgTable(
     check(
       "pesanan_voucher_dan_kode_bersama",
       sql`(${tabel.voucherId} is null) = (${tabel.kodeVoucher} is null)`,
+    ),
+    check(
+      "pesanan_qris_menurut_metode",
+      sql`case when ${tabel.metode} = 'QRIS' then ${tabel.qrisId} is not null and ${tabel.kedaluwarsaPada} is not null and ${tabel.gambarQr} is not null else ${tabel.qrisId} is null and ${tabel.kedaluwarsaPada} is null and ${tabel.gambarQr} is null and ${tabel.kodeUnik} = 0 end`,
     ),
   ],
 );

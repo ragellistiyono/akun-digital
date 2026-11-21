@@ -27,6 +27,7 @@ import type { Qrispy, StatusQris } from "./qrispy";
 import { bayarQrisTiruan, qrispyTiruan } from "./qrispy-tiruan";
 import { sisipkanProduk } from "./uji-katalog";
 import { kunciPengaturanToko } from "./uji-pengaturan-toko";
+import { kolomQris } from "./uji-pesanan";
 
 // Test integrasi dengan database app_test dari .env.ci, yang dipakai bersama test lain. Setiap test
 // menyiapkan Produk dan Pesanannya sendiri langsung di database. Angka Total bayar, nominal diterima, dan
@@ -436,7 +437,12 @@ async function checkout(qrispy: Qrispy) {
     })
     .from(pesanan)
     .where(eq(pesanan.tautan, hasil.tautan));
-  return { tautan: hasil.tautan, varianId, ...dibuat };
+  return {
+    tautan: hasil.tautan,
+    varianId,
+    ...dibuat,
+    qrisId: kolomQris(dibuat.qrisId),
+  };
 }
 
 /** Qrispy tiruan yang cek statusnya selalu menjawab status itu, dengan pencatat panggilan cek status. */
