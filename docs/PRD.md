@@ -766,6 +766,10 @@ Ringkasan hanya berupa angka, tanpa grafik.
   13. Varian stok menipis
 - Kartu Laba bersih ikut menghitung Kode unik Top up dan Biaya transaksi Top up (§15.8).
 
+▶ Keputusan 2026-11-21 (#240):
+- Keterangan kartu Laba bersih tetap memuat rumus lengkap: "Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up, dalam rentang itu. Nominal top up tidak dihitung."
+- Ajakan di kartu Top up Bermasalah berbunyi "Perlu tindakan. Buka daftar Top up Bermasalah", sama polanya dengan kartu Pesanan Bermasalah.
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -1255,6 +1259,14 @@ Bagian ini ditambahkan pada 2026-11-20 (#226) untuk M5. Sebelumnya saldo termasu
   - Masa berlaku QRIS 15 menit. Saat waktu kedaluwarsa tercapai, toko memeriksa status QRIS ke Qrispy sekali.
 - Top up Kedaluwarsa dan Dibatalkan tidak tampil di mana pun bagi Member, karena saldonya tidak berubah. Riwayat lengkap semua Top up ada di menu Top up dasbor admin (§15.9).
 
+▶ Keputusan 2026-11-21 (#240):
+- Member yang masih punya Top up Menunggu Pembayaran langsung dibawa ke Halaman bayar Top up itu saat menekan "Bayar dengan QRIS", walaupun isian nominalnya kosong atau salah. Isian nominal tidak diperiksa lebih dulu. Urutan ini sama dengan Checkout, yang mendahulukan Pesanan menunggu (§5.2, §5.4).
+- Pesan "Top up Rp X berhasil. Saldo sekarang Rp Y." hanya muncul sekali, tepat setelah halaman bayar berpindah sendiri karena pembayaran masuk. Riwayat saldo yang dimuat ulang atau dibuka lagi sesudahnya tidak menampilkan pesan itu.
+- Bila Qrispy menolak "Batalkan" karena tagihan sudah dibayar, sama seperti Pesanan (§5.8 ▶ Keputusan 2026-11-12):
+  - Top up yang menjadi Berhasil membawa Member ke Riwayat saldo dengan pesan "Pembayaran Anda sudah masuk, jadi Top up tidak dibatalkan." Pesan ini tampil sekali, tepat setelah Member menekan "Batalkan", menggantikan pesan "Top up Rp X berhasil".
+  - Top up yang menjadi Bermasalah, karena nominalnya kurang, membawa Member ke halaman Top up Bermasalah tanpa pesan itu.
+  - Pesan yang sama juga tampil bila Top up sudah Berhasil saat "Batalkan" diproses. Top up itu tidak dibatalkan.
+
 ### 15.4 Status Top up
 
 | Status | Arti |
@@ -1289,6 +1301,8 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - **Biaya transaksi Top up** dihitung dan dicatat saat pembayaran masuk, dengan rumus dan pengaturan yang sama dengan Pesanan (§14.3), dari Total bayar Top up. Contoh dengan nilai awal: Total bayar Rp 150.200 menghasilkan 150.200 × 0,7 ÷ 100 = 1.051,4, jadi Biaya transaksinya Rp 1.052. Total bayar Rp 50.123 di bawah Rp 100.000, jadi Biaya transaksinya Rp 0.
 - Contoh lengkapnya ada di `tests/golden/kabar-pembayaran-top-up.json`.
 
+▶ Keputusan 2026-11-21 (#240): Halaman bayar Top up yang Top up-nya Bermasalah menampilkan kalimat "Pembayaran Anda sudah kami terima, tetapi saldo belum bertambah. Hubungi kami lewat WhatsApp.", tombol "Hubungi kami di WhatsApp", dan rincian nominalnya. Polanya sama dengan Halaman Pesanan Bermasalah (§6.2).
+
 ### 15.6 Admin mengubah saldo
 
 - Halaman Member di dasbor admin (§2.3), yang dibuka dengan mengetuk email Member, menampilkan:
@@ -1303,6 +1317,8 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - Kedua aksi berlaku untuk Member aktif maupun nonaktif.
 - Daftar Member (§2.3) mendapat kolom Saldo. Member tidak punya username, jadi yang tampil tetap email.
 - Contoh lengkapnya ada di `tests/golden/ubah-saldo-admin.json`.
+
+▶ Keputusan 2026-11-21 (#240): Judul halaman Member di dasbor admin tetap "Riwayat Pesanan" (§2.3). Isinya dipisah dengan subjudul "Riwayat saldo" dan "Pesanan".
 
 ### 15.7 Bayar dengan saldo
 
@@ -1328,6 +1344,12 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - Rincian nominal Pesanan yang dibayar dengan saldo berisi Harga jual, Potongan voucher, dan Total bayar, tanpa baris Kode unik, lalu tulisan "Dibayar dengan saldo". Ini berlaku di Halaman Pesanan, email "Pesanan selesai", Riwayat Pesanan, dan detail Pesanan dasbor admin.
 - Contoh: Saldo Rp 50.000, Harga jual Rp 50.000, dan Voucher `HEMAT5` Rp 5.000. Yang harus dibayar Rp 45.000, jadi saldo cukup. Tombolnya "Bayar Rp 45.000 dengan saldo", dan sesudahnya saldo menjadi Rp 5.000. Tanpa Voucher, saldo Rp 40.000 kurang Rp 10.000, sehingga tertulis "Saldo kurang Rp 10.000. Top up dulu."
 - Contoh lengkapnya ada di `tests/golden/bayar-saldo.json`.
+
+▶ Keputusan 2026-11-21 (#240): Detail Checkout dengan saldo:
+- Rincian untuk pilihan Saldo berisi baris "Total bayar", tanpa baris Kode unik.
+- Pilihan QRIS yang sudah ditekan Member tetap dipertahankan, walaupun hasil "Pakai" voucher kemudian membuat saldo cukup. Pilihan awal hanya ditentukan saat Checkout dibuka.
+- Bila sesi Member habis selagi Checkout terbuka, pembayaran saldo ditolak dengan "Bayar dengan saldo hanya untuk Member yang sedang login. Masuk dulu, atau bayar dengan QRIS."
+- Selama pembayaran saldo diproses, tombolnya bertuliskan "Membayar…".
 
 ### 15.8 Saldo di keuangan toko
 
@@ -1379,6 +1401,10 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
   - "Tambahkan ke saldo": saldo Member bertambah sebesar Nominal top up, dan Top up menjadi Berhasil. Riwayat saldo mencatat baris Top up dengan Nomor Top up-nya;
   - "Dana Dikembalikan": dipakai setelah uangnya dikembalikan di luar sistem. Saldo tidak berubah.
 - Admin tidak bisa membuat atau membatalkan Top up atas nama Member. Untuk menambah saldo tanpa pembayaran, Admin memakai "Tambah saldo" (§15.6).
+
+▶ Keputusan 2026-11-21 (#240): Tombol penyelesaian kedua Top up Bermasalah berbunyi "Tandai Dana Dikembalikan", sama seperti Pesanan Bermasalah (§5.9). Penegasan kedua aksi:
+- "Tambahkan ke saldo": "Tambahkan Rp X ke saldo <email>? Top up ini menjadi Berhasil, dan Riwayat saldo mencatat baris Top up. Aksi ini tidak bisa dibatalkan."
+- "Tandai Dana Dikembalikan": "Tandai Top up ini Dana Dikembalikan? Saldo <email> tidak bertambah, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan."
 
 ### 15.10 Saldo di tab Akun
 
