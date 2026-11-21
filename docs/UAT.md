@@ -78,6 +78,8 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 - **Produksi.** UAT M5 di server produksi juga dijalankan tanpa data seed. Member uji memulai dengan Saldo Rp 0. Top up sungguhan memakai nominal minimal Rp 10.000 ditambah Kode unik, dan saldonya dipakai untuk membeli Uji Bayar. Setelah UAT, Admin mengurangi sisa saldo Member uji dengan keterangan "Selesai UAT", atau membiarkannya sebagai saldo pemilik sendiri.
 - **Top up Bermasalah.** Top up kurang bayar tidak bisa dibuat dengan QRIS sungguhan, jadi UAT-O5 dijalankan di seed lokal.
 
+▶ Keputusan 2026-11-21 (#240): Seed lokal diselaraskan dengan §15.2. Top up Berhasil seed juga punya satu baris Riwayat saldo jenis Top up +Rp 100.000 dengan Nomor Top up-nya, di atas baris "Saldo awal seed". Karena itu Saldo `member@miwe.example` di seed lokal menjadi Rp 200.000. Data seed lainnya tidak berubah.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -905,7 +907,7 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
 - Hasil:
   - Langkah 2 ditolak dengan "Nominal top up minimal Rp 10.000." dan "Nominal top up maksimal Rp 499.000."
   - Langkah 3: tombol cepat mengisi 50000. Halaman bayar Top up menampilkan QR, hitung mundur, dan rincian Nominal top up Rp 10.000, Kode unik, serta Total bayar.
-  - Langkah 4: halaman berpindah sendiri ke Riwayat saldo dengan pesan "Top up Rp 10.000 berhasil. Saldo sekarang Rp …".
+  - Langkah 4: halaman berpindah sendiri ke Riwayat saldo dengan pesan "Top up Rp 10.000 berhasil. Saldo sekarang Rp …". Setelah halaman itu dimuat ulang, pesannya tidak muncul lagi.
   - Saldo bertambah tepat Rp 10.000, bukan Total bayar, dan baris Top up menyebut Nomor Top up `TOPUP-…`.
   - Tidak ada email yang masuk untuk top up.
 - PRD: §15.3, §15.5
@@ -939,7 +941,7 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
 - Langkah:
   1. Di seed lokal, buka Ringkasan, lalu ketuk kartu Top up Bermasalah.
   2. Buka Top up Bermasalah milik `member@miwe.example`, lalu tekan "Tambahkan ke saldo" dan setujui penegasannya.
-  3. Ulangi seed lokal, lalu selesaikan Top up yang sama dengan "Dana Dikembalikan".
+  3. Kosongkan database lokal, lalu jalankan `pnpm db:seed` lagi. Selesaikan Top up yang sama dengan "Tandai Dana Dikembalikan".
 - Hasil:
   - Langkah 1: kartu ditonjolkan dengan warna Bermasalah dan membuka menu Top up yang sudah disaring ke Bermasalah.
   - Langkah 2: Top up menjadi Berhasil, dan saldo Member bertambah Rp 50.000. Riwayat saldo mencatat baris Top up, dan riwayat status mencatat pelaku "Admin".
