@@ -1,7 +1,11 @@
+import { cookies } from "next/headers";
+
 import { nomorTopUpSah } from "@/domain/nomor-top-up";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { cekStatusPembayaranTopUp } from "@/server/kabar-pembayaran-top-up";
 import { bacaTopUpMember } from "@/server/top-up";
+
+import { pasangPesanTopUp } from "../../../riwayat-saldo/pesan-top-up";
 
 const teks = (isi: string, status: number) =>
   new Response(isi, {
@@ -18,7 +22,8 @@ const tidakDitemukan = () =>
 // Status Top up yang ditanyakan Halaman bayar Top up secara berkala (ADR-0004: Halaman bayar menanyakan status ke
 // server toko, bukan ke Qrispy). Hanya Member pemilik Top up itu yang boleh membacanya. Jalur cek status ke Qrispy
 // dijalankan dulu, paling sering sekali per 15 detik untuk setiap Top up, supaya pembayaran yang sudah masuk terbaca
-// tanpa Halaman bayar Top up dimuat ulang.
+// tanpa Halaman bayar Top up dimuat ulang. Jawaban Berhasil juga memasang pesan "Top up Rp X berhasil", karena
+// Halaman bayar Top up yang bertanya akan berpindah sendiri ke Riwayat saldo (PRD §15.3 ▶ Keputusan 2026-11-21, issue 240).
 export async function GET(
   request: Request,
   { params }: RouteContext<"/akun/top-up/[nomor]/status">,
@@ -36,6 +41,9 @@ export async function GET(
   await cekStatusPembayaranTopUp(nomor, idMember);
   const topUp = await bacaTopUpMember({ nomorTopUp: nomor, idMember });
   if (!topUp) return tidakDitemukan();
+  if (topUp.status === "Berhasil") {
+    pasangPesanTopUp(await cookies(), "berhasil", nomor);
+  }
   return Response.json(
     { status: topUp.status },
     { headers: { "Cache-Control": "no-store" } },

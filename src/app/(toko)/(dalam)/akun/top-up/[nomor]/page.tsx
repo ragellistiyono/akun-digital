@@ -21,7 +21,6 @@ import {
   TombolSimpanQr,
 } from "../../../pesanan/[tautan]/_components/kerangka-halaman-bayar";
 import { PantauStatus } from "../../../pesanan/[tautan]/_components/pantau-status";
-import { alamatTopUpBerhasil } from "../../riwayat-saldo/top-up-berhasil";
 import { aksiBatalkanTopUp } from "./aksi";
 
 /** Panel (DESIGN.md "Cards / Containers"), sama seperti di Halaman bayar Pesanan. */
@@ -103,8 +102,10 @@ function HalamanTopUpBermasalah({
 // lalu kembali ke sini, sedangkan Member lain dan Nomor Top up yang tidak dikenal melihat halaman tidak ditemukan.
 //
 // Jalur cek status (ADR-0004) dijalankan sebelum Top up dibaca, dan halaman menanyakan status ke server toko secara
-// berkala. Begitu Top up Berhasil, halaman berpindah sendiri ke Riwayat saldo dengan pesan Top up berhasil (PRD
-// §15.3). Top up Bermasalah menampilkan Halaman Top up Bermasalah. Top up lain yang sudah tidak Menunggu Pembayaran
+// berkala. Begitu Top up Berhasil, halaman berpindah sendiri ke Riwayat saldo dengan pesan Top up berhasil, yang
+// dipasang jalur status saat menjawab Berhasil (PRD §15.3 ▶ Keputusan 2026-11-21, issue 240). Halaman ini yang dibuka lagi
+// untuk Top up yang sudah Berhasil membawa Member ke Riwayat saldo tanpa pesan itu. Top up Bermasalah menampilkan
+// Halaman Top up Bermasalah. Top up lain yang sudah tidak Menunggu Pembayaran
 // membawa Member ke tab Akun, karena Top up Kedaluwarsa dan Dibatalkan tidak tampil di mana pun bagi Member (PRD
 // §15.3).
 export default async function HalamanBayarTopUp({
@@ -126,7 +127,7 @@ export default async function HalamanBayarTopUp({
     idMember: sesiMember.user.id,
   });
   if (!topUp) notFound();
-  if (topUp.status === "Berhasil") redirect(alamatTopUpBerhasil(nomor));
+  if (topUp.status === "Berhasil") redirect("/akun/riwayat-saldo");
   if (topUp.status === "Bermasalah") {
     return (
       <HalamanTopUpBermasalah
