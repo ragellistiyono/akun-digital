@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { rupiahBertanda } from "@/lib/rupiah";
+import { rupiah, rupiahBertanda } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import { jumlahPesananBermasalah } from "@/server/daftar-pesanan";
@@ -12,7 +12,9 @@ import {
   angkaItemStok,
   angkaMemberAktif,
   angkaRingkasan,
+  angkaTotalSaldoMember,
   jumlahPesananMenungguPembayaran,
+  jumlahTopUpBermasalah,
 } from "@/server/ringkasan";
 import { daftarStokMenipis } from "@/server/stok-menipis";
 
@@ -30,13 +32,13 @@ const KELAS_KARTU_TAUTAN =
 
 /**
  * Grid kartu Ringkasan. Di ponsel satu kolom, mulai 640 px dua kolom, dan mulai 1200 px tiga kolom. Kartu
- * terakhir selebar dua kolom, supaya baris terakhir penuh di dua dan tiga kolom (11 kartu). Kartu sebaris sama
- * tinggi karena grid meregangkannya. Varian `min-[…px]` dipakai, bukan `sm:`, karena `sm:` (rem) tersusun sesudah
- * `lebar:` (px) di CSS hasil Tailwind dan akan menimpanya.
+ * terakhir selebar dua kolom di dua kolom dan selebar tiga kolom di tiga kolom, supaya baris terakhir penuh
+ * (13 kartu). Kartu sebaris sama tinggi karena grid meregangkannya. Varian `min-[…px]` dipakai, bukan `sm:`, karena
+ * `sm:` (rem) tersusun sesudah `lebar:` (px) di CSS hasil Tailwind dan akan menimpanya.
  */
 const KELAS_GRID_KARTU =
   "grid gap-4 min-[640px]:grid-cols-2 min-[1200px]:grid-cols-3";
-const KELAS_KARTU_TERAKHIR = "min-[640px]:col-span-2";
+const KELAS_KARTU_TERAKHIR = "min-[640px]:col-span-2 min-[1200px]:col-span-3";
 
 /** Judul kartu angka (h2): spidol Kalam, lebih kecil daripada judul bagian. */
 const KELAS_JUDUL_KARTU = "flex items-center gap-2 text-[20px]";
@@ -50,6 +52,9 @@ const KELAS_KETERANGAN = "text-[15px] text-pensil-redup";
 /** Daftar Pesanan yang sudah disaring ke status itu (PRD §9.2, §9.5). */
 const alamatPesananBerstatus = (status: string) =>
   `/admin/pesanan?${new URLSearchParams({ status })}`;
+
+/** Menu Top up yang sudah disaring ke status Bermasalah (PRD §9.2 ▶ Keputusan 2026-11-20, §15.9). */
+const ALAMAT_TOP_UP_BERMASALAH = `/admin/top-up?${new URLSearchParams({ status: "Bermasalah" })}`;
 
 /** Nilai kartu: teks yang tampil dan apakah nilainya negatif, yang ditulis dengan warna `aksi` (DESIGN.md). */
 type NilaiKartu = { teks: string; negatif: boolean };
@@ -157,7 +162,10 @@ function KartuTigaAngka({
   );
 }
 
-/** Kartu dengan satu angka, beserta keterangan asal angkanya. */
+/**
+ * Kartu dengan satu angka, beserta keterangan asal angkanya. Angkanya jumlah, atau nominal rupiah yang sudah
+ * ditulis.
+ */
 function KartuSatuAngka({
   id,
   judul,
@@ -169,7 +177,7 @@ function KartuSatuAngka({
 }: {
   id: string;
   judul: string;
-  angka: number;
+  angka: number | string;
   tambahan?: ReactNode;
   keterangan: ReactNode;
   href?: string;
@@ -187,21 +195,79 @@ function KartuSatuAngka({
   );
 }
 
-// Halaman depan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20): 11 kartu angka dengan urutan PRD, lalu daftar
-// Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu uang membuka
-// Laporan keuangan, dan kartu Item stok membuka menu Item stok.
+/**
+ * Kartu yang perlu tindakan (Pesanan Bermasalah dan Top up Bermasalah): berwarna `st-masalah`, berbayangan tegas,
+ * dengan ikon `TriangleAlert` dan ajakan "Perlu tindakan. Buka daftar …" (PRD §9.2, DESIGN.md). Kartu ini tegak
+ * tanpa paku payung, karena dasbor admin tidak memakai hiasan dan rotasi (DESIGN.md Navigation).
+ */
+function KartuPerluTindakan({
+  id,
+  judul,
+  angka,
+  href,
+  ajakan,
+}: {
+  id: string;
+  judul: string;
+  angka: number;
+  href: string;
+  ajakan: string;
+}) {
+  return (
+    <article aria-labelledby={id}>
+      <Link
+        href={href}
+        className="kartu flex h-full flex-col gap-2 border-st-masalah bg-st-masalah-bg p-4 text-st-masalah shadow-coret transition-shadow duration-100 hover:shadow-coret-sedang motion-reduce:transition-none"
+      >
+        <h2 id={id} className={KELAS_JUDUL_KARTU}>
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-coret-bulat border-2 border-current">
+            <TriangleAlert
+              aria-hidden="true"
+              className="size-5"
+              strokeWidth={2.5}
+            />
+          </span>
+          {judul}
+        </h2>
+        <p className={KELAS_ANGKA}>{angka}</p>
+        <p className="mt-auto flex items-center gap-1 text-[16px]">
+          {ajakan}
+          <ChevronRight
+            aria-hidden="true"
+            className="size-5 shrink-0"
+            strokeWidth={2.5}
+          />
+        </p>
+      </Link>
+    </article>
+  );
+}
+
+// Halaman depan dasbor admin (PRD §9.2 ▶ Keputusan 2026-11-20): 13 kartu angka dengan urutan PRD,
+// lalu daftar Stok menipis di bawahnya (PRD §9.4), selebar isi. Ringkasan hanya berupa angka, tanpa grafik. Kartu
+// uang membuka Laporan keuangan, kartu Member membuka daftar Member, dan kartu Item stok membuka menu Item stok.
 export default async function HalamanRingkasan() {
   await wajibSesiAdmin(await headers());
   const { ambangStokMenipis } = await bacaPengaturanToko();
-  const [angka, menunggu, bermasalah, member, itemStok, stokMenipis] =
-    await Promise.all([
-      angkaRingkasan(),
-      jumlahPesananMenungguPembayaran(),
-      jumlahPesananBermasalah(),
-      angkaMemberAktif(),
-      angkaItemStok(),
-      daftarStokMenipis({ ambang: ambangStokMenipis }),
-    ]);
+  const [
+    angka,
+    menunggu,
+    bermasalah,
+    member,
+    totalSaldo,
+    topUpBermasalah,
+    itemStok,
+    stokMenipis,
+  ] = await Promise.all([
+    angkaRingkasan(),
+    jumlahPesananMenungguPembayaran(),
+    jumlahPesananBermasalah(),
+    angkaMemberAktif(),
+    angkaTotalSaldoMember(),
+    jumlahTopUpBermasalah(),
+    angkaItemStok(),
+    daftarStokMenipis({ ambang: ambangStokMenipis }),
+  ]);
   const { hariIni, bulanIni, sepanjangWaktu } = angka;
   // Hari ini dan bulan ini termasuk di dalam sepanjang waktu, jadi N sepanjang waktu mencakup keduanya.
   const tanpaHargaModal = sepanjangWaktu.pesananTanpaHargaModal;
@@ -269,7 +335,7 @@ export default async function HalamanRingkasan() {
           judul="Laba bersih"
           {...uang((laba) => laba.labaBersih)}
           href={ALAMAT_LAPORAN}
-          keterangan="Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional bertanggal dalam rentang itu."
+          keterangan="Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up, dalam rentang itu. Nominal top up tidak dihitung."
         />
 
         <KartuTigaAngka
@@ -290,34 +356,13 @@ export default async function HalamanRingkasan() {
           href={alamatPesananBerstatus("Menunggu Pembayaran")}
         />
 
-        {/* Satu-satunya kartu yang perlu tindakan: berwarna `st-masalah` dan berbayangan tegas. Kartu ini tegak
-            tanpa paku payung, karena dasbor admin tidak memakai hiasan dan rotasi (DESIGN.md Navigation). */}
-        <article aria-labelledby="kartu-pesanan-bermasalah">
-          <Link
-            href={alamatPesananBerstatus("Bermasalah")}
-            className="kartu flex h-full flex-col gap-2 border-st-masalah bg-st-masalah-bg p-4 text-st-masalah shadow-coret transition-shadow duration-100 hover:shadow-coret-sedang motion-reduce:transition-none"
-          >
-            <h2 id="kartu-pesanan-bermasalah" className={KELAS_JUDUL_KARTU}>
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-coret-bulat border-2 border-current">
-                <TriangleAlert
-                  aria-hidden="true"
-                  className="size-5"
-                  strokeWidth={2.5}
-                />
-              </span>
-              Pesanan Bermasalah
-            </h2>
-            <p className={KELAS_ANGKA}>{bermasalah}</p>
-            <p className="mt-auto flex items-center gap-1 text-[16px]">
-              Perlu tindakan. Buka daftar Pesanan Bermasalah
-              <ChevronRight
-                aria-hidden="true"
-                className="size-5 shrink-0"
-                strokeWidth={2.5}
-              />
-            </p>
-          </Link>
-        </article>
+        <KartuPerluTindakan
+          id="kartu-pesanan-bermasalah"
+          judul="Pesanan Bermasalah"
+          angka={bermasalah}
+          href={alamatPesananBerstatus("Bermasalah")}
+          ajakan="Perlu tindakan. Buka daftar Pesanan Bermasalah"
+        />
 
         <KartuSatuAngka
           id="kartu-member-aktif"
@@ -330,6 +375,22 @@ export default async function HalamanRingkasan() {
           }
           keterangan="Member yang sudah diverifikasi dan tidak nonaktif, sama dengan Member berstatus Aktif di daftar Member. Pendaftar tidak dihitung."
           href="/admin/member"
+        />
+
+        <KartuSatuAngka
+          id="kartu-total-saldo-member"
+          judul="Total saldo Member"
+          angka={rupiah(totalSaldo.total)}
+          keterangan="Saldo milik Member yang belum dibelanjakan. Ini uang Member, bukan Pendapatan."
+          href="/admin/member"
+        />
+
+        <KartuPerluTindakan
+          id="kartu-top-up-bermasalah"
+          judul="Top up Bermasalah"
+          angka={topUpBermasalah.jumlah}
+          href={ALAMAT_TOP_UP_BERMASALAH}
+          ajakan="Perlu tindakan. Buka daftar Top up Bermasalah"
         />
 
         <KartuSatuAngka

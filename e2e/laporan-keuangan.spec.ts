@@ -9,12 +9,15 @@ import { eq } from "drizzle-orm";
 // Kategori milik test itu sendiri. Berkas ini tidak mencatat Biaya operasional, supaya total bulan di
 // biaya-operasional.spec.ts tidak terganggu.
 import { db } from "../src/server/db";
-import { varian } from "../src/server/db/schema";
+import { user, varian } from "../src/server/db/schema";
 import { sisipkanKategori, sisipkanProduk } from "../src/server/uji-katalog";
+import { sisipkanMember } from "../src/server/uji-member";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
+import { sisipkanTopUp } from "../src/server/uji-top-up";
 import { tanggalIsianWib, tanggalWib } from "../src/server/zona-waktu-toko";
 
-// Laporan keuangan (T71, T72, T73, PRD §11.1, §14.5, §14.6, §14.7, §14.8, UAT-N6, UAT-N7, UAT-N8).
+// Laporan keuangan (T71, T72, T73, T81, PRD §11.1, §14.5, §14.6, §14.7, §14.8, §15.8, UAT-N6, UAT-N7, UAT-N8,
+// UAT-O9).
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 const PASSWORD = "sandi-uji-admin-123";
 const ALAMAT = "/admin/laporan";
@@ -73,12 +76,18 @@ async function katalogUji({
   return { kategoriId, namaKategori, produkId, namaProduk, varianId };
 }
 
-/** Nominal baris rincian angka berlabel itu, sebagai teks. */
-const nilaiRincian = (page: Page, label: string) =>
+/** Baris rincian angka berlabel tepat itu. */
+const barisRincian = (page: Page, label: string) =>
   isi(page)
     .getByRole("table", { name: "Rincian angka" })
-    .getByRole("row", { name: label })
-    .getByRole("cell");
+    .getByRole("row")
+    .filter({
+      has: page.getByRole("rowheader", { name: label, exact: true }),
+    });
+
+/** Nominal baris rincian angka berlabel itu, sebagai teks. */
+const nilaiRincian = (page: Page, label: string) =>
+  barisRincian(page, label).getByRole("cell");
 
 /** Baris data tabel Pesanan Selesai, tanpa baris judul kolom. */
 const barisTabel = (page: Page) =>
@@ -88,7 +97,7 @@ const barisTabel = (page: Page) =>
     .filter({ has: page.getByRole("rowheader") });
 
 const KETERANGAN_BIAYA_OPERASIONAL =
-  "Laba bersih ini belum dikurangi Biaya operasional, karena saringan Produk atau Kategori sedang aktif.";
+  "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif.";
 
 test("halaman terbuka dengan periode Harian dan 30 hari terakhir, dan memilih Mingguan mengganti tanggal mulai ke Senin 12 minggu lalu (UAT-N6)", async ({
   page,
@@ -178,11 +187,7 @@ test("memilih Kategori membatasi pilihan Produk, dan saringan Kategori atau Prod
   await expect(isi(page).getByRole("note")).toHaveText(
     KETERANGAN_BIAYA_OPERASIONAL,
   );
-  await expect(
-    isi(page)
-      .getByRole("table", { name: "Rincian angka" })
-      .getByRole("row", { name: "− Biaya operasional" }),
-  ).toHaveCount(0);
+  await expect(barisRincian(page, "− Biaya operasional")).toHaveCount(0);
 
   // Produk tanpa Kategori.
   await page
@@ -200,11 +205,7 @@ test("memilih Kategori membatasi pilihan Produk, dan saringan Kategori atau Prod
   await expect(isi(page).getByRole("note")).toHaveText(
     KETERANGAN_BIAYA_OPERASIONAL,
   );
-  await expect(
-    isi(page)
-      .getByRole("table", { name: "Rincian angka" })
-      .getByRole("row", { name: "− Biaya operasional" }),
-  ).toHaveCount(0);
+  await expect(barisRincian(page, "− Biaya operasional")).toHaveCount(0);
 });
 
 test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah rincian angka, dan mengetuk baris membuka detail Pesanan (UAT-N8)", async ({
@@ -232,7 +233,7 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
 
   await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}`);
 
-  // Kolom PRD §14.8, dengan Pesanan terbaru dibayar di atas.
+  // Kolom PRD §14.8 dan Metode (§14.6 ▶ Keputusan 2026-11-20), dengan Pesanan terbaru dibayar di atas.
   await expect(
     isi(page)
       .getByRole("table", { name: "Pesanan Selesai", exact: true })
@@ -240,6 +241,7 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
   ).toHaveText([
     "Nomor Pesanan",
     "Waktu bayar (WIB)",
+    "Metode",
     "Produk dan Varian",
     "Harga jual",
     "Harga modal",
@@ -254,10 +256,13 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
     dicari.nomorPesanan,
   ]);
   // Pesanan tanpa Harga modal: "—" di Harga modal dan Laba kotor, dan peringatannya tampil.
-  await expect(barisTabel(page).first().getByRole("cell").nth(3)).toHaveText(
-    "—",
+  await expect(barisTabel(page).first().getByRole("cell").nth(1)).toHaveText(
+    "QRIS",
   );
   await expect(barisTabel(page).first().getByRole("cell").nth(4)).toHaveText(
+    "—",
+  );
+  await expect(barisTabel(page).first().getByRole("cell").nth(5)).toHaveText(
     "—",
   );
   await expect(
@@ -483,4 +488,159 @@ test("di lebar 360 px, Produk terlaris dan Pendapatan per Kategori tampil dengan
     () => document.documentElement.scrollWidth,
   );
   expect(lebarHalaman).toBeLessThanOrEqual(360);
+});
+
+/** Label baris rincian angka, dari atas ke bawah. */
+const labelRincian = (page: Page) =>
+  isi(page)
+    .getByRole("table", { name: "Rincian angka" })
+    .getByRole("rowheader");
+
+/** Teks kolom Metode semua baris tabel Pesanan Selesai. */
+const metodeTabel = (page: Page) =>
+  barisTabel(page)
+    .locator("td:nth-of-type(2)")
+    .evaluateAll((sel) => sel.map((s) => (s.textContent ?? "").trim()));
+
+const BARIS_INFORMASI_TOP_UP =
+  /^Top up Berhasil: \d+, Rp \d[\d.]* \(uang Member, bukan Pendapatan\)$/;
+
+// UAT-O9 dan PRD §14.6 ▶ Keputusan 2026-11-20 (#226): rincian angka memuat baris Top up dan baris informasi Top up
+// Berhasil. Saringan Metode Saldo dan QRIS membatasi tabel ke Pesanan bermetode itu, dan menghilangkan baris
+// Biaya operasional serta Top up dengan keterangan baru; saringan Produk dengan Metode Semua memberi keterangan yang
+// sama.
+test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan baris Biaya operasional dan Top up (UAT-O9)", async ({
+  page,
+}) => {
+  const katalog = await katalogUji({ awalan: "Metode" });
+  const sekarang = Date.now();
+  const qris = await sisipkanPesanan({
+    varianId: katalog.varianId,
+    status: "Selesai",
+    hargaModal: 35000,
+    biayaTransaksi: 0,
+    waktuBayar: new Date(sekarang - 2 * 60 * 1000),
+  });
+  const saldo = await sisipkanPesanan({
+    varianId: katalog.varianId,
+    status: "Selesai",
+    metode: "Saldo",
+    rincian: {
+      hargaJual: 50000,
+      potonganVoucher: 0,
+      kodeUnik: 0,
+      totalBayar: 50000,
+    },
+    hargaModal: 35000,
+    biayaTransaksi: 0,
+    waktuBayar: new Date(sekarang - 60 * 1000),
+  });
+  const email = `laporan-top-up-${randomUUID()}@mail.com`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id: userId }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  // Top up Berhasil contoh PRD §15.8.
+  await sisipkanTopUp({
+    userId,
+    status: "Berhasil",
+    nominalTopUp: 150000,
+    kodeUnik: 200,
+    biayaTransaksi: 1052,
+    waktuBayar: new Date(sekarang - 3 * 60 * 1000),
+  });
+  await masukSebagaiAdmin(page);
+
+  // Langkah 1: tanpa saringan.
+  await page.goto(ALAMAT);
+  await expect(labelRincian(page)).toHaveText([
+    "Pendapatan",
+    "Pesanan Selesai",
+    "Total Harga modal",
+    "Laba kotor",
+    "− Potongan voucher",
+    "+ Kode unik",
+    "− Biaya transaksi",
+    "− Biaya operasional",
+    "+ Kode unik Top up",
+    "− Biaya transaksi Top up",
+    "Laba bersih",
+  ]);
+  await expect(
+    isi(page)
+      .getByRole("table", { name: "Rincian angka" })
+      .getByText(BARIS_INFORMASI_TOP_UP),
+  ).toBeVisible();
+  await expect(isi(page).getByText(KETERANGAN_BIAYA_OPERASIONAL)).toHaveCount(
+    0,
+  );
+
+  // Langkah 2: Metode Saldo, lalu QRIS.
+  for (const [metode, pesananMetode] of [
+    ["Saldo", saldo],
+    ["QRIS", qris],
+  ] as const) {
+    await page.getByLabel("Metode", { exact: true }).selectOption(metode);
+    await page.getByRole("button", { name: "Tampilkan" }).click();
+
+    await expect(page).toHaveURL(new RegExp(`metode=${metode}`));
+    await expect(page.getByLabel("Metode", { exact: true })).toHaveValue(
+      metode,
+    );
+    // Test lain bisa menambah Pesanan tanpa Harga modal, jadi catatan peringatannya boleh ikut tampil.
+    await expect(
+      isi(page)
+        .getByRole("note")
+        .filter({ hasText: KETERANGAN_BIAYA_OPERASIONAL }),
+    ).toHaveCount(1);
+    await expect(labelRincian(page)).toHaveText([
+      "Pendapatan",
+      "Pesanan Selesai",
+      "Total Harga modal",
+      "Laba kotor",
+      "− Potongan voucher",
+      "+ Kode unik",
+      "− Biaya transaksi",
+      "Laba bersih",
+    ]);
+    await expect(
+      isi(page)
+        .getByRole("table", { name: "Rincian angka" })
+        .getByText(BARIS_INFORMASI_TOP_UP),
+    ).toHaveCount(0);
+    await expect(
+      barisTabel(page).filter({ hasText: pesananMetode.nomorPesanan }),
+    ).toHaveCount(1);
+    expect(new Set(await metodeTabel(page))).toEqual(new Set([metode]));
+  }
+
+  // Langkah 3: Metode Semua dengan saringan Produk.
+  await page.getByLabel("Metode", { exact: true }).selectOption("");
+  await page
+    .getByLabel("Produk", { exact: true })
+    .selectOption({ label: katalog.namaProduk });
+  await page.getByRole("button", { name: "Tampilkan" }).click();
+
+  await expect(page).toHaveURL(new RegExp(`produk=${katalog.produkId}`));
+  await expect(page.getByLabel("Metode", { exact: true })).toHaveValue("");
+  await expect(isi(page).getByRole("note")).toHaveText(
+    KETERANGAN_BIAYA_OPERASIONAL,
+  );
+  await expect(barisRincian(page, "+ Kode unik Top up")).toHaveCount(0);
+  await expect(barisTabel(page).getByRole("rowheader")).toHaveText([
+    saldo.nomorPesanan,
+    qris.nomorPesanan,
+  ]);
+  expect(await metodeTabel(page)).toEqual(["Saldo", "QRIS"]);
+
+  // Grafik 4 dan 5 juga mengikuti saringan Metode: dengan Metode Saldo hanya Pesanan saldo Rp 50.000 yang dihitung.
+  await page.goto(`${ALAMAT}?kategori=${katalog.kategoriId}&metode=Saldo`);
+  const terlarisSaldo = grafik(page, "Produk terlaris")
+    .getByRole("list", { name: "Grafik Produk terlaris" })
+    .getByRole("button");
+  await expect(terlarisSaldo).toHaveCount(1);
+  await expect(terlarisSaldo).toHaveAccessibleName(
+    `${katalog.namaProduk} · 1 Pesanan · Rp 50.000`,
+  );
 });

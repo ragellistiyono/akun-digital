@@ -1,5 +1,5 @@
-// Laporan keuangan di dasbor admin (PRD §14.5, §14.6, §14.8): rincian angka dan tabel Pesanan Selesai dalam
-// saringan rentang tanggal WIB, Kategori, dan Produk, serta grafik per kelompok periode, Produk terlaris, dan
+// Laporan keuangan di dasbor admin (PRD §14.5, §14.6, §14.8, §15.8): rincian angka dan tabel Pesanan Selesai dalam
+// saringan rentang tanggal WIB, Kategori, Produk, dan Metode, serta grafik per kelompok periode, Produk terlaris, dan
 // Pendapatan per Kategori (§14.7). Aturan hitungnya ada di src/domain/laba.ts, src/domain/harga-modal.ts,
 // src/domain/rentang-awal-laporan.ts, src/domain/kelompok-periode-laporan.ts, src/domain/produk-terlaris.ts, dan
 // src/domain/pendapatan-per-kategori.ts.
@@ -18,9 +18,10 @@ import {
   sql,
 } from "drizzle-orm";
 
+import type { Metode } from "@/domain/bayar-saldo";
 import { labaKotor } from "@/domain/harga-modal";
 import { kelompokPeriodeLaporan } from "@/domain/kelompok-periode-laporan";
-import { laba } from "@/domain/laba";
+import { laba, pesananMenurutMetode, type SaringanMetode } from "@/domain/laba";
 import { pesananSelesaiDibayar } from "@/domain/pendapatan";
 import { pendapatanPerKategori } from "@/domain/pendapatan-per-kategori";
 import { produkTerlaris } from "@/domain/produk-terlaris";
@@ -32,6 +33,7 @@ import {
   kategori,
   pesanan,
   produk,
+  topUp,
   varian,
 } from "./db/schema";
 import { rentangTanggalWib } from "./zona-waktu-toko";
@@ -41,13 +43,14 @@ const UKURAN_HALAMAN = 50;
 
 /**
  * Saringan Laporan keuangan (PRD §14.6). Tanggal berbentuk "YYYY-MM-DD" dan dibaca dalam WIB, keduanya ikut
- * dihitung. Kategori dan Produk yang tidak diberikan berarti "Semua".
+ * dihitung. Kategori, Produk, dan Metode yang tidak diberikan berarti "Semua".
  */
 type SaringanLaporan = {
   dari: string;
   sampai: string;
   kategoriId?: string;
   produkId?: string;
+  metode?: Metode;
 };
 
 /** Rentang instan saringan: dari 00.00.00 WIB tanggal `dari` sampai sebelum 00.00.00 WIB sesudah `sampai`. */
@@ -70,17 +73,20 @@ const syaratKatalog = ({ kategoriId, produkId }: SaringanLaporan) => [
 
 /**
  * Bahan hitung Laporan keuangan dalam saringan itu: Pesanan yang dibayar dalam rentang dan saringan Kategori atau
- * Produk, beserta Produk dan Kategori Produk-nya saat ini, Biaya operasional bertanggal dalam rentang, dan apakah Biaya operasional dikurangkan. Saat saringan
- * Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (PRD §14.5). Yang memutuskan Pesanan mana yang
- * dihitung adalah fungsi domain laba.
+ * Produk, beserta Metode, Produk, dan Kategori Produk-nya saat ini, Biaya operasional bertanggal dalam rentang, Top
+ * up yang dibayar dalam rentang, saringan Metode, dan apakah saringan Kategori atau Produk aktif. Yang memutuskan
+ * Pesanan dan Top up mana yang dihitung, termasuk bahwa Biaya operasional dan Top up tidak dihitung saat saringan
+ * aktif (PRD §14.5 ▶ Keputusan 2026-11-20), adalah fungsi domain laba.
  */
 async function bahanLaporan(saringan: SaringanLaporan) {
   const rentang = rentangSaringan(saringan);
-  const denganBiayaOperasional =
-    saringan.kategoriId === undefined && saringan.produkId === undefined;
-  const [dibayar, biaya] = await Promise.all([
+  const metode: SaringanMetode = saringan.metode ?? "Semua";
+  const saringanProdukAtauKategori =
+    saringan.kategoriId !== undefined || saringan.produkId !== undefined;
+  const [dibayar, biaya, topUpDibayar] = await Promise.all([
     db
       .select({
+        metode: pesanan.metode,
         status: pesanan.status,
         dibayarPada: pesanan.waktuBayar,
         hargaJual: pesanan.hargaJual,
@@ -118,20 +124,37 @@ async function bahanLaporan(saringan: SaringanLaporan) {
           lte(biayaOperasional.tanggal, saringan.sampai),
         ),
       ),
+    db
+      .select({
+        status: topUp.status,
+        dibayarPada: topUp.waktuBayar,
+        nominalTopUp: topUp.nominalTopUp,
+        kodeUnik: topUp.kodeUnik,
+        biayaTransaksi: topUp.biayaTransaksi,
+      })
+      .from(topUp)
+      .where(
+        and(
+          gte(topUp.waktuBayar, rentang.mulai),
+          lt(topUp.waktuBayar, rentang.sebelum),
+        ),
+      ),
   ]);
   return {
     rentang,
-    denganBiayaOperasional,
+    metode,
+    saringanProdukAtauKategori,
     pesanan: dibayar,
     biayaOperasional: biaya,
+    topUp: topUpDibayar,
   };
 }
 
 /**
- * Rincian angka Laporan keuangan (PRD §14.5, §14.6): Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor,
- * potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, dan Laba bersih dalam saringan itu, dihitung
- * fungsi domain laba. Saat saringan Kategori atau Produk aktif, Biaya operasional tidak dikurangkan (nilainya
- * null).
+ * Rincian angka Laporan keuangan (PRD §14.5, §14.6, §15.8): Pendapatan, Pesanan Selesai, Total Harga modal, Laba
+ * kotor, potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, Kode unik Top up, Biaya transaksi Top up,
+ * Laba bersih, dan Top up Berhasil dalam saringan itu, dihitung fungsi domain laba. Saat saringan Kategori, Produk,
+ * atau Metode aktif, Biaya operasional dan kedua angka Top up tidak dihitung (nilainya null).
  */
 export async function rincianLaporan(saringan: SaringanLaporan) {
   return laba(await bahanLaporan(saringan));
@@ -144,11 +167,14 @@ export async function rincianLaporan(saringan: SaringanLaporan) {
  * - Pendapatan dan jumlah Pesanan Selesai (grafik 1 dan 3) menghitung semua Pesanan Selesai, termasuk yang belum
  *   punya Harga modal;
  * - Laba kotor dan Laba bersih (grafik 2) mengikuti §14.2 dan §14.5, dengan Biaya operasional dikurangkan pada
- *   kelompok yang memuat tanggalnya, kecuali saat saringan Kategori atau Produk aktif.
+ *   kelompok yang memuat tanggalnya, serta Kode unik Top up ditambahkan dan Biaya transaksi Top up dikurangkan pada
+ *   kelompok yang memuat waktu bayar Top up-nya, kecuali saat saringan Kategori, Produk, atau Metode aktif
+ *   (§14.6 ▶ Keputusan 2026-11-20).
  * Kelompok tanpa Pesanan Selesai bernilai 0.
  *
  * Grafik Produk terlaris dan Pendapatan per Kategori (grafik 4 dan 5) dihitung dari semua Pesanan Selesai dalam
- * saringan itu, termasuk yang belum punya Harga modal, oleh fungsi domain produkTerlaris dan pendapatanPerKategori.
+ * saringan itu, termasuk saringan Metode (fungsi domain pesananMenurutMetode) dan termasuk yang belum punya Harga
+ * modal, oleh fungsi domain produkTerlaris dan pendapatanPerKategori.
  */
 export async function grafikLaporan(
   saringan: SaringanLaporan & { periode: PeriodeLaporan },
@@ -156,7 +182,7 @@ export async function grafikLaporan(
   const bahan = await bahanLaporan(saringan);
   const selesai = pesananSelesaiDibayar({
     rentang: bahan.rentang,
-    pesanan: bahan.pesanan,
+    pesanan: pesananMenurutMetode(bahan),
   });
   const { kelompok } = kelompokPeriodeLaporan({
     periode: saringan.periode,
@@ -165,7 +191,6 @@ export async function grafikLaporan(
   });
   return {
     periode: saringan.periode,
-    denganBiayaOperasional: bahan.denganBiayaOperasional,
     kelompok: kelompok.map(({ mulai, akhir, rentang }) => {
       const angka = laba({ ...bahan, rentang });
       return {
@@ -213,9 +238,10 @@ function cocokPencarian(cari: string) {
 
 /**
  * Satu halaman tabel Pesanan Selesai Laporan keuangan (PRD §14.8): Pesanan Selesai yang dibayar dalam saringan
- * itu, yang terbaru dibayar di atas, 50 per halaman, beserta jumlah semua Pesanan yang cocok dan jumlah
- * halamannya. `cari` hanya menyaring tabel ini. Laba kotor setiap Pesanan dihitung domain, dan null bila Pesanan
- * itu belum punya Harga modal. Tabel tanpa Pesanan tetap punya satu halaman.
+ * itu, termasuk saringan Metode, beserta Metode-nya (§14.6 ▶ Keputusan 2026-11-20), yang terbaru dibayar di atas, 50
+ * per halaman, beserta jumlah semua Pesanan yang cocok dan jumlah halamannya. `cari` hanya menyaring tabel ini.
+ * Laba kotor setiap Pesanan dihitung domain, dan null bila Pesanan itu belum punya Harga modal. Tabel tanpa Pesanan
+ * tetap punya satu halaman.
  */
 export async function tabelPesananLaporan(
   saringan: SaringanLaporan & { cari?: string; halaman?: number },
@@ -227,6 +253,9 @@ export async function tabelPesananLaporan(
     gte(pesanan.waktuBayar, rentang.mulai),
     lt(pesanan.waktuBayar, rentang.sebelum),
     ...syaratKatalog(saringan),
+    saringan.metode === undefined
+      ? undefined
+      : eq(pesanan.metode, saringan.metode),
     saringan.cari === undefined ? undefined : cocokPencarian(saringan.cari),
   );
   const [{ jumlah }] = await db
@@ -240,6 +269,7 @@ export async function tabelPesananLaporan(
     .select({
       nomorPesanan: pesanan.nomorPesanan,
       waktuBayar: pesanan.waktuBayar,
+      metode: pesanan.metode,
       namaProduk: produk.nama,
       namaVarian: varian.nama,
       hargaJual: pesanan.hargaJual,

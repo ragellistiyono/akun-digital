@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { z } from "zod";
 
+import { METODE, type Metode } from "@/domain/bayar-saldo";
 import {
   PERIODE_LAPORAN,
   rentangAwalLaporan,
@@ -36,6 +37,7 @@ const SaringanAlamat = z.object({
   sampai: z.iso.date().optional().catch(undefined),
   kategori: z.uuid().optional().catch(undefined),
   produk: z.uuid().optional().catch(undefined),
+  metode: z.enum(METODE).optional().catch(undefined),
   cari: z.string().trim().min(1).optional().catch(undefined),
   halaman: z.coerce.number().int().min(1).optional().catch(undefined),
 });
@@ -47,6 +49,7 @@ type Saringan = {
   sampai: string;
   kategori?: string;
   produk?: string;
+  metode?: Metode;
   cari?: string;
 };
 
@@ -64,6 +67,7 @@ function alamatLaporan(
     "sampai",
     "kategori",
     "produk",
+    "metode",
     "cari",
   ] as const) {
     const nilai = parameter[kunci];
@@ -82,7 +86,7 @@ const PESAN = "max-w-[65ch] text-pensil-redup";
 
 /**
  * Pilihan periode (PRD §14.6) sebagai chip. Memilih periode membuka rentang awal periode itu, sedangkan Kategori,
- * Produk, dan kata cari tetap.
+ * Produk, Metode, dan kata cari tetap.
  */
 function PilihanPeriode({ saringan }: { saringan: Saringan }) {
   return (
@@ -98,6 +102,7 @@ function PilihanPeriode({ saringan }: { saringan: Saringan }) {
             periode,
             kategori: saringan.kategori,
             produk: saringan.produk,
+            metode: saringan.metode,
             cari: saringan.cari,
           })}
           aria-current={periode === saringan.periode ? "true" : undefined}
@@ -139,10 +144,12 @@ function NominalBertanda({ nominal }: { nominal: number }) {
 }
 
 /**
- * Rincian angka (PRD §14.5, §14.6) dengan tata letak Rincian Total bayar (DESIGN.md "Rincian angka Laporan
+ * Rincian angka (PRD §14.5, §14.6, §15.8) dengan tata letak Rincian Total bayar (DESIGN.md "Rincian angka Laporan
  * keuangan dan kartu Ringkasan"): label di kiri, nominal rata kanan, dan baris Laba kotor serta Laba bersih
- * ditebalkan dengan garis pemisah 2 px di atasnya. Baris Biaya operasional tidak tampil saat saringan Kategori
- * atau Produk aktif; keterangannya tampil sebagai catatan di atas rincian.
+ * ditebalkan dengan garis pemisah 2 px di atasnya. Sesudah Biaya operasional ada baris Kode unik Top up dan Biaya
+ * transaksi Top up, dan di bawah Laba bersih baris informasi Top up Berhasil. Keempat baris itu tidak tampil saat
+ * saringan Kategori, Produk, atau Metode aktif (nilainya null dari domain); keterangannya tampil sebagai catatan di
+ * atas rincian.
  */
 function RincianAngka({
   rincian,
@@ -169,6 +176,18 @@ function RincianAngka({
           {
             label: "− Biaya operasional",
             nilai: rupiah(rincian.biayaOperasional),
+          },
+        ]),
+    ...(rincian.kodeUnikTopUp === null || rincian.biayaTransaksiTopUp === null
+      ? []
+      : [
+          {
+            label: "+ Kode unik Top up",
+            nilai: rupiah(rincian.kodeUnikTopUp),
+          },
+          {
+            label: "− Biaya transaksi Top up",
+            nilai: rupiah(rincian.biayaTransaksiTopUp),
           },
         ]),
     {
@@ -198,8 +217,8 @@ function RincianAngka({
       )}
       {rincian.biayaOperasional === null && (
         <Catatan>
-          Laba bersih ini belum dikurangi Biaya operasional, karena saringan
-          Produk atau Kategori sedang aktif.
+          Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena
+          saringan Produk, Kategori, atau Metode sedang aktif.
         </Catatan>
       )}
       <div className="kartu max-w-[560px] p-4 sm:p-6">
@@ -234,6 +253,20 @@ function RincianAngka({
                 </td>
               </tr>
             ))}
+            {/* Baris informasi di bawah Laba bersih, tidak ikut hitungan (PRD §15.8). Teksnya boleh terlipat,
+                supaya rincian tidak bergulir ke samping di ponsel. */}
+            {rincian.topUpBerhasil !== null && (
+              <tr>
+                <td
+                  colSpan={2}
+                  className="pt-3 text-[15px] text-pensil-redup tabular-nums"
+                >
+                  Top up Berhasil: {rincian.topUpBerhasil.jumlah},{" "}
+                  {rupiah(rincian.topUpBerhasil.nominal)} (uang Member, bukan
+                  Pendapatan)
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -246,7 +279,7 @@ type Grafik = Awaited<ReturnType<typeof grafikLaporan>>;
 /**
  * Lima grafik Laporan keuangan (PRD §14.7): Pendapatan dan jumlah Pesanan Selesai per kelompok periode berupa
  * batang, Laba kotor (garis utuh) dan Laba bersih (garis putus-putus), lalu Produk terlaris dan Pendapatan per
- * Kategori berupa batang mendatar. Semuanya mengikuti saringan rentang, Kategori, dan Produk.
+ * Kategori berupa batang mendatar. Semuanya mengikuti saringan rentang, Kategori, Produk, dan Metode.
  */
 function GrafikLaporan({ grafik }: { grafik: Grafik }) {
   const kelompok = grafik.kelompok.map((k) => labelKelompok(grafik.periode, k));
@@ -334,7 +367,9 @@ function FormCari({ saringan }: { saringan: Saringan }) {
       aria-label="Cari Pesanan"
       className="flex flex-wrap items-end gap-4"
     >
-      {(["periode", "dari", "sampai", "kategori", "produk"] as const).map(
+      {(
+        ["periode", "dari", "sampai", "kategori", "produk", "metode"] as const
+      ).map(
         (kunci) =>
           saringan[kunci] !== undefined && (
             <input
@@ -368,10 +403,11 @@ function FormCari({ saringan }: { saringan: Saringan }) {
 
 type Tabel = Awaited<ReturnType<typeof tabelPesananLaporan>>;
 
-/** Judul kolom PRD §14.8, dengan nominal rata kanan. */
+/** Judul kolom PRD §14.8 dan Metode (§14.6 ▶ Keputusan 2026-11-20), dengan nominal rata kanan. */
 const KOLOM = [
   { label: "Nomor Pesanan", kanan: false },
   { label: "Waktu bayar (WIB)", kanan: false },
+  { label: "Metode", kanan: false },
   { label: "Produk dan Varian", kanan: false },
   { label: "Harga jual", kanan: true },
   { label: "Harga modal", kanan: true },
@@ -392,7 +428,7 @@ function TabelPesanan({ pesanan }: { pesanan: Tabel["pesanan"] }) {
   return (
     <div className="kartu p-4">
       <div className="relative overflow-x-auto">
-        <table className="w-full min-w-[1100px] text-left">
+        <table className="w-full min-w-[1180px] text-left">
           <caption className="sr-only">Pesanan Selesai</caption>
           <thead className="font-spidol text-base font-bold text-pensil-redup">
             <tr className="border-b-2 border-dashed border-pensil">
@@ -430,6 +466,7 @@ function TabelPesanan({ pesanan }: { pesanan: Tabel["pesanan"] }) {
                   <td className="py-3 pr-4 whitespace-nowrap">
                     {p.waktuBayar ? waktuWib(p.waktuBayar) : "—"}
                   </td>
+                  <td className="py-3 pr-4 whitespace-nowrap">{p.metode}</td>
                   <td className="min-w-48 py-3 pr-4 [overflow-wrap:anywhere]">
                     <span className="font-spidol font-bold">
                       {p.namaProduk}
@@ -550,9 +587,9 @@ function IsiTabel({
   );
 }
 
-// Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, dan periode, rincian
-// angka sampai Laba bersih, lima grafik (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan periode Harian
-// dan rentang awalnya, dan dibuka dari menu samping serta kartu uang Ringkasan (PRD §11.1, §9.2).
+// Laporan keuangan (PRD §14.5, §14.6, §14.8): saringan rentang tanggal WIB, Kategori, Produk, Metode, dan periode,
+// rincian angka sampai Laba bersih, lima grafik (§14.7), lalu tabel Pesanan Selesai. Halaman dibuka dengan periode
+// Harian dan rentang awalnya, dan dibuka dari menu samping serta kartu uang Ringkasan (PRD §11.1, §9.2).
 export default async function HalamanLaporanKeuangan({
   searchParams,
 }: PageProps<"/admin/laporan">) {
@@ -571,6 +608,7 @@ export default async function HalamanLaporanKeuangan({
     sampai: alamat.sampai ?? awal.akhir,
     kategori: alamat.kategori,
     produk: alamat.produk,
+    metode: alamat.metode,
     cari: alamat.cari,
   };
   const tanggalTerbalik = saringan.sampai < saringan.dari;
@@ -579,6 +617,7 @@ export default async function HalamanLaporanKeuangan({
     sampai: saringan.sampai,
     kategoriId: saringan.kategori,
     produkId: saringan.produk,
+    metode: saringan.metode,
   };
 
   const [pilihan, data] = await Promise.all([
@@ -624,6 +663,7 @@ export default async function HalamanLaporanKeuangan({
           sampai={saringan.sampai}
           kategoriId={saringan.kategori}
           produkId={saringan.produk}
+          metode={saringan.metode}
           cari={saringan.cari}
           semuaKategori={pilihan.kategori}
           semuaProduk={pilihan.produk}

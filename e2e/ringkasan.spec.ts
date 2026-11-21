@@ -7,10 +7,12 @@ import { and, count, eq, isNotNull, isNull, ne } from "drizzle-orm";
 // DATABASE_URL dari .env.ci yang dimuat playwright.config.ts, jadi data ini masuk ke database app_test, yang
 // dipakai bersama test lain yang berjalan bersamaan.
 import { db } from "../src/server/db";
-import { pesanan, varian } from "../src/server/db/schema";
+import { pesanan, topUp, user, varian } from "../src/server/db/schema";
 import { jumlahPesananBermasalah } from "../src/server/daftar-pesanan";
 import { sisipkanProduk } from "../src/server/uji-katalog";
+import { sisipkanMember } from "../src/server/uji-member";
 import { sisipkanPesanan } from "../src/server/uji-pesanan";
+import { sisipkanTopUp } from "../src/server/uji-top-up";
 
 const PASSWORD = "sandi-uji-admin-123";
 
@@ -93,7 +95,7 @@ test("kartu Pesanan Bermasalah menampilkan jumlah Pesanan Bermasalah saat ini, d
   ).toBeVisible();
 });
 
-/** Urutan kartu PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4. */
+/** Urutan kartu PRD §9.2 ▶ Keputusan 2026-11-20 (#204 dan #226), UAT-N4, dan UAT-O8. */
 const URUTAN_KARTU = [
   "Pendapatan",
   "Total Harga modal",
@@ -103,6 +105,8 @@ const URUTAN_KARTU = [
   "Pesanan Menunggu Pembayaran",
   "Pesanan Bermasalah",
   "Member aktif",
+  "Total saldo Member",
+  "Top up Bermasalah",
   "Item stok Tersedia",
   "Item stok Terkirim",
   "Varian stok menipis",
@@ -155,9 +159,10 @@ async function jumlahSelesaiTanpaHargaModal() {
   return jumlah;
 }
 
-// PRD §9.2 ▶ Keputusan 2026-11-20 dan UAT-N4: 11 kartu dengan urutan PRD. Kartu uang dan kartu Pesanan Selesai
-// menampilkan hari ini, bulan ini, dan sepanjang waktu. Ringkasan hanya berupa angka, tanpa grafik.
-test("Ringkasan menampilkan 11 kartu dengan urutan PRD, kartu uang dan Pesanan Selesai bertiga angka, tanpa grafik", async ({
+// PRD §9.2 ▶ Keputusan 2026-11-20 (#204 dan #226), UAT-N4, dan UAT-O8: 13 kartu dengan urutan PRD, dengan Total
+// saldo Member dan Top up Bermasalah tepat setelah Member aktif. Kartu uang dan kartu Pesanan Selesai menampilkan
+// hari ini, bulan ini, dan sepanjang waktu. Ringkasan hanya berupa angka, tanpa grafik.
+test("Ringkasan menampilkan 13 kartu dengan urutan PRD, kartu uang dan Pesanan Selesai bertiga angka, tanpa grafik", async ({
   page,
 }) => {
   await masukSebagaiAdmin(page);
@@ -196,6 +201,12 @@ test("Ringkasan menampilkan 11 kartu dengan urutan PRD, kartu uang dan Pesanan S
   ).toHaveText([/^\d+$/, /^\d+$/, /^\d+$/]);
   await expect(kartu(page, "Member aktif")).toContainText(
     /dari \d+ Member terdaftar/,
+  );
+  await expect(
+    kartu(page, "Total saldo Member").getByText(/^Rp \d[\d.]*$/),
+  ).toBeVisible();
+  await expect(kartu(page, "Total saldo Member")).toContainText(
+    "Saldo milik Member yang belum dibelanjakan. Ini uang Member, bukan Pendapatan.",
   );
 
   // Tidak ada grafik: tidak ada kanvas, gambar, atau SVG yang tidak disembunyikan dari pembaca layar.
@@ -407,4 +418,77 @@ test("kartu Member aktif menampilkan jumlah yang sama dengan jumlah Member berst
     expect(sesudah).toBe(sebelum);
     expect(Number(sebelum)).toBe(statusAktif);
   }).toPass({ timeout: 30_000 });
+});
+
+// UAT-O8 dan PRD §9.2 ▶ Keputusan 2026-11-20 (#226): kartu Total saldo Member membuka daftar Member.
+test("kartu Total saldo Member membuka daftar Member", async ({ page }) => {
+  await masukSebagaiAdmin(page);
+
+  await kartu(page, "Total saldo Member").getByRole("link").click();
+
+  await expect(page).toHaveURL("/admin/member");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Member" }),
+  ).toBeVisible();
+});
+
+/** Jumlah Top up Bermasalah di database saat ini. */
+async function jumlahTopUpBermasalahDiDatabase() {
+  const [{ jumlah }] = await db
+    .select({ jumlah: count() })
+    .from(topUp)
+    .where(eq(topUp.status, "Bermasalah"));
+  return jumlah;
+}
+
+// UAT-O5 langkah 1 dan PRD §9.2 ▶ Keputusan 2026-11-20 (#226): kartu Top up Bermasalah menampilkan jumlah Top up
+// Bermasalah saat ini, ditonjolkan seperti kartu Pesanan Bermasalah, dan membuka menu Top up yang tersaring
+// Bermasalah. Test lain bisa mengubah jumlah itu di sela bacaan, jadi kartu hanya dibandingkan saat jumlah di
+// database sama sebelum dan sesudah halaman dimuat.
+test("kartu Top up Bermasalah menampilkan jumlah Top up Bermasalah saat ini, dan mengetuknya membuka menu Top up yang tersaring Bermasalah", async ({
+  page,
+}) => {
+  const email = `ringkasan-top-up-${randomUUID()}@mail.com`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id: userId }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  // Top up Bermasalah seed [CONTOH]: Rp 50.000, Kode unik Rp 123.
+  const bermasalah = await sisipkanTopUp({
+    userId,
+    status: "Bermasalah",
+    biayaTransaksi: 0,
+    waktuBayar: new Date(),
+  });
+  await masukSebagaiAdmin(page);
+  const kartuTopUp = kartu(page, "Top up Bermasalah");
+
+  await expect(async () => {
+    const sebelum = await jumlahTopUpBermasalahDiDatabase();
+    await page.goto("/admin/ringkasan");
+    const diKartu = await kartuTopUp.getByText(/^\d+$/).textContent();
+    const sesudah = await jumlahTopUpBermasalahDiDatabase();
+
+    expect(sesudah).toBe(sebelum);
+    expect(Number(diKartu)).toBe(sebelum);
+    expect(sebelum).toBeGreaterThanOrEqual(1);
+  }).toPass({ timeout: 30_000 });
+  await expect(kartuTopUp).toContainText(
+    "Perlu tindakan. Buka daftar Top up Bermasalah",
+  );
+
+  await kartuTopUp.getByRole("link").click();
+
+  await expect(page).toHaveURL("/admin/top-up?status=Bermasalah", {
+    timeout: 15_000,
+  });
+  await expect(page.getByRole("main").getByLabel("Status")).toHaveValue(
+    "Bermasalah",
+  );
+  await expect(
+    page
+      .getByRole("main")
+      .getByRole("row", { name: new RegExp(bermasalah.nomorTopUp) }),
+  ).toBeVisible();
 });
