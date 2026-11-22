@@ -1,8 +1,8 @@
 // Qrispy tiruan untuk pengembangan, test, dan e2e (ADR-0004): menerbitkan QRIS dengan Kode unik acak
 // Rp 1–499, waktu kedaluwarsa 15 menit dari sekarang, dan gambar QR contoh yang tidak bisa dibayar dengan
-// e-wallet. Pembayarannya dipicu lewat bayarQrisTiruan, lalu cek status QRIS itu menjawab `paid`. QRIS yang
-// belum dibayar bisa dibatalkan, lalu cek statusnya menjawab `cancelled`; pembatalannya bisa diatur gagal
-// lewat tolakPembatalanTiruan.
+// e-wallet. Pembayarannya dipicu lewat bayarQrisTiruan, lalu cek status QRIS itu menjawab `paid`, termasuk cek
+// status yang dipicu webhook (ADR-0004 ▶ Keputusan 2026-11-22). QRIS yang belum dibayar bisa dibatalkan, lalu cek
+// statusnya menjawab `cancelled`; pembatalannya bisa diatur gagal lewat tolakPembatalanTiruan.
 import { randomInt, randomUUID } from "node:crypto";
 import { crc32, deflateSync } from "node:zlib";
 
@@ -101,7 +101,8 @@ const pembatalanDitolak = (wadah.__pembatalanDitolakTiruan ??= new Set());
 
 /**
  * Pembeli tiruan membayar sebuah QRIS dengan nominal itu, yang boleh berbeda dari Total bayar. Sesudahnya
- * cek status QRIS itu menjawab `paid`. Waktu bayarnya bisa diganti untuk test.
+ * cek status QRIS itu menjawab `paid` dengan nominal itu sebagai `amount`, yang menjadi nominal diterima, juga bila
+ * cek statusnya dipicu webhook. Waktu bayarnya bisa diganti untuk test.
  */
 export function bayarQrisTiruan(
   { qrisId, amount }: { qrisId: string; amount: number },

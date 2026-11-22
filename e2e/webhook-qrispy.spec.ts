@@ -16,9 +16,8 @@ test.use({ viewport: { width: 390, height: 800 } });
 
 /**
  * Pesanan Menunggu Pembayaran Canva Pro 1 Bulan Rp 45.000 [CONTOH] dengan Kode unik 123 dan Total bayar
- * Rp 45.123, yang menahan satu Item stok. Pesanan disiapkan langsung di database dengan QRIS yang tidak
- * pernah dibayar di Qrispy tiruan, sehingga cek status saat halaman dibuka tetap menjawab pending, dan
- * Pesanan hanya bisa Selesai lewat webhook.
+ * Rp 45.123, yang menahan satu Item stok. Pesanan disiapkan langsung di database dengan QRIS yang belum dibayar di
+ * Qrispy tiruan, sehingga cek status menjawab pending sampai test membayarnya lewat POST /api/qrispy-tiruan/bayar.
  */
 async function siapkanPesanan() {
   // Produk Canva Pro [CONTOH] dengan akhiran unik per run.
@@ -78,21 +77,27 @@ async function kirimWebhook(request: APIRequestContext, body: string) {
   });
 }
 
-// Issue T37, T38 dan ADR-0004: Qrispy mengirim kabar pembayaran dalam bentuk dashboard, yaitu event
-// payment.received dengan field di dalam data, seperti contoh di docs/referensi/qrispy-api.md bagian 6.
-// Nominal diterima-nya received_amount, yang di sini sama dengan Total bayar.
-test("webhook payment.received bentuk dashboard bersignature benar ke /api/qrispy/webhook membuat pil status di Tautan Pesanan menjadi Selesai", async ({
+// Issue T37, T38, T82 dan ADR-0004: Qrispy mengirim kabar pembayaran dalam bentuk dashboard, yaitu event
+// payment.received dengan field di dalam data, seperti contoh di docs/referensi/qrispy-api.md bagian 6. Webhook
+// hanya memicu cek status, dan nominal diterima-nya amount cek status (▶ Keputusan 2026-11-22). Di sini
+// received_amount Rp 45.000 tanpa Kode unik, seperti dugaan pada Pesanan Bermasalah 2026-11-22 (referensi bagian 9),
+// sedangkan Pembeli tiruan membayar Total bayar Rp 45.123.
+test("webhook payment.received bentuk dashboard bersignature benar dengan received_amount tanpa Kode unik untuk QRIS yang dibayar penuh membuat Pesanan Selesai, dan pil status di Tautan Pesanan menjadi Selesai", async ({
   page,
   request,
 }) => {
   const { tautan, qrisId, nomor } = await siapkanPesanan();
+  const dibayar = await request.post("/api/qrispy-tiruan/bayar", {
+    data: { qrisId, amount: 45123 },
+  });
+  expect(dibayar.status()).toBe(200);
 
   const body = JSON.stringify({
     event: "payment.received",
     data: {
       qris_id: qrisId,
       amount: 45000,
-      received_amount: 45123,
+      received_amount: 45000,
       payment_reference: nomor,
       paid_at: new Date().toISOString().replace("Z", "+00:00"),
       unique_id: 123,
@@ -100,6 +105,13 @@ test("webhook payment.received bentuk dashboard bersignature benar ke /api/qrisp
   });
   const respons = await kirimWebhook(request, body);
   expect(respons.status()).toBe(200);
+  // Pesanan sudah Selesai sebelum halamannya dibuka, jadi yang memprosesnya cek status dari webhook.
+  expect(
+    await db
+      .select({ status: pesanan.status })
+      .from(pesanan)
+      .where(eq(pesanan.qrisId, qrisId)),
+  ).toEqual([{ status: "Selesai" }]);
 
   await page.goto(`/pesanan/${tautan}`);
   const isi = page.getByRole("main");
