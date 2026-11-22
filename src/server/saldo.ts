@@ -101,7 +101,7 @@ function nilai(
 
 /**
  * Memeriksa isian "Tambah saldo" atau "Kurangi saldo" terhadap saldo Member sekarang tanpa mengubah apa pun, untuk
- * penegasan di tempat sebelum aksi dijalankan (PRD §15.6). Hasilnya "sah" beserta nominal yang terbaca, atau
+ * Modal penegasan sebelum aksi dijalankan (PRD §15.6, §9.10). Hasilnya "sah" beserta nominal yang terbaca, atau
  * "ditolak" beserta alasannya.
  */
 export async function periksaUbahSaldo(

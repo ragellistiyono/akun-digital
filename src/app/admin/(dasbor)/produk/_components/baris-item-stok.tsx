@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import { itemStokBolehDiubah, type StatusItemStok } from "@/domain/item-stok";
 
 import { IsianTeks } from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
+import { ModalPenegasan } from "../../_components/modal-penegasan";
 import { PilStatusItemStok } from "../../_components/pil";
 import {
   aksiHapusItemStok,
@@ -111,9 +112,9 @@ function FormUbahItemStok({
 }
 
 /**
- * Tombol Ubah dan Hapus untuk Item stok Tersedia. Hapus meminta penegasan lebih dulu, karena isi Item stok
- * yang terhapus tidak bisa dikembalikan. Bila server menolak, misalnya karena Item stok itu baru saja ditahan
- * checkout, pesannya tampil di bawah tombol.
+ * Tombol Ubah dan Hapus untuk Item stok Tersedia. Hapus membuka Modal penegasan lebih dulu (PRD §9.10), karena isi
+ * Item stok yang terhapus tidak bisa dikembalikan. Setelah aksi selesai, modal tertutup. Bila server menolak,
+ * misalnya karena Item stok itu baru saja ditahan checkout, pesannya tampil di bawah tombol.
  */
 function AksiItemStok({
   dipilih,
@@ -125,54 +126,48 @@ function AksiItemStok({
   onUbah: () => void;
 }) {
   const [menegaskan, setMenegaskan] = useState(false);
+  const pemicu = useRef<HTMLButtonElement>(null);
   const [keadaan, aksi, sedangMenghapus] = useActionState<
     KeadaanHapusItemStok,
     FormData
-  >(aksiHapusItemStok, {});
+  >(async (sebelumnya, formData) => {
+    const hasil = await aksiHapusItemStok(sebelumnya, formData);
+    setMenegaskan(false);
+    return hasil;
+  }, {});
   const nama = `Item stok ${nomor}`;
 
   return (
     <div className="flex flex-col gap-2">
-      {menegaskan ? (
-        // Penegasan di tempat dibingkai tepi merah `aksi` 2 px, karena isinya tidak bisa dikembalikan.
-        <form
-          action={aksi}
-          className="flex flex-col gap-3 rounded-coret-md border-2 border-aksi bg-permukaan p-3"
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={onUbah} className={KELAS_TOMBOL_KECIL}>
+          Ubah<span className="sr-only"> {nama}</span>
+        </button>
+        <button
+          ref={pemicu}
+          type="button"
+          onClick={() => setMenegaskan(true)}
+          className={KELAS_TOMBOL_KECIL}
         >
-          <IdItemStok {...dipilih} />
-          <p className="text-[17px]">
-            Hapus {nama}? Isinya tidak bisa dikembalikan.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="submit"
-              disabled={sedangMenghapus}
-              className="tombol tombol-kecil text-aksi hover:text-teks-di-aksi disabled:text-pensil-redup"
-            >
-              {sedangMenghapus ? "Menghapus…" : `Ya, hapus ${nama}`}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMenegaskan(false)}
-              className={KELAS_TOMBOL_KECIL}
-            >
-              Batal
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={onUbah} className={KELAS_TOMBOL_KECIL}>
-            Ubah<span className="sr-only"> {nama}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMenegaskan(true)}
-            className={KELAS_TOMBOL_KECIL}
-          >
-            Hapus<span className="sr-only"> {nama}</span>
-          </button>
-        </div>
+          Hapus<span className="sr-only"> {nama}</span>
+        </button>
+      </div>
+      {menegaskan && (
+        <ModalPenegasan
+          pemicu={pemicu}
+          judul="Hapus Item stok?"
+          rincian={`Hapus ${nama}? Isinya tidak bisa dikembalikan.`}
+          labelYa={`Ya, hapus ${nama}`}
+          labelProses="Menghapus…"
+          aksi={aksi}
+          isian={{
+            produkId: dipilih.produkId,
+            varianId: dipilih.varianId,
+            itemStokId: dipilih.id,
+          }}
+          sedangMemproses={sedangMenghapus}
+          onBatal={() => setMenegaskan(false)}
+        />
       )}
       {keadaan.galat && (
         <div role="alert">

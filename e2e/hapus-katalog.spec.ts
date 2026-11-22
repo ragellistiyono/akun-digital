@@ -137,13 +137,31 @@ async function masukSebagaiAdmin(page: Page) {
 const panelHapus = (page: Page, judul: string) =>
   page.getByRole("region", { name: judul });
 
-/** Memilih tombol hapus di panel itu, lalu menegaskannya. */
-async function hapusLewatPanel(page: Page, judul: string, nama: string) {
+/** Modal penegasan yang sedang terbuka (PRD §9.10). */
+const modalPenegasan = (page: Page) => page.getByRole("alertdialog");
+
+/**
+ * Memilih tombol hapus di panel itu, lalu menyetujui Modal penegasan-nya. Aksinya belum berjalan selama modal
+ * masih terbuka.
+ */
+async function hapusLewatPanel(
+  page: Page,
+  judul: string,
+  nama: string,
+  akibat: string,
+) {
   const panel = panelHapus(page, judul);
   await panel.getByRole("button", { name: judul }).click();
-  await expect(panel).toContainText(`Hapus ${nama}?`);
-  await panel.getByRole("button", { name: `Ya, hapus ${nama}` }).click();
+  const modal = page.getByRole("alertdialog", { name: `${judul}?` });
+  await expect(modal).toContainText(`Hapus ${nama}? ${akibat}`);
+  await modal.getByRole("button", { name: `Ya, hapus ${nama}` }).click();
 }
+
+const AKIBAT = {
+  kategori: "Kategori dan gambar ikonnya tidak bisa dikembalikan.",
+  produk:
+    "Varian, Item stok, dan foto miliknya ikut terhapus dan tidak bisa dikembalikan.",
+};
 
 const adaBerkas = (nama: string) =>
   access(path.join(FOLDER_UNGGAHAN_TEST, nama)).then(
@@ -173,7 +191,12 @@ test("UAT-C6 langkah 1: menghapus Kategori Game yang berisi Produk nonaktif dito
   await masukSebagaiAdmin(page);
   await page.goto(`/admin/kategori/${id.game}`);
 
-  await hapusLewatPanel(page, "Hapus Kategori", `Kategori ${NAMA.game}`);
+  await hapusLewatPanel(
+    page,
+    "Hapus Kategori",
+    `Kategori ${NAMA.game}`,
+    AKIBAT.kategori,
+  );
 
   await expect(
     panelHapus(page, "Hapus Kategori").getByRole("alert"),
@@ -192,16 +215,19 @@ test("menghapus Kategori yang kosong berhasil: dasbor kembali ke daftar Kategori
   await masukSebagaiAdmin(page);
   await page.goto(`/admin/kategori/${id.kosong}`);
 
-  // Batal menutup penegasan tanpa menghapus.
+  // Batal menutup Modal penegasan tanpa menghapus.
   const panel = panelHapus(page, "Hapus Kategori");
   await panel.getByRole("button", { name: "Hapus Kategori" }).click();
-  await panel.getByRole("button", { name: "Batal" }).click();
-  await expect(panel.getByRole("button", { name: /^Ya, hapus/ })).toHaveCount(
-    0,
-  );
+  await modalPenegasan(page).getByRole("button", { name: "Batal" }).click();
+  await expect(modalPenegasan(page)).toHaveCount(0);
   expect(await kategoriAda(id.kosong)).toBe(true);
 
-  await hapusLewatPanel(page, "Hapus Kategori", `Kategori ${NAMA.kosong}`);
+  await hapusLewatPanel(
+    page,
+    "Hapus Kategori",
+    `Kategori ${NAMA.kosong}`,
+    AKIBAT.kategori,
+  );
 
   await expect(page).toHaveURL("/admin/kategori", NAVIGASI);
   await expect(
@@ -266,8 +292,15 @@ test("UAT-C6 langkah 2 dan 3: Netflix Premium yang dinonaktifkan hilang dari kat
 
   // Langkah 3: Admin mencoba menghapus Netflix Premium.
   await page.goto(`/admin/produk/${id.netflix}`);
-  await hapusLewatPanel(page, "Hapus Produk", `Produk ${NAMA.netflix}`);
+  await hapusLewatPanel(
+    page,
+    "Hapus Produk",
+    `Produk ${NAMA.netflix}`,
+    AKIBAT.produk,
+  );
 
+  // Penolakan menutup Modal penegasan, lalu pesannya tampil di panel seperti sebelum ada modal (PRD §9.10).
+  await expect(modalPenegasan(page)).toHaveCount(0);
   await expect(panelHapus(page, "Hapus Produk").getByRole("alert")).toHaveText(
     "Produk ini tidak bisa dihapus, karena sudah tercatat di 2 Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Produk ini saja: hapus centang Aktif di form Produk, lalu simpan. Produk nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.",
   );
@@ -291,21 +324,20 @@ test("menghapus Varian yang pernah dipesan ditolak dengan pesan untuk menonaktif
 
   const tigaBulan = barisVarian("3 Bulan");
   await tigaBulan.getByRole("button", { name: "Hapus Varian 3 Bulan" }).click();
-  await expect(tigaBulan).toContainText(
+  const modal = page.getByRole("alertdialog", { name: "Hapus Varian?" });
+  await expect(modal).toContainText(
     "Hapus Varian 3 Bulan? Item stok Varian ini ikut terhapus dan tidak bisa dikembalikan.",
   );
-  await tigaBulan
-    .getByRole("button", { name: "Ya, hapus Varian 3 Bulan" })
-    .click();
+  expect(await idVarian(id.youtube, "3 Bulan")).not.toBe("");
+  await modal.getByRole("button", { name: "Ya, hapus Varian 3 Bulan" }).click();
+  await expect(modalPenegasan(page)).toHaveCount(0);
   await expect(tigaBulan.getByRole("alert")).toHaveText(
     "Varian ini tidak bisa dihapus, karena sudah tercatat di 1 Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Varian ini saja: pilih Ubah, hapus centang Aktif, lalu simpan. Varian nonaktif hilang dari katalog dan tidak bisa dibeli, sedangkan Pesanan lamanya tetap tampil utuh.",
   );
 
   const satuBulan = barisVarian("1 Bulan");
   await satuBulan.getByRole("button", { name: "Hapus Varian 1 Bulan" }).click();
-  await satuBulan
-    .getByRole("button", { name: "Ya, hapus Varian 1 Bulan" })
-    .click();
+  await modal.getByRole("button", { name: "Ya, hapus Varian 1 Bulan" }).click();
 
   await expect(barisVarian("1 Bulan")).toHaveCount(0);
   await expect(barisVarian("3 Bulan")).toHaveCount(1);

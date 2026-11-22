@@ -12,7 +12,7 @@ import { FormBiayaOperasional } from "../_components/form-biaya-operasional";
 import { aksiHapusBiayaOperasional } from "../aksi";
 
 // Mengubah tanggal, keterangan, atau nominal sebuah Biaya operasional, dengan panel Hapus Biaya operasional di
-// bawahnya (PRD §14.4). Penghapusan ditegaskan di tempat, seperti panel hapus Voucher (PRD §8.8).
+// bawahnya (PRD §14.4). Penghapusan ditegaskan lewat Modal penegasan, seperti panel hapus Voucher (PRD §8.8, §9.10).
 export default async function HalamanUbahBiayaOperasional({
   params,
 }: PageProps<"/admin/laporan/biaya-operasional/[id]">) {

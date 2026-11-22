@@ -223,7 +223,8 @@ function FormVarian({
 
 /**
  * Satu Varian di daftar: nama, harga, dan keadaannya, atau form ubahnya saat Admin memilih Ubah. Hapus
- * meminta penegasan lebih dulu, dan server menolak Varian yang sudah pernah dipesan (PRD §3.7).
+ * meminta persetujuan lewat Modal penegasan lebih dulu (PRD §9.10), dan server menolak Varian yang sudah pernah
+ * dipesan (PRD §3.7).
  */
 function BarisVarian({
   produkId,
@@ -283,6 +284,7 @@ function BarisVarian({
         <PenegasanHapus
           aksi={aksiHapusVarian}
           isian={{ produkId, id: varian.id }}
+          judul="Hapus Varian?"
           nama={`Varian ${varian.nama}`}
           akibat="Item stok Varian ini ikut terhapus dan tidak bisa dikembalikan."
           tombol={

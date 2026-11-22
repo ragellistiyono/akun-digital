@@ -68,7 +68,7 @@ async function isiDanSimpan(
 }
 
 // UAT-O1, PRD §15.6, §15.2, §15.10.
-test("Admin menambah dan mengurangi saldo Member dengan penegasan di tempat, lalu Member melihat saldo dan Riwayat saldo-nya", async ({
+test("Admin menambah dan mengurangi saldo Member lewat Modal penegasan, lalu Member melihat saldo dan Riwayat saldo-nya", async ({
   page,
 }) => {
   const { email, id } = await memberBaru();
@@ -85,17 +85,19 @@ test("Admin menambah dan mengurangi saldo Member dengan penegasan di tempat, lal
   let form = await isiDanSimpan(page, "Tambah saldo", "5000", "");
   await expect(form).toContainText("Keterangan belum diisi.");
 
-  // Langkah 3: penegasan dibatalkan, saldo tetap.
+  // Langkah 3: penegasan dibatalkan, saldo tetap. Isian diperiksa dulu sebelum Modal penegasan terbuka (PRD §9.10).
   form = await isiDanSimpan(page, "Tambah saldo", "5000", "Uji tambah saldo");
-  await expect(form).toContainText(`Tambah Rp 5.000 ke saldo ${email}?`);
-  await form.getByRole("button", { name: "Batal" }).click();
+  const modalTambah = page.getByRole("alertdialog", { name: "Tambah saldo?" });
+  await expect(modalTambah).toContainText(`Tambah Rp 5.000 ke saldo ${email}?`);
+  await modalTambah.getByRole("button", { name: "Batal" }).click();
+  await expect(modalTambah).toHaveCount(0);
   await expect(kotakSaldoAdmin(page)).toContainText("Rp 0");
   await expect(isi(page)).toContainText("Belum ada perubahan saldo.");
 
   // Langkah 4: isian tetap terisi setelah Batal; penegasan disetujui, saldo bertambah.
   await expect(form.getByLabel("Keterangan")).toHaveValue("Uji tambah saldo");
   await form.getByRole("button", { name: "Simpan" }).click();
-  await form.getByRole("button", { name: "Ya, tambah saldo" }).click();
+  await modalTambah.getByRole("button", { name: "Ya, tambah saldo" }).click();
   await expect(form).toHaveCount(0);
   await expect(kotakSaldoAdmin(page)).toContainText("Rp 5.000");
 
@@ -107,12 +109,19 @@ test("Admin menambah dan mengurangi saldo Member dengan penegasan di tempat, lal
   await expect(form).toContainText(
     `Saldo tidak cukup untuk dikurangi Rp 5.001. Saldo ${email} sekarang Rp 5.000.`,
   );
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(kotakSaldoAdmin(page)).toContainText("Rp 5.000");
 
   // Langkah 6: kurangi Rp 2.000.
   form = await isiDanSimpan(page, "Kurangi saldo", "2000", "Uji kurangi");
-  await expect(form).toContainText(`Kurangi Rp 2.000 dari saldo ${email}?`);
-  await form.getByRole("button", { name: "Ya, kurangi saldo" }).click();
+  const modalKurangi = page.getByRole("alertdialog", {
+    name: "Kurangi saldo?",
+  });
+  await expect(modalKurangi).toContainText(
+    `Kurangi Rp 2.000 dari saldo ${email}?`,
+  );
+  await expect(kotakSaldoAdmin(page)).toContainText("Rp 5.000");
+  await modalKurangi.getByRole("button", { name: "Ya, kurangi saldo" }).click();
   await expect(form).toHaveCount(0);
   await expect(kotakSaldoAdmin(page)).toContainText("Rp 3.000");
 
@@ -188,8 +197,11 @@ test("Admin menambah saldo Member nonaktif", async ({ page }) => {
   await kotakSaldoAdmin(page)
     .getByRole("button", { name: "Tambah saldo" })
     .click();
-  const form = await isiDanSimpan(page, "Tambah saldo", "20.000", "Bonus");
-  await form.getByRole("button", { name: "Ya, tambah saldo" }).click();
+  await isiDanSimpan(page, "Tambah saldo", "20.000", "Bonus");
+  await page
+    .getByRole("alertdialog", { name: "Tambah saldo?" })
+    .getByRole("button", { name: "Ya, tambah saldo" })
+    .click();
 
   await expect(kotakSaldoAdmin(page)).toContainText("Rp 20.000");
 });
