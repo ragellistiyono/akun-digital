@@ -1,0 +1,327 @@
+{
+  "aturan": "Batas per Member dan sisa jatah Produk gratis",
+  "prd": "§16.2, §16.3",
+  "keterangan": "pesanan adalah Pesanan di toko yang perlu diperiksa. jatahTerpakai = jumlah Pesanan dengan metode 'Gratis' untuk produk itu, dari semua Variannya, yang emailnya sama dengan emailMember menurut kesamaan-email.json (§7.4), sepanjang waktu. Pesanan QRIS dan Saldo tidak dihitung. sisaJatah = max(0, batasPerMember − jatahTerpakai). bolehAmbil bila sisaJatah > 0. teksJatah adalah baris \"Jatah Anda: sisa N dari M\" di Checkout. pesanJatahHabis tampil sebagai pengganti tombol \"Ambil gratis\" dan sebagai penolakan bila sisaJatah 0, selain itu null.",
+  "kasus": [
+    {
+      "nama": "Belum pernah mengambil",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 5,
+        "pesanan": []
+      },
+      "output": {
+        "jatahTerpakai": 0,
+        "sisaJatah": 5,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 5 dari 5",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Contoh PRD: 4 dari 5, dari dua Varian",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 5,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 4,
+        "sisaJatah": 1,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 1 dari 5",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Contoh PRD: pengambilan keenam ditolak",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 5,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 5,
+        "sisaJatah": 0,
+        "bolehAmbil": false,
+        "teksJatah": "Jatah Anda: sisa 0 dari 5",
+        "pesanJatahHabis": "Anda sudah mengambil 5 dari batas 5 untuk Produk ini."
+      }
+    },
+    {
+      "nama": "Contoh PRD: batas diturunkan ke 3",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 3,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 5,
+        "sisaJatah": 0,
+        "bolehAmbil": false,
+        "teksJatah": "Jatah Anda: sisa 0 dari 3",
+        "pesanJatahHabis": "Anda sudah mengambil 5 dari batas 3 untuk Produk ini."
+      }
+    },
+    {
+      "nama": "Batas dinaikkan lagi ke 10",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 10,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian B",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 5,
+        "sisaJatah": 5,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 5 dari 10",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Pesanan QRIS dan saldo dari Produk itu tidak dihitung",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 2,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "QRIS",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          },
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Saldo",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 0,
+        "sisaJatah": 2,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 2 dari 2",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Pesanan gratis Produk lain tidak dihitung",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 1,
+        "pesanan": [
+          {
+            "produk": "Produk Gratis Lain",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "budi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 0,
+        "sisaJatah": 1,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 1 dari 1",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Pesanan Member lain tidak dihitung",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 1,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "andi@mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 0,
+        "sisaJatah": 1,
+        "bolehAmbil": true,
+        "teksJatah": "Jatah Anda: sisa 1 dari 1",
+        "pesanJatahHabis": null
+      }
+    },
+    {
+      "nama": "Email dibandingkan tanpa membedakan huruf besar dan kecil",
+      "input": {
+        "produk": "Akun Uji Gratis",
+        "emailMember": "budi@mail.com",
+        "batasPerMember": 1,
+        "pesanan": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Varian A",
+            "metode": "Gratis",
+            "status": "Selesai",
+            "email": "Budi@Mail.com"
+          }
+        ]
+      },
+      "output": {
+        "jatahTerpakai": 1,
+        "sisaJatah": 0,
+        "bolehAmbil": false,
+        "teksJatah": "Jatah Anda: sisa 0 dari 1",
+        "pesanJatahHabis": "Anda sudah mengambil 1 dari batas 1 untuk Produk ini."
+      }
+    }
+  ]
+}

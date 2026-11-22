@@ -1,0 +1,322 @@
+{
+  "aturan": "Item stok kembar di seluruh toko",
+  "prd": "§4.2 (▶ Keputusan 2026-11-22)",
+  "keterangan": "itemStokToko adalah Item stok yang sudah ada di seluruh toko, dari Produk dan Varian mana pun, berstatus Tersedia, Ditahan, atau Terkirim. baris adalah tempelan ke Varian tujuan dengan Format Item stok kolom. Spasi di awal dan akhir setiap kolom dibuang, lalu setiap kolom dibandingkan apa adanya: huruf besar dan kecil dibedakan, dan titik ikut dibandingkan. Item stok dengan jumlah kolom berbeda tidak pernah kembar. Baris yang kembar dengan Item stok toko ditolak dengan alasan 'sudah-ada' dan pesan \"Sudah ada di <Produk> – <Varian> (<status>)\"; bila ada di beberapa tempat, yang disebut adalah yang pertama menurut nama Produk lalu nama Varian, A sampai Z. Baris kembar dengan baris sebelumnya di tempelan yang sama ditolak dengan alasan 'kembar-dalam-tempelan'. sedangDiubah adalah indeks Item stok di itemStokToko yang sedang diubah, yang tidak dibandingkan dengan dirinya sendiri; null untuk tempelan dan form satu Item stok.",
+  "kasus": [
+    {
+      "nama": "Kembar dengan Item stok Terkirim di Produk lain",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password",
+          "Profil"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "status": "Terkirim",
+            "kolom": [
+              "a@mail.com",
+              "pass1",
+              "Profil 1"
+            ]
+          }
+        ],
+        "baris": [
+          "a@mail.com|pass1|Profil 1",
+          "b@mail.com|pass2|Profil 2"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "b@mail.com|pass2|Profil 2"
+        ],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "sudah-ada",
+            "pesan": "Sudah ada di Netflix Premium – 3 Bulan (Terkirim)"
+          }
+        ],
+        "ringkasan": "1 tersimpan, 1 ditolak"
+      }
+    },
+    {
+      "nama": "Letak titik berbeda bukan kembar",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Akun Baru",
+            "status": "Tersedia",
+            "kolom": [
+              "budi.santoso@mail.com",
+              "rahasia1"
+            ]
+          }
+        ],
+        "baris": [
+          "bu.di.santoso@mail.com|rahasia1",
+          "b.udi.santoso@mail.com|rahasia1"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "bu.di.santoso@mail.com|rahasia1",
+          "b.udi.santoso@mail.com|rahasia1"
+        ],
+        "ditolak": [],
+        "ringkasan": "2 tersimpan, 0 ditolak"
+      }
+    },
+    {
+      "nama": "Huruf besar dan kecil dibedakan",
+      "input": {
+        "kolom": [
+          "Email",
+          "Password"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Akun Uji Gratis",
+            "varian": "Akun Baru",
+            "status": "Ditahan",
+            "kolom": [
+              "budi@mail.com",
+              "rahasia1"
+            ]
+          }
+        ],
+        "baris": [
+          "budi@mail.com|Rahasia1",
+          "Budi@mail.com|rahasia1"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "budi@mail.com|Rahasia1",
+          "Budi@mail.com|rahasia1"
+        ],
+        "ditolak": [],
+        "ringkasan": "2 tersimpan, 0 ditolak"
+      }
+    },
+    {
+      "nama": "Spasi di awal dan akhir kolom dibuang sebelum dibandingkan",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 60.000",
+            "status": "Tersedia",
+            "kolom": [
+              "KODE-111"
+            ]
+          }
+        ],
+        "baris": [
+          "  KODE-111  "
+        ]
+      },
+      "output": {
+        "tersimpan": [],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "sudah-ada",
+            "pesan": "Sudah ada di Steam Wallet – Rp 60.000 (Tersedia)"
+          }
+        ],
+        "ringkasan": "0 tersimpan, 1 ditolak"
+      }
+    },
+    {
+      "nama": "Jumlah kolom berbeda tidak pernah kembar",
+      "input": {
+        "kolom": [
+          "Kode",
+          "PIN"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 60.000",
+            "status": "Tersedia",
+            "kolom": [
+              "KODE-111"
+            ]
+          }
+        ],
+        "baris": [
+          "KODE-111|1234"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "KODE-111|1234"
+        ],
+        "ditolak": [],
+        "ringkasan": "1 tersimpan, 0 ditolak"
+      }
+    },
+    {
+      "nama": "Ada di dua tempat: yang disebut pertama menurut nama Produk lalu Varian",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 60.000",
+            "status": "Terkirim",
+            "kolom": [
+              "KODE-222"
+            ]
+          },
+          {
+            "produk": "Google Play",
+            "varian": "Rp 50.000",
+            "status": "Tersedia",
+            "kolom": [
+              "KODE-222"
+            ]
+          },
+          {
+            "produk": "Google Play",
+            "varian": "Rp 20.000",
+            "status": "Ditahan",
+            "kolom": [
+              "KODE-222"
+            ]
+          }
+        ],
+        "baris": [
+          "KODE-222"
+        ]
+      },
+      "output": {
+        "tersimpan": [],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "sudah-ada",
+            "pesan": "Sudah ada di Google Play – Rp 20.000 (Ditahan)"
+          }
+        ],
+        "ringkasan": "0 tersimpan, 1 ditolak"
+      }
+    },
+    {
+      "nama": "Kembar di dalam tempelan yang sama",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "sedangDiubah": null,
+        "itemStokToko": [],
+        "baris": [
+          "KODE-333",
+          "KODE-333"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "KODE-333"
+        ],
+        "ditolak": [
+          {
+            "baris": 2,
+            "alasan": "kembar-dalam-tempelan",
+            "pesan": null
+          }
+        ],
+        "ringkasan": "1 tersimpan, 1 ditolak"
+      }
+    },
+    {
+      "nama": "Ubah Item stok tanpa mengganti isinya tidak dibandingkan dengan dirinya sendiri",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "sedangDiubah": 0,
+        "itemStokToko": [
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 60.000",
+            "status": "Tersedia",
+            "kolom": [
+              "KODE-444"
+            ]
+          }
+        ],
+        "baris": [
+          "KODE-444"
+        ]
+      },
+      "output": {
+        "tersimpan": [
+          "KODE-444"
+        ],
+        "ditolak": [],
+        "ringkasan": "1 tersimpan, 0 ditolak"
+      }
+    },
+    {
+      "nama": "Ubah Item stok menjadi isi Item stok lain",
+      "input": {
+        "kolom": [
+          "Kode"
+        ],
+        "sedangDiubah": 0,
+        "itemStokToko": [
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 60.000",
+            "status": "Tersedia",
+            "kolom": [
+              "KODE-555"
+            ]
+          },
+          {
+            "produk": "Steam Wallet",
+            "varian": "Rp 120.000",
+            "status": "Terkirim",
+            "kolom": [
+              "KODE-666"
+            ]
+          }
+        ],
+        "baris": [
+          "KODE-666"
+        ]
+      },
+      "output": {
+        "tersimpan": [],
+        "ditolak": [
+          {
+            "baris": 1,
+            "alasan": "sudah-ada",
+            "pesan": "Sudah ada di Steam Wallet – Rp 120.000 (Terkirim)"
+          }
+        ],
+        "ringkasan": "0 tersimpan, 1 ditolak"
+      }
+    }
+  ]
+}

@@ -306,6 +306,19 @@ Setelah toko terpasang di `https://akun.miwedigital.store`, pemilik membeli dua 
 | Pengaturan webhook disimpan lagi, lalu Test Webhook ditekan pukul 13.14 | Webhook `payment.test` sampai, signature-nya cocok, dan toko menjawab `200` tanpa perubahan |
 | Pembayaran 2: Pesanan dibuat 13.18, dibayar 13.19.31, Selesai 13.19.32 | Total bayar Rp 1.234. Cek status lebih dulu menangkapnya. Webhook `payment.received` dalam bentuk dashboard sampai pukul 13.19.34, signature-nya cocok, payload-nya sah, dan karena sudah diproses, tidak ada perubahan ganda. Email Pesanan selesai terkirim. |
 
+### Pesanan Bermasalah 2026-11-22
+
+Pemilik membeli Varian Rp 1.000 di toko yang sudah terpasang, lalu membayar QRIS-nya dengan e-wallet. Email Pembeli, Nomor Pesanan, dan ID QRIS tidak dicatat di sini.
+
+| Kejadian (WIB) | Temuan |
+|---|---|
+| Pesanan dibuat 22.26 | Total bayar Rp 1.212, dengan Kode unik Rp 212 |
+| Pesanan menjadi Bermasalah 22.27, dengan pelaku "Qrispy" | Pembeli sudah membayar, tetapi Item stok tidak dikirim. Pesanan ini menahan Item stok sejak dibuat. Menurut kode, perpindahan dari Menunggu Pembayaran ke Bermasalah oleh Qrispy dalam keadaan itu hanya terjadi bila nominal yang dikabarkan kurang dari Total bayar (PRD §5.9 butir 2). Pada jalur itu, Item stok yang ditahan dilepas lagi. |
+
+**Dugaan.** Jalur cek status tidak mungkin menghasilkan Bermasalah di sini, karena `amount`-nya sudah termasuk Kode unik (pembayaran 1 dan 2 di atas). Jadi kabar itu kemungkinan besar datang lewat webhook, dan `received_amount`-nya kurang dari Rp 1.212, misalnya Rp 1.000 tanpa Kode unik. Contoh dashboard di bagian 6 juga menulis `received_amount` 50000 dengan `unique_id` 123. Log tidak mencatat nominal, jadi dugaan ini belum terbukti. Detail transaksi di Dashboard Qrispy bisa memastikannya.
+
+**Tindak lanjut.** Sejak #246, nominal diterima selalu diambil dari cek status, dan log webhook mencatat `received_amount` di samping `amount` cek status (ADR-0004).
+
 **Belum diuji:**
 - status `expired`;
 - format signature (hex atau base64);

@@ -11,6 +11,8 @@ Diperbarui 2026-11-15. Uji API Qrispy sungguhan menunjukkan bahwa nominal dikiri
 
 Diperbarui lagi 2026-11-15 (#118). Dua pembayaran sungguhan membuktikan bahwa Qrispy mengirim webhook dalam bentuk dashboard, jadi bentuk referensi tidak lagi diterima.
 
+Diperbarui 2026-11-22 (#246). Sebuah Pesanan yang sudah dibayar penuh menjadi Bermasalah lewat webhook. Dugaan kuatnya, `received_amount` tidak memuat Kode unik, sehingga terlihat kurang dari Total bayar (`docs/referensi/qrispy-api.md` bagian 9). Karena itu nominal diterima kini selalu diambil dari cek status, dan webhook hanya menjadi pemicunya.
+
 ## Keputusan
 
 - **Satu adaptor.** Semua panggilan ke Qrispy lewat satu antarmuka di `src/server/`. Antarmuka itu punya dua implementasi:
@@ -45,6 +47,14 @@ Diperbarui lagi 2026-11-15 (#118). Dua pembayaran sungguhan membuktikan bahwa Qr
   - `amount` dari cek status, bila statusnya `paid`.
 
   Nominal ini dibandingkan dengan Total bayar menurut PRD §5.9.
+
+  ▶ Keputusan 2026-11-22 (#246): Butir di atas diganti. Nominal diterima selalu diambil dari `amount` cek status, juga untuk kabar yang datang lewat webhook. Butir ini berlaku untuk Pesanan dan Top up.
+  - Webhook `payment.received` yang signature dan bentuknya sah memicu satu cek status QRIS itu ke Qrispy. Cek ini langsung dijalankan, tanpa menunggu giliran 15 detik dari jalur halaman bayar, dan tetap tercatat sebagai cek terakhir untuk Pesanan atau Top up itu.
+  - Bila jawabannya `paid`, kabar diproses dengan `amount` sebagai nominal diterima dan `paid_at` sebagai waktu bayar, lewat pemroses kabar pembayaran yang sama.
+  - Bila cek status gagal atau jawabannya belum `paid`, tidak ada yang berubah. Kegagalan itu dicatat di log, dan webhook tetap dijawab `200`. Pembayarannya tertangkap lewat cek status berikutnya, paling lambat pada cek terakhir sebelum Pesanan atau Top up dijadikan Kedaluwarsa.
+  - `received_amount` tetap wajib ada di payload, supaya bentuk dashboard tetap dikenali, tetapi tidak lagi dibandingkan dengan Total bayar.
+  - Saat webhook memicu cek status, log server mencatat satu baris berisi `received_amount` dari webhook dan `amount` dari cek status. Nominal bukan rahasia (▶ Keputusan 2026-11-15, #113). Baris ini memastikan arti `received_amount` pada pembayaran sungguhan berikutnya.
+  - Pesanan atau Top up yang sudah telanjur Bermasalah karena webhook tidak diproses ulang otomatis. Admin menyelesaikannya lewat "Kirim Item stok" atau "Tambahkan ke saldo".
 - **Dua jalur kabar pembayaran.** Webhook bukan satu-satunya jalur:
   - Halaman bayar menanyakan status ke server toko, bukan ke Qrispy.
   - Server toko menanyakan status ke Qrispy paling sering sekali per 15 detik untuk setiap Pesanan, dan sekali lagi tepat sebelum Pesanan dijadikan Kedaluwarsa.
@@ -73,5 +83,5 @@ Diperbarui lagi 2026-11-15 (#118). Dua pembayaran sungguhan membuktikan bahwa Qr
 - Contoh jawaban Qrispy di test adaptor dan contoh webhook di test e2e memakai bentuk dari uji sungguhan (`docs/referensi/qrispy-api.md` bagian 9). Qrispy tiruan bekerja di tingkat adaptor, jadi bentuk JSON tidak memengaruhinya.
 - Bentuk webhook sudah terbukti pada pembayaran sungguhan 2026-11-15, dan bentuk referensi dihapus (#118). Dua hal masih menunggu bukti:
   - format signature. Log webhook kini mencatat format yang cocok. Setelah terbukti, format yang tidak terpakai dihapus lewat tiket baru;
-  - apakah `received_amount` sudah termasuk Kode unik (`docs/referensi/qrispy-api.md` bagian 6).
+  - apakah `received_amount` sudah termasuk Kode unik (`docs/referensi/qrispy-api.md` bagian 6). Sejak #246 nilai ini tidak lagi menentukan status Pesanan atau Top up. Log webhook mencatatnya di samping `amount` cek status, supaya artinya bisa dipastikan.
 - Toko memanggil API status Qrispy secara berkala. Bila Qrispy menjawab `429`, toko menunggu sampai giliran cek berikutnya.

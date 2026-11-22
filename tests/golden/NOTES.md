@@ -33,3 +33,9 @@ Aturan PRD yang memuat angka tetapi belum atau tidak punya berkas golden:
 - **§15.2 dan §15.9 50 baris per halaman** di Riwayat saldo dan daftar Top up adalah aturan tampilan, jadi diuji lewat test biasa.
 - **§15.1 Saldo tidak pernah negatif** diuji lewat `ubah-saldo-admin.json` dan `bayar-saldo.json`. Pemotongan saldo yang terjadi bersamaan, misalnya Admin mengurangi saldo saat Member membayar, diuji lewat test integrasi.
 - **§9.2 kartu Total saldo Member dan Top up Bermasalah** (▶ Keputusan 2026-11-20, #226) adalah hitungan jumlah tanpa rumus, jadi diuji lewat test integrasi. Kartu Laba bersih memakai `laba-top-up.json`.
+- **§9.10 Modal penegasan** (▶ Keputusan 2026-11-22, #246) adalah aturan tampilan tanpa hitungan, jadi diuji lewat test komponen dan end-to-end. Teks penegasan hapus semua Item stok Tersedia ada di `hapus-semua-item-stok.json`.
+- **§9.7 pembeli Item stok** (▶ Keputusan 2026-11-22, #246) hanya menampilkan email, waktu, dan Nomor Pesanan yang sudah tercatat, jadi diuji lewat test integrasi.
+- **§7.3 tujuan setelah Kode verifikasi** (▶ Keputusan 2026-11-22, #246) adalah aturan alur, jadi diuji lewat test integrasi dan end-to-end.
+- **§15.7 pilihan Saldo untuk Tamu** (▶ Keputusan 2026-11-22, #246) adalah aturan tampilan dan alur tanpa hitungan. Kecukupan saldo Member tetap memakai `bayar-saldo.json`.
+- **§16.3 urutan pemeriksaan "Ambil gratis"** diuji lewat test integrasi, seperti urutan pemeriksaan checkout §5.2. Sisa jatahnya memakai `batas-per-member.json`.
+- **§16.4 tampilan "Gratis"** di kartu Produk, Halaman Produk, Checkout, dan rincian nominal adalah aturan tampilan tanpa hitungan, jadi diuji lewat test komponen dan end-to-end.

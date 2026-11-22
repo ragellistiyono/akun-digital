@@ -80,6 +80,16 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
 
 ▶ Keputusan 2026-11-21 (#240): Seed lokal diselaraskan dengan §15.2. Top up Berhasil seed juga punya satu baris Riwayat saldo jenis Top up +Rp 100.000 dengan Nomor Top up-nya, di atas baris "Saldo awal seed". Karena itu Saldo `member@miwe.example` di seed lokal menjadi Rp 200.000. Data seed lainnya tidak berubah.
 
+▶ Keputusan 2026-11-22 (#246): Persiapan M6
+- **Seed lokal.** `pnpm db:seed` juga mengisi data berikut, semuanya bertanda `[CONTOH]`:
+  - Produk gratis "Akun Uji Gratis": Kategori Streaming, Format Item stok `Email`, `Password`, Batas per Member 2, dan satu Varian "Akun Baru" dengan Harga jual Rp 1.000, Harga normal Rp 15.000, Harga modal Rp 0, serta 5 Item stok Tersedia. Salah satu Item stoknya `budi.santoso@mail.com|rahasia1`.
+  - Satu Item stok Tersedia Netflix Premium 3 Bulan berisi `uji-kembar@mail.com|pass9|Profil 1`, untuk UAT-D5.
+- **Produksi.** UAT M6 di server produksi juga dijalankan tanpa data seed.
+  - Jadikan sendiri sebuah Produk sebagai Produk gratis, misalnya Produk gratis yang sudah Anda jual, dengan Batas per Member 2 dan paling sedikit 3 Item stok Tersedia.
+  - Untuk UAT-D5, pakai baris Item stok yang sudah ada di Produk lain milik Anda.
+  - UAT-E8 memakai pembayaran sungguhan Uji Bayar dan satu Top up Rp 10.000.
+- **Email baru.** UAT-O10 dan UAT-P2 masing-masing butuh satu email yang belum terdaftar, misalnya `nama+uji6@gmail.com` dan `nama+uji7@gmail.com`.
+
 ## A. Tujuan dan batas (§1)
 
 **UAT-A1 — Pembelian tanpa campur tangan Admin (bayar)**
@@ -257,6 +267,46 @@ Disusun lewat /tiket:rencanakan-produk dan dijalankan pemilik di akhir tahap. Da
   - Setelah kolom 3 diganti `Profil`, Produk tersimpan.
 - PRD: §4.1
 
+**UAT-D5 — Item stok kembar di seluruh toko**
+- Langkah:
+  1. Sebagai Admin, buka menu Item stok, pilih YouTube Premium 3 Bulan, lalu tempel dua baris berikut. Baris pertama sama persis dengan Item stok Netflix Premium 3 Bulan dari persiapan M6.
+     ```
+     uji-kembar@mail.com|pass9|Profil 1
+     uji-baru@mail.com|pass9|Profil 1
+     ```
+  2. Di Akun Uji Gratis, tempel `bu.di.santoso@mail.com|rahasia1` dan `Budi.santoso@mail.com|rahasia1`.
+  3. Di halaman Varian YouTube Premium 3 Bulan, ubah satu Item stok Tersedia menjadi `uji-kembar@mail.com|pass9|Profil 1`.
+- Hasil:
+  - Langkah 1: ringkasan "1 tersimpan, 1 ditolak". Baris 1 ditolak dengan alasan "Sudah ada di Netflix Premium – 3 Bulan (Tersedia)".
+  - Langkah 2: kedua baris tersimpan, karena letak titik dan huruf besarnya berbeda dari `budi.santoso@mail.com|rahasia1`.
+  - Langkah 3: perubahan ditolak dengan pesan "Sudah ada di Netflix Premium – 3 Bulan (Tersedia)", dan isi Item stok itu tidak berubah.
+- PRD: §4.2
+
+**UAT-D6 — Hapus semua Item stok Tersedia**
+- Langkah:
+  1. Mulai checkout Netflix Premium 1 Bulan dengan Email A tanpa membayar.
+  2. Sebagai Admin, buka halaman Varian Netflix Premium 1 Bulan, lalu tekan "Hapus semua Item stok Tersedia".
+  3. Tekan "Batal" di modal.
+  4. Tekan tombol itu lagi, lalu setujui modalnya.
+  5. Batalkan Pesanan Email A.
+- Hasil:
+  - Langkah 2: Modal penegasan menyebut jumlah Item stok Tersedia, 1 Ditahan, dan jumlah Terkirim, misalnya "Hapus 9 Item stok Tersedia dari Netflix Premium – 1 Bulan? 1 Ditahan dan 1 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan."
+  - Langkah 3: modal tertutup, dan tidak ada Item stok yang terhapus.
+  - Langkah 4: tampil "N Item stok terhapus.", dengan N sama dengan jumlah Tersedia di modal. Saringan Tersedia kosong, dan Item stok Ditahan serta Terkirim tetap ada. Tombol "Hapus semua Item stok Tersedia" tidak tampil lagi.
+  - Langkah 5: Item stok yang tadi Ditahan kembali Tersedia, sehingga Stok Varian menjadi 1.
+- PRD: §4.4, §9.10
+
+**UAT-D7 — Pembeli Item stok**
+- Langkah:
+  1. Mulai checkout YouTube Premium 3 Bulan dengan Email B tanpa membayar.
+  2. Sebagai Admin, buka menu Item stok, lalu ketuk "Lihat Item stok" di baris YouTube Premium 3 Bulan.
+  3. Buka halaman Varian Netflix Premium 1 Bulan dan saring ke Terkirim, lalu ketuk Nomor Pesanan-nya.
+  4. Batalkan Pesanan Email B.
+- Hasil:
+  - Langkah 2 membuka halaman Varian YouTube Premium 3 Bulan. Baris Ditahan menampilkan Email B, waktu Pesanan dibuat, dan Nomor Pesanan-nya.
+  - Langkah 3: baris Terkirim menampilkan email penerima dan waktu bayarnya. Nomor Pesanan membuka detail Pesanan itu di dasbor admin.
+- PRD: §9.7
+
 ## E. Checkout dan pembayaran (§5)
 
 **UAT-E1 — Penahanan dan pembatalan**
@@ -331,6 +381,18 @@ Pengarahan ke Pesanan yang menunggu saat Stok Varian 0 (§5.4 ▶ Keputusan 2026
   - Form hanya berisi email dan kode voucher.
   - Ada kalimat "Dengan membayar, Anda menyetujui Syarat & Ketentuan" dengan tautan, tanpa kotak centang.
 - PRD: §5.2
+
+**UAT-E8 — Pembayaran QRIS saat halaman bayar sudah ditutup (bayar)**
+- Langkah:
+  1. Checkout Uji Bayar dengan QRIS, tekan "Simpan gambar QR", lalu tutup tab browser-nya.
+  2. Bayar gambar QR itu dari e-wallet.
+  3. Tunggu 1 menit, lalu buka Pesanan itu di dasbor admin.
+  4. Sebagai Member uji, mulai Top up Rp 10.000, simpan gambar QR-nya, lalu tutup tab browser-nya. Bayar dari e-wallet, tunggu 1 menit, lalu buka tab Akun.
+- Hasil:
+  - Langkah 3: Pesanan Selesai, riwayat statusnya mencatat "Selesai" dengan pelaku "Qrispy", dan email "Pesanan selesai" masuk. Pesanan tidak menjadi Bermasalah.
+  - Langkah 4: Top up Berhasil, dan saldo bertambah Rp 10.000.
+  - Bila salah satunya Bermasalah, catat waktunya dan laporkan sebagai bug, karena kabar pembayarannya datang lewat webhook (ADR-0004).
+- PRD: §5.7, §5.9, §15.5
 
 ## F. Pengiriman Item stok (§6)
 
@@ -616,6 +678,21 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Tidak ada menu log aktivitas, ekspor CSV, atau notifikasi email Admin.
 - PRD: §9.8, §9.9
 
+**UAT-I6 — Modal penegasan**
+- Langkah:
+  1. Buka halaman ubah sebuah Voucher yang belum pernah dipakai, lalu tekan tombol di panel "Hapus Voucher".
+  2. Tekan Esc.
+  3. Buka modal yang sama lagi, lalu ketuk di luar modal.
+  4. Di halaman Member uji, isi "Tambah saldo" Rp 1.000 dengan keterangan "Uji modal", tekan tombolnya, lalu setujui modalnya.
+  5. Di halaman Varian, tekan "Ubah" pada satu Item stok Tersedia, lalu simpan tanpa mengubah isinya.
+- Hasil:
+  - Langkah 1: Modal penegasan tampil di tengah layar dengan teks "Hapus Voucher KODE? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan.", tombol "Ya, hapus …", dan "Batal". Fokus ada di "Batal".
+  - Langkah 2 dan 3: modal tertutup, dan Voucher tidak terhapus.
+  - Langkah 4: modal menyebut "Tambah Rp 1.000 ke saldo <email>?", lalu saldo bertambah Rp 1.000. Kurangi lagi saldo itu sesudahnya.
+  - Langkah 5: Item stok tersimpan tanpa modal.
+  - Coba juga di ponsel: modal selebar layar dengan tombol bersusun.
+- PRD: §9.10
+
 ## J. Email (§10)
 
 **UAT-J1 — Tiga jenis email**
@@ -721,6 +798,7 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 | M3 | K2, K3, K4 |
 | M4 | N1–N10, lalu ulangi I1 untuk memastikan Pendapatan dan Pesanan Selesai tidak berubah |
 | M5 | O1–O9, lalu ulangi I1 dan N4 untuk memastikan kartu lain tidak berubah selain dua kartu saldo |
+| M6 | E8, I6, D5–D7, O10, P1–P5, lalu ulangi O6 untuk memastikan bayar dengan saldo tetap berjalan |
 
 PRD: §13
 
@@ -963,6 +1041,8 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
   - Langkah 4: Tamu hanya melihat QRIS.
 - PRD: §5.2, §15.7
 
+▶ Keputusan 2026-11-22 (#246): Sejak M6, langkah 4 menampilkan pilihan Saldo yang tidak bisa dipilih, beserta ajakan Masuk atau Daftar lalu top up. Skenarionya ada di UAT-O10.
+
 **UAT-O7 — Saldo dengan Voucher dan Pesanan menunggu (seed lokal)**
 - Langkah:
   1. Di seed lokal, login sebagai `member@miwe.example` dengan saldo Rp 45.000. Atur saldonya lewat "Kurangi saldo".
@@ -996,3 +1076,72 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
   - Langkah 2: rincian, grafik, dan tabel hanya berisi Pesanan dengan Metode itu. Baris Biaya operasional, baris Top up, dan baris informasi Top up hilang, dan tampil keterangan "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif."
   - Langkah 3: keterangan yang sama tampil.
 - PRD: §14.5, §14.6, §15.8
+
+**UAT-O10 — Pilihan Saldo untuk Tamu**
+- Langkah:
+  1. Di jendela penyamaran, buka Checkout Uji Bayar sebagai Tamu.
+  2. Ketuk "Masuk", lalu login sebagai Member uji.
+  3. Keluar. Di jendela penyamaran baru, buka lagi Checkout Uji Bayar, ketuk "Daftar", lalu daftarkan email baru pertama dari persiapan M6, lalu masukkan Kode verifikasinya.
+- Hasil:
+  - Langkah 1: ada pilihan "Saldo" yang redup dan tidak bisa dipilih, dengan kalimat "Bayar pakai saldo khusus Member. Masuk, atau Daftar lalu top up." Pilihan QRIS terpilih, dan tombolnya "Bayar dengan QRIS".
+  - Langkah 2: Member kembali ke Checkout Uji Bayar dengan pilihan "Saldo (Rp …)".
+  - Langkah 3: setelah Kode verifikasi benar, Member baru langsung dibawa ke halaman Top up.
+- PRD: §7.3, §15.7
+
+## P. Produk gratis (§16)
+
+**UAT-P1 — Menjadikan Produk gratis**
+- Langkah:
+  1. Sebagai Admin, buka form Produk Akun Uji Gratis. Lepas centang "Produk gratis" bila ada, lalu centang lagi dan kosongkan Batas per Member, lalu simpan.
+  2. Isi Batas per Member `1000`, lalu `2.5`, lalu `2`, dan simpan setiap kali.
+  3. Buka form Varian "Akun Baru".
+  4. Buka Beranda dan Halaman Produk Akun Uji Gratis.
+- Hasil:
+  - Langkah 1 dan 2: Batas per Member kosong, `1000`, dan `2.5` ditolak dengan pesan yang menyebut sebabnya. `2` tersimpan, dan daftar Produk di dasbor admin menandai Produk itu "Gratis".
+  - Langkah 3: Harga jual tetap terisi dan wajib, dengan catatan "Produk ini gratis. Harga jual dipakai lagi bila centang Produk gratis dilepas."
+  - Langkah 4: kartu Produk menampilkan "Gratis" tanpa kata "Mulai", dengan Harga normal Rp 15.000 dicoret dan tanpa label Hemat. Halaman Produk menampilkan "Gratis khusus Member, maksimal 2 per Member".
+- PRD: §16.1, §16.2, §16.4
+
+**UAT-P2 — Tamu membuka Checkout Produk gratis**
+- Langkah:
+  1. Di jendela penyamaran, buka Checkout Akun Uji Gratis sebagai Tamu.
+  2. Ketuk "Daftar", daftarkan email baru kedua dari persiapan M6, lalu masukkan Kode verifikasinya.
+- Hasil:
+  - Langkah 1: tampil "Produk gratis khusus Member. Masuk atau Daftar dulu." tanpa form, isian voucher, maupun tombol bayar.
+  - Langkah 2: setelah Kode verifikasi benar, Member baru kembali ke Checkout Akun Uji Gratis dan melihat "Jatah Anda: sisa 2 dari 2".
+- PRD: §7.3, §16.3
+
+**UAT-P3 — Mengambil Produk gratis sampai batas**
+- Langkah:
+  1. Login sebagai Member uji, buka Checkout Akun Uji Gratis, lalu tekan "Ambil gratis".
+  2. Buka lagi Checkout yang sama, lalu tekan "Ambil gratis" sekali lagi.
+  3. Buka lagi Checkout yang sama.
+  4. Sebagai Admin, buka detail kedua Pesanan itu.
+- Hasil:
+  - Langkah 1: Checkout berisi email Member yang tidak bisa diubah, "Total bayar Rp 0" dengan tulisan "Gratis", dan "Jatah Anda: sisa 2 dari 2". Tidak ada isian voucher dan pilihan Saldo atau QRIS. Setelah ditekan, Halaman Pesanan Selesai langsung tampil dengan Item stok, tanpa QRIS, dan email "Pesanan selesai" masuk dengan rincian "Total bayar Rp 0" dan "Gratis".
+  - Langkah 2: berhasil, karena jatahnya masih "sisa 1 dari 2".
+  - Langkah 3: tombol "Ambil gratis" tidak tampil. Sebagai gantinya tampil "Anda sudah mengambil 2 dari batas 2 untuk Produk ini."
+  - Langkah 4: Metode Gratis, Total bayar Rp 0, Biaya transaksi Rp 0, Harga modal Rp 0, dan riwayat status "Selesai" dengan pelaku "Pembeli (gratis)". Kedua Pesanan tampil di Riwayat Pesanan Member uji.
+- PRD: §16.2, §16.3, §16.4
+
+**UAT-P4 — Batas diubah dan stok habis**
+- Langkah:
+  1. Sebagai Admin, naikkan Batas per Member Akun Uji Gratis menjadi 10.
+  2. Sebagai Member uji, buka Checkout Akun Uji Gratis.
+  3. Sebagai Admin, hapus semua Item stok Tersedia Varian "Akun Baru", lalu sebagai Member uji tekan "Ambil gratis".
+  4. Sebagai Admin, isi lagi 3 Item stok baru, lalu lepas centang "Produk gratis".
+  5. Buka Halaman Produk Akun Uji Gratis.
+- Hasil:
+  - Langkah 2: "Jatah Anda: sisa 8 dari 10".
+  - Langkah 3: ditolak dengan pesan stok habis yang sama seperti checkout biasa, dan tidak ada Pesanan baru.
+  - Langkah 5: Produk dijual lagi dengan Harga jual Rp 1.000 dan pilihan QRIS seperti biasa. Centang lagi "Produk gratis" sesudahnya.
+- PRD: §16.1, §16.2, §16.3
+
+**UAT-P5 — Pesanan gratis di keuangan**
+- Langkah:
+  1. Buka Ringkasan.
+  2. Buka Laporan keuangan dengan rentang hari ini, lalu pilih Metode Gratis.
+- Hasil:
+  - Langkah 1: Pesanan Selesai hari ini bertambah 2 karena UAT-P3, sedangkan Pendapatan hari ini tidak bertambah karena Pesanan itu.
+  - Langkah 2: rincian, grafik, dan tabel hanya berisi kedua Pesanan gratis, dengan Pendapatan Rp 0. Kolom Metode di tabel bertuliskan Gratis.
+- PRD: §14.6, §16.5

@@ -1,0 +1,187 @@
+{
+  "aturan": "Pesanan gratis di Pendapatan dan laba",
+  "prd": "§14.2, §14.5, §16.5",
+  "keterangan": "Bentuk input dan output sama dengan laba.json. Pesanan gratis tercatat dengan Harga jual, potongan voucher, Kode unik, Total bayar, dan Biaya transaksi Rp 0, serta Harga modal Varian saat itu. Pesanan gratis dihitung di pesananSelesai, tetapi tidak menambah Pendapatan. Laba kotornya Rp 0 − Harga modal. Pesanan gratis tanpa Harga modal (Varian lama) dihitung di pesananTanpaHargaModal, sama seperti Pesanan lain.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD §16.5",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 123,
+            "totalBayar": 50123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 2000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T10:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 2000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T11:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 50123,
+        "pesananSelesai": 3,
+        "totalHargaModal": 39000,
+        "labaKotor": 11000,
+        "potonganVoucher": 0,
+        "kodeUnik": 123,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 11123,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Hanya Pesanan gratis dengan Harga modal Rp 0",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 0,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 0,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:05:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 2,
+        "totalHargaModal": 0,
+        "labaKotor": 0,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 0,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis membuat laba negatif",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 12500,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 1,
+        "totalHargaModal": 12500,
+        "labaKotor": -12500,
+        "potonganVoucher": 0,
+        "kodeUnik": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": -12500,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis dari Varian tanpa Harga modal",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 123,
+            "totalBayar": 50123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": null,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T10:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 50123,
+        "pesananSelesai": 2,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "kodeUnik": 123,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 15123,
+        "pesananTanpaHargaModal": 1
+      }
+    }
+  ]
+}

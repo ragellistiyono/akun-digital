@@ -117,6 +117,8 @@ Semua Admin punya hak yang sama. Tidak ada peran staf dengan hak terbatas.
 
 ▶ Keputusan 2026-11-20 (#204): Setiap Varian juga punya Harga modal, yang diisi di form Varian di samping Harga jual. Aturannya ada di §14.1.
 
+▶ Keputusan 2026-11-22 (#246): Admin bisa menjadikan sebuah Produk sebagai Produk gratis (§16). Harga jual setiap Varian-nya tetap wajib diisi dengan aturan di atas, tetapi tidak dipakai selama Produk itu gratis.
+
 ### 3.3 Halaman Produk
 
 Halaman Produk menampilkan:
@@ -183,6 +185,8 @@ Tidak ada banner promo.
 - Bila semua Varian aktif habis, kartu menampilkan label "Habis" (§3.4). Harganya diambil dari Harga jual termurah di antara semua Varian aktif, dan kata "Mulai" tetap dipakai bila Varian aktifnya lebih dari satu.
 - Contoh: Varian "1 Bulan" Rp 50.000 dengan stok 0, dan Varian "3 Bulan" Rp 135.000 dengan stok 4. Kartu menampilkan "Mulai Rp 135.000".
 
+▶ Keputusan 2026-11-22 (#246): Kartu Produk gratis menampilkan "Gratis" sebagai pengganti harga, tanpa kata "Mulai", berapa pun Varian aktifnya (§16.4). Label "Habis" tetap berlaku.
+
 ## 4. Item stok
 
 ### 4.1 Format Item stok
@@ -230,6 +234,16 @@ Saat menempel banyak baris:
 - Di daftar Varian, status Aktif atau Nonaktif adalah status Varian itu sendiri. Bila Produknya nonaktif, baris itu juga diberi teks "Produk nonaktif".
 - Saat menu dibuka tanpa Varian terpilih, halaman hanya menampilkan pilihan Varian, petunjuk, dan daftar Varian. Keterangan Varian dan kotak tempel muncul setelah Admin memilih Varian, supaya Item stok tidak tertempel ke Varian yang salah.
 
+▶ Keputusan 2026-11-22 (#246): Item stok kembar diperiksa di seluruh toko. Keputusan ini menggantikan "di Varian itu" pada aturan tempelan di atas.
+- Item stok baru ditolak bila semua kolomnya sama persis dengan Item stok lain di Varian mana pun dan Produk mana pun, yang berstatus Tersedia, Ditahan, maupun Terkirim. Item stok seperti itu disebut Item stok kembar.
+- "Sama persis" tetap seperti di atas: spasi di awal dan akhir setiap kolom dibuang, lalu setiap kolom dibandingkan apa adanya. Huruf besar dan kecil dibedakan, dan tanda baca seperti titik ikut dibandingkan. Item stok yang jumlah kolomnya berbeda tidak pernah kembar.
+- Contoh: `budi.santoso@mail.com|rahasia1` dan `bu.di.santoso@mail.com|rahasia1` adalah dua Item stok yang berbeda, walaupun layanan email tertentu mengabaikan titik. Sebaliknya, `KODE-111` di Produk "Steam Wallet" kembar dengan `KODE-111` di Produk "Google Play".
+- Aturan ini berlaku di semua tempat Item stok diisi atau diubah: tempelan di halaman Varian dan menu Item stok, form satu Item stok, dan ubah Item stok. Item stok yang sedang diubah tidak dibandingkan dengan dirinya sendiri.
+- Alasan tolaknya menyebut letak Item stok yang sama: "Sudah ada di <Produk> – <Varian> (<status>)". Contoh: "Sudah ada di Netflix Premium – 3 Bulan (Terkirim)". Bila Item stok yang sama ada di lebih dari satu tempat, yang disebut adalah yang pertama menurut nama Produk, lalu nama Varian, A sampai Z.
+- Baris kembar di dalam tempelan yang sama tetap ditolak seperti di atas: baris pertama disimpan, dan baris berikutnya ditolak.
+- Item stok kembar yang sudah tersimpan sebelum aturan ini tayang tidak dihapus atau diubah otomatis.
+- Contoh lengkapnya ada di `tests/golden/item-stok-kembar.json`.
+
 ### 4.3 Satu Item stok untuk satu Pesanan
 
 - Setiap Item stok dikirim ke tepat satu Pesanan, lalu tidak bisa dipakai lagi.
@@ -239,6 +253,16 @@ Saat menempel banyak baris:
 
 - Item stok yang Tersedia boleh diubah atau dihapus.
 - Item stok yang Ditahan atau Terkirim tidak bisa diubah atau dihapus. Item stok Ditahan sudah disisihkan untuk Pesanan yang sedang menunggu pembayaran (§5.3).
+
+▶ Keputusan 2026-11-22 (#246): Hapus semua Item stok Tersedia
+- Daftar Item stok di halaman Varian (§9.7) punya tombol "Hapus semua Item stok Tersedia". Tombol ini hanya tampil bila Varian itu punya Item stok Tersedia.
+- Tombol ini menghapus semua Item stok Varian itu yang masih Tersedia saat penegasannya disetujui. Item stok Ditahan dan Terkirim tidak ikut terhapus.
+- Penegasannya memakai modal (§9.10) dengan teks "Hapus N Item stok Tersedia dari <Produk> – <Varian>? M Ditahan dan K Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan."
+  - Kalimat "… tidak ikut terhapus." hanya menyebut status yang jumlahnya lebih dari 0, dan tidak tampil bila keduanya 0.
+  - Contoh: "Hapus 25 Item stok Tersedia dari Netflix Premium – 1 Bulan? 2 Ditahan dan 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan."
+  - Contoh tanpa Item stok Ditahan: "Hapus 3 Item stok Tersedia dari YouTube Premium – 3 Bulan? 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan."
+- Item stok yang menjadi Ditahan setelah modal terbuka, tetapi sebelum penegasannya disetujui, dilewati. Sesudahnya tampil "N Item stok terhapus.", dengan N jumlah yang benar-benar terhapus.
+- Contoh lengkapnya ada di `tests/golden/hapus-semua-item-stok.json`.
 
 ## 5. Checkout dan pembayaran
 
@@ -275,6 +299,10 @@ Saat menempel banyak baris:
 - Urutan pemeriksaan di atas mendapat langkah keenam, yang hanya berlaku bila Member memilih Saldo:
   6. saldo kurang dari Harga jual − potongan voucher.
 - Batas Pesanan menunggu (langkah 3, §5.4) juga berlaku saat Member memilih Saldo.
+
+▶ Keputusan 2026-11-22 (#246):
+- Tamu juga melihat pilihan Saldo, tetapi tidak bisa memilihnya (▶ Keputusan 2026-11-22 di §15.7).
+- Checkout Produk gratis tidak punya isian kode voucher dan pilihan cara bayar. Urutan pemeriksaannya diatur di §16.3.
 
 ### 5.3 Penahanan Item stok
 
@@ -349,6 +377,8 @@ Satu Pesanan hanya pernah mendapat satu Item stok, walaupun kabar pembayarannya 
 - "Admin": Pesanan Bermasalah diselesaikan Admin.
 
 ▶ Keputusan 2026-11-20 (#226): Pesanan yang dibayar dengan saldo (§15.7) dibuat langsung berstatus Selesai, tanpa melewati Menunggu Pembayaran. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (saldo)". Pesanan itu tidak pernah Bermasalah dan tidak bisa dibatalkan. Perpindahan status di atas tetap berlaku untuk Pesanan QRIS.
+
+▶ Keputusan 2026-11-22 (#246): Pesanan gratis (§16.3) juga dibuat langsung berstatus Selesai, tanpa melewati Menunggu Pembayaran. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (gratis)". Pesanan itu tidak pernah Bermasalah dan tidak bisa dibatalkan.
 
 ### 5.8 Pembatalan dan kedaluwarsa
 
@@ -470,6 +500,13 @@ Orang boleh mendaftar Member dari halaman Daftar tanpa membeli lebih dulu. Caran
 
 ▶ Keputusan 2026-11-17 (#128): Begitu Kode verifikasi yang benar dimasukkan, akun Member aktif, dan Pendaftar langsung masuk sebagai Member lalu dibawa ke Riwayat Pesanan. Ini berlaku untuk pendaftaran dari halaman Daftar maupun dari Halaman Pesanan (§7.1). Lama sesinya sama dengan login Member biasa, yaitu 30 hari (§7.5).
 
+▶ Keputusan 2026-11-22 (#246): Tujuan setelah Kode verifikasi yang benar dimasukkan bergantung pada tautan "Daftar" yang dipakai:
+- tautan "Daftar" di pilihan Saldo pada Checkout Tamu (§15.7): halaman Top up (§15.3);
+- tautan "Daftar" di Checkout Produk gratis (§16.3): Checkout Varian yang sama;
+- tautan lain: Riwayat Pesanan, seperti di atas.
+
+Tujuan itu tetap berlaku bila Pendaftar meminta Kode verifikasi baru atau salah memasukkan kode sebelum berhasil.
+
 ▶ Keputusan 2026-11-17 (#174): Memasukkan Kode verifikasi
 - Isian kode punya teks bantuan "Kode 6 angka di email terakhir dari kami." dan tombol "Verifikasi". Isian ini berada di atas tombol "Kirim ulang kode".
 - Kode yang dimasukkan setelah masa 10 menitnya habis selalu ditolak dengan pesan kedaluwarsa, apa pun isinya, dan tidak menambah hitungan salah (§7.7). Kode yang hangus sekaligus kedaluwarsa juga mendapat pesan kedaluwarsa.
@@ -590,6 +627,8 @@ Varian dengan Harga jual tepat Rp 1.000 mendapat potongan voucher Rp 0. Apakah V
 - Keadaan ini hanya terjadi pada Varian dengan Harga jual tepat Rp 1.000, karena nominal tetap, persen, dan batas maksimum selalu minimal Rp 1 atau 1% (§8.4).
 - Pesan ini paling bawah dalam urutan §8.7. Bila ada syarat lain yang tidak terpenuhi, pesan syarat itulah yang tampil.
 - Contoh: `HEMAT5` untuk Varian Rp 1.000 ditolak dengan "Voucher tidak memberi potongan untuk produk ini". `HEMAT10`, yang mensyaratkan minimal Harga jual Rp 50.000, untuk Varian yang sama ditolak dengan "Minimal pembelian Rp 50.000". Contoh lengkapnya ada di `tests/golden/penerapan-voucher.json`.
+
+▶ Keputusan 2026-11-22 (#246): Kalimat "tidak ada Pesanan gratis" di atas hanya berlaku untuk Voucher: potongan voucher tidak pernah membuat Pesanan gratis. Pesanan gratis hanya berasal dari Produk gratis (§16), dan Checkout Produk gratis tidak punya isian kode voucher.
 
 Contoh:
 
@@ -809,6 +848,8 @@ Baris tambahan ini hanya ada di dasbor admin. Pembeli tidak pernah melihat Harga
 
 ▶ Keputusan 2026-11-20 (#226): Detail Pesanan dasbor admin menampilkan Metode, yaitu QRIS atau Saldo. Rincian nominal Pesanan yang dibayar dengan saldo mengikuti §15.7: tanpa baris Kode unik, diikuti "Dibayar dengan saldo", dengan Biaya transaksi Rp 0.
 
+▶ Keputusan 2026-11-22 (#246): Metode juga bisa "Gratis", untuk Pesanan gratis (§16.5). Rincian nominal Pesanan gratis mengikuti §16.4. Baris Harga modal, Laba kotor, dan Biaya transaksi di atas tetap tampil, dengan Biaya transaksi Rp 0.
+
 ### 9.6 Nomor Pesanan
 
 - Nomor Pesanan berbentuk `MIWE-` diikuti 6 karakter acak, misalnya `MIWE-7K3P9Q`.
@@ -822,6 +863,14 @@ Baris tambahan ini hanya ada di dasbor admin. Pembeli tidak pernah melihat Harga
   - Ditahan, dengan Nomor Pesanan yang menahannya;
   - Terkirim, dengan Nomor Pesanan penerimanya.
 - Admin bisa menyaring menurut status dan melihat isi lengkap setiap Item stok.
+
+▶ Keputusan 2026-11-22 (#246): Pembeli Item stok
+- Baris Item stok Ditahan menampilkan email Pesanan yang menahannya dan waktu Pesanan itu dibuat.
+- Baris Item stok Terkirim menampilkan email Pesanan penerimanya dan waktu bayar Pesanan itu.
+- Email yang ditampilkan adalah email Pesanan saat ini, termasuk hasil koreksi email (§6.4).
+- Nomor Pesanan di kedua baris menaut ke detail Pesanan di dasbor admin (§9.5).
+- Setiap baris daftar Varian di menu Item stok (§4.2) mendapat tautan "Lihat Item stok", yang membuka halaman Varian itu.
+- Tombol "Hapus semua Item stok Tersedia" diatur di §4.4.
 
 ### 9.8 Pengaturan toko
 
@@ -841,6 +890,24 @@ Baris tambahan ini hanya ada di dasbor admin. Pembeli tidak pernah melihat Harga
 ### 9.9 Yang tidak dibuat di dasbor admin
 
 Log aktivitas Admin, ekspor CSV, dan notifikasi email ke Admin.
+
+### 9.10 Penegasan aksi
+
+Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Bagian ini menggantikan penegasan "di tempat" di §5.9, §8.8, §14.4, §15.6, dan §15.9.
+
+- Setiap aksi dasbor admin yang tidak bisa dibatalkan ditegaskan lewat Modal penegasan sebelum dijalankan. Modal itu berisi judul, rincian akibat aksinya, tombol "Batal", dan tombol aksi.
+- Aksi yang memakai Modal penegasan:
+  - hapus Item stok dan hapus semua Item stok Tersedia (§4.4);
+  - hapus Kategori, Produk, dan Varian (§3.1, §3.7);
+  - hapus Voucher (§8.8) dan hapus Biaya operasional (§14.4);
+  - "Kirim Item stok" dan "Tandai Dana Dikembalikan" untuk Pesanan Bermasalah (§5.9);
+  - "Tambah saldo" dan "Kurangi saldo" (§15.6);
+  - "Tambahkan ke saldo" dan "Tandai Dana Dikembalikan" untuk Top up Bermasalah (§15.9).
+- Rinciannya memakai teks penegasan yang sudah ditetapkan untuk aksi itu. Contoh: "Hapus Voucher HEMAT5? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan." Teks untuk hapus semua Item stok Tersedia ada di §4.4.
+- Tombol aksi di modal menyebut aksinya, misalnya "Ya, hapus Voucher" atau "Ya, kirim Item stok". Selama aksi diproses, tombol itu menampilkan teks proses seperti sekarang, misalnya "Menghapus…".
+- "Batal" menutup modal tanpa menjalankan apa pun.
+- Bila server menolak aksinya, misalnya karena Produk sudah pernah dipesan, modal tertutup dan pesan penolakannya tampil di halaman seperti sekarang.
+- Yang tidak memakai Modal penegasan: menyimpan form, membuka form ubah, mengubah Item stok, menghapus foto Produk, menonaktifkan atau mengaktifkan kembali Member dan Voucher, dan semua tombol di toko, termasuk tombol "Batalkan" milik Pembeli (§5.8).
 
 ## 10. Email
 
@@ -980,6 +1047,7 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 | M3 | Sentuhan aplikasi | Animasi navbar, mode gelap, dan pasang seperti aplikasi | §11.2–§11.4 |
 | M4 | Laporan keuangan dan stok | Harga modal; Biaya transaksi dan Biaya operasional; Laba kotor dan Laba bersih; Ringkasan yang lebih lengkap; Laporan keuangan dengan saringan, grafik, dan tabel Pesanan; menu Item stok dengan hitungan baris; tombol "Salin semua" | §4.2, §6.1, §9.2, §9.5, §9.8, §11.1, §14 |
 | M5 | Saldo Member | Admin menambah dan mengurangi saldo; Riwayat saldo; top up dengan QRIS; menu Top up dan Top up Bermasalah; bayar Pesanan dengan saldo; kartu saldo di Ringkasan; saringan Metode di Laporan keuangan | §1.3, §5.2, §5.7, §9.2, §9.5, §11.1, §14.5, §14.6, §15 |
+| M6 | Perbaikan QRIS, Item stok, dan Produk gratis | Kabar pembayaran QRIS memakai nominal dari cek status; Item stok kembar di seluruh toko; hapus semua Item stok Tersedia; pembeli Item stok di halaman Varian; Modal penegasan; pilihan Saldo untuk Tamu; Produk gratis dengan Batas per Member | §3.2, §3.8, §4.2, §4.4, §5.2, §5.7, §7.3, §8.3, §9.5, §9.7, §9.10, §14.6, §15.7, §16 |
 
 Setelah M1, toko sudah bisa dipakai berjualan sungguhan. Sebelum M2, form checkout belum punya isian kode voucher, dan halaman Pesanan belum menampilkan ajakan membuat akun.
 
@@ -1012,6 +1080,16 @@ Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dar
 4. Tombol "Top up" dan "Lanjutkan bayar" di tab Akun dipasang setelah langkah 2 dan 3 selesai, supaya Admin sudah bisa menangani Top up Bermasalah sebelum Member bisa top up.
 5. Bayar dengan saldo di Checkout.
 6. Kartu saldo di Ringkasan dan saringan Metode di Laporan keuangan.
+
+▶ Keputusan 2026-11-22 (#246): M6 dan urutan tayangnya.
+- M6 berisi permintaan pemilik di #246. Pemilik menyebut toko masih tahap staging, tetapi QRIS-nya sudah menerima uang sungguhan, jadi perbaikan kabar pembayaran dikerjakan paling awal.
+- Setiap merge tetap langsung tayang, jadi tiket M6 diurutkan sebagai berikut:
+  1. Kabar pembayaran QRIS untuk Pesanan dan Top up memakai nominal dari cek status (ADR-0004).
+  2. Modal penegasan (§9.10) untuk aksi yang sudah ada.
+  3. Item stok kembar di seluruh toko, pembeli Item stok, dan hapus semua Item stok Tersedia.
+  4. Pilihan Saldo untuk Tamu.
+  5. Checkout Produk gratis dan pencatatan Pesanan gratis. Sebelum langkah 6, Admin belum bisa menjadikan Produk gratis dari dasbor admin.
+  6. Centang "Produk gratis" dan isian Batas per Member di form Produk, tampilan "Gratis" di toko, Checkout Produk gratis untuk Tamu, dan saringan Metode Gratis. Centang itu baru tampil setelah semua bagian ini siap, supaya tidak ada Produk gratis yang tampil dengan harga lamanya.
 
 ## 14. Keuangan toko
 
@@ -1155,6 +1233,8 @@ Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, 
   - Saat saringan Kategori, Produk, atau Metode aktif, kedua baris Top up, baris Biaya operasional, dan baris informasi Top up tidak tampil, dan keterangan §14.5 yang baru dipakai.
 - **Grafik 2** mengurangkan Biaya transaksi Top up dan menambahkan Kode unik Top up pada kelompok periode yang memuat waktu bayar Top up, kecuali saat saringan Kategori, Produk, atau Metode aktif.
 - **Tabel Pesanan** (§14.8) mendapat kolom Metode, yaitu QRIS atau Saldo, sesudah kolom waktu bayar.
+
+▶ Keputusan 2026-11-22 (#246): Saringan Metode mendapat pilihan Gratis untuk Pesanan gratis (§16.5), sehingga pilihannya Semua, QRIS, Saldo, atau Gratis. Kolom Metode di tabel Pesanan juga bisa berisi Gratis. Tidak ada pilihan gabungan seperti "Berbayar". Untuk melihat Pesanan berbayar saja, Admin memilih QRIS atau Saldo satu per satu.
 
 **Periode**
 - Pilihan periode Harian, Mingguan, Bulanan, dan Tahunan menentukan pengelompokan grafik per periode (§14.7).
@@ -1351,6 +1431,14 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - Bila sesi Member habis selagi Checkout terbuka, pembayaran saldo ditolak dengan "Bayar dengan saldo hanya untuk Member yang sedang login. Masuk dulu, atau bayar dengan QRIS."
 - Selama pembayaran saldo diproses, tombolnya bertuliskan "Membayar…".
 
+▶ Keputusan 2026-11-22 (#246): Pilihan Saldo untuk Tamu. Keputusan ini menggantikan kalimat "Tamu hanya melihat QRIS" di atas dan di §5.2.
+- Checkout Tamu juga menampilkan dua pilihan, "Saldo" dan "QRIS". Pilihan Saldo tidak bisa dipilih, tampil seperti pilihan Saldo yang saldonya kurang, dan tanpa nominal saldo.
+- Di bawah pilihan Saldo tertulis "Bayar pakai saldo khusus Member. Masuk, atau Daftar lalu top up." Hanya kata "Masuk" dan "Daftar" yang menjadi tautan.
+  - "Masuk" membuka halaman Masuk. Setelah login, Member kembali ke Checkout Varian yang sama, seperti tautan Masuk dari pesan Voucher khusus Member (§7.5, §8.7).
+  - "Daftar" membuka halaman Daftar. Setelah Kode verifikasi yang benar dimasukkan, Member baru dibawa ke halaman Top up (§7.3).
+  - Setelah top up berhasil, Member dibawa ke Riwayat saldo seperti biasa (§15.3), bukan kembali ke Checkout.
+- Pilihan awal Tamu tetap QRIS, dan tombolnya tetap "Bayar dengan QRIS".
+
 ### 15.8 Saldo di keuangan toko
 
 - Nominal top up bukan Pendapatan. Uang top up baru menjadi Pendapatan saat dibelanjakan.
@@ -1411,3 +1499,95 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - Tab Akun untuk Member menampilkan kotak "Saldo Rp X", di bawah email Member dan di atas form ganti password. Kotak itu berisi tombol "Top up" dan tautan "Riwayat saldo".
 - Bila ada Top up Menunggu Pembayaran, kotak itu juga menampilkan "Top up Rp X menunggu pembayaran" dengan tombol "Lanjutkan bayar", yang membuka Halaman bayar Top up.
 - Bilah atas tidak berubah dan tidak menampilkan saldo.
+
+## 16. Produk gratis
+
+Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Produk gratis hanya bisa diambil Member yang sedang login, tanpa pembayaran QRIS.
+
+### 16.1 Menjadikan Produk gratis
+
+- Form Produk punya centang "Produk gratis". Bila dicentang, semua Varian Produk itu menjadi gratis.
+- Produk gratis wajib punya Batas per Member (§16.2). Isiannya ada di form Produk, tepat di bawah centang "Produk gratis", dan hanya dipakai selama centang itu aktif.
+- Harga jual setiap Varian tetap wajib diisi dengan aturan §3.2, tetapi tidak dipakai selama Produk itu gratis.
+  - Form Varian Produk gratis menampilkan catatan "Produk ini gratis. Harga jual dipakai lagi bila centang Produk gratis dilepas."
+  - Begitu centang dilepas, setiap Varian langsung dijual lagi dengan Harga jual-nya.
+- Harga modal tetap wajib diisi (§14.1), dan dicatat di setiap Pesanan gratis.
+- Format Item stok, Item stok, Stok Varian, Produk Unggulan, nonaktif, dan hapus berlaku sama seperti Produk lain.
+- Pesanan QRIS yang sudah dibuat sebelum Produk dijadikan gratis tetap berjalan dengan Harga jual yang dicatat saat checkout (§5.1).
+- Daftar Produk di dasbor admin menandai Produk gratis dengan teks "Gratis".
+
+### 16.2 Batas per Member
+
+- Batas per Member adalah jumlah Pesanan gratis terbanyak yang boleh dimiliki satu Member untuk satu Produk gratis, dari semua Variannya.
+- Isiannya berupa bilangan bulat 1 sampai 999. Isian kosong, bukan bilangan bulat, atau di luar rentang itu ditolak dengan pesan yang menyebut sebabnya, mengikuti pola isian Ambang stok menipis (§9.4). Contohnya ada di `tests/golden/isian-batas-per-member.json`.
+- **Jatah terpakai** seorang Member adalah jumlah Pesanan gratis Produk itu yang emailnya sama dengan email Member menurut §7.4, sepanjang waktu.
+  - Jatah terpakai tidak pernah kembali, karena Pesanan gratis selalu Selesai dan tidak bisa dibatalkan.
+  - Pesanan QRIS atau saldo dari Produk itu tidak dihitung, termasuk yang dibuat sebelum Produk itu gratis.
+- **Sisa jatah** = Batas per Member − jatah terpakai, paling kecil 0. Member boleh mengambil Produk gratis bila sisa jatahnya lebih dari 0.
+- Bila Admin menurunkan Batas per Member di bawah jatah terpakai seorang Member, sisa jatah Member itu 0, dan Pesanan lamanya tidak berubah. Bila Admin menaikkannya lagi, sisa jatah dihitung ulang dengan rumus yang sama.
+- Batas per Member tidak dikaitkan dengan Stok Varian. Pengambilan saat Stok Varian 0 ditolak menurut §16.3.
+- Contoh: Batas per Member 5. Budi sudah punya 4 Pesanan gratis Produk itu, yaitu 3 dari Varian A dan 1 dari Varian B. Sisa jatahnya 1, jadi pengambilan kelima diterima dan pengambilan keenam ditolak. Admin lalu menurunkan batasnya menjadi 3. Sisa jatah Budi menjadi 0, dan kelima Pesanannya tetap Selesai.
+- Contoh lengkapnya ada di `tests/golden/batas-per-member.json`.
+
+### 16.3 Mengambil Produk gratis
+
+- Tombol beli di Halaman Produk membuka Checkout seperti biasa.
+- **Tamu** yang membuka Checkout Produk gratis melihat "Produk gratis khusus Member. Masuk atau Daftar dulu.", tanpa form. Hanya kata "Masuk" dan "Daftar" yang menjadi tautan.
+  - "Masuk" membawa Tamu kembali ke Checkout Varian yang sama setelah login (§7.5).
+  - "Daftar" membuka halaman Daftar. Setelah Kode verifikasi yang benar dimasukkan, Member baru kembali ke Checkout Varian yang sama (§7.3).
+- **Member** melihat Checkout berisi:
+  - email Member yang tidak bisa diubah (§5.2);
+  - rincian Pesanan gratis (§16.4);
+  - baris "Jatah Anda: sisa N dari M", misalnya "Jatah Anda: sisa 3 dari 5";
+  - tombol "Ambil gratis".
+
+  Tidak ada isian kode voucher dan tidak ada pilihan cara bayar.
+- Bila sisa jatah sudah 0 saat Checkout dibuka, pesan jatah habis di bawah ini tampil sebagai pengganti tombol "Ambil gratis".
+- Saat "Ambil gratis" ditekan, pemeriksaan berjalan berurutan, dan pemeriksaan pertama yang menolak menentukan hasilnya:
+  1. Produk atau Varian tidak dijual (§3.7);
+  2. Produk itu tidak lagi gratis: "Produk ini tidak gratis lagi, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk melihat harganya.";
+  3. Member tidak sedang login, misalnya karena sesinya habis: "Produk gratis hanya untuk Member yang sedang login. Masuk dulu.";
+  4. email Member masih punya Pesanan Menunggu Pembayaran (§5.4);
+  5. Stok Varian 0, dengan pesan yang sama seperti §5.2;
+  6. sisa jatah 0: "Anda sudah mengambil N dari batas M untuk Produk ini.", misalnya "Anda sudah mengambil 5 dari batas 5 untuk Produk ini."
+- "Ambil gratis" langsung berjalan tanpa dialog penegasan. Selama diproses, tombolnya bertuliskan "Mengambil…".
+- Bila berhasil:
+  - Pesanan dibuat langsung berstatus Selesai dengan Metode Gratis, tanpa QRIS;
+  - satu Item stok langsung dikirim;
+  - email "Pesanan selesai" dikirim;
+  - Member dibawa ke Halaman Pesanan Selesai.
+- Pembuatan Pesanan gratis dan pengiriman Item stoknya terjadi bersama. Bila salah satunya tidak bisa terjadi, tidak ada yang berubah. Dua pengambilan yang terjadi bersamaan oleh Member yang sama tidak boleh melewati Batas per Member.
+- Pesanan gratis tidak pernah Bermasalah dan tidak bisa dibatalkan. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (gratis)" (§5.7). Waktu bayarnya adalah waktu Pesanan dibuat.
+
+### 16.4 Tampilan
+
+- Di toko, Produk gratis menampilkan "Gratis" di tempat Harga jual: kartu Produk, bagian Produk Unggulan, Halaman Produk, dan Checkout. Kartu Produk tidak memakai kata "Mulai" (§3.8).
+- Harga normal yang diisi tetap tampil dicoret di samping "Gratis", tanpa label "Hemat N%".
+- Halaman Produk gratis menampilkan "Gratis khusus Member, maksimal M per Member", misalnya "Gratis khusus Member, maksimal 5 per Member".
+- Stok Varian dan label "Habis" tetap berlaku (§3.4).
+- Rincian nominal Pesanan gratis berisi baris "Total bayar Rp 0" lalu tulisan "Gratis", tanpa baris Harga jual, Potongan voucher, dan Kode unik. Ini berlaku di Checkout, Halaman Pesanan, email "Pesanan selesai", Riwayat Pesanan, dan detail Pesanan dasbor admin.
+
+### 16.5 Pesanan gratis di keuangan
+
+- Pesanan gratis mencatat Harga jual Rp 0, potongan voucher Rp 0, Kode unik Rp 0, Total bayar Rp 0, Biaya transaksi Rp 0, dan Harga modal Varian saat itu (§14.1).
+- Pesanan gratis dihitung sebagai Pesanan Selesai menurut waktu bayarnya di semua tempat, yaitu kartu Ringkasan, Laporan keuangan, grafik jumlah Pesanan Selesai, dan Produk terlaris. Pendapatan tidak bertambah, karena Total bayar-nya Rp 0.
+- Laba kotor Pesanan gratis = Rp 0 − Harga modal, jadi negatif bila Harga modal-nya lebih dari Rp 0. Rumus Laba bersih (§14.5) tidak berubah.
+- Metode Pesanan gratis adalah "Gratis" (§9.5, §14.6).
+- Contoh dalam satu hari tanpa Biaya operasional, dengan Biaya transaksi nilai awal (§14.3):
+  - satu Pesanan QRIS: Harga jual Rp 50.000, tanpa Voucher, Kode unik Rp 123, Total bayar Rp 50.123, dan Harga modal Rp 35.000;
+  - dua Pesanan gratis, masing-masing dengan Harga modal Rp 2.000.
+
+  | Rincian | Nominal |
+  |---|---|
+  | Pendapatan | Rp 50.123 |
+  | Pesanan Selesai | 3 |
+  | Total Harga modal | Rp 39.000 |
+  | **Laba kotor** | **Rp 11.000** |
+  | − Potongan voucher | Rp 0 |
+  | + Kode unik | Rp 123 |
+  | − Biaya transaksi | Rp 0 |
+  | − Biaya operasional | Rp 0 |
+  | **Laba bersih** | **Rp 11.123** |
+
+  Laba kotor = (50.000 − 35.000) + (0 − 2.000) + (0 − 2.000) = 11.000. Hitungan lewat Pendapatan memberi angka yang sama: 50.123 − 39.000 − 0 − 0 = 11.123.
+- Contoh lengkapnya ada di `tests/golden/laba-pesanan-gratis.json`.
