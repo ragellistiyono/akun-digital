@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { db, koneksi } from "./db";
-import { itemStok, varian } from "./db/schema";
+import { itemStok, pesanan, varian } from "./db/schema";
 import { daftarItemStokVarian, daftarVarianItemStok } from "./item-stok";
 import { isiItemStokUji, sisipkanProduk } from "./uji-katalog";
 import { sisipkanPesanan } from "./uji-pesanan";
@@ -119,6 +119,64 @@ describe("daftarItemStokVarian (PRD §9.7)", () => {
       expect(daftar.every((satu) => satu.status === status)).toBe(true);
     },
   );
+
+  // PRD §9.7 ▶ Keputusan 2026-11-22 dan UAT-D7: Item stok Ditahan menampilkan email Pesanan yang menahannya dan
+  // waktu Pesanan itu dibuat, dan Item stok Terkirim menampilkan email Pesanan penerimanya dan waktu bayarnya.
+  it("memuat Pembeli Item stok Ditahan dan Terkirim: email Pesanan saat ini dan waktu Pesanan dibuat atau waktu bayarnya", async () => {
+    const varianId = await varianBaru();
+    await sisipkanTersedia(varianId, SITI);
+    const emailDitahan = `email-b-${randomUUID()}@example.test`;
+    const emailTerkirim = `email-a-${randomUUID()}@example.test`;
+    const dibuatPada = new Date("2026-11-22T03:00:00Z");
+    const waktuBayar = new Date("2026-11-21T10:05:00Z");
+    const menahan = await sisipkanPesanan({
+      varianId,
+      status: "Menunggu Pembayaran",
+      email: emailDitahan,
+      dibuatPada,
+      itemStok: { status: "Ditahan", nilai: BUDI },
+    });
+    const menerima = await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      email: emailTerkirim,
+      dibuatPada: new Date("2026-11-21T10:00:00Z"),
+      waktuBayar,
+      itemStok: {
+        status: "Terkirim",
+        nilai: ANDI,
+        formatSaatTerkirim: FORMAT,
+      },
+    });
+    // Email Pesanan penerima dikoreksi Admin (PRD §6.4): yang tampil adalah email saat ini.
+    const emailKoreksi = `koreksi-${randomUUID()}@example.test`;
+    await db
+      .update(pesanan)
+      .set({ email: emailKoreksi })
+      .where(eq(pesanan.id, menerima.id));
+
+    const daftar = await daftarItemStokVarian({ varianId });
+
+    expect(
+      daftar.map(({ status, nomorPesanan, pembeli }) => ({
+        status,
+        nomorPesanan,
+        pembeli,
+      })),
+    ).toEqual([
+      { status: "Tersedia", nomorPesanan: null, pembeli: null },
+      {
+        status: "Ditahan",
+        nomorPesanan: menahan.nomorPesanan,
+        pembeli: { email: emailDitahan, waktu: dibuatPada },
+      },
+      {
+        status: "Terkirim",
+        nomorPesanan: menerima.nomorPesanan,
+        pembeli: { email: emailKoreksi, waktu: waktuBayar },
+      },
+    ]);
+  });
 
   it("tidak memuat Item stok Varian lain", async () => {
     const varianId = await varianBaru();

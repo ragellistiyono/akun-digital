@@ -165,6 +165,7 @@ export default async function HalamanItemStok({
             <DaftarVarian
               varianTerpilih={terpilih?.varianId}
               varian={semuaVarian.map((v) => ({
+                produkId: v.produkId,
                 varianId: v.varianId,
                 namaVarian: v.namaVarian,
                 namaProduk: v.namaProduk,

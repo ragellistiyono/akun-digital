@@ -1,30 +1,43 @@
 import Link from "next/link";
 
+import { penegasanHapusSemuaItemStokTersedia } from "@/domain/hapus-semua-item-stok";
 import { STATUS_ITEM_STOK, type StatusItemStok } from "@/domain/item-stok";
 import type { daftarItemStokVarian } from "@/server/item-stok";
+import { waktuWib } from "@/server/zona-waktu-toko";
 
 import { BarisItemStok } from "./baris-item-stok";
+import { HapusSemuaItemStokTersedia } from "./hapus-semua-item-stok";
 
 /**
  * Daftar Item stok sebuah Varian di halaman Varian dasbor admin (PRD §9.7): saringan menurut status lewat
- * `?status=` di alamat, lalu setiap Item stok beserta statusnya, Nomor Pesanan-nya, dan isi lengkapnya. Item
- * stok Tersedia bisa diubah atau dihapus (PRD §4.4). Jumlah Item stok per status di setiap chip adalah bahan
- * hitung Stok Varian dari bacaStokVarian.
+ * `?status=` di alamat, tombol "Hapus semua Item stok Tersedia" (PRD §4.4 ▶ Keputusan 2026-11-22), lalu setiap
+ * Item stok beserta statusnya, Nomor Pesanan-nya, Pembeli-nya, dan isi lengkapnya. Item stok Tersedia bisa diubah
+ * atau dihapus (PRD §4.4). Jumlah Item stok per status di setiap chip adalah bahan hitung Stok Varian dari
+ * bacaStokVarian, dan juga bahan teks penegasan hapus semua.
  */
 export function DaftarItemStok({
   produkId,
   varianId,
+  namaProduk,
+  namaVarian,
   saringan,
   jumlahPerStatus,
   itemStok,
 }: {
   produkId: string;
   varianId: string;
+  namaProduk: string;
+  namaVarian: string;
   saringan: StatusItemStok | undefined;
   jumlahPerStatus: Record<StatusItemStok, number>;
   itemStok: Awaited<ReturnType<typeof daftarItemStokVarian>>;
 }) {
   const alamat = `/admin/produk/${produkId}/varian/${varianId}`;
+  const hapusSemua = penegasanHapusSemuaItemStokTersedia({
+    produk: namaProduk,
+    varian: namaVarian,
+    jumlahPerStatus,
+  });
   const pilihan = [
     {
       label: "Semua",
@@ -68,6 +81,14 @@ export function DaftarItemStok({
         </ul>
       </nav>
 
+      <HapusSemuaItemStokTersedia
+        produkId={produkId}
+        varianId={varianId}
+        teksPenegasan={
+          hapusSemua.tombolTampil ? hapusSemua.teksPenegasan : null
+        }
+      />
+
       {itemStok.length === 0 ? (
         <p className="text-pensil-redup">
           {saringan === undefined
@@ -84,7 +105,14 @@ export function DaftarItemStok({
               key={satu.id}
               produkId={produkId}
               varianId={varianId}
-              itemStok={satu}
+              itemStok={{
+                ...satu,
+                // Waktu Pembeli ditulis dalam WIB (PRD §9.1), misalnya "22 Nov 2026 10.00".
+                pembeli: satu.pembeli && {
+                  email: satu.pembeli.email,
+                  waktu: satu.pembeli.waktu && waktuWib(satu.pembeli.waktu),
+                },
+              }}
               nomor={indeks + 1}
             />
           ))}

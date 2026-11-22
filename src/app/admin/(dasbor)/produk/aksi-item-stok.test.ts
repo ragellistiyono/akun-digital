@@ -23,6 +23,7 @@ import { daftarVarian, tambahVarian } from "@/server/varian";
 
 import {
   aksiHapusItemStok,
+  aksiHapusSemuaItemStokTersedia,
   aksiTambahItemStok,
   aksiTempelItemStok,
   aksiUbahItemStok,
@@ -52,6 +53,13 @@ function formulir(isian: Record<string, string | string[]>) {
 
 /** Nama unik per test, karena database test dipakai bersama oleh semua test. */
 const namaUnik = (nama: string) => `${nama} ${randomUUID().slice(0, 8)}`;
+
+/**
+ * Akhiran unik untuk isi Item stok. Item stok yang sama persis dengan Item stok lain di seluruh toko ditolak
+ * (PRD §4.2 ▶ Keputusan 2026-11-22), padahal database test dipakai bersama oleh semua test. Jadi email di contoh
+ * baris PRD dan UAT diberi akhiran ini, misalnya `budi-1a2b3c4d@mail.com`.
+ */
+const akhiranUnik = () => randomUUID().slice(0, 8);
 
 /**
  * Varian "1 Bulan" baru tanpa Item stok, milik Produk Netflix Premium baru dengan Format Item stok
@@ -86,7 +94,7 @@ async function varianBaru(formatItemStok = ["Email", "Password", "Profil"]) {
     aktif: true,
   });
   const [varian] = await daftarVarian(produk.id);
-  return { produkId: produk.id, varianId: varian.id };
+  return { produkId: produk.id, varianId: varian.id, namaProduk: nama };
 }
 
 /** Baris mentah tabel item_stok sebuah Varian, persis seperti yang tersimpan di database. */
@@ -99,14 +107,23 @@ async function barisMentah(varianId: string) {
 const stok = async (varianId: string) =>
   (await bacaStokVarian(varianId)).stokVarian;
 
-// Lima baris UAT-D1 (PRD §4.2).
-const TEMPELAN_UAT_D1 = [
-  "a@mail.com|pass1|Profil 1",
-  "b@mail.com|pass2|Profil 2",
-  "c@mail.com|pass3",
-  "a@mail.com|pass1|Profil 1",
-  "d@mail.com|pass4|Profil 4",
-].join("\n");
+// Lima baris UAT-D1 (PRD §4.2), dengan akhiran unik di setiap email bila Item stok-nya disimpan.
+const tempelanUatD1 = (akhiran: string) =>
+  [
+    `a-${akhiran}@mail.com|pass1|Profil 1`,
+    `b-${akhiran}@mail.com|pass2|Profil 2`,
+    `c-${akhiran}@mail.com|pass3`,
+    `a-${akhiran}@mail.com|pass1|Profil 1`,
+    `d-${akhiran}@mail.com|pass4|Profil 4`,
+  ].join("\n");
+const TEMPELAN_UAT_D1 = tempelanUatD1("uji");
+
+/**
+ * Pesan form bila Item stok kembar dengan Item stok di letak itu, misalnya "Netflix Premium – 3 Bulan
+ * (Tersedia)" (PRD §4.2 ▶ Keputusan 2026-11-22).
+ */
+const pesanKembar = (letak: string) =>
+  `Sudah ada di ${letak}. Item stok yang sama persis tidak boleh ada dua kali di toko, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.`;
 
 const keadaanTempelKosong = () => ({ teks: "" });
 const keadaanFormKosong = () => ({ nilai: ["", "", ""] });
@@ -125,10 +142,11 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
     sebagaiPengunjung(await cookieAdminBaru());
     vi.mocked(refresh).mockClear();
     expect(await stok(varianId)).toBe(0);
+    const akhiran = akhiranUnik();
 
     const keadaan = await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ produkId, varianId, teks: TEMPELAN_UAT_D1 }),
+      formulir({ produkId, varianId, teks: tempelanUatD1(akhiran) }),
     );
 
     expect(keadaan).toEqual({
@@ -138,13 +156,13 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
         ditolak: [
           {
             baris: 3,
-            teks: "c@mail.com|pass3",
+            teks: `c-${akhiran}@mail.com|pass3`,
             keterangan:
               "Jumlah kolomnya salah: 2 kolom, padahal Format Item stok punya 3 kolom (Email, Password, Profil).",
           },
           {
             baris: 4,
-            teks: "a@mail.com|pass1|Profil 1",
+            teks: `a-${akhiran}@mail.com|pass1|Profil 1`,
             keterangan: "Kembar dengan baris 1 di tempelan ini.",
           },
         ],
@@ -157,10 +175,11 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
   it("Item stok baru berstatus Tersedia, dan isinya tidak tersimpan sebagai teks asli (PRD §12)", async () => {
     const { produkId, varianId } = await varianBaru();
     sebagaiPengunjung(await cookieAdminBaru());
+    const akhiran = akhiranUnik();
 
     await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ produkId, varianId, teks: TEMPELAN_UAT_D1 }),
+      formulir({ produkId, varianId, teks: tempelanUatD1(akhiran) }),
     );
 
     const semua = await barisMentah(varianId);
@@ -175,23 +194,27 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
     expect(
       semua.map((baris) => bukaItemStok(baris.isi_terenkripsi)).sort(),
     ).toEqual([
-      ["a@mail.com", "pass1", "Profil 1"],
-      ["b@mail.com", "pass2", "Profil 2"],
-      ["d@mail.com", "pass4", "Profil 4"],
+      [`a-${akhiran}@mail.com`, "pass1", "Profil 1"],
+      [`b-${akhiran}@mail.com`, "pass2", "Profil 2"],
+      [`d-${akhiran}@mail.com`, "pass4", "Profil 4"],
     ]);
   });
 
-  it("baris yang sama persis dengan Item stok yang sudah ada di Varian itu ditolak, dan baris lain tetap disimpan", async () => {
-    const { produkId, varianId } = await varianBaru(["Kode"]);
+  it("baris yang sama persis dengan Item stok yang sudah ada di Varian itu ditolak dengan menyebut letaknya, dan baris lain tetap disimpan", async () => {
+    const { produkId, varianId, namaProduk } = await varianBaru(["Kode"]);
     sebagaiPengunjung(await cookieAdminBaru());
+    const [kode1, kode2] = [
+      `KODE-111-${akhiranUnik()}`,
+      `KODE-222-${akhiranUnik()}`,
+    ];
     await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ produkId, varianId, teks: "KODE-111" }),
+      formulir({ produkId, varianId, teks: kode1 }),
     );
 
     const keadaan = await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ produkId, varianId, teks: "KODE-111\nKODE-222" }),
+      formulir({ produkId, varianId, teks: `${kode1}\n${kode2}` }),
     );
 
     expect(keadaan.hasil).toEqual({
@@ -199,30 +222,84 @@ describe("menempel banyak Item stok (PRD §4.2, UAT-D1)", () => {
       ditolak: [
         {
           baris: 1,
-          teks: "KODE-111",
-          keterangan:
-            "Sama persis dengan Item stok yang sudah ada di Varian ini.",
+          teks: kode1,
+          keterangan: `Sudah ada di ${namaProduk} – 1 Bulan (Tersedia).`,
         },
       ],
     });
     expect(await stok(varianId)).toBe(2);
   });
 
-  it("Item stok yang sama di Varian lain tidak dihitung sudah ada", async () => {
-    const satu = await varianBaru(["Kode"]);
-    const dua = await varianBaru(["Kode"]);
+  // UAT-D5 langkah 1 (PRD §4.2 ▶ Keputusan 2026-11-22): baris pertama sama persis dengan Item stok Tersedia
+  // Netflix Premium 3 Bulan dari persiapan M6, yang ada di Produk lain.
+  it("baris yang sama persis dengan Item stok Varian lain di Produk lain ditolak dengan menyebut letaknya, dan baris lain tetap tersimpan (UAT-D5)", async () => {
+    const akhiran = akhiranUnik();
+    const netflix = namaUnik("Netflix Premium");
+    await sisipkanProduk({
+      nama: netflix,
+      formatItemStok: ["Email", "Password", "Profil"],
+      varian: [{ nama: "3 Bulan", hargaJual: 135_000 }],
+    });
+    const [netflix3Bulan] = (await daftarVarianItemStok()).filter(
+      (v) => v.namaProduk === netflix,
+    );
+    const kembar = `uji-kembar-${akhiran}@mail.com|pass9|Profil 1`;
+    const youtube = await varianBaru();
     sebagaiPengunjung(await cookieAdminBaru());
     await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ ...satu, teks: "KODE-111" }),
+      formulir({
+        produkId: netflix3Bulan.produkId,
+        varianId: netflix3Bulan.varianId,
+        teks: kembar,
+      }),
     );
 
     const keadaan = await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ ...dua, teks: "KODE-111" }),
+      formulir({
+        produkId: youtube.produkId,
+        varianId: youtube.varianId,
+        teks: `${kembar}\nuji-baru-${akhiran}@mail.com|pass9|Profil 1`,
+      }),
     );
 
-    expect(keadaan.hasil?.ringkasan).toBe("1 tersimpan, 0 ditolak");
+    expect(keadaan.hasil).toEqual({
+      ringkasan: "1 tersimpan, 1 ditolak",
+      ditolak: [
+        {
+          baris: 1,
+          teks: kembar,
+          keterangan: `Sudah ada di ${netflix} – 3 Bulan (Tersedia).`,
+        },
+      ],
+    });
+    expect(await stok(youtube.varianId)).toBe(1);
+  });
+
+  it("Item stok Terkirim dan Ditahan di Varian lain juga dihitung sudah ada", async () => {
+    const akhiran = akhiranUnik();
+    const lain = await varianTigaStatus();
+    const { produkId, varianId } = await varianBaru();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiTempelItemStok(
+      keadaanTempelKosong(),
+      formulir({
+        produkId,
+        varianId,
+        teks: [lain.isi.siti, lain.isi.andi]
+          .map((nilai) => nilai.join("|"))
+          .concat(`baru-${akhiran}@mail.com|pass9|Profil 1`)
+          .join("\n"),
+      }),
+    );
+
+    expect(keadaan.hasil?.ringkasan).toBe("1 tersimpan, 2 ditolak");
+    expect(keadaan.hasil?.ditolak.map((satu) => satu.keterangan)).toEqual([
+      `Sudah ada di ${lain.namaProduk} – 1 Bulan (Ditahan).`,
+      `Sudah ada di ${lain.namaProduk} – 1 Bulan (Terkirim).`,
+    ]);
   });
 
   it("menyebut nama kolom yang kosong", async () => {
@@ -336,35 +413,35 @@ describe("menu Item stok (PRD §4.2 ▶ Keputusan 2026-11-20)", () => {
 });
 
 describe("form satu Item stok (PRD §4.2)", () => {
-  const isian = (ids: { produkId: string; varianId: string }) => ({
-    ...ids,
-    nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
-  });
+  /** Contoh Item stok PRD §4.2, dengan akhiran unik di emailnya. */
+  const budiUnik = () => [
+    `budi-${akhiranUnik()}@mail.com`,
+    "rahasia123",
+    "Profil 2",
+  ];
 
   it("Admin menyimpan satu Item stok berstatus Tersedia, dan spasi di awal dan akhir kolom dibuang", async () => {
-    const ids = await varianBaru();
+    const { produkId, varianId } = await varianBaru();
     sebagaiPengunjung(await cookieAdminBaru());
     vi.mocked(refresh).mockClear();
+    const budi = budiUnik();
 
     const keadaan = await aksiTambahItemStok(
       keadaanFormKosong(),
       formulir({
-        ...ids,
-        nilai: [" budi@mail.com ", "rahasia123", "Profil 2"],
+        produkId,
+        varianId,
+        nilai: [` ${budi[0]} `, "rahasia123", "Profil 2"],
       }),
     );
 
     expect(keadaan).toEqual({ nilai: ["", "", ""], tersimpan: true });
     expect(refresh).toHaveBeenCalledOnce();
-    expect(await stok(ids.varianId)).toBe(1);
-    const [baris] = await barisMentah(ids.varianId);
+    expect(await stok(varianId)).toBe(1);
+    const [baris] = await barisMentah(varianId);
     expect(baris.status).toBe("Tersedia");
     expect(baris.isi_terenkripsi).not.toMatch(/budi|rahasia123|Profil 2/);
-    expect(bukaItemStok(baris.isi_terenkripsi)).toEqual([
-      "budi@mail.com",
-      "rahasia123",
-      "Profil 2",
-    ]);
+    expect(bukaItemStok(baris.isi_terenkripsi)).toEqual(budi);
   });
 
   it("kolom kosong ditolak dengan pesan di setiap kolom itu, dan Item stok tidak disimpan", async () => {
@@ -389,26 +466,46 @@ describe("form satu Item stok (PRD §4.2)", () => {
     expect(await stok(ids.varianId)).toBe(0);
   });
 
-  it("Item stok yang sama persis dengan Item stok yang sudah ada, termasuk dari tempelan, ditolak dengan pesan", async () => {
-    const ids = await varianBaru();
+  it("Item stok yang sama persis dengan Item stok yang sudah ada, termasuk dari tempelan, ditolak dengan pesan yang menyebut letaknya", async () => {
+    const { produkId, varianId, namaProduk } = await varianBaru();
     sebagaiPengunjung(await cookieAdminBaru());
+    const budi = budiUnik();
     await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({ ...ids, teks: "budi@mail.com|rahasia123|Profil 2" }),
+      formulir({ produkId, varianId, teks: budi.join("|") }),
     );
 
     const keadaan = await aksiTambahItemStok(
       keadaanFormKosong(),
-      formulir(isian(ids)),
+      formulir({ produkId, varianId, nilai: budi }),
     );
 
     expect(keadaan).toEqual({
-      nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
+      nilai: budi,
+      galat: { umum: pesanKembar(`${namaProduk} – 1 Bulan (Tersedia)`) },
+    });
+    expect(await stok(varianId)).toBe(1);
+  });
+
+  // PRD §4.2 ▶ Keputusan 2026-11-22: form satu Item stok menolak Item stok kembar dari Produk lain dengan pesan
+  // yang sama seperti tempelan.
+  it("Item stok kembar dengan Item stok Terkirim di Produk lain ditolak dengan pesan yang menyebut letaknya, dan tidak disimpan", async () => {
+    const lain = await varianTigaStatus();
+    const { produkId, varianId } = await varianBaru();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiTambahItemStok(
+      keadaanFormKosong(),
+      formulir({ produkId, varianId, nilai: lain.isi.andi }),
+    );
+
+    expect(keadaan).toEqual({
+      nilai: lain.isi.andi,
       galat: {
-        umum: "Item stok ini sama persis dengan Item stok yang sudah ada di Varian ini, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.",
+        umum: pesanKembar(`${lain.namaProduk} – 1 Bulan (Terkirim)`),
       },
     });
-    expect(await stok(ids.varianId)).toBe(1);
+    expect(await barisMentah(varianId)).toEqual([]);
   });
 
   it("isian yang jumlah kolomnya tidak sama dengan Format Item stok ditolak dengan pesan", async () => {
@@ -520,21 +617,24 @@ describe("kunci enkripsi ITEM_STOK_KEY (PRD §12)", () => {
 
 const FORMAT = ["Email", "Password", "Profil"];
 
-// Contoh isi Item stok untuk format `Email`, `Password`, `Profil` seperti contoh baris PRD §4.2.
-const BUDI = ["budi@mail.com", "rahasia123", "Profil 2"];
-const SITI = ["siti@mail.com", "rahasia456", "Profil 3"];
-const ANDI = ["andi@mail.com", "rahasia789", "Profil 1"];
-
 /**
  * Varian "1 Bulan" baru milik Produk baru [CONTOH] dengan Format Item stok `Email`, `Password`, `Profil`,
- * dibuat langsung di database, berisi satu Item stok untuk setiap status: BUDI Tersedia, SITI Ditahan oleh
- * Pesanan Menunggu Pembayaran, dan ANDI Terkirim ke Pesanan Selesai. Nama Produknya bukan Netflix, supaya
- * tidak mengubah hasil pencarian "netflix" di test e2e yang memakai database yang sama. Hasilnya id Produk,
- * id Varian, dan id Item stok per status, yang dibaca lewat daftar Item stok (PRD §9.7).
+ * dibuat langsung di database, berisi satu Item stok untuk setiap status: budi Tersedia, siti Ditahan oleh
+ * Pesanan Menunggu Pembayaran, dan andi Terkirim ke Pesanan Selesai. Isinya contoh baris PRD §4.2 dengan
+ * akhiran unik di emailnya. Nama Produknya bukan Netflix, supaya tidak mengubah hasil pencarian "netflix" di
+ * test e2e yang memakai database yang sama. Hasilnya id Produk, nama Produk, id Varian, id Item stok per status
+ * yang dibaca lewat daftar Item stok (PRD §9.7), isi setiap Item stok, dan daftar awalnya (isiDaftar).
  */
 async function varianTigaStatus() {
+  const akhiran = akhiranUnik();
+  const isi = {
+    budi: [`budi-${akhiran}@mail.com`, "rahasia123", "Profil 2"],
+    siti: [`siti-${akhiran}@mail.com`, "rahasia456", "Profil 3"],
+    andi: [`andi-${akhiran}@mail.com`, "rahasia789", "Profil 1"],
+  };
+  const namaProduk = `Ubah Item stok ${akhiran}`;
   const produkId = await sisipkanProduk({
-    nama: `Ubah Item stok ${randomUUID().slice(0, 8)}`,
+    nama: namaProduk,
     formatItemStok: FORMAT,
     varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
   });
@@ -542,16 +642,20 @@ async function varianTigaStatus() {
     .select({ id: tabelVarian.id })
     .from(tabelVarian)
     .where(eq(tabelVarian.produkId, produkId));
-  await db.insert(itemStok).values({ varianId, ...isiItemStokUji(BUDI) });
+  await db.insert(itemStok).values({ varianId, ...isiItemStokUji(isi.budi) });
   await sisipkanPesanan({
     varianId,
     status: "Menunggu Pembayaran",
-    itemStok: { status: "Ditahan", nilai: SITI },
+    itemStok: { status: "Ditahan", nilai: isi.siti },
   });
   await sisipkanPesanan({
     varianId,
     status: "Selesai",
-    itemStok: { status: "Terkirim", nilai: ANDI, formatSaatTerkirim: FORMAT },
+    itemStok: {
+      status: "Terkirim",
+      nilai: isi.andi,
+      formatSaatTerkirim: FORMAT,
+    },
   });
 
   const daftar = await daftarItemStokVarian({ varianId });
@@ -561,10 +665,17 @@ async function varianTigaStatus() {
   };
   return {
     produkId,
+    namaProduk,
     varianId,
     tersedia: idBerstatus("Tersedia"),
     ditahan: idBerstatus("Ditahan"),
     terkirim: idBerstatus("Terkirim"),
+    isi,
+    daftarAwal: [
+      { status: "Tersedia", nilai: isi.budi },
+      { status: "Ditahan", nilai: isi.siti },
+      { status: "Terkirim", nilai: isi.andi },
+    ],
   };
 }
 
@@ -575,40 +686,34 @@ async function isiDaftar(varianId: string) {
   );
 }
 
-/** Daftar awal varianTigaStatus. */
-const DAFTAR_AWAL = [
-  { status: "Tersedia", nilai: BUDI },
-  { status: "Ditahan", nilai: SITI },
-  { status: "Terkirim", nilai: ANDI },
-];
-
 const keadaanUbah = (nilai: string[]) => ({ nilai });
 const keadaanHapus = () => ({});
 
 describe("mengubah Item stok (PRD §4.4)", () => {
   it("Admin mengubah Item stok Tersedia, isi barunya tersimpan terenkripsi, dan statusnya tetap Tersedia (UAT-D3 langkah 1)", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi } = await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
     vi.mocked(refresh).mockClear();
+    const email = `budi.baru-${akhiranUnik()}@mail.com`;
 
     const keadaan = await aksiUbahItemStok(
-      keadaanUbah(BUDI),
+      keadaanUbah(isi.budi),
       formulir({
         produkId,
         varianId,
         itemStokId: tersedia,
-        nilai: [" budi.baru@mail.com ", "sandiBaru99", "Profil 5"],
+        nilai: [` ${email} `, "sandiBaru99", "Profil 5"],
       }),
     );
 
     // Spasi di awal dan akhir kolom dibuang, seperti saat Item stok diisi (PRD §4.2 ▶ Keputusan).
-    const baru = ["budi.baru@mail.com", "sandiBaru99", "Profil 5"];
+    const baru = [email, "sandiBaru99", "Profil 5"];
     expect(keadaan).toEqual({ nilai: baru, tersimpan: true });
     expect(refresh).toHaveBeenCalledOnce();
     expect(await isiDaftar(varianId)).toEqual([
       { status: "Tersedia", nilai: baru },
-      { status: "Ditahan", nilai: SITI },
-      { status: "Terkirim", nilai: ANDI },
+      { status: "Ditahan", nilai: isi.siti },
+      { status: "Terkirim", nilai: isi.andi },
     ]);
     expect(await stok(varianId)).toBe(1);
 
@@ -623,25 +728,23 @@ describe("mengubah Item stok (PRD §4.4)", () => {
   });
 
   it("setelah diubah, isi lama boleh diisi lagi dan isi baru dikenali sebagai Item stok yang sudah ada (PRD §4.2)", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, namaProduk, varianId, tersedia, isi } =
+      await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
+    const baru = `budi.baru-${akhiranUnik()}@mail.com|sandiBaru99|Profil 5`;
     await aksiUbahItemStok(
-      keadaanUbah(BUDI),
+      keadaanUbah(isi.budi),
       formulir({
         produkId,
         varianId,
         itemStokId: tersedia,
-        nilai: ["budi.baru@mail.com", "sandiBaru99", "Profil 5"],
+        nilai: baru.split("|"),
       }),
     );
 
     const keadaan = await aksiTempelItemStok(
       keadaanTempelKosong(),
-      formulir({
-        produkId,
-        varianId,
-        teks: "budi@mail.com|rahasia123|Profil 2\nbudi.baru@mail.com|sandiBaru99|Profil 5",
-      }),
+      formulir({ produkId, varianId, teks: `${isi.budi.join("|")}\n${baru}` }),
     );
 
     expect(keadaan.hasil).toEqual({
@@ -649,48 +752,49 @@ describe("mengubah Item stok (PRD §4.4)", () => {
       ditolak: [
         {
           baris: 2,
-          teks: "budi.baru@mail.com|sandiBaru99|Profil 5",
-          keterangan:
-            "Sama persis dengan Item stok yang sudah ada di Varian ini.",
+          teks: baru,
+          keterangan: `Sudah ada di ${namaProduk} – 1 Bulan (Tersedia).`,
         },
       ],
     });
   });
 
   it("menyimpan isi yang sama dengan isinya sendiri tidak dianggap sama persis dengan Item stok lain", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi, daftarAwal } =
+      await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
 
     const keadaan = await aksiUbahItemStok(
-      keadaanUbah(BUDI),
+      keadaanUbah(isi.budi),
       formulir({
         produkId,
         varianId,
         itemStokId: tersedia,
-        nilai: ["budi@mail.com ", "rahasia123", "Profil 2"],
+        nilai: [`${isi.budi[0]} `, isi.budi[1], isi.budi[2]],
       }),
     );
 
-    expect(keadaan).toEqual({ nilai: BUDI, tersimpan: true });
-    expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+    expect(keadaan).toEqual({ nilai: isi.budi, tersimpan: true });
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
   });
 
   it("kolom kosong ditolak dengan pesan di setiap kolom itu, dan Item stok tidak berubah (aturan T10)", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi, daftarAwal } =
+      await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
 
     const keadaan = await aksiUbahItemStok(
-      keadaanUbah(BUDI),
+      keadaanUbah(isi.budi),
       formulir({
         produkId,
         varianId,
         itemStokId: tersedia,
-        nilai: ["budi@mail.com", " ", ""],
+        nilai: [isi.budi[0], " ", ""],
       }),
     );
 
     expect(keadaan).toEqual({
-      nilai: ["budi@mail.com", " ", ""],
+      nilai: [isi.budi[0], " ", ""],
       galat: {
         kolom: [
           null,
@@ -699,32 +803,56 @@ describe("mengubah Item stok (PRD §4.4)", () => {
         ],
       },
     });
-    expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
   });
 
-  it.each([
-    ["Ditahan", SITI],
-    ["Terkirim", ANDI],
-  ])(
-    "isi yang sama persis dengan Item stok %s di Varian itu ditolak, dan Item stok tidak berubah (aturan T10)",
-    async (_status, nilai) => {
-      const { produkId, varianId, tersedia } = await varianTigaStatus();
+  it.each(["Ditahan", "Terkirim"] as const)(
+    "isi yang sama persis dengan Item stok %s di Varian itu ditolak dengan pesan yang menyebut letaknya, dan Item stok tidak berubah",
+    async (status) => {
+      const { produkId, namaProduk, varianId, tersedia, isi, daftarAwal } =
+        await varianTigaStatus();
       sebagaiPengunjung(await cookieAdminBaru());
+      const nilai = status === "Ditahan" ? isi.siti : isi.andi;
 
       const keadaan = await aksiUbahItemStok(
-        keadaanUbah(BUDI),
+        keadaanUbah(isi.budi),
         formulir({ produkId, varianId, itemStokId: tersedia, nilai }),
       );
 
       expect(keadaan).toEqual({
         nilai,
-        galat: {
-          umum: "Item stok ini sama persis dengan Item stok yang sudah ada di Varian ini, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.",
-        },
+        galat: { umum: pesanKembar(`${namaProduk} – 1 Bulan (${status})`) },
       });
-      expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+      expect(await isiDaftar(varianId)).toEqual(daftarAwal);
     },
   );
+
+  // UAT-D5 langkah 3 (PRD §4.2 ▶ Keputusan 2026-11-22): ubah Item stok Tersedia menjadi isi Item stok Tersedia
+  // Varian lain di Produk lain.
+  it("isi yang sama persis dengan Item stok Varian lain di Produk lain ditolak dengan pesan yang menyebut letaknya, dan Item stok tidak berubah (UAT-D5)", async () => {
+    const lain = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi, daftarAwal } =
+      await varianTigaStatus();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await aksiUbahItemStok(
+      keadaanUbah(isi.budi),
+      formulir({
+        produkId,
+        varianId,
+        itemStokId: tersedia,
+        nilai: lain.isi.budi,
+      }),
+    );
+
+    expect(keadaan).toEqual({
+      nilai: lain.isi.budi,
+      galat: {
+        umum: pesanKembar(`${lain.namaProduk} – 1 Bulan (Tersedia)`),
+      },
+    });
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
+  });
 
   it.each([
     [
@@ -753,7 +881,7 @@ describe("mengubah Item stok (PRD §4.4)", () => {
       );
 
       expect(keadaan).toEqual({ nilai, galat: { umum: pesan } });
-      expect(await isiDaftar(ids.varianId)).toEqual(DAFTAR_AWAL);
+      expect(await isiDaftar(ids.varianId)).toEqual(ids.daftarAwal);
     },
   );
 
@@ -779,23 +907,29 @@ describe("mengubah Item stok (PRD §4.4)", () => {
         umum: "Item stok ini tidak ada lagi di Varian ini, mungkin baru saja dihapus Admin lain. Muat ulang halaman untuk melihat daftar Item stok terbaru.",
       },
     });
-    expect(await isiDaftar(lain.varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(lain.varianId)).toEqual(lain.daftarAwal);
   });
 
   it("id Item stok yang tidak sah menghasilkan halaman tidak ditemukan", async () => {
-    const { produkId, varianId } = await varianTigaStatus();
+    const { produkId, varianId, isi } = await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
 
     await expect(
       aksiUbahItemStok(
-        keadaanUbah(BUDI),
-        formulir({ produkId, varianId, itemStokId: "bukan-id", nilai: BUDI }),
+        keadaanUbah(isi.budi),
+        formulir({
+          produkId,
+          varianId,
+          itemStokId: "bukan-id",
+          nilai: isi.budi,
+        }),
       ),
     ).rejects.toSatisfy(tidakDitemukan);
   });
 
   it("tanpa ITEM_STOK_KEY, Item stok tidak diubah dan pesannya menyebut variabel itu", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, daftarAwal } =
+      await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
     vi.stubEnv("ITEM_STOK_KEY", undefined);
     const nilai = ["baru@mail.com", "sandiBaru99", "Profil 9"];
@@ -812,13 +946,13 @@ describe("mengubah Item stok (PRD §4.4)", () => {
       },
     });
     vi.unstubAllEnvs();
-    expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
   });
 });
 
 describe("menghapus Item stok (PRD §4.4)", () => {
   it("Admin menghapus Item stok Tersedia, dan Stok Varian berkurang satu", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi } = await varianTigaStatus();
     sebagaiPengunjung(await cookieAdminBaru());
     vi.mocked(refresh).mockClear();
     expect(await stok(varianId)).toBe(1);
@@ -831,8 +965,8 @@ describe("menghapus Item stok (PRD §4.4)", () => {
     expect(keadaan).toEqual({});
     expect(refresh).toHaveBeenCalledOnce();
     expect(await isiDaftar(varianId)).toEqual([
-      { status: "Ditahan", nilai: SITI },
-      { status: "Terkirim", nilai: ANDI },
+      { status: "Ditahan", nilai: isi.siti },
+      { status: "Terkirim", nilai: isi.andi },
     ]);
     expect(await stok(varianId)).toBe(0);
   });
@@ -862,7 +996,7 @@ describe("menghapus Item stok (PRD §4.4)", () => {
       );
 
       expect(keadaan).toEqual({ galat: pesan });
-      expect(await isiDaftar(ids.varianId)).toEqual(DAFTAR_AWAL);
+      expect(await isiDaftar(ids.varianId)).toEqual(ids.daftarAwal);
     },
   );
 
@@ -884,7 +1018,7 @@ describe("menghapus Item stok (PRD §4.4)", () => {
       galat:
         "Item stok ini tidak ada lagi di Varian ini, mungkin baru saja dihapus Admin lain. Muat ulang halaman untuk melihat daftar Item stok terbaru.",
     });
-    expect(await isiDaftar(lain.varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(lain.varianId)).toEqual(lain.daftarAwal);
   });
 
   it("id Item stok yang tidak sah menghasilkan halaman tidak ditemukan", async () => {
@@ -897,6 +1031,92 @@ describe("menghapus Item stok (PRD §4.4)", () => {
         formulir({ produkId, varianId, itemStokId: "bukan-id" }),
       ),
     ).rejects.toSatisfy(tidakDitemukan);
+  });
+});
+
+// PRD §4.4 ▶ Keputusan 2026-11-22 dan UAT-D6.
+describe("hapus semua Item stok Tersedia (PRD §4.4)", () => {
+  /** varianTigaStatus dengan dua Item stok Tersedia tambahan, jadi Varian itu punya 3 Tersedia. */
+  async function varianTigaTersedia() {
+    const ids = await varianTigaStatus();
+    for (const nama of ["dewi", "eka"]) {
+      await db.insert(itemStok).values({
+        varianId: ids.varianId,
+        ...isiItemStokUji([
+          `${nama}-${akhiranUnik()}@mail.com`,
+          "pass",
+          "Profil 4",
+        ]),
+      });
+    }
+    return ids;
+  }
+
+  const hapusSemua = (ids: { produkId: string; varianId: string }) =>
+    aksiHapusSemuaItemStokTersedia(
+      keadaanHapus(),
+      formulir({ produkId: ids.produkId, varianId: ids.varianId }),
+    );
+
+  it("menghapus semua Item stok Tersedia Varian itu, tanpa menyentuh Item stok Ditahan dan Terkirim maupun Varian lain, lalu menyebut jumlahnya", async () => {
+    const ids = await varianTigaTersedia();
+    const lain = await varianTigaStatus();
+    sebagaiPengunjung(await cookieAdminBaru());
+    vi.mocked(refresh).mockClear();
+    expect(await stok(ids.varianId)).toBe(3);
+
+    const keadaan = await hapusSemua(ids);
+
+    expect(keadaan).toEqual({ pesan: "3 Item stok terhapus." });
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(await isiDaftar(ids.varianId)).toEqual([
+      { status: "Ditahan", nilai: ids.isi.siti },
+      { status: "Terkirim", nilai: ids.isi.andi },
+    ]);
+    expect(await stok(ids.varianId)).toBe(0);
+    expect(await isiDaftar(lain.varianId)).toEqual(lain.daftarAwal);
+  });
+
+  it("Item stok yang menjadi Ditahan setelah modal terbuka, sebelum penegasan disetujui, dilewati (UAT-D6)", async () => {
+    const ids = await varianTigaTersedia();
+    sebagaiPengunjung(await cookieAdminBaru());
+    // Modal dibuka dengan 3 Item stok Tersedia, lalu checkout menahan Item stok budi sebelum Admin menyetujuinya.
+    const { id: pesananId } = await sisipkanPesanan({
+      varianId: ids.varianId,
+      status: "Menunggu Pembayaran",
+    });
+    await db
+      .update(itemStok)
+      .set({ status: "Ditahan", pesananId })
+      .where(eq(itemStok.id, ids.tersedia));
+
+    const keadaan = await hapusSemua(ids);
+
+    expect(keadaan).toEqual({ pesan: "2 Item stok terhapus." });
+    expect(await isiDaftar(ids.varianId)).toEqual([
+      { status: "Ditahan", nilai: ids.isi.budi },
+      { status: "Ditahan", nilai: ids.isi.siti },
+      { status: "Terkirim", nilai: ids.isi.andi },
+    ]);
+  });
+
+  it("Varian milik Produk lain menghasilkan halaman tidak ditemukan, dan tidak ada Item stok yang terhapus", async () => {
+    const ids = await varianTigaStatus();
+    const lain = await varianTigaStatus();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    await expect(
+      hapusSemua({ produkId: lain.produkId, varianId: ids.varianId }),
+    ).rejects.toSatisfy(tidakDitemukan);
+    expect(await isiDaftar(ids.varianId)).toEqual(ids.daftarAwal);
+  });
+
+  it("Tamu tanpa sesi Admin diarahkan ke halaman login, dan tidak ada Item stok yang terhapus", async () => {
+    const ids = await varianTigaStatus();
+    sebagaiPengunjung(new Headers());
+
+    await expect(hapusSemua(ids)).rejects.toSatisfy(arahKe("/admin"));
+    expect(await isiDaftar(ids.varianId)).toEqual(ids.daftarAwal);
   });
 });
 
@@ -966,9 +1186,28 @@ describe("mengubah dan menghapus bersamaan dengan checkout", () => {
       /^Item stok ini tidak dihapus, karena berstatus Ditahan/,
     );
     expect(await isiDaftar(ids.varianId)).toEqual([
-      { status: "Ditahan", nilai: BUDI },
-      { status: "Ditahan", nilai: SITI },
-      { status: "Terkirim", nilai: ANDI },
+      { status: "Ditahan", nilai: ids.isi.budi },
+      { status: "Ditahan", nilai: ids.isi.siti },
+      { status: "Terkirim", nilai: ids.isi.andi },
+    ]);
+  });
+
+  it("hapus semua Item stok Tersedia menunggu checkout yang sedang menahan salah satunya, lalu melewati Item stok itu", async () => {
+    const ids = await varianTigaStatus();
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const keadaan = await selagiCheckoutMenahan(ids, () =>
+      aksiHapusSemuaItemStokTersedia(
+        keadaanHapus(),
+        formulir({ produkId: ids.produkId, varianId: ids.varianId }),
+      ),
+    );
+
+    expect(keadaan).toEqual({ pesan: "0 Item stok terhapus." });
+    expect(await isiDaftar(ids.varianId)).toEqual([
+      { status: "Ditahan", nilai: ids.isi.budi },
+      { status: "Ditahan", nilai: ids.isi.siti },
+      { status: "Terkirim", nilai: ids.isi.andi },
     ]);
   });
 
@@ -993,9 +1232,9 @@ describe("mengubah dan menghapus bersamaan dengan checkout", () => {
       /^Item stok ini tidak diubah, karena berstatus Ditahan/,
     );
     expect(await isiDaftar(ids.varianId)).toEqual([
-      { status: "Ditahan", nilai: BUDI },
-      { status: "Ditahan", nilai: SITI },
-      { status: "Terkirim", nilai: ANDI },
+      { status: "Ditahan", nilai: ids.isi.budi },
+      { status: "Ditahan", nilai: ids.isi.siti },
+      { status: "Terkirim", nilai: ids.isi.andi },
     ]);
   });
 });
@@ -1003,12 +1242,13 @@ describe("mengubah dan menghapus bersamaan dengan checkout", () => {
 // Issue T27: Tamu tidak bisa mengubah Item stok.
 describe("kewenangan mengubah dan menghapus (PRD §2.1)", () => {
   it("Tamu tanpa sesi Admin yang mengubah Item stok diarahkan ke halaman login, dan Item stok tidak berubah", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, isi, daftarAwal } =
+      await varianTigaStatus();
     sebagaiPengunjung(new Headers());
 
     await expect(
       aksiUbahItemStok(
-        keadaanUbah(BUDI),
+        keadaanUbah(isi.budi),
         formulir({
           produkId,
           varianId,
@@ -1018,11 +1258,12 @@ describe("kewenangan mengubah dan menghapus (PRD §2.1)", () => {
       ),
     ).rejects.toSatisfy(arahKe("/admin"));
 
-    expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
   });
 
   it("Tamu tanpa sesi Admin yang menghapus Item stok diarahkan ke halaman login, dan Item stok tetap ada", async () => {
-    const { produkId, varianId, tersedia } = await varianTigaStatus();
+    const { produkId, varianId, tersedia, daftarAwal } =
+      await varianTigaStatus();
     sebagaiPengunjung(new Headers());
 
     await expect(
@@ -1032,6 +1273,6 @@ describe("kewenangan mengubah dan menghapus (PRD §2.1)", () => {
       ),
     ).rejects.toSatisfy(arahKe("/admin"));
 
-    expect(await isiDaftar(varianId)).toEqual(DAFTAR_AWAL);
+    expect(await isiDaftar(varianId)).toEqual(daftarAwal);
   });
 });

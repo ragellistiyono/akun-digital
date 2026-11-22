@@ -1,0 +1,1 @@
+CREATE INDEX "item_stok_sidik_jari_idx" ON "item_stok" USING btree ("sidik_jari");

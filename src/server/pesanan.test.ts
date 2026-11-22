@@ -1024,11 +1024,14 @@ describe("bacaPesananLewatTautan (PRD §6.1, §6.2)", () => {
       .select({ id: varian.id })
       .from(varian)
       .where(eq(varian.produkId, produkId));
+    // Password unik per test, karena Item stok kembar di seluruh toko ditolak (PRD §4.2 ▶ Keputusan 2026-11-22)
+    // dan test lain juga memakai contoh baris PRD §4.2.
+    const rahasia = `rahasia-${akhiran()}`;
     expect(
       await tambahItemStok({
         produkId,
         varianId,
-        nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
+        nilai: ["budi@mail.com", rahasia, "Profil 2"],
       }),
     ).toEqual({ hasil: "disimpan" });
     const email = emailUnik();
@@ -1053,7 +1056,7 @@ describe("bacaPesananLewatTautan (PRD §6.1, §6.2)", () => {
     expect(dibaca?.status).toBe("Selesai");
     expect(dibaca?.itemStok).toEqual([
       { nama: "Email", nilai: "budi@mail.com" },
-      { nama: "Password", nilai: "rahasia123" },
+      { nama: "Password", nilai: rahasia },
       { nama: "Profil", nilai: "Profil 2" },
     ]);
   });

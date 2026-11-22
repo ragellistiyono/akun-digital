@@ -40,7 +40,7 @@ async function masukSebagaiAdmin(page: Page) {
 /**
  * Kategori, Produk Netflix Premium dengan Format Item stok `Email`, `Password`, `Profil`, dan Varian
  * "1 Bulan" dibuat lewat dasbor admin seperti biasa, dengan nama unik per run (UAT-D1). Lalu halaman
- * Varian itu dibuka lewat tombol Item stok di daftar Varian.
+ * Varian itu dibuka lewat tombol Item stok di daftar Varian. Hasilnya nama Produk itu.
  */
 async function bukaVarianBaru(page: Page) {
   const kategori = `Streaming ${randomUUID().slice(0, 8)}`;
@@ -94,6 +94,7 @@ async function bukaVarianBaru(page: Page) {
   await expect(
     page.getByRole("link", { name: `Produk ${nama}` }),
   ).toBeVisible();
+  return nama;
 }
 
 /** Angka Stok Varian di halaman Varian. */
@@ -119,7 +120,7 @@ test("lima baris UAT-D1 yang ditempel menghasilkan 3 tersimpan, 2 ditolak, dan S
   page,
 }) => {
   await masukSebagaiAdmin(page);
-  await bukaVarianBaru(page);
+  const nama = await bukaVarianBaru(page);
   await expect(angkaStokVarian(page)).toHaveText("0");
 
   const tempel = page.getByRole("region", { name: "Tempel banyak Item stok" });
@@ -162,14 +163,15 @@ test("lima baris UAT-D1 yang ditempel menghasilkan 3 tersimpan, 2 ditolak, dan S
   expect(await tanpaGulirSamping(page)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  // Tempelan yang sama lagi: semua baris sudah ada di Varian ini.
+  // Tempelan yang sama lagi: baris itu sudah ada di Varian ini, dan alasannya menyebut letaknya
+  // (PRD §4.2 ▶ Keputusan 2026-11-22).
   await tempel
     .getByLabel("Tempelan Item stok")
     .fill("a@mail.com|pass1|Profil 1");
   await tempel.getByRole("button", { name: "Simpan tempelan" }).click();
   await expect(tempel.getByRole("status")).toHaveText("0 tersimpan, 1 ditolak");
   await expect(barisDitolak(tempel, 1)).toContainText(
-    "Sama persis dengan Item stok yang sudah ada di Varian ini.",
+    `Sudah ada di ${nama} – 1 Bulan (Tersedia).`,
   );
 
   await page.reload();
@@ -180,12 +182,15 @@ test("form satu Item stok menyimpan Item stok, lalu menolak kolom kosong dan Ite
   page,
 }) => {
   await masukSebagaiAdmin(page);
-  await bukaVarianBaru(page);
+  const nama = await bukaVarianBaru(page);
   const form = page.getByRole("region", { name: "Tambah satu Item stok" });
+  // Contoh baris PRD §4.2 dengan email unik per run, karena Item stok kembar di seluruh toko ditolak (PRD §4.2
+  // ▶ Keputusan 2026-11-22) dan test lain juga memakai contoh baris itu.
+  const email = `budi-${randomUUID().slice(0, 8)}@mail.com`;
 
   // Satu isian untuk setiap kolom Format Item stok, menurut urutannya.
   await expect(form.getByRole("textbox")).toHaveCount(3);
-  await form.getByLabel("Email").fill("budi@mail.com");
+  await form.getByLabel("Email").fill(email);
   await form.getByLabel("Password").fill("rahasia123");
   await form.getByLabel("Profil").fill("Profil 2");
   await form.getByRole("button", { name: "Simpan Item stok" }).click();
@@ -209,13 +214,13 @@ test("form satu Item stok menyimpan Item stok, lalu menolak kolom kosong dan Ite
   await expect(form.getByLabel("Email")).toHaveValue("siti@mail.com");
   await expect(angkaStokVarian(page)).toHaveText("1");
 
-  // Item stok yang sama persis dengan yang sudah ada ditolak.
-  await form.getByLabel("Email").fill("budi@mail.com");
+  // Item stok yang sama persis dengan yang sudah ada ditolak, dengan pesan yang menyebut letaknya.
+  await form.getByLabel("Email").fill(email);
   await form.getByLabel("Password").fill("rahasia123");
   await form.getByLabel("Profil").fill("Profil 2");
   await form.getByRole("button", { name: "Simpan Item stok" }).click();
   await expect(form.getByRole("alert")).toHaveText(
-    "Item stok ini sama persis dengan Item stok yang sudah ada di Varian ini, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.",
+    `Sudah ada di ${nama} – 1 Bulan (Tersedia). Item stok yang sama persis tidak boleh ada dua kali di toko, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.`,
   );
   await expect(angkaStokVarian(page)).toHaveText("1");
 });
