@@ -317,6 +317,10 @@ Pemilik membeli Varian Rp 1.000 di toko yang sudah terpasang, lalu membayar QRIS
 
 **Dugaan.** Jalur cek status tidak mungkin menghasilkan Bermasalah di sini, karena `amount`-nya sudah termasuk Kode unik (pembayaran 1 dan 2 di atas). Jadi kabar itu kemungkinan besar datang lewat webhook, dan `received_amount`-nya kurang dari Rp 1.212, misalnya Rp 1.000 tanpa Kode unik. Contoh dashboard di bagian 6 juga menulis `received_amount` 50000 dengan `unique_id` 123. Log tidak mencatat nominal, jadi dugaan ini belum terbukti. Detail transaksi di Dashboard Qrispy bisa memastikannya.
 
+**Bukti dari pemilik 2026-11-23.** Dashboard Qrispy mencatat nominal transaksi ini Rp 1.000, dengan Rp 1.212 dicoret, dan statusnya Success. Mutasi saldo Qrispy toko juga hanya bertambah Rp 1.000. Dari situ ada dua kesimpulan:
+- **Kode unik tidak masuk saldo toko.** Pembeli membayar Rp 1.212, tetapi toko menerima Rp 1.000. Aturan keuangannya diputuskan di PRD §5.5 (▶ Keputusan 2026-11-23, #254).
+- **Nominal Rp 1.000 kemungkinan besar dikirim sebagai `received_amount`.** Ini cocok dengan Pesanan yang menjadi Bermasalah. Log webhook sesudah #246 akan memastikannya.
+
 **Tindak lanjut.** Sejak #246, nominal diterima selalu diambil dari cek status, dan log webhook mencatat `received_amount` di samping `amount` cek status (ADR-0004).
 
 **Belum diuji:**

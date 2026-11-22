@@ -341,6 +341,12 @@ Saat menempel banyak baris:
 
 - Pesanan mencatat Harga jual, potongan voucher, dan Kode unik secara terpisah. Rincian ini tampil di halaman bayar, di email, dan di riwayat.
 
+▶ Keputusan 2026-11-23 (#254): Kode unik dibayar Pembeli, tetapi tidak masuk saldo toko. Kalimat "Kode unik dibayar Pembeli dan masuk saldo toko" di atas tidak berlaku lagi.
+- Bukti: pada pembayaran sungguhan 2026-11-22, Pembeli membayar Total bayar Rp 1.212 dengan Kode unik Rp 212, tetapi mutasi saldo Qrispy toko hanya bertambah Rp 1.000. Dashboard Qrispy mencatat nominal transaksi itu Rp 1.000, dengan Rp 1.212 dicoret (`docs/referensi/qrispy-api.md` bagian 9).
+- Uang Pesanan QRIS yang masuk saldo toko adalah Harga jual − potongan voucher.
+- Rumus Total bayar dan rinciannya untuk Pembeli tidak berubah. Pembeli tetap membayar Total bayar, dan pemeriksaan nominal kurang (§5.9) tetap memakai Total bayar.
+- Akibatnya bagi angka keuangan toko diatur di §9.3, §14.5, §14.6, dan §15.8.
+
 ### 5.6 Halaman bayar
 
 Halaman bayar menampilkan:
@@ -809,12 +815,24 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Keterangan kartu Laba bersih tetap memuat rumus lengkap: "Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up, dalam rentang itu. Nominal top up tidak dihitung."
 - Ajakan di kartu Top up Bermasalah berbunyi "Perlu tindakan. Buka daftar Top up Bermasalah", sama polanya dengan kartu Pesanan Bermasalah.
 
+▶ Keputusan 2026-11-23 (#254): Keterangan kartu Pendapatan dan Laba bersih mengikuti rumus baru di §9.3 dan §14.5.
+- Kartu Laba bersih berketerangan "Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up, dalam rentang itu. Kode unik dan nominal top up tidak dihitung, karena tidak masuk saldo toko."
+- Kalimat "Kartu Laba bersih ikut menghitung Kode unik Top up" di atas tidak berlaku lagi.
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
 - Kode unik ikut dihitung. Biaya Qrispy tidak dipotong.
 - Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung. Pesanan Bermasalah yang kemudian diselesaikan Admin dihitung pada tanggal pembayarannya.
 - Contoh: hari ini ada Pesanan Selesai dengan Total bayar Rp 45.123, Rp 50.010, dan Rp 135.499, ditambah satu Pesanan Bermasalah Rp 50.200. Pendapatan hari ini Rp 45.123 + Rp 50.010 + Rp 135.499 = Rp 230.632.
+
+▶ Keputusan 2026-11-23 (#254): Pendapatan adalah uang yang masuk saldo toko (§5.5).
+- **Pendapatan = jumlah (Harga jual − potongan voucher) dari Pesanan Selesai**, dikelompokkan menurut waktu bayarnya. Kode unik tidak dihitung. Kalimat "Kode unik ikut dihitung" di atas tidak berlaku lagi.
+- Pesanan yang dibayar dengan saldo dan Pesanan gratis tidak berubah, karena Total bayar keduanya memang tanpa Kode unik (§15.7, §16.5).
+- Contoh di atas menjadi 45.000 + 50.000 + 135.000 = Rp 230.000. Rinciannya: Rp 50.000 − Rp 5.000 voucher, Rp 50.000, dan Rp 135.000. Pesanan Bermasalah tetap tidak dihitung.
+- Aturan ini juga berlaku untuk semua angka yang memakai Pendapatan: kartu Ringkasan, Laporan keuangan dan grafiknya, Produk terlaris, Pendapatan per Kategori, serta total belanja Member (§2.3).
+- Pesanan lama ikut dihitung ulang dengan rumus ini, karena Kode unik-nya juga tidak pernah masuk saldo toko.
+- Contoh lengkapnya ada di `tests/golden/pendapatan-tanpa-kode-unik.json` dan `tests/golden/produk-terlaris-tanpa-kode-unik.json`. Keduanya menggantikan `pendapatan.json` dan `produk-terlaris.json`, yang masih memakai rumus lama sampai tiket koreksi Kode unik tayang.
 
 ### 9.4 Stok menipis
 
@@ -1091,6 +1109,8 @@ Sebelum itu, halaman baru boleh sudah ada di alamatnya, asal belum ditautkan dar
   5. Checkout Produk gratis dan pencatatan Pesanan gratis. Sebelum langkah 6, Admin belum bisa menjadikan Produk gratis dari dasbor admin.
   6. Centang "Produk gratis" dan isian Batas per Member di form Produk, tampilan "Gratis" di toko, Checkout Produk gratis untuk Tamu, dan saringan Metode Gratis. Centang itu baru tampil setelah semua bagian ini siap, supaya tidak ada Produk gratis yang tampil dengan harga lamanya.
 
+▶ Keputusan 2026-11-23 (#254): M6 juga memuat koreksi Kode unik di keuangan toko (§5.5, §9.3, §14.5, §14.6, §15.8). Tiket ini tidak bergantung pada tiket M6 lain dan boleh tayang kapan saja.
+
 ## 14. Keuangan toko
 
 Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian ini hanya terlihat oleh Admin. Pembeli tidak pernah melihat Harga modal, laba, Biaya transaksi, maupun Biaya operasional.
@@ -1151,6 +1171,8 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 - Biaya transaksi dihitung dan dicatat di Pesanan saat pembayarannya masuk. Ini termasuk pembayaran yang membuat Pesanan Bermasalah dan pembayaran yang datang terlambat (§5.9). Mengubah pengaturan sesudahnya tidak mengubah Pesanan yang sudah dibayar.
 - Pesanan yang sudah dibayar sebelum fitur ini tayang dihitung sekali dengan nilai awal.
 - Pemilik mencocokkan kedua nilai itu dengan potongan yang tampil di saldo Qrispy, lalu mengubahnya di pengaturan toko bila berbeda.
+
+▶ Keputusan 2026-11-23 (#254): Biaya transaksi tetap dihitung dari Total bayar, termasuk Kode unik, walaupun Kode unik tidak masuk saldo toko (§5.5). Pemilik mencocokkannya dengan mutasi saldo Qrispy saat ada transaksi Rp 100.000 ke atas. Bila potongannya ternyata dihitung dari nominal tanpa Kode unik, dasar hitungannya diputuskan ulang.
 
 ▶ Keputusan 2026-11-20 (#224): Pesan penolakan kedua isian Biaya transaksi mengikuti pola pesan Ambang stok menipis dan Harga modal. Setiap pesan menyebut sebabnya, misalnya isian kosong, persen di luar 0 sampai 10, atau lebih dari 2 angka di belakang koma, lalu langkah berikutnya.
 
@@ -1215,6 +1237,27 @@ Bagian ini ditambahkan pada 2026-11-20 (#204) untuk M4. Semua angka di bagian in
 - Bila saringan Kategori, Produk, atau Metode di Laporan keuangan aktif, Biaya operasional, Kode unik Top up, dan Biaya transaksi Top up tidak dikurangkan, karena ketiganya bukan milik Produk atau metode tertentu. Barisnya dihapus dari rincian, dan keterangannya menjadi "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif."
 - Contoh: Laba bersih contoh di atas (Rp 49.683), ditambah satu Top up Berhasil pada hari yang sama dengan Kode unik Rp 200 dan Biaya transaksi Rp 1.052, menjadi 49.683 + 200 − 1.052 = Rp 48.831. Pendapatan tetap Rp 230.632. Contoh lengkapnya ada di `tests/golden/laba-top-up.json`.
 
+▶ Keputusan 2026-11-23 (#254): Kode unik dan Kode unik Top up tidak menambah Laba bersih, karena keduanya tidak masuk saldo toko (§5.5). Keputusan ini menggantikan kedua rumus Laba bersih di atas.
+- **Laba bersih = Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up**
+- Kalimat "Kode unik ditambahkan karena dibayar Pembeli dan masuk saldo toko" di atas tidak berlaku lagi.
+- Bila semua Pesanan Selesai punya Harga modal, Laba bersih tetap sama dengan Pendapatan − Total Harga modal − Biaya transaksi − Biaya operasional − Biaya transaksi Top up, dengan Pendapatan menurut §9.3.
+- Contoh di atas, dengan angka yang sama:
+
+  | Rincian | Nominal |
+  |---|---|
+  | Pendapatan | Rp 230.000 |
+  | Pesanan Selesai | 3 |
+  | Total Harga modal | Rp 170.000 |
+  | **Laba kotor** | **Rp 65.000** |
+  | − Potongan voucher | Rp 5.000 |
+  | − Biaya transaksi | Rp 949 |
+  | − Biaya operasional | Rp 10.000 |
+  | **Laba bersih** | **Rp 49.051** |
+
+  Hitungan lewat Pendapatan memberi angka yang sama: 230.000 − 170.000 − 949 − 10.000 = 49.051.
+- Dengan satu Top up Berhasil yang Biaya transaksinya Rp 1.052, Laba bersih menjadi 49.051 − 1.052 = Rp 47.999.
+- Contoh lengkapnya ada di `tests/golden/laba-tanpa-kode-unik.json` dan `tests/golden/laba-top-up-tanpa-kode-unik.json`. Keduanya menggantikan `laba.json` dan `laba-top-up.json`, yang masih memakai rumus lama sampai tiket koreksi Kode unik tayang.
+
 ### 14.6 Laporan keuangan
 
 Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, dan tabel Pesanan Selesai dalam satu rentang. Letaknya di menu samping diatur di §11.1, dan halamannya punya tautan ke halaman Biaya operasional (§14.4).
@@ -1261,6 +1304,11 @@ Laporan keuangan adalah halaman dasbor admin yang berisi rincian angka, grafik, 
 **Rincian angka**
 - Di atas grafik tampil rincian angka yang mengikuti saringan rentang, Kategori, dan Produk. Rinciannya disusun dari atas ke bawah seperti tabel rincian di §14.5: Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor, potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, lalu Laba bersih.
 - Peringatan Pesanan tanpa Harga modal (§14.2) dan keterangan Biaya operasional saat saringan aktif (§14.5) tampil di rincian ini.
+
+▶ Keputusan 2026-11-23 (#254): Kode unik di Laporan keuangan
+- Baris "+ Kode unik" dan "+ Kode unik Top up" dihapus dari rincian angka. Urutan rinciannya menjadi Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor, potongan voucher, Biaya transaksi, Biaya operasional, Biaya transaksi Top up, lalu Laba bersih.
+- Grafik 2 tidak lagi menambahkan Kode unik Top up. Grafik 1, 4, dan 5 memakai Pendapatan menurut §9.3.
+- Kolom Kode unik di tabel Pesanan (§14.8) tetap ada sebagai informasi, supaya setiap Pesanan bisa dicocokkan dengan dashboard Qrispy. Kolom Total bayar juga tetap ada.
 
 ### 14.7 Grafik
 
@@ -1472,6 +1520,23 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
 - Baris "Top up Berhasil: N, Rp X" hanya informasi, dan tidak ikut hitungan. N adalah jumlah Top up Berhasil, dan X jumlah Nominal top up-nya. Gunanya untuk mencocokkan uang yang masuk dengan saldo Qrispy.
 - Contoh lengkapnya ada di `tests/golden/laba-top-up.json`.
 
+▶ Keputusan 2026-11-23 (#254): Kode unik Top up tidak masuk saldo toko, sama seperti Kode unik Pesanan (§5.5). Saldo Qrispy toko hanya bertambah sebesar Nominal top up.
+- Kode unik Top up tidak lagi menambah Laba bersih. Biaya transaksi Top up tetap mengurangi Laba bersih (§14.5).
+- Contoh di atas menjadi:
+
+  | Rincian | Nominal |
+  |---|---|
+  | Pendapatan | Rp 50.000 |
+  | Pesanan Selesai | 1 |
+  | Total Harga modal | Rp 35.000 |
+  | **Laba kotor** | **Rp 15.000** |
+  | − Potongan voucher | Rp 0 |
+  | − Biaya transaksi | Rp 0 |
+  | − Biaya operasional | Rp 0 |
+  | − Biaya transaksi Top up | Rp 1.052 |
+  | **Laba bersih** | **Rp 13.948** |
+  | Top up Berhasil | 1, Rp 150.000 |
+
 ### 15.9 Menu Top up di dasbor admin
 
 - Menu samping "Top up" letaknya tepat di bawah menu Member (▶ Keputusan 2026-11-20 di §11.1).
@@ -1591,3 +1656,5 @@ Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Produk gratis hanya bisa
 
   Laba kotor = (50.000 − 35.000) + (0 − 2.000) + (0 − 2.000) = 11.000. Hitungan lewat Pendapatan memberi angka yang sama: 50.123 − 39.000 − 0 − 0 = 11.123.
 - Contoh lengkapnya ada di `tests/golden/laba-pesanan-gratis.json`.
+
+▶ Keputusan 2026-11-23 (#254): Contoh di atas mengikuti Pendapatan dan Laba bersih yang baru (§9.3, §14.5). Pendapatan menjadi Rp 50.000, tanpa Kode unik Rp 123, dan baris "+ Kode unik" hilang. Laba bersih menjadi 11.000 − 0 − 0 − 0 = Rp 11.000. Contohnya ada di `tests/golden/laba-tanpa-kode-unik.json`, dengan nama kasus berawalan "Pesanan gratis:".

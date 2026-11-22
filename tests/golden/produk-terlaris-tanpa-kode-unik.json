@@ -1,0 +1,349 @@
+{
+  "aturan": "Grafik Produk terlaris, dengan Pendapatan tanpa Kode unik",
+  "prd": "§14.7 (▶ Keputusan 2026-11-23)",
+  "keterangan": "Input adalah Pesanan Selesai yang sudah lolos saringan Laporan keuangan. Pesanan dijumlahkan per Produk dari semua Variannya. Paling banyak 10 Produk, diurutkan menurut jumlah Pesanan Selesai terbanyak, lalu Pendapatan terbesar, lalu nama Produk A sampai Z. Pendapatan adalah jumlah (Harga jual − potongan voucher), tanpa Kode unik (▶ Keputusan 2026-11-23). totalBayar dan kodeUnik di input hanya data Pesanan. Berkas ini menggantikan produk-terlaris.json sejak #254 (▶ Keputusan 2026-11-23). T88 menyambungkannya ke test, lalu produk-terlaris.json tidak dipakai lagi.",
+  "kasus": [
+    {
+      "nama": "Sepuluh Produk teratas dari sebelas, dengan jumlah yang sama",
+      "input": {
+        "pesananSelesai": [
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50010,
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 45123,
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50200,
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135499,
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135001,
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 1
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25100,
+            "hargaJual": 25000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25200,
+            "hargaJual": 25000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25300,
+            "hargaJual": 25000,
+            "potonganVoucher": 0,
+            "kodeUnik": 300
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25400,
+            "hargaJual": 25000,
+            "potonganVoucher": 0,
+            "kodeUnik": 400
+          },
+          {
+            "produk": "Spotify Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 25005,
+            "hargaJual": 25000,
+            "potonganVoucher": 0,
+            "kodeUnik": 5
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55100,
+            "hargaJual": 55000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55200,
+            "hargaJual": 55000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "YouTube Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 55300,
+            "hargaJual": 55000,
+            "potonganVoucher": 0,
+            "kodeUnik": 300
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30100,
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30200,
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Canva Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 30300,
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 300
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40100,
+            "hargaJual": 40000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40200,
+            "hargaJual": 40000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "varian": "1 Bulan",
+            "totalBayar": 40300,
+            "hargaJual": 40000,
+            "potonganVoucher": 0,
+            "kodeUnik": 300
+          },
+          {
+            "produk": "Vidio Platinum",
+            "varian": "1 Bulan",
+            "totalBayar": 30100,
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Vidio Platinum",
+            "varian": "1 Bulan",
+            "totalBayar": 30200,
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Viu Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 15100,
+            "hargaJual": 15000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Viu Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 15200,
+            "hargaJual": 15000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "WeTV VIP",
+            "varian": "1 Bulan",
+            "totalBayar": 20100,
+            "hargaJual": 20000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Zoom Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 150100,
+            "hargaJual": 150000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "Apple Music",
+            "varian": "1 Bulan",
+            "totalBayar": 20100,
+            "hargaJual": 20000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          },
+          {
+            "produk": "CapCut Pro",
+            "varian": "1 Bulan",
+            "totalBayar": 20100,
+            "hargaJual": 20000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100
+          }
+        ]
+      },
+      "output": {
+        "terlaris": [
+          {
+            "produk": "Netflix Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 415000
+          },
+          {
+            "produk": "Spotify Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 125000
+          },
+          {
+            "produk": "YouTube Premium",
+            "pesananSelesai": 3,
+            "pendapatan": 165000
+          },
+          {
+            "produk": "Disney+ Hotstar",
+            "pesananSelesai": 3,
+            "pendapatan": 120000
+          },
+          {
+            "produk": "Canva Pro",
+            "pesananSelesai": 3,
+            "pendapatan": 90000
+          },
+          {
+            "produk": "Vidio Platinum",
+            "pesananSelesai": 2,
+            "pendapatan": 60000
+          },
+          {
+            "produk": "Viu Premium",
+            "pesananSelesai": 2,
+            "pendapatan": 30000
+          },
+          {
+            "produk": "Zoom Pro",
+            "pesananSelesai": 1,
+            "pendapatan": 150000
+          },
+          {
+            "produk": "Apple Music",
+            "pesananSelesai": 1,
+            "pendapatan": 20000
+          },
+          {
+            "produk": "CapCut Pro",
+            "pesananSelesai": 1,
+            "pendapatan": 20000
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Kurang dari sepuluh Produk",
+      "input": {
+        "pesananSelesai": [
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50010,
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 45123,
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "1 Bulan",
+            "totalBayar": 50200,
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135499,
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499
+          },
+          {
+            "produk": "Netflix Premium",
+            "varian": "3 Bulan",
+            "totalBayar": 135001,
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 1
+          }
+        ]
+      },
+      "output": {
+        "terlaris": [
+          {
+            "produk": "Netflix Premium",
+            "pesananSelesai": 5,
+            "pendapatan": 415000
+          }
+        ]
+      }
+    },
+    {
+      "nama": "Tanpa Pesanan Selesai",
+      "input": {
+        "pesananSelesai": []
+      },
+      "output": {
+        "terlaris": []
+      }
+    }
+  ]
+}
