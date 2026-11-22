@@ -22,7 +22,8 @@ const SaringanAlamat = z.object({
 
 // Halaman Varian di dasbor admin: Stok Varian (PRD §5.3), mengisi Item stok lewat form satu Item stok atau
 // dengan menempel banyak baris (PRD §4.2), dan daftar Item stok yang bisa disaring menurut status, dengan
-// ubah dan hapus untuk Item stok Tersedia (PRD §4.4, §9.7).
+// Pembeli Item stok Ditahan dan Terkirim, ubah dan hapus untuk Item stok Tersedia, dan hapus semua Item stok
+// Tersedia (PRD §4.4, §9.7).
 //
 // Tata letak (DESIGN.md Tata letak halaman, dasbor admin): di bawah 1200 px semua panel satu kolom 720 px di
 // tengah. Mulai 1200 px Stok Varian dan kedua form Item stok di kolom kiri, Daftar Item stok di kolom kanan.
@@ -89,6 +90,8 @@ export default async function HalamanVarian({
         <div className="min-w-0">
           <DaftarItemStok
             {...varianDipilih}
+            namaProduk={varian.namaProduk}
+            namaVarian={varian.nama}
             saringan={saringan}
             jumlahPerStatus={stok.jumlahPerStatus}
             itemStok={itemStok}

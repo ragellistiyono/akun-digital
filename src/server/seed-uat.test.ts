@@ -567,10 +567,29 @@ describe("pnpm db:seed di database kosong", () => {
     ]);
   });
 
+  // Issue T84: persiapan M6 di docs/UAT.md (▶ Keputusan 2026-11-22), untuk UAT-D5.
+  it("Netflix Premium 3 Bulan berisi Item stok Tersedia uji-kembar@mail.com|pass9|Profil 1 [CONTOH]", async () => {
+    const { daftarItemStokVarian, daftarVarianItemStok } =
+      await import("./item-stok");
+    const [netflix3Bulan] = (await daftarVarianItemStok()).filter(
+      (v) => v.namaProduk === "Netflix Premium" && v.namaVarian === "3 Bulan",
+    );
+
+    const daftar = await daftarItemStokVarian({
+      varianId: netflix3Bulan.varianId,
+      status: "Tersedia",
+    });
+
+    expect(
+      daftar.map((item) => item.kolom.map((k) => k.nilai).join("|")),
+    ).toContain("uji-kembar@mail.com|pass9|Profil 1");
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
-    // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 28 Item stok (Netflix 1 Bulan
-    // 10 Tersedia dan 1 Terkirim ke Pesanan Selesai, Netflix 3 Bulan 4, YouTube 3 Bulan 3, Uji Bayar 10),
+    // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 29 Item stok (Netflix 1 Bulan
+    // 10 Tersedia dan 1 Terkirim ke Pesanan Selesai, Netflix 3 Bulan 4 ditambah uji-kembar dari persiapan M6,
+    // YouTube 3 Bulan 3, Uji Bayar 10),
     // dan 8 berkas gambar (3 ikon Kategori dan 5 foto Produk). User berisi 1 Admin dan 2 Member, masing-masing
     // dengan satu akun password, Voucher berisi 6 Voucher seed, dan Biaya operasional berisi Sewa server.
     expect(sebelum).toEqual({
@@ -579,7 +598,7 @@ describe("pnpm db:seed di database kosong", () => {
       kategori: 3,
       produk: 5,
       varian: 6,
-      item_stok: 28,
+      item_stok: 29,
       pesanan: 3,
       riwayat_status_pesanan: 6,
       pengaturan_toko: 1,

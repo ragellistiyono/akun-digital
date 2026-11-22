@@ -248,9 +248,9 @@ export const statusItemStok = pgEnum("status_item_stok", STATUS_ITEM_STOK);
 
 // Item stok (PRD §4) milik satu Varian. Isinya, yaitu isi kolom-kolom Format Item stok, disimpan
 // terenkripsi (PRD §12) oleh src/server/enkripsi-item-stok.ts. Sidik jari HMAC dari isinya dipakai
-// untuk menolak Item stok yang sama persis di Varian yang sama (PRD §4.2) tanpa membuka Item stok
-// lain; indeks unik menjaganya juga bila dua Admin mengisi bersamaan. Item stok tidak ada tanpa
-// Variannya, jadi ikut terhapus bersama Varian.
+// untuk menolak Item stok kembar di seluruh toko (PRD §4.2 ▶ Keputusan 2026-11-22) tanpa membuka Item
+// stok lain; indeks unik per Varian menjaganya juga bila dua Admin mengisi Varian yang sama bersamaan.
+// Item stok tidak ada tanpa Variannya, jadi ikut terhapus bersama Varian.
 // Item stok Ditahan mencatat Pesanan yang menahannya di pesanan_id (PRD §5.3), dan Item stok Terkirim
 // mencatat Pesanan penerimanya. Satu Pesanan hanya pernah mendapat satu Item stok (PRD §5.7), jadi
 // pesanan_id unik; Item stok Tersedia tidak punya Pesanan. Item stok Terkirim juga mencatat nama kolom
@@ -275,6 +275,9 @@ export const itemStok = pgTable(
       tabel.varianId,
       tabel.sidikJari,
     ),
+    // Item stok kembar dicari di seluruh toko lewat sidik jarinya (PRD §4.2 ▶ Keputusan 2026-11-22). Indeks ini
+    // tidak unik, karena Item stok kembar yang tersimpan sebelum aturan itu tidak dihapus.
+    index("item_stok_sidik_jari_idx").on(tabel.sidikJari),
     uniqueIndex("item_stok_pesanan_id_unik").on(tabel.pesananId),
   ],
 );

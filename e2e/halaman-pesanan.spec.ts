@@ -96,12 +96,14 @@ test("setelah pembayaran lewat Qrispy tiruan, Halaman Pesanan menampilkan Item s
     formatItemStok: ["Email", "Password", "Profil"],
     varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
   });
-  // Contoh baris Item stok dari PRD §4.2.
+  // Contoh baris Item stok dari PRD §4.2, dengan password unik per run, karena Item stok kembar di seluruh toko
+  // ditolak (PRD §4.2 ▶ Keputusan 2026-11-22) dan test lain juga memakai contoh baris itu.
+  const rahasia = `rahasia-${randomUUID().slice(0, 8)}`;
   expect(
     await tambahItemStok({
       produkId: idProduk,
       varianId: await idVarian(idProduk),
-      nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
+      nilai: ["budi@mail.com", rahasia, "Profil 2"],
     }),
   ).toEqual({ hasil: "disimpan" });
   const email = emailUnik();
@@ -126,7 +128,7 @@ test("setelah pembayaran lewat Qrispy tiruan, Halaman Pesanan menampilkan Item s
   await expect(blokItemStok(page)).toBeVisible({ timeout: 20_000 });
   const kolom = [
     ["Email", "budi@mail.com"],
-    ["Password", "rahasia123"],
+    ["Password", rahasia],
     ["Profil", "Profil 2"],
   ];
   for (const [nama, nilai] of kolom) {

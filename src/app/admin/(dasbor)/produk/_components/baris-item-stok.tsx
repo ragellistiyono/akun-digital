@@ -16,11 +16,15 @@ import {
   type KeadaanHapusItemStok,
 } from "../aksi-item-stok";
 
-/** Satu Item stok di daftar Item stok Varian (PRD §9.7), seperti yang dibaca daftarItemStokVarian. */
+/**
+ * Satu Item stok di daftar Item stok Varian (PRD §9.7), seperti yang dibaca daftarItemStokVarian. Waktu Pembeli-nya
+ * sudah ditulis dalam WIB, atau null bila tidak tercatat.
+ */
 type ItemStok = {
   id: string;
   status: StatusItemStok;
   nomorPesanan: string | null;
+  pembeli: { email: string; waktu: string | null } | null;
   kolom: { nama: string; nilai: string }[];
 };
 
@@ -183,8 +187,10 @@ function AksiItemStok({
 
 /**
  * Satu Item stok di daftar Item stok Varian (PRD §9.7): nomor urutnya di daftar, pil statusnya, Nomor Pesanan
- * yang menahannya (Ditahan) atau menerimanya (Terkirim), dan isi lengkapnya per kolom. Item stok Tersedia
- * bisa diubah atau dihapus (PRD §4.4); tombolnya tidak tampil untuk status lain, dan server tetap menolaknya.
+ * yang menahannya (Ditahan) atau menerimanya (Terkirim), Pembeli-nya, dan isi lengkapnya per kolom. Pembeli Item
+ * stok (PRD §9.7 ▶ Keputusan 2026-11-22) adalah email Pesanan itu beserta waktu Pesanan dibuat (Ditahan) atau
+ * waktu bayarnya (Terkirim). Item stok Tersedia bisa diubah atau dihapus (PRD §4.4); tombolnya tidak tampil untuk
+ * status lain, dan server tetap menolaknya.
  */
 export function BarisItemStok({
   produkId,
@@ -218,6 +224,19 @@ export function BarisItemStok({
           </span>
         )}
       </div>
+      {itemStok.pembeli && (
+        <p className="flex flex-wrap gap-x-3 text-[15px] text-pensil-redup">
+          <span className="[overflow-wrap:anywhere]">
+            {itemStok.pembeli.email}
+          </span>
+          {itemStok.pembeli.waktu && (
+            <span>
+              {itemStok.status === "Terkirim" ? "Dibayar" : "Pesanan dibuat"}{" "}
+              {itemStok.pembeli.waktu}
+            </span>
+          )}
+        </p>
+      )}
 
       {diubah ? (
         <FormUbahItemStok

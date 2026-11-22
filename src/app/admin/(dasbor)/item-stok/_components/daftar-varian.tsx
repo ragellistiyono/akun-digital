@@ -9,6 +9,7 @@ import { PilAktif } from "../../_components/pil";
 import { alamatVarianTerpilih } from "../alamat";
 
 type BarisVarian = {
+  produkId: string;
   varianId: string;
   namaVarian: string;
   namaProduk: string;
@@ -22,7 +23,8 @@ type BarisVarian = {
  * atau Nonaktif Varian itu (ditambah "Produk nonaktif" bila Produknya nonaktif), serta jumlah Item stok
  * Tersedia, Ditahan, dan Terkirim, dengan urutan dari daftarVarianItemStok.
  * Mengetuk sebuah baris memilih Varian itu. Baris Varian yang sedang terpilih ditandai post-it, seperti Varian
- * terpilih di toko (DESIGN.md Post-it).
+ * terpilih di toko (DESIGN.md Post-it). Di bawah setiap baris, tautan "Lihat Item stok" membuka halaman Varian itu
+ * (PRD §9.7 ▶ Keputusan 2026-11-22). Tautan itu terpisah dari tautan baris, karena tautan tidak boleh bersarang.
  */
 export function DaftarVarian({
   varian,
@@ -46,7 +48,7 @@ export function DaftarVarian({
         return (
           <li
             key={v.varianId}
-            className="border-b-2 border-dashed border-pensil last:border-b-0"
+            className="flex flex-col border-b-2 border-dashed border-pensil pb-2 last:border-b-0"
           >
             <Link
               href={alamatVarianTerpilih(v.varianId)}
@@ -88,6 +90,16 @@ export function DaftarVarian({
                 className="size-6 shrink-0 opacity-70"
                 strokeWidth={2.5}
               />
+            </Link>
+            <Link
+              href={`/admin/produk/${v.produkId}/varian/${v.varianId}`}
+              className="inline-flex min-h-10 items-center self-start text-[17px] text-pulpen decoration-2 underline-offset-4 hover:underline"
+            >
+              Lihat Item stok
+              <span className="sr-only">
+                {" "}
+                {v.namaProduk} {v.namaVarian}
+              </span>
             </Link>
           </li>
         );

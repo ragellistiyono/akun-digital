@@ -211,6 +211,13 @@
       "when": 1795201086148,
       "tag": "0029_bayar_saldo",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795390131800,
+      "tag": "0030_item_stok_sidik_jari",
+      "breakpoints": true
     }
   ]
 }

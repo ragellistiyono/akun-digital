@@ -5,10 +5,12 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
+import { pesanItemStokTerhapus } from "@/domain/hapus-semua-item-stok";
 import type { MasalahItemStok, StatusItemStok } from "@/domain/item-stok";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import {
   hapusItemStok,
+  hapusSemuaItemStokTersedia,
   tambahItemStok,
   tempelItemStokVarian,
   ubahItemStok,
@@ -27,6 +29,9 @@ export type KeadaanFormItemStok = {
 
 /** Pesan galat bila Item stok tidak dihapus. */
 export type KeadaanHapusItemStok = { galat?: string };
+
+/** Pesan sesudah semua Item stok Tersedia sebuah Varian dihapus, misalnya "25 Item stok terhapus.". */
+export type KeadaanHapusSemuaItemStok = { pesan?: string };
 
 /**
  * Teks tempelan yang dikembalikan ke form beserta pesan galatnya, atau hasil tempelan: ringkasan dan
@@ -115,7 +120,7 @@ function galatItemStok(
       };
     case "sudah-ada":
       return {
-        umum: "Item stok ini sama persis dengan Item stok yang sudah ada di Varian ini, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.",
+        umum: `${masalah.pesan}. Item stok yang sama persis tidak boleh ada dua kali di toko, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada.`,
       };
     case "jumlah-kolom-salah":
       // Form selalu memuat satu isian untuk setiap kolom, jadi jumlahnya hanya berbeda bila Format
@@ -185,7 +190,7 @@ function keteranganDitolak(kolom: string[], masalah: MasalahItemStok) {
     case "kolom-kosong":
       return `Kolom ${namaKolom(kolom, masalah.nomorKolom)} kosong.`;
     case "sudah-ada":
-      return "Sama persis dengan Item stok yang sudah ada di Varian ini.";
+      return `${masalah.pesan}.`;
   }
 }
 
@@ -267,4 +272,19 @@ export async function aksiHapusItemStok(
       refresh();
       return {};
   }
+}
+
+export async function aksiHapusSemuaItemStokTersedia(
+  _sebelumnya: KeadaanHapusSemuaItemStok,
+  formData: FormData,
+): Promise<KeadaanHapusSemuaItemStok> {
+  await wajibSesiAdmin(await headers());
+
+  const varianDipilih = bacaVarianDipilih(formData);
+
+  // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk menghapus.
+  const hasil = await hapusSemuaItemStokTersedia(varianDipilih);
+  if (hasil.hasil === "varian-tidak-ada") notFound();
+  refresh();
+  return { pesan: pesanItemStokTerhapus(hasil.jumlah) };
 }

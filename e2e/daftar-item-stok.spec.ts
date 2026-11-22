@@ -49,12 +49,13 @@ async function masukSebagaiAdmin(page: Page) {
 /**
  * Produk baru [CONTOH] dengan Format Item stok `Email`, `Password`, `Profil` dan satu Varian "1 Bulan", berisi
  * Item stok Tersedia dengan isi itu. Namanya bukan Netflix, supaya tidak mengubah hasil pencarian "netflix" di
- * cari-kategori-beranda.spec.ts yang berjalan bersamaan. Hasilnya id Produk, id Varian, dan alamat halaman
- * Varian itu di dasbor admin.
+ * cari-kategori-beranda.spec.ts yang berjalan bersamaan. Hasilnya id Produk, nama Produk, id Varian, dan alamat
+ * halaman Varian itu di dasbor admin.
  */
 async function varianBerisi(tersedia: string[][]) {
+  const namaProduk = `Daftar Item stok ${randomUUID().slice(0, 8)}`;
   const produkId = await sisipkanProduk({
-    nama: `Daftar Item stok ${randomUUID().slice(0, 8)}`,
+    nama: namaProduk,
     formatItemStok: FORMAT,
     varian: [{ nama: "1 Bulan", hargaJual: 50000 }],
   });
@@ -67,6 +68,7 @@ async function varianBerisi(tersedia: string[][]) {
   }
   return {
     produkId,
+    namaProduk,
     varianId,
     alamat: `/admin/produk/${produkId}/varian/${varianId}`,
   };
@@ -225,6 +227,116 @@ test("daftar Item stok menampilkan Item stok Tersedia, Ditahan dengan Nomor Pesa
     ),
   ).toBeVisible();
   await pembeli.context().close();
+});
+
+// UAT-D7 dan PRD §9.7 ▶ Keputusan 2026-11-22. Waktunya ditulis dalam WIB (PRD §9.1).
+test("baris Ditahan dan Terkirim menampilkan email Pesanan, waktu Pesanan dibuat atau waktu bayarnya, dan Nomor Pesanan yang membuka detail Pesanan (UAT-D7)", async ({
+  page,
+}) => {
+  const { varianId, alamat } = await varianBerisi([isiUji("iota", "Profil 1")]);
+  const emailB = `email-b-${randomUUID()}@example.test`;
+  const { nomorPesanan: nomorPenahan } = await sisipkanPesanan({
+    varianId,
+    status: "Menunggu Pembayaran",
+    email: emailB,
+    dibuatPada: new Date("2026-11-22T03:00:00Z"),
+    itemStok: { status: "Ditahan", nilai: isiUji("kappa", "Profil 2") },
+  });
+  const emailA = `email-a-${randomUUID()}@example.test`;
+  const { nomorPesanan: nomorPenerima } = await sisipkanPesanan({
+    varianId,
+    status: "Selesai",
+    email: emailA,
+    dibuatPada: new Date("2026-11-21T10:00:00Z"),
+    waktuBayar: new Date("2026-11-21T10:05:00Z"),
+    itemStok: {
+      status: "Terkirim",
+      nilai: isiUji("lambda", "Profil 3"),
+      formatSaatTerkirim: FORMAT,
+    },
+  });
+  await masukSebagaiAdmin(page);
+  await page.goto(alamat);
+
+  // Langkah 2: baris Ditahan menampilkan Email B, waktu Pesanan dibuat, dan Nomor Pesanan-nya.
+  const barisDitahan = itemStokBerstatus(page, "Ditahan");
+  await expect(barisDitahan).toContainText(emailB);
+  await expect(barisDitahan).toContainText("Pesanan dibuat 22 Nov 2026 10.00");
+  await expect(
+    barisDitahan.getByRole("link", { name: nomorPenahan }),
+  ).toHaveAttribute("href", `/admin/pesanan/${nomorPenahan}`);
+  // Item stok Tersedia tidak punya Pembeli.
+  await expect(itemStokBerstatus(page, "Tersedia")).not.toContainText(
+    "@example.test",
+  );
+
+  // Langkah 3: saring ke Terkirim, lalu ketuk Nomor Pesanan-nya.
+  await chip(page, "Terkirim (1)").click();
+  const barisTerkirim = itemStokBerstatus(page, "Terkirim");
+  await expect(barisTerkirim).toContainText(emailA);
+  await expect(barisTerkirim).toContainText("Dibayar 21 Nov 2026 17.05");
+  await barisTerkirim.getByRole("link", { name: nomorPenerima }).click();
+  await expect(page).toHaveURL(`/admin/pesanan/${nomorPenerima}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: nomorPenerima }),
+  ).toBeVisible();
+});
+
+// UAT-D6 dan PRD §4.4 ▶ Keputusan 2026-11-22, §9.10.
+test("hapus semua Item stok Tersedia ditegaskan lewat Modal penegasan, lalu menghapus semua Item stok Tersedia tanpa menyentuh Item stok Ditahan dan Terkirim (UAT-D6)", async ({
+  page,
+}) => {
+  const { varianId, alamat, namaProduk } = await varianBerisi([
+    isiUji("mu", "Profil 1"),
+    isiUji("nu", "Profil 2"),
+    isiUji("xi", "Profil 3"),
+  ]);
+  await sisipkanPesanan({
+    varianId,
+    status: "Menunggu Pembayaran",
+    itemStok: { status: "Ditahan", nilai: isiUji("omikron", "Profil 4") },
+  });
+  await pesananSelesai(varianId, isiUji("pi", "Profil 5"));
+  await masukSebagaiAdmin(page);
+  await page.goto(alamat);
+
+  // Langkah 2: Modal penegasan menyebut jumlah Tersedia, Ditahan, dan Terkirim.
+  const tombol = bagianDaftar(page).getByRole("button", {
+    name: "Hapus semua Item stok Tersedia",
+  });
+  await tombol.click();
+  const modal = page.getByRole("alertdialog", {
+    name: "Hapus semua Item stok Tersedia?",
+  });
+  await expect(modal).toContainText(
+    `Hapus 3 Item stok Tersedia dari ${namaProduk} – 1 Bulan? 1 Ditahan dan 1 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan.`,
+  );
+
+  // Langkah 3: Batal menutup modal tanpa menghapus apa pun.
+  await modal.getByRole("button", { name: "Batal" }).click();
+  await expect(modal).toHaveCount(0);
+  await expect(chip(page, "Tersedia (3)")).toBeVisible();
+
+  // Langkah 4: setujui modalnya.
+  await tombol.click();
+  await modal
+    .getByRole("button", { name: "Ya, hapus semua Item stok Tersedia" })
+    .click();
+  await expect(bagianDaftar(page).getByRole("status")).toHaveText(
+    "3 Item stok terhapus.",
+  );
+  await expect(modal).toHaveCount(0);
+  await expect(chip(page, "Tersedia (0)")).toBeVisible();
+  await expect(tombol).toHaveCount(0);
+  await expect(itemStokBerstatus(page, "Ditahan")).toHaveCount(1);
+  await expect(itemStokBerstatus(page, "Terkirim")).toHaveCount(1);
+  await expect(angkaStokVarian(page)).toHaveText("0");
+  await chip(page, "Tersedia (0)").click();
+  await expect(
+    bagianDaftar(page).getByText(
+      "Tidak ada Item stok berstatus Tersedia. Pilih Semua untuk melihat Item stok lainnya.",
+    ),
+  ).toBeVisible();
 });
 
 // PRD §4.4 dan §11.1, UAT-D3 langkah 1. Di layar ponsel 360 px, isi Item stok yang panjang tidak membuat

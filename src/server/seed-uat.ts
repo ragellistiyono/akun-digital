@@ -170,10 +170,15 @@ const PRODUK: ProdukSeed[] = [
         hargaJual: 135000,
         hargaNormal: null,
         hargaModal: 100000,
-        itemStok: berurut(
-          4,
-          (nomor) => `netflix-c@miwe.example|sandi-contoh-c|Profil ${nomor}`,
-        ),
+        itemStok: [
+          ...berurut(
+            4,
+            (nomor) => `netflix-c@miwe.example|sandi-contoh-c|Profil ${nomor}`,
+          ),
+          // Persiapan M6 di docs/UAT.md (▶ Keputusan 2026-11-22): Item stok yang ditempel ulang di Varian lain
+          // pada UAT-D5, dan ditolak sebagai Item stok kembar.
+          "uji-kembar@mail.com|pass9|Profil 1",
+        ],
       },
     ],
   },
@@ -803,7 +808,7 @@ async function isiPesanan(
       [nilaiTerkirim] = tempelItemStok({
         kolom: produkDipesan.formatItemStok,
         teks: p.itemStok,
-        sudahAda: () => false,
+        itemStokSama: () => [],
       }).tersimpan;
       if (!nilaiTerkirim) {
         gagal(

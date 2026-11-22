@@ -1,21 +1,27 @@
 // Mengisi Item stok sebuah Varian dan menghitung Stok Varian (PRD §4.2, §5.3), daftar semua Varian untuk menu
-// Item stok (PRD §4.2 ▶ Keputusan 2026-11-20), serta daftar Item stok per Varian beserta mengubah dan menghapus
-// Item stok Tersedia (PRD §4.4, §9.7). Aturannya ada di
-// src/domain/item-stok.ts dan src/domain/stok-varian.ts. Isinya disimpan terenkripsi (PRD §12) lewat
+// Item stok (PRD §4.2 ▶ Keputusan 2026-11-20), serta daftar Item stok per Varian beserta Pembeli-nya, mengubah dan
+// menghapus Item stok Tersedia, dan menghapus semua Item stok Tersedia sebuah Varian (PRD §4.4, §9.7). Item stok
+// kembar diperiksa di seluruh toko (PRD §4.2 ▶ Keputusan 2026-11-22). Aturannya ada di src/domain/item-stok.ts,
+// src/domain/hapus-semua-item-stok.ts, dan src/domain/stok-varian.ts. Isinya disimpan terenkripsi (PRD §12) lewat
 // enkripsi-item-stok.ts.
-import { and, count, eq, ne } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 
 import {
+  isiBarisTempelan,
   itemStokBolehDiubah,
   kolomItemStok,
   periksaItemStok,
+  rapikanIsiItemStok,
   STATUS_ITEM_STOK,
   tempelItemStok,
+  type CariItemStokSama,
+  type LetakItemStok,
   type MasalahItemStok,
   type StatusItemStok,
 } from "@/domain/item-stok";
 import { stokVarian } from "@/domain/stok-varian";
 
+import { waktuDibuat } from "./daftar-pesanan";
 import { db } from "./db";
 import { itemStok, pesanan, produk, varian } from "./db/schema";
 import {
@@ -32,27 +38,96 @@ type KunciItemStok = Extract<
 
 type Pemeriksa<H> = (
   kolom: string[],
-  sudahAda: (nilai: readonly string[]) => boolean,
+  itemStokSama: CariItemStokSama,
 ) => { simpan: string[][]; hasil: H };
 
-// Item stok disimpan dalam kelompok, supaya tempelan yang sangat panjang tidak melewati batas jumlah
+type Transaksi = Pick<typeof db, "select" | "execute">;
+
+// Item stok disimpan dan dicari dalam kelompok, supaya tempelan yang sangat panjang tidak melewati batas jumlah
 // parameter satu perintah PostgreSQL.
 const UKURAN_KELOMPOK = 1_000;
 
 /**
+ * Menunggu giliran mengisi atau mengubah Item stok, sampai akhir transaksi. Item stok kembar diperiksa di seluruh
+ * toko (PRD §4.2 ▶ Keputusan 2026-11-22), jadi semua pengisian dan pengubahan Item stok di toko berjalan satu per
+ * satu lewat satu kunci advisory PostgreSQL. Dengan begitu dua Admin yang mengisi isi yang sama ke dua Varian
+ * bersamaan tetap tidak menyimpan Item stok kembar. Checkout dan pembayaran tidak memakai kunci ini.
+ */
+async function tungguGiliranIsiItemStok(tx: Transaksi) {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext('item-stok-kembar'))`,
+  );
+}
+
+/**
+ * Pencari Item stok toko yang sama persis untuk periksaItemStok dan tempelItemStok. Item stok toko dari Varian
+ * dan Produk mana pun, berstatus apa pun, yang sidik jarinya sama dengan salah satu isi `calon` dibaca sekali dari
+ * database beserta letaknya, jadi isi Item stok yang tersimpan tidak perlu dibuka (PRD §12). `calon` harus memuat
+ * setiap isi yang nanti ditanyakan domain, sudah dirapikan seperti rapikanIsiItemStok. Isi lain yang ditanyakan
+ * melempar galat, supaya Item stok kembar tidak pernah lolos tanpa diperiksa.
+ */
+async function pencariItemStokSama(
+  tx: Transaksi,
+  kunci: KunciItemStok,
+  calon: readonly (readonly string[])[],
+): Promise<CariItemStokSama> {
+  const dicari = [
+    ...new Set(calon.map((nilai) => sidikJariItemStok(kunci, nilai))),
+  ];
+  const letakPerSidikJari = new Map<string, LetakItemStok[]>(
+    dicari.map((sidikJari) => [sidikJari, []]),
+  );
+  for (let mulai = 0; mulai < dicari.length; mulai += UKURAN_KELOMPOK) {
+    const semua = await tx
+      .select({
+        sidikJari: itemStok.sidikJari,
+        id: itemStok.id,
+        produk: produk.nama,
+        varian: varian.nama,
+        status: itemStok.status,
+      })
+      .from(itemStok)
+      .innerJoin(varian, eq(itemStok.varianId, varian.id))
+      .innerJoin(produk, eq(varian.produkId, produk.id))
+      .where(
+        inArray(
+          itemStok.sidikJari,
+          dicari.slice(mulai, mulai + UKURAN_KELOMPOK),
+        ),
+      );
+    for (const { sidikJari, ...letak } of semua) {
+      letakPerSidikJari.get(sidikJari)?.push(letak);
+    }
+  }
+
+  return (nilai) => {
+    const letak = letakPerSidikJari.get(sidikJariItemStok(kunci, nilai));
+    if (!letak) {
+      throw new Error(
+        "Isi Item stok ini diperiksa tanpa dicari dulu di seluruh toko, jadi Item stok kembar bisa lolos. Sertakan isinya, yang sudah dirapikan rapikanIsiItemStok, di calon pencariItemStokSama.",
+      );
+    }
+    return letak;
+  };
+}
+
+/**
  * Memeriksa Item stok baru untuk sebuah Varian milik Produk itu, lalu menyimpan yang diterima dengan
- * status Tersedia. Hasilnya null bila Varian tidak ada atau milik Produk lain.
+ * status Tersedia. `calon` adalah isi Item stok baru yang akan diperiksa (pencariItemStokSama). Hasilnya null
+ * bila Varian tidak ada atau milik Produk lain.
  *
- * Baris Varian dan Produknya dikunci selama pemeriksaan dan penyimpanan, supaya dua Admin yang mengisi
- * Varian yang sama bersamaan tetap tidak menyimpan Item stok yang sama persis. Item stok yang sudah ada
- * dikenali dari sidik jarinya, jadi isinya tidak perlu dibuka.
+ * Pengisian menunggu gilirannya lebih dulu (tungguGiliranIsiItemStok), lalu baris Varian dan Produknya dikunci
+ * selama pemeriksaan dan penyimpanan, supaya Format Item stok-nya tidak berubah di tengah jalan. Item stok yang
+ * sudah ada di toko dikenali dari sidik jarinya, jadi isinya tidak perlu dibuka.
  */
 async function isiVarian<H>(
   kunci: KunciItemStok,
   { produkId, varianId }: { produkId: string; varianId: string },
+  calon: readonly (readonly string[])[],
   periksa: Pemeriksa<H>,
 ): Promise<H | null> {
   return db.transaction(async (tx) => {
+    await tungguGiliranIsiItemStok(tx);
     const [terkunci] = await tx
       .select({ formatItemStok: produk.formatItemStok })
       .from(varian)
@@ -61,16 +136,9 @@ async function isiVarian<H>(
       .for("update");
     if (!terkunci) return null;
 
-    const sidikJariAda = new Set(
-      (
-        await tx
-          .select({ sidikJari: itemStok.sidikJari })
-          .from(itemStok)
-          .where(eq(itemStok.varianId, varianId))
-      ).map((baris) => baris.sidikJari),
-    );
-    const { simpan, hasil } = periksa(terkunci.formatItemStok, (nilai) =>
-      sidikJariAda.has(sidikJariItemStok(kunci, nilai)),
+    const { simpan, hasil } = periksa(
+      terkunci.formatItemStok,
+      await pencariItemStokSama(tx, kunci, calon),
     );
 
     for (let mulai = 0; mulai < simpan.length; mulai += UKURAN_KELOMPOK) {
@@ -106,16 +174,21 @@ export async function tambahItemStok({
   const hasil = await isiVarian<
     | { hasil: "disimpan" }
     | { hasil: "ditolak"; kolom: string[]; masalah: MasalahItemStok }
-  >(kunci.kunci, varianDipilih, (kolom, sudahAda) => {
-    const periksa = periksaItemStok({ kolom, nilai, sudahAda });
-    if (periksa.sah) {
-      return { simpan: [periksa.nilai], hasil: { hasil: "disimpan" } };
-    }
-    return {
-      simpan: [],
-      hasil: { hasil: "ditolak", kolom, masalah: periksa.masalah },
-    };
-  });
+  >(
+    kunci.kunci,
+    varianDipilih,
+    [rapikanIsiItemStok(nilai)],
+    (kolom, itemStokSama) => {
+      const periksa = periksaItemStok({ kolom, nilai, itemStokSama });
+      if (periksa.sah) {
+        return { simpan: [periksa.nilai], hasil: { hasil: "disimpan" } };
+      }
+      return {
+        simpan: [],
+        hasil: { hasil: "ditolak", kolom, masalah: periksa.masalah },
+      };
+    },
+  );
   return hasil ?? ({ hasil: "varian-tidak-ada" } as const);
 }
 
@@ -140,8 +213,9 @@ export async function tempelItemStokVarian({
   const hasil = await isiVarian(
     kunci.kunci,
     varianDipilih,
-    (kolom, sudahAda) => {
-      const tempel = tempelItemStok({ kolom, teks, sudahAda });
+    isiBarisTempelan(teks),
+    (kolom, itemStokSama) => {
+      const tempel = tempelItemStok({ kolom, teks, itemStokSama });
       return {
         simpan: tempel.tersimpan,
         hasil: { hasil: "ditempel", kolom, tempel } as const,
@@ -230,8 +304,12 @@ export async function daftarVarianItemStok() {
 /**
  * Semua Item stok sebuah Varian untuk daftar Item stok di dasbor admin (PRD §9.7), atau hanya yang berstatus
  * `status` bila diberikan. Setiap Item stok membawa id, status, Nomor Pesanan yang menahannya (Ditahan) atau
- * menerimanya (Terkirim), dan isi lengkapnya per kolom menurut kolomItemStok. Isinya dibuka dengan
+ * menerimanya (Terkirim), Pembeli-nya, dan isi lengkapnya per kolom menurut kolomItemStok. Isinya dibuka dengan
  * ITEM_STOK_KEY.
+ *
+ * Pembeli Item stok (PRD §9.7 ▶ Keputusan 2026-11-22) adalah email Pesanan saat ini, termasuk hasil koreksi email,
+ * beserta waktunya: waktu Pesanan dibuat untuk Item stok Ditahan, dan waktu bayar Pesanan untuk Item stok
+ * Terkirim. Waktunya null bila tidak tercatat. Item stok Tersedia tidak punya Pembeli.
  *
  * Urutannya Tersedia, Ditahan, lalu Terkirim, dan di dalam status yang sama menurut isinya. Urutan ini
  * keputusan teknis, karena PRD tidak mengatur urutan daftar Item stok.
@@ -244,10 +322,14 @@ export async function daftarItemStokVarian({
   status?: StatusItemStok;
 }) {
   const semua = await db
+    .with(waktuDibuat)
     .select({
       id: itemStok.id,
       status: itemStok.status,
       nomorPesanan: pesanan.nomorPesanan,
+      email: pesanan.email,
+      waktuDibuat: waktuDibuat.waktu,
+      waktuBayar: pesanan.waktuBayar,
       isiTerenkripsi: itemStok.isiTerenkripsi,
       formatSaatTerkirim: itemStok.formatSaatTerkirim,
       formatItemStok: produk.formatItemStok,
@@ -256,6 +338,7 @@ export async function daftarItemStokVarian({
     .innerJoin(varian, eq(itemStok.varianId, varian.id))
     .innerJoin(produk, eq(varian.produkId, produk.id))
     .leftJoin(pesanan, eq(itemStok.pesananId, pesanan.id))
+    .leftJoin(waktuDibuat, eq(waktuDibuat.pesananId, pesanan.id))
     .where(
       and(
         eq(itemStok.varianId, varianId),
@@ -270,6 +353,16 @@ export async function daftarItemStokVarian({
       id: baris.id,
       status: baris.status,
       nomorPesanan: baris.nomorPesanan,
+      pembeli:
+        baris.email === null
+          ? null
+          : {
+              email: baris.email,
+              waktu:
+                baris.status === "Terkirim"
+                  ? baris.waktuBayar
+                  : baris.waktuDibuat,
+            },
       kolom: kolomItemStok({
         status: baris.status,
         formatItemStok: baris.formatItemStok,
@@ -322,14 +415,16 @@ async function kunciItemStok(
  *
  * - Hanya Item stok Tersedia yang diubah (itemStokBolehDiubah). Item stok Ditahan atau Terkirim tidak berubah.
  * - Isi baru diperiksa seperti Item stok dari form (periksaItemStok, PRD §4.2): spasi di awal dan akhir kolom
- *   dibuang, dan isi dengan kolom kosong, jumlah kolom yang salah, atau yang sama persis dengan Item stok
- *   lain di Varian itu, terkirim maupun belum, ditolak. Item stok ini tidak dibandingkan dengan dirinya sendiri.
+ *   dibuang, dan isi dengan kolom kosong, jumlah kolom yang salah, atau Item stok kembar, yaitu yang sama persis
+ *   dengan Item stok lain di seluruh toko, terkirim maupun belum, ditolak (PRD §4.2 ▶ Keputusan 2026-11-22). Item
+ *   stok ini tidak dibandingkan dengan dirinya sendiri.
  * - Isi baru disimpan terenkripsi beserta sidik jari barunya (PRD §12). Tanpa ITEM_STOK_KEY yang sah, tidak ada
  *   yang diubah.
  *
- * Baris Varian dikunci lebih dulu, seperti saat Item stok diisi, supaya pengisian dan pengubahan bersamaan di
- * Varian yang sama tidak menghasilkan Item stok yang sama persis. Kuncinya FOR NO KEY UPDATE, yang tidak
- * menghalangi checkout membuat Pesanan untuk Varian itu. Lalu baris Item stok dikunci (kunciItemStok).
+ * Pengubahan menunggu gilirannya lebih dulu, seperti saat Item stok diisi (tungguGiliranIsiItemStok), supaya
+ * pengisian dan pengubahan bersamaan tidak menghasilkan Item stok kembar. Lalu baris Varian dikunci dengan FOR NO
+ * KEY UPDATE, yang tidak menghalangi checkout membuat Pesanan untuk Varian itu, dan baris Item stok dikunci
+ * (kunciItemStok).
  */
 export async function ubahItemStok({
   nilai,
@@ -341,6 +436,7 @@ export async function ubahItemStok({
   }
 
   return db.transaction(async (tx) => {
+    await tungguGiliranIsiItemStok(tx);
     const [terkunci] = await tx
       .select({ formatItemStok: produk.formatItemStok })
       .from(varian)
@@ -358,24 +454,14 @@ export async function ubahItemStok({
       return { hasil: "tidak-boleh", status } as const;
     }
 
-    const sidikJariLain = new Set(
-      (
-        await tx
-          .select({ sidikJari: itemStok.sidikJari })
-          .from(itemStok)
-          .where(
-            and(
-              eq(itemStok.varianId, dipilih.varianId),
-              ne(itemStok.id, dipilih.id),
-            ),
-          )
-      ).map((baris) => baris.sidikJari),
-    );
     const kolom = terkunci.formatItemStok;
     const periksa = periksaItemStok({
       kolom,
       nilai,
-      sudahAda: (isi) => sidikJariLain.has(sidikJariItemStok(kunci.kunci, isi)),
+      itemStokSama: await pencariItemStokSama(tx, kunci.kunci, [
+        rapikanIsiItemStok(nilai),
+      ]),
+      sedangDiubah: dipilih.id,
     });
     if (!periksa.sah) {
       return { hasil: "ditolak", kolom, masalah: periksa.masalah } as const;
@@ -405,5 +491,38 @@ export async function hapusItemStok(dipilih: ItemStokDipilih) {
     }
     await tx.delete(itemStok).where(eq(itemStok.id, dipilih.id));
     return { hasil: "dihapus" } as const;
+  });
+}
+
+/**
+ * Menghapus semua Item stok Varian itu yang masih Tersedia saat penegasannya disetujui (PRD §4.4 ▶ Keputusan
+ * 2026-11-22). Item stok Ditahan dan Terkirim tidak ikut terhapus. Hasilnya jumlah yang benar-benar terhapus, atau
+ * "varian-tidak-ada" bila Varian itu tidak ada atau milik Produk lain.
+ *
+ * Status diperiksa oleh perintah hapus itu sendiri. Bila checkout sedang mengunci salah satu Item stok untuk
+ * ditahan (PRD §5.3), perintah ini menunggu checkout itu selesai, lalu melewati Item stok yang sudah menjadi
+ * Ditahan. Bila perintah ini lebih dulu, checkout melewati Item stok yang sedang dihapus (SKIP LOCKED).
+ */
+export async function hapusSemuaItemStokTersedia({
+  produkId,
+  varianId,
+}: {
+  produkId: string;
+  varianId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const [ada] = await tx
+      .select({ id: varian.id })
+      .from(varian)
+      .where(and(eq(varian.id, varianId), eq(varian.produkId, produkId)));
+    if (!ada) return { hasil: "varian-tidak-ada" } as const;
+
+    const terhapus = await tx
+      .delete(itemStok)
+      .where(
+        and(eq(itemStok.varianId, varianId), eq(itemStok.status, "Tersedia")),
+      )
+      .returning({ id: itemStok.id });
+    return { hasil: "dihapus", jumlah: terhapus.length } as const;
   });
 }

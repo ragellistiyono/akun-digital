@@ -63,36 +63,93 @@ export function kolomItemStok({
 export const PEMISAH_KOLOM = "|";
 
 /**
- * Pemeriksa apakah sebuah Item stok sama persis dengan Item stok yang sudah ada di Varian itu, terkirim
- * maupun belum. Lapisan server menjawabnya tanpa membuka isi Item stok yang tersimpan.
+ * Letak sebuah Item stok di toko: id-nya, nama Produk dan Varian-nya, dan statusnya (PRD §4.2 ▶ Keputusan
+ * 2026-11-22).
  */
-type SudahAda = (nilai: readonly string[]) => boolean;
+export type LetakItemStok = {
+  id: string;
+  produk: string;
+  varian: string;
+  status: StatusItemStok;
+};
+
+/**
+ * Pencari Item stok toko yang semua kolomnya sama persis dengan isi itu, dari Varian dan Produk mana pun,
+ * berstatus Tersedia, Ditahan, maupun Terkirim. Isi yang dicari sudah dibuang spasinya di awal dan akhir
+ * setiap kolom, lalu dibandingkan apa adanya: huruf besar dan kecil dibedakan, dan Item stok dengan jumlah
+ * kolom berbeda tidak pernah sama. Lapisan server menjawabnya tanpa membuka isi Item stok yang tersimpan.
+ */
+export type CariItemStokSama = (
+  nilai: readonly string[],
+) => readonly LetakItemStok[];
 
 /** Sebab sebuah Item stok ditolak. Nomor kolom dihitung dari 1, menurut Format Item stok. */
 export type MasalahItemStok =
   | { alasan: "jumlah-kolom-salah"; jumlahKolom: number }
   | { alasan: "kolom-kosong"; nomorKolom: number[] }
-  | { alasan: "sudah-ada" };
+  | { alasan: "sudah-ada"; letak: LetakItemStok; pesan: string };
 
 type HasilPeriksaItemStok =
   { sah: true; nilai: string[] } | { sah: false; masalah: MasalahItemStok };
 
+// Nama Produk dan Varian dibandingkan seperti yang dibaca orang, sama seperti daftar Varian di menu Item stok:
+// angka di dalamnya dibandingkan sebagai angka, jadi "3 Bulan" berada sebelum "12 Bulan".
+const pembandingNama = new Intl.Collator("id", { numeric: true });
+
+/**
+ * Item stok kembar (PRD §4.2 ▶ Keputusan 2026-11-22): dari Item stok toko yang sama persis, letak yang disebut
+ * adalah yang pertama menurut nama Produk, lalu nama Varian, A sampai Z. Bila nama Produk dan Varian-nya juga
+ * sama, urutannya Tersedia, Ditahan, Terkirim, lalu id, supaya letak yang disebut selalu sama. Item stok yang
+ * sedang diubah tidak dibandingkan dengan dirinya sendiri. Null bila tidak ada Item stok lain yang sama persis.
+ */
+function letakItemStokKembar(
+  sama: readonly LetakItemStok[],
+  sedangDiubah: string | null,
+) {
+  const [pertama] = sama
+    .filter((letak) => letak.id !== sedangDiubah)
+    .toSorted(
+      (a, b) =>
+        pembandingNama.compare(a.produk, b.produk) ||
+        pembandingNama.compare(a.varian, b.varian) ||
+        STATUS_ITEM_STOK.indexOf(a.status) -
+          STATUS_ITEM_STOK.indexOf(b.status) ||
+        a.id.localeCompare(b.id),
+    );
+  return pertama ?? null;
+}
+
+/**
+ * Isi sebuah Item stok seperti yang dibandingkan dan disimpan: spasi di awal dan akhir setiap kolom dibuang
+ * (PRD §4.2 ▶ Keputusan 2026-11-11). Kolom yang hanya berisi spasi menjadi kosong.
+ */
+export function rapikanIsiItemStok(nilai: readonly string[]) {
+  return nilai.map((satu) => satu.trim());
+}
+
 /**
  * Memeriksa satu Item stok, yaitu isi kolom-kolomnya menurut urutan Format Item stok (PRD §4.2).
  * Spasi di awal dan akhir setiap kolom dibuang. Item stok ditolak bila jumlah kolomnya tidak sama
- * dengan Format Item stok, ada kolom yang kosong, atau sama persis dengan Item stok yang sudah ada di
- * Varian itu. Hanya satu alasan yang diberikan, diperiksa menurut urutan itu.
+ * dengan Format Item stok, ada kolom yang kosong, atau ia Item stok kembar: sama persis dengan Item stok lain
+ * di toko (PRD §4.2 ▶ Keputusan 2026-11-22). Alasan kembar menyebut letak Item stok yang sama, misalnya
+ * "Sudah ada di Netflix Premium – 3 Bulan (Terkirim)". Hanya satu alasan yang diberikan, diperiksa menurut
+ * urutan itu.
+ *
+ * `sedangDiubah` adalah id Item stok yang sedang diubah (PRD §4.4), yang tidak dibandingkan dengan dirinya
+ * sendiri.
  */
 export function periksaItemStok({
   kolom,
   nilai,
-  sudahAda,
+  itemStokSama,
+  sedangDiubah = null,
 }: {
   kolom: readonly string[];
   nilai: readonly string[];
-  sudahAda: SudahAda;
+  itemStokSama: CariItemStokSama;
+  sedangDiubah?: string | null;
 }): HasilPeriksaItemStok {
-  const isi = nilai.map((satu) => satu.trim());
+  const isi = rapikanIsiItemStok(nilai);
   if (isi.length !== kolom.length) {
     return {
       sah: false,
@@ -103,8 +160,41 @@ export function periksaItemStok({
   if (nomorKolom.length > 0) {
     return { sah: false, masalah: { alasan: "kolom-kosong", nomorKolom } };
   }
-  if (sudahAda(isi)) return { sah: false, masalah: { alasan: "sudah-ada" } };
+  const letak = letakItemStokKembar(itemStokSama(isi), sedangDiubah);
+  if (letak) {
+    return {
+      sah: false,
+      masalah: {
+        alasan: "sudah-ada",
+        letak,
+        pesan: `Sudah ada di ${letak.produk} – ${letak.varian} (${letak.status})`,
+      },
+    };
+  }
   return { sah: true, nilai: isi };
+}
+
+/** Setiap baris tempelan yang tidak kosong beserta nomor barisnya, dihitung dari 1 termasuk baris kosong. */
+function barisTempelan(teks: string) {
+  return teks.split(/\r?\n/).flatMap((isiBaris, indeks) =>
+    isiBaris.trim() === ""
+      ? []
+      : [
+          {
+            baris: indeks + 1,
+            teks: isiBaris,
+            nilai: isiBaris.split(PEMISAH_KOLOM),
+          },
+        ],
+  );
+}
+
+/**
+ * Isi setiap baris tempelan yang tidak kosong, sudah dirapikan seperti rapikanIsiItemStok. Lapisan server
+ * memakainya untuk membaca Item stok toko yang mungkin sama persis, sebelum tempelan diperiksa tempelItemStok.
+ */
+export function isiBarisTempelan(teks: string) {
+  return barisTempelan(teks).map(({ nilai }) => rapikanIsiItemStok(nilai));
 }
 
 type DitolakTempel = { baris: number; teks: string } & (
@@ -133,29 +223,22 @@ type HasilTempel = {
 export function tempelItemStok({
   kolom,
   teks,
-  sudahAda,
+  itemStokSama,
 }: {
   kolom: readonly string[];
   teks: string;
-  sudahAda: SudahAda;
+  itemStokSama: CariItemStokSama;
 }): HasilTempel {
   const tersimpan: string[][] = [];
   const ditolak: DitolakTempel[] = [];
   // Isi setiap Item stok yang sudah diterima dari tempelan ini, beserta nomor barisnya.
   const barisDiterima = new Map<string, number>();
 
-  teks.split(/\r?\n/).forEach((isiBaris, indeks) => {
-    if (isiBaris.trim() === "") return;
-    const baris = indeks + 1;
-
-    const periksa = periksaItemStok({
-      kolom,
-      nilai: isiBaris.split(PEMISAH_KOLOM),
-      sudahAda,
-    });
+  for (const { baris, teks: isiBaris, nilai } of barisTempelan(teks)) {
+    const periksa = periksaItemStok({ kolom, nilai, itemStokSama });
     if (!periksa.sah) {
       ditolak.push({ baris, teks: isiBaris, ...periksa.masalah });
-      return;
+      continue;
     }
     const kunci = JSON.stringify(periksa.nilai);
     const barisPertama = barisDiterima.get(kunci);
@@ -166,11 +249,11 @@ export function tempelItemStok({
         alasan: "kembar-dalam-tempelan",
         samaDenganBaris: barisPertama,
       });
-      return;
+      continue;
     }
     barisDiterima.set(kunci, baris);
     tersimpan.push(periksa.nilai);
-  });
+  }
 
   return {
     tersimpan,

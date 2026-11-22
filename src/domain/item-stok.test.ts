@@ -1,16 +1,31 @@
 import { describe, expect, it } from "vitest";
 
+import kembar from "../../tests/golden/item-stok-kembar.json";
 import golden from "../../tests/golden/tempel-item-stok.json";
 import {
+  isiBarisTempelan,
   itemStokBolehDiubah,
   kolomItemStok,
   periksaItemStok,
+  STATUS_ITEM_STOK,
   tempelItemStok,
+  type LetakItemStok,
 } from "./item-stok";
 
+/** Letak contoh untuk Item stok yang sudah ada, bila letaknya tidak diperiksa test itu. */
+const LETAK_VARIAN_INI: LetakItemStok = {
+  id: "item-stok-ada",
+  produk: "Netflix Premium",
+  varian: "1 Bulan",
+  status: "Tersedia",
+};
+
+/** Tanpa Item stok lain di toko. */
+const tanpaItemStok = () => [];
+
 // PRD §4.2: satu baris satu Item stok, kolom dipisah |. Baris dengan jumlah kolom yang salah, kolom
-// kosong, sama persis dengan Item stok yang sudah ada di Varian itu, atau kembar dengan baris
-// sebelumnya di tempelan ditolak. Baris kosong diabaikan, tetapi tetap dihitung nomornya.
+// kosong, sama persis dengan Item stok yang sudah ada, atau kembar dengan baris sebelumnya di tempelan
+// ditolak. Baris kosong diabaikan, tetapi tetap dihitung nomornya.
 describe("tempelItemStok", () => {
   it.each(golden.kasus)("$nama", ({ input, output }) => {
     // Fixture menulis Item stok yang sudah ada dalam bentuk baris tempelan. Dari tempelan, isi
@@ -18,7 +33,8 @@ describe("tempelItemStok", () => {
     const hasil = tempelItemStok({
       kolom: input.kolom,
       teks: input.baris.join("\n"),
-      sudahAda: (nilai) => input.itemStokAda.includes(nilai.join("|")),
+      itemStokSama: (nilai) =>
+        input.itemStokAda.includes(nilai.join("|")) ? [LETAK_VARIAN_INI] : [],
     });
 
     expect(hasil.tersimpan.map((nilai) => nilai.join("|"))).toEqual(
@@ -33,7 +49,6 @@ describe("tempelItemStok", () => {
 
 describe("tempelItemStok: bahan setiap penolakan", () => {
   const kolom = ["Email", "Password", "Profil"];
-  const tanpaItemStok = () => false;
 
   it("menyebut jumlah kolom yang terbaca, dan baris pertama yang dikembari (UAT-D1)", () => {
     const hasil = tempelItemStok({
@@ -45,7 +60,7 @@ describe("tempelItemStok: bahan setiap penolakan", () => {
         "a@mail.com|pass1|Profil 1",
         "d@mail.com|pass4|Profil 4",
       ].join("\n"),
-      sudahAda: tanpaItemStok,
+      itemStokSama: tanpaItemStok,
     });
 
     expect(hasil.ditolak).toEqual([
@@ -68,7 +83,7 @@ describe("tempelItemStok: bahan setiap penolakan", () => {
     const hasil = tempelItemStok({
       kolom,
       teks: "|rahasia123| ",
-      sudahAda: tanpaItemStok,
+      itemStokSama: tanpaItemStok,
     });
 
     expect(hasil.ditolak).toEqual([
@@ -85,7 +100,7 @@ describe("tempelItemStok: bahan setiap penolakan", () => {
     const hasil = tempelItemStok({
       kolom,
       teks: "budi@mail.com|rahasia123|Profil 2\r\nsiti@mail.com|rahasia456|Profil 3\r\n",
-      sudahAda: tanpaItemStok,
+      itemStokSama: tanpaItemStok,
     });
 
     expect(hasil).toEqual({
@@ -102,7 +117,7 @@ describe("tempelItemStok: bahan setiap penolakan", () => {
     const hasil = tempelItemStok({
       kolom,
       teks: "budi@mail.com | rahasia123 | Profil 2\nbudi@mail.com|rahasia123|Profil 2",
-      sudahAda: tanpaItemStok,
+      itemStokSama: tanpaItemStok,
     });
 
     expect(hasil.tersimpan).toEqual([
@@ -121,13 +136,94 @@ describe("tempelItemStok: bahan setiap penolakan", () => {
     const hasil = tempelItemStok({
       kolom: ["Kode"],
       teks: "KODE-111\nKODE-111",
-      sudahAda: ([kode]) => kode === "KODE-111",
+      itemStokSama: ([kode]) => (kode === "KODE-111" ? [LETAK_VARIAN_INI] : []),
     });
 
+    const sudahAda = {
+      teks: "KODE-111",
+      alasan: "sudah-ada",
+      letak: LETAK_VARIAN_INI,
+      pesan: "Sudah ada di Netflix Premium – 1 Bulan (Tersedia)",
+    };
     expect(hasil.ditolak).toEqual([
-      { baris: 1, teks: "KODE-111", alasan: "sudah-ada" },
-      { baris: 2, teks: "KODE-111", alasan: "sudah-ada" },
+      { baris: 1, ...sudahAda },
+      { baris: 2, ...sudahAda },
     ]);
+  });
+});
+
+// PRD §4.2 ▶ Keputusan 2026-11-22: Item stok kembar diperiksa di seluruh toko, dari Varian dan Produk mana pun,
+// berstatus Tersedia, Ditahan, maupun Terkirim. Kasus dengan sedangDiubah null adalah tempelan; kasus lainnya
+// mengubah Item stok ke-sedangDiubah di itemStokToko menjadi baris satu-satunya, lewat periksaItemStok.
+describe("Item stok kembar di seluruh toko", () => {
+  /** Status dari fixture, yang ditulis sebagai teks. */
+  function status(teks: string) {
+    const hasil = STATUS_ITEM_STOK.find((satu) => satu === teks);
+    if (!hasil) throw new Error(`Status "${teks}" di fixture tidak dikenal.`);
+    return hasil;
+  }
+
+  it.each(kembar.kasus)("$nama", ({ input, output }) => {
+    // Lapisan server mengenali Item stok yang sama persis dari sidik jari isinya. Di sini isi yang tersimpan
+    // dibandingkan langsung, kolom demi kolom, dan id-nya adalah indeksnya di itemStokToko.
+    const itemStokSama = (nilai: readonly string[]) =>
+      input.itemStokToko.flatMap((satu, indeks) =>
+        satu.kolom.length === nilai.length &&
+        satu.kolom.every((isi, i) => isi === nilai[i])
+          ? [
+              {
+                id: String(indeks),
+                produk: satu.produk,
+                varian: satu.varian,
+                status: status(satu.status),
+              },
+            ]
+          : [],
+      );
+    const pesan = (masalah: { alasan: string; pesan?: string }) =>
+      masalah.alasan === "sudah-ada" ? masalah.pesan : null;
+
+    if (input.sedangDiubah === null) {
+      const hasil = tempelItemStok({
+        kolom: input.kolom,
+        teks: input.baris.join("\n"),
+        itemStokSama,
+      });
+
+      expect(hasil.tersimpan.map((nilai) => nilai.join("|"))).toEqual(
+        output.tersimpan,
+      );
+      expect(
+        hasil.ditolak.map((satu) => ({
+          baris: satu.baris,
+          alasan: satu.alasan,
+          pesan: pesan(satu),
+        })),
+      ).toEqual(output.ditolak);
+      expect(hasil.ringkasan).toBe(output.ringkasan);
+    } else {
+      const hasil = periksaItemStok({
+        kolom: input.kolom,
+        nilai: input.baris[0].split("|"),
+        itemStokSama,
+        sedangDiubah: String(input.sedangDiubah),
+      });
+
+      expect(hasil.sah ? [hasil.nilai.join("|")] : []).toEqual(
+        output.tersimpan,
+      );
+      expect(
+        hasil.sah
+          ? []
+          : [
+              {
+                baris: 1,
+                alasan: hasil.masalah.alasan,
+                pesan: pesan(hasil.masalah),
+              },
+            ],
+      ).toEqual(output.ditolak);
+    }
   });
 });
 
@@ -139,7 +235,7 @@ describe("periksaItemStok (form satu Item stok)", () => {
       periksaItemStok({
         kolom,
         nilai: ["budi@mail.com", "rahasia123", "Profil 2"],
-        sudahAda: () => false,
+        itemStokSama: tanpaItemStok,
       }),
     ).toEqual({
       sah: true,
@@ -152,7 +248,7 @@ describe("periksaItemStok (form satu Item stok)", () => {
       periksaItemStok({
         kolom,
         nilai: [" budi@mail.com ", "rahasia123\t", "Profil 2"],
-        sudahAda: () => false,
+        itemStokSama: tanpaItemStok,
       }),
     ).toEqual({
       sah: true,
@@ -165,7 +261,7 @@ describe("periksaItemStok (form satu Item stok)", () => {
       periksaItemStok({
         kolom,
         nilai: ["budi@mail.com", "  ", ""],
-        sudahAda: () => false,
+        itemStokSama: tanpaItemStok,
       }),
     ).toEqual({
       sah: false,
@@ -173,14 +269,22 @@ describe("periksaItemStok (form satu Item stok)", () => {
     });
   });
 
-  it("menolak Item stok yang sama persis dengan Item stok yang sudah ada", () => {
+  it("menolak Item stok yang sama persis dengan Item stok yang sudah ada, dan menyebut letaknya", () => {
     expect(
       periksaItemStok({
         kolom: ["Kode"],
         nilai: [" KODE-111 "],
-        sudahAda: ([kode]) => kode === "KODE-111",
+        itemStokSama: ([kode]) =>
+          kode === "KODE-111" ? [LETAK_VARIAN_INI] : [],
       }),
-    ).toEqual({ sah: false, masalah: { alasan: "sudah-ada" } });
+    ).toEqual({
+      sah: false,
+      masalah: {
+        alasan: "sudah-ada",
+        letak: LETAK_VARIAN_INI,
+        pesan: "Sudah ada di Netflix Premium – 1 Bulan (Tersedia)",
+      },
+    });
   });
 
   it("menolak isian yang jumlah kolomnya tidak sama dengan Format Item stok", () => {
@@ -188,7 +292,7 @@ describe("periksaItemStok (form satu Item stok)", () => {
       periksaItemStok({
         kolom,
         nilai: ["budi@mail.com", "rahasia123"],
-        sudahAda: () => false,
+        itemStokSama: tanpaItemStok,
       }),
     ).toEqual({
       sah: false,
@@ -272,5 +376,20 @@ describe("kolomItemStok", () => {
         nilai,
       }),
     ).toThrow(/3 isi kolom.*2 kolom/);
+  });
+});
+
+// Lapisan server membaca Item stok toko yang mungkin sama persis dengan isi setiap baris tempelan, sebelum
+// tempelan diperiksa (PRD §4.2). Contoh baris dari PRD §4.2 dan UAT-D1.
+describe("isiBarisTempelan", () => {
+  it("memuat isi setiap baris yang tidak kosong, dengan spasi di awal dan akhir kolom dibuang", () => {
+    expect(
+      isiBarisTempelan(
+        "budi@mail.com | rahasia123 | Profil 2\r\n\n   \nc@mail.com|pass3\n",
+      ),
+    ).toEqual([
+      ["budi@mail.com", "rahasia123", "Profil 2"],
+      ["c@mail.com", "pass3"],
+    ]);
   });
 });
