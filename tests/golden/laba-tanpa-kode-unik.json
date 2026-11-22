@@ -1,0 +1,689 @@
+{
+  "aturan": "Total Harga modal, Laba kotor, dan Laba bersih tanpa Kode unik",
+  "prd": "§9.2, §9.3, §14.2, §14.5, §16.5 (▶ Keputusan 2026-11-23)",
+  "keterangan": "Pesanan Selesai yang dibayar dalam rentang [mulai, sebelum) dihitung di pendapatan dan pesananSelesai. Pendapatan adalah jumlah (Harga jual − potongan voucher) dari Pesanan itu; Kode unik tidak dihitung, karena tidak masuk saldo toko (▶ Keputusan 2026-11-23). Total Harga modal, Laba kotor, potongan voucher, Biaya transaksi, dan Laba bersih hanya dari Pesanan Selesai yang punya Harga modal. Biaya operasional dijumlahkan dari biaya yang tanggalnya (00.00 WIB) berada dalam rentang. rentang null berarti sepanjang waktu. denganBiayaOperasional false berarti saringan Produk atau Kategori sedang aktif, sehingga biayaOperasional null dan tidak dikurangkan. Laba bersih = Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional. biayaTransaksi Pesanan yang belum dibayar adalah null. kodeUnik dan totalBayar di input hanya data Pesanan; keduanya tidak ikut hitungan di sini. Kasus berawalan \"Pesanan gratis:\" adalah kasus laba-pesanan-gratis.json yang dihitung ulang dengan rumus ini. Berkas ini menggantikan laba.json dan laba-pesanan-gratis.json sejak #254 (▶ Keputusan 2026-11-23). T88 menyambungkannya ke test, lalu laba.json dan laba-pesanan-gratis.json tidak dipakai lagi.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD §14.5",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230000,
+        "pesananSelesai": 3,
+        "totalHargaModal": 170000,
+        "labaKotor": 65000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 949,
+        "biayaOperasional": 10000,
+        "labaBersih": 49051,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Contoh pemilik diperkecil menjadi 5 Pesanan: Harga modal Rp 800, Harga jual Rp 1.000",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 12,
+            "totalBayar": 1012,
+            "hargaModal": 800,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 250,
+            "totalBayar": 1250,
+            "hargaModal": 800,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T11:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 3,
+            "totalBayar": 1003,
+            "hargaModal": 800,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T12:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 1499,
+            "hargaModal": 800,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 100,
+            "totalBayar": 1100,
+            "hargaModal": 800,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T14:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 5000,
+        "pesananSelesai": 5,
+        "totalHargaModal": 4000,
+        "labaKotor": 1000,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 1000,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Hanya Pesanan Selesai yang dihitung",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Bermasalah",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200,
+            "totalBayar": 50200,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T21:00:00+07:00"
+          },
+          {
+            "status": "Dana Dikembalikan",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 300,
+            "totalBayar": 135300,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T21:30:00+07:00"
+          },
+          {
+            "status": "Menunggu Pembayaran",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 77,
+            "totalBayar": 50077,
+            "hargaModal": 35000,
+            "biayaTransaksi": null,
+            "dibayarPada": null
+          },
+          {
+            "status": "Kedaluwarsa",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 88,
+            "totalBayar": 50088,
+            "hargaModal": 35000,
+            "biayaTransaksi": null,
+            "dibayarPada": null
+          },
+          {
+            "status": "Dibatalkan",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 99,
+            "totalBayar": 50099,
+            "hargaModal": 35000,
+            "biayaTransaksi": null,
+            "dibayarPada": null
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 45000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 10000,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan tanpa Harga modal masuk Pendapatan tetapi tidak masuk laba",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 20000,
+            "potonganVoucher": 0,
+            "kodeUnik": 321,
+            "totalBayar": 20321,
+            "hargaModal": null,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T22:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 250000,
+        "pesananSelesai": 4,
+        "totalHargaModal": 170000,
+        "labaKotor": 65000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 949,
+        "biayaOperasional": 10000,
+        "labaBersih": 49051,
+        "pesananTanpaHargaModal": 1
+      }
+    },
+    {
+      "nama": "Saringan Produk atau Kategori aktif: Biaya operasional tidak dikurangkan",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": false,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 10000
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230000,
+        "pesananSelesai": 3,
+        "totalHargaModal": 170000,
+        "labaKotor": 65000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 949,
+        "biayaOperasional": null,
+        "labaBersih": 59051,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Batas hari dan zona waktu, juga untuk tanggal Biaya operasional",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 1,
+            "totalBayar": 50001,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-10T23:59:59+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 2,
+            "totalBayar": 50002,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T00:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 3,
+            "totalBayar": 50003,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T16:59:59Z"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 4,
+            "totalBayar": 50004,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T17:00:00Z"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2026-11-10",
+            "nominal": 1000
+          },
+          {
+            "tanggal": "2026-11-11",
+            "nominal": 2000
+          },
+          {
+            "tanggal": "2026-11-12",
+            "nominal": 4000
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 100000,
+        "pesananSelesai": 2,
+        "totalHargaModal": 70000,
+        "labaKotor": 30000,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 2000,
+        "labaBersih": 28000,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Sepanjang waktu",
+      "input": {
+        "rentang": null,
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2025-12-31T23:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "hargaModal": 100000,
+            "biayaTransaksi": 949,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          }
+        ],
+        "biayaOperasional": [
+          {
+            "tanggal": "2025-12-01",
+            "nominal": 150000
+          },
+          {
+            "tanggal": "2026-11-01",
+            "nominal": 150000
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 180000,
+        "pesananSelesai": 2,
+        "totalHargaModal": 135000,
+        "labaKotor": 50000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 949,
+        "biayaOperasional": 300000,
+        "labaBersih": -255949,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Laba negatif saat Harga modal lebih besar dari Harga jual",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 100,
+            "totalBayar": 45100,
+            "hargaModal": 60000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 45000,
+        "pesananSelesai": 1,
+        "totalHargaModal": 60000,
+        "labaKotor": -10000,
+        "potonganVoucher": 5000,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": -15000,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis: Contoh PRD §16.5",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 123,
+            "totalBayar": 50123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 2000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T10:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 2000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T11:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 3,
+        "totalHargaModal": 39000,
+        "labaKotor": 11000,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 11000,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis: Hanya Pesanan gratis dengan Harga modal Rp 0",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 0,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 0,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:05:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 2,
+        "totalHargaModal": 0,
+        "labaKotor": 0,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 0,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis: Pesanan gratis membuat laba negatif",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": 12500,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 0,
+        "pesananSelesai": 1,
+        "totalHargaModal": 12500,
+        "labaKotor": -12500,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": -12500,
+        "pesananTanpaHargaModal": 0
+      }
+    },
+    {
+      "nama": "Pesanan gratis: Pesanan gratis dari Varian tanpa Harga modal",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "denganBiayaOperasional": true,
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 123,
+            "totalBayar": 50123,
+            "hargaModal": 35000,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 0,
+            "potonganVoucher": 0,
+            "kodeUnik": 0,
+            "totalBayar": 0,
+            "hargaModal": null,
+            "biayaTransaksi": 0,
+            "dibayarPada": "2026-11-22T10:00:00+07:00"
+          }
+        ],
+        "biayaOperasional": []
+      },
+      "output": {
+        "pendapatan": 50000,
+        "pesananSelesai": 2,
+        "totalHargaModal": 35000,
+        "labaKotor": 15000,
+        "potonganVoucher": 0,
+        "biayaTransaksi": 0,
+        "biayaOperasional": 0,
+        "labaBersih": 15000,
+        "pesananTanpaHargaModal": 1
+      }
+    }
+  ]
+}

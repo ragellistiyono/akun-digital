@@ -39,3 +39,16 @@ Aturan PRD yang memuat angka tetapi belum atau tidak punya berkas golden:
 - **§15.7 pilihan Saldo untuk Tamu** (▶ Keputusan 2026-11-22, #246) adalah aturan tampilan dan alur tanpa hitungan. Kecukupan saldo Member tetap memakai `bayar-saldo.json`.
 - **§16.3 urutan pemeriksaan "Ambil gratis"** diuji lewat test integrasi, seperti urutan pemeriksaan checkout §5.2. Sisa jatahnya memakai `batas-per-member.json`.
 - **§16.4 tampilan "Gratis"** di kartu Produk, Halaman Produk, Checkout, dan rincian nominal adalah aturan tampilan tanpa hitungan, jadi diuji lewat test komponen dan end-to-end.
+
+## Golden yang sedang diganti
+
+- **Kode unik tidak masuk saldo toko** (▶ Keputusan 2026-11-23, #254). Rumus baru Pendapatan dan Laba bersih ada di empat berkas baru, karena berkas lama masih dibaca test kode yang sudah tayang:
+
+  | Berkas baru | Menggantikan |
+  |---|---|
+  | `pendapatan-tanpa-kode-unik.json` | `pendapatan.json` |
+  | `produk-terlaris-tanpa-kode-unik.json` | `produk-terlaris.json` |
+  | `laba-tanpa-kode-unik.json` | `laba.json` dan `laba-pesanan-gratis.json` |
+  | `laba-top-up-tanpa-kode-unik.json` | `laba-top-up.json` |
+
+  Tiket koreksi Kode unik (T88) menyambungkan berkas baru ke test dan berhenti membaca berkas lama. Berkas lama dihapus pemilik sesudahnya. Selama itu, berkas lama tidak boleh dipakai untuk aturan baru.

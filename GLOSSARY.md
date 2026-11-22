@@ -89,7 +89,7 @@ Kode acak berawalan `MIWE-` yang mengenali satu Pesanan, misalnya `MIWE-7K3P9Q`.
 _Avoid_: ID order, nomor invoice, nomor transaksi
 
 **Pendapatan**:
-Jumlah Total bayar dari Pesanan Selesai dalam suatu rentang waktu.
+Jumlah Harga jual dikurangi potongan voucher dari Pesanan Selesai dalam suatu rentang waktu, yaitu uang yang masuk saldo toko. Kode unik tidak termasuk.
 _Avoid_: omzet, revenue, penjualan, pemasukan
 
 **Qrispy**:
@@ -113,7 +113,7 @@ Tagihan berbentuk kode QR yang diterbitkan Qrispy untuk satu Pesanan dan punya m
 _Avoid_: invoice, kode bayar, QR code
 
 **Kode unik**:
-Tambahan Rp 1–499 yang dibubuhkan Qrispy pada setiap tagihan dan dibayar Pembeli.
+Tambahan Rp 1–499 yang dibubuhkan Qrispy pada setiap tagihan dan dibayar Pembeli, tetapi tidak masuk saldo toko.
 _Avoid_: biaya admin, biaya layanan, kode pembayaran
 
 **Total bayar**:
@@ -193,7 +193,7 @@ Biaya toko di luar Harga modal dan Biaya transaksi, misalnya sewa server atau ik
 _Avoid_: pengeluaran, beban, expense, biaya lain-lain
 
 **Laba bersih**:
-Laba kotor dikurangi potongan voucher, ditambah Kode unik, lalu dikurangi Biaya transaksi dan Biaya operasional, ditambah Kode unik Top up dan dikurangi Biaya transaksi Top up, dalam suatu rentang waktu.
+Laba kotor dikurangi potongan voucher, Biaya transaksi, Biaya operasional, dan Biaya transaksi Top up, dalam suatu rentang waktu.
 _Avoid_: untung bersih, keuntungan bersih, net profit, laba (tanpa keterangan)
 
 **Laporan keuangan**:
@@ -227,7 +227,7 @@ Cara sebuah Pesanan dibayar, yaitu QRIS atau Saldo, atau Gratis untuk Pesanan gr
 _Avoid_: metode pembayaran (di kode), payment method, cara bayar
 
 **Kode unik Top up**:
-Jumlah Kode unik dari Top up Berhasil dalam suatu rentang waktu, yang masuk toko dan menambah Laba bersih.
+Jumlah Kode unik dari Top up Berhasil dalam suatu rentang waktu. Kode unik Top up tidak masuk saldo toko dan tidak dihitung di Laba bersih.
 _Avoid_: pendapatan top up, untung top up
 
 **Biaya transaksi Top up**:

@@ -1,0 +1,173 @@
+{
+  "aturan": "Pendapatan tanpa Kode unik",
+  "prd": "§9.1, §9.3 (▶ Keputusan 2026-11-23)",
+  "keterangan": "Jumlah (Harga jual − potongan voucher) dari Pesanan Selesai yang dibayar dalam rentang [mulai, sebelum). Kode unik tidak dihitung, karena dibayar Pembeli tetapi tidak masuk saldo toko (▶ Keputusan 2026-11-23). Biaya Qrispy tidak dipotong. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung. Berkas ini menggantikan pendapatan.json sejak #254 (▶ Keputusan 2026-11-23). T88 menyambungkannya ke test, lalu pendapatan.json tidak dipakai lagi.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 123,
+            "totalBayar": 45123,
+            "dibayarPada": "2026-11-11T09:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 10,
+            "totalBayar": 50010,
+            "dibayarPada": "2026-11-11T13:30:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 135000,
+            "potonganVoucher": 0,
+            "kodeUnik": 499,
+            "totalBayar": 135499,
+            "dibayarPada": "2026-11-11T20:45:00+07:00"
+          },
+          {
+            "status": "Bermasalah",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 200,
+            "totalBayar": 50200,
+            "dibayarPada": "2026-11-11T21:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 230000
+      }
+    },
+    {
+      "nama": "Batas hari dan zona waktu",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 10000,
+            "potonganVoucher": 0,
+            "kodeUnik": 101,
+            "totalBayar": 10101,
+            "dibayarPada": "2026-11-10T23:59:59+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 20000,
+            "potonganVoucher": 0,
+            "kodeUnik": 202,
+            "totalBayar": 20202,
+            "dibayarPada": "2026-11-11T00:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 30000,
+            "potonganVoucher": 0,
+            "kodeUnik": 303,
+            "totalBayar": 30303,
+            "dibayarPada": "2026-11-10T17:30:00Z"
+          },
+          {
+            "status": "Dana Dikembalikan",
+            "hargaJual": 40000,
+            "potonganVoucher": 0,
+            "kodeUnik": 404,
+            "totalBayar": 40404,
+            "dibayarPada": "2026-11-11T08:00:00+07:00"
+          },
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 0,
+            "kodeUnik": 55,
+            "totalBayar": 50055,
+            "dibayarPada": "2026-11-12T00:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 50000
+      }
+    },
+    {
+      "nama": "Contoh pembayaran sungguhan 2026-11-22: Kode unik tidak masuk saldo toko",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-22T00:00:00+07:00",
+          "sebelum": "2026-11-23T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 212,
+            "totalBayar": 1212,
+            "dibayarPada": "2026-11-22T22:27:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 1000
+      }
+    },
+    {
+      "nama": "Pesanan saldo tanpa Kode unik",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Selesai",
+            "hargaJual": 50000,
+            "potonganVoucher": 5000,
+            "kodeUnik": 0,
+            "totalBayar": 45000,
+            "dibayarPada": "2026-11-11T10:20:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 45000
+      }
+    },
+    {
+      "nama": "Tidak ada Pesanan Selesai",
+      "input": {
+        "rentang": {
+          "mulai": "2026-11-11T00:00:00+07:00",
+          "sebelum": "2026-11-12T00:00:00+07:00"
+        },
+        "pesanan": [
+          {
+            "status": "Bermasalah",
+            "hargaJual": 1000,
+            "potonganVoucher": 0,
+            "kodeUnik": 250,
+            "totalBayar": 1250,
+            "dibayarPada": "2026-11-11T10:00:00+07:00"
+          }
+        ]
+      },
+      "output": {
+        "pendapatan": 0
+      }
+    }
+  ]
+}

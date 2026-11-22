@@ -629,6 +629,8 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Tidak ada grafik.
 - PRD: §9.1, §9.2, §9.3
 
+▶ Keputusan 2026-11-23 (#254): Pendapatan tidak lagi memuat Kode unik (PRD §9.3). Jumlahkan sendiri Total bayar dikurangi Kode unik, yaitu Harga jual − potongan voucher, untuk semua Pesanan Selesai hari ini. Pendapatan hari ini harus sama dengan hasil itu dan dengan kenaikan saldo Qrispy hari ini.
+
 **UAT-I2 — Stok menipis**
 - Langkah:
   1. Pastikan tidak ada Pesanan Menunggu Pembayaran, lalu lihat daftar "Stok menipis".
@@ -798,7 +800,7 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 | M3 | K2, K3, K4 |
 | M4 | N1–N10, lalu ulangi I1 untuk memastikan Pendapatan dan Pesanan Selesai tidak berubah |
 | M5 | O1–O9, lalu ulangi I1 dan N4 untuk memastikan kartu lain tidak berubah selain dua kartu saldo |
-| M6 | E8, I6, D5–D7, O10, P1–P5, lalu ulangi O6 untuk memastikan bayar dengan saldo tetap berjalan |
+| M6 | E8, I6, D5–D7, O10, P1–P5, lalu ulangi O6 untuk memastikan bayar dengan saldo tetap berjalan, serta ulangi I1, N6, dan O9 untuk memeriksa Pendapatan dan Laba bersih tanpa Kode unik |
 
 PRD: §13
 
@@ -893,6 +895,8 @@ Skenario bagian ini dijalankan berurutan, karena N3 sampai N8 memakai Pesanan da
   - Langkah 4 ditolak dengan pesan "Tanggal akhir tidak boleh sebelum tanggal mulai."
   - Langkah 5: rentang awalnya berganti menurut PRD §14.6. Mingguan dimulai hari Senin 12 minggu lalu, Bulanan dimulai tanggal 1 dari 12 bulan lalu, dan Tahunan dimulai 1 Januari tahun Pesanan Selesai pertama.
 - PRD: §11.1, §14.5, §14.6
+
+▶ Keputusan 2026-11-23 (#254): Sejak M6, rincian angka di langkah 2 tidak memuat baris Kode unik, dan Laba bersih sama dengan Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up (PRD §14.5, §14.6). Kolom Kode unik di tabel Pesanan (UAT-N8) tetap ada.
 
 **UAT-N7 — Grafik**
 - Langkah:
@@ -1076,6 +1080,8 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
   - Langkah 2: rincian, grafik, dan tabel hanya berisi Pesanan dengan Metode itu. Baris Biaya operasional, baris Top up, dan baris informasi Top up hilang, dan tampil keterangan "Laba bersih ini belum dikurangi Biaya operasional dan Top up, karena saringan Produk, Kategori, atau Metode sedang aktif."
   - Langkah 3: keterangan yang sama tampil.
 - PRD: §14.5, §14.6, §15.8
+
+▶ Keputusan 2026-11-23 (#254): Sejak M6, langkah 1 tidak lagi memuat baris "+ Kode unik Top up". Baris "− Biaya transaksi Top up" dan baris informasi Top up Berhasil tetap ada (PRD §14.6, §15.8).
 
 **UAT-O10 — Pilihan Saldo untuk Tamu**
 - Langkah:
