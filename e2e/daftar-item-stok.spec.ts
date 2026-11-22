@@ -266,6 +266,8 @@ test("di layar ponsel, Admin mengubah lalu menghapus Item stok Tersedia, dan isi
   await form.getByLabel("Profil").fill(baru[2]);
   await form.getByRole("button", { name: "Simpan Item stok" }).click();
   await expect(form).toHaveCount(0);
+  // Mengubah Item stok tersimpan tanpa Modal penegasan (PRD §9.10).
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   const barisBaru = itemStokBerisi(page, baru[0]);
   // Daftar bisa diperbarui sesaat sesudah form tertutup, jadi kolomnya dibaca ulang sampai isi barunya tampil.
   await expect.poll(() => kolomItemStok(barisBaru)).toEqual(teksKolom(baru));
@@ -280,18 +282,58 @@ test("di layar ponsel, Admin mengubah lalu menghapus Item stok Tersedia, dan isi
     ),
   ).toBe(true);
 
-  // Hapus meminta penegasan dulu; Batal tidak menghapus apa pun.
+  // Hapus membuka Modal penegasan dulu; Batal tidak menghapus apa pun (PRD §9.10).
   await barisBaru.getByRole("button", { name: "Hapus Item stok 1" }).click();
-  await expect(
-    barisBaru.getByText("Hapus Item stok 1? Isinya tidak bisa dikembalikan."),
-  ).toBeVisible();
-  await barisBaru.getByRole("button", { name: "Batal" }).click();
+  const modal = page.getByRole("alertdialog", { name: "Hapus Item stok?" });
+  await expect(modal).toContainText(
+    "Hapus Item stok 1? Isinya tidak bisa dikembalikan.",
+  );
+  // Di ponsel, modal selebar layar dikurangi gutter 16 px di kiri dan kanan, dengan tombol aksi di atas Batal,
+  // tanpa gulir ke samping (DESIGN.md Navigation ▶ Keputusan 2026-11-22).
+  const kotakModal = await modal.boundingBox();
+  expect(kotakModal?.x).toBe(16);
+  expect(kotakModal?.width).toBe(360 - 2 * 16);
+  // Letak tombol "Ya, …" dan Batal dibaca dari offset*, yang tidak ikut bergeser saat tombol di bawah tetikus
+  // mendapat gaya hover.
+  const letakTombol = () =>
+    modal.getByRole("button").evaluateAll((tombol) =>
+      tombol.map((elemen) => {
+        const { offsetLeft, offsetTop, offsetWidth, offsetHeight } =
+          elemen as HTMLElement;
+        return { offsetLeft, offsetTop, offsetWidth, offsetHeight };
+      }),
+    );
+  const tombolBersusun = async () => {
+    const [ya, batal] = await letakTombol();
+    expect(ya.offsetLeft).toBe(batal.offsetLeft);
+    expect(ya.offsetWidth).toBe(batal.offsetWidth);
+    expect(ya.offsetTop + ya.offsetHeight).toBeLessThanOrEqual(batal.offsetTop);
+  };
+  await tombolBersusun();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+  // Tampilan ponsel berlaku sampai di bawah 900 px (DESIGN.md Layout), jadi tombol tetap bersusun di 768 px dan
+  // baru sebaris, "Ya, …" di kiri Batal, mulai 900 px.
+  await page.setViewportSize({ width: 768, height: 800 });
+  await tombolBersusun();
+  await page.setViewportSize({ width: 900, height: 800 });
+  const [yaLebar, batalLebar] = await letakTombol();
+  expect(yaLebar.offsetTop).toBe(batalLebar.offsetTop);
+  expect(yaLebar.offsetLeft + yaLebar.offsetWidth).toBeLessThanOrEqual(
+    batalLebar.offsetLeft,
+  );
+  await page.setViewportSize({ width: 360, height: 800 });
+  await modal.getByRole("button", { name: "Batal" }).click();
+  await expect(modal).toHaveCount(0);
   await expect(itemStokBerisi(page, baru[0])).toHaveCount(1);
 
   await barisBaru.getByRole("button", { name: "Hapus Item stok 1" }).click();
-  await barisBaru
-    .getByRole("button", { name: "Ya, hapus Item stok 1" })
-    .click();
+  await modal.getByRole("button", { name: "Ya, hapus Item stok 1" }).click();
   await expect(itemStokBerisi(page, baru[0])).toHaveCount(0);
   await expect(angkaStokVarian(page)).toHaveText("0");
   await expect(chip(page, "Tersedia (0)")).toBeVisible();
@@ -331,7 +373,11 @@ test("mengubah atau menghapus Item stok yang sudah Ditahan sejak halaman dibuka 
   await form.getByRole("button", { name: "Batal" }).click();
 
   await baris.getByRole("button", { name: "Hapus Item stok 1" }).click();
-  await baris.getByRole("button", { name: "Ya, hapus Item stok 1" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Ya, hapus Item stok 1" })
+    .click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(baris.getByRole("alert")).toHaveText(pesanDitahan("dihapus"));
 
   await page.reload();

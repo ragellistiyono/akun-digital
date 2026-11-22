@@ -177,9 +177,11 @@ test("Admin mengunggah 5 foto Produk, foto keenam dan berkas yang bukan gambar d
   expect(await tanpaGulirSamping(page)).toBe(true);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  // Sampul dihapus: foto berikutnya menjadi sampul, dan berkasnya hilang dari folder unggahan.
+  // Sampul dihapus: foto berikutnya menjadi sampul, dan berkasnya hilang dari folder unggahan. Hapus foto langsung
+  // berjalan tanpa Modal penegasan (PRD §9.10).
   await page.getByRole("button", { name: "Hapus foto 1" }).click();
   await expect.poll(alamatFoto).toEqual([a1, a2, a4, a5]);
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect.poll(alamatSampul).toBe(a1);
   await expect(bagianFoto.getByText(/4 dari 5 foto\./)).toBeVisible();
   await expect(

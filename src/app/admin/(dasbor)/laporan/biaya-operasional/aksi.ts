@@ -219,8 +219,8 @@ export async function aksiUbahBiayaOperasional(
 }
 
 /**
- * Menghapus Biaya operasional (PRD §14.4). Penegasannya dilakukan di tempat oleh panel Hapus di halaman ubah
- * biaya, seperti panel hapus Voucher (PRD §8.8). Setelah terhapus, dasbor kembali ke daftar bulan biaya itu.
+ * Menghapus Biaya operasional (PRD §14.4). Penegasannya lewat Modal penegasan dari panel Hapus di halaman ubah
+ * biaya, seperti panel hapus Voucher (PRD §8.8, §9.10). Setelah terhapus, dasbor kembali ke daftar bulan biaya itu.
  */
 export async function aksiHapusBiayaOperasional(
   _sebelumnya: { galat?: string },

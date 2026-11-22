@@ -145,7 +145,7 @@ test("Admin menambah biaya hari ini Rp 10.000, yang tampil paling atas di bulan 
 });
 
 // UAT-N5 langkah 5.
-test("mengubah nominal memperbarui total, dan menghapus biaya meminta penegasan di tempat lebih dulu", async ({
+test("mengubah nominal memperbarui total, dan menghapus biaya meminta persetujuan di Modal penegasan lebih dulu", async ({
   page,
 }) => {
   const keterangan = keteranganUnik("Uji biaya");
@@ -168,7 +168,9 @@ test("mengubah nominal memperbarui total, dan menghapus biaya meminta penegasan 
   await page.getByLabel("Nominal").fill("12000");
   await page.getByRole("button", { name: "Simpan" }).click();
 
+  // Menyimpan form langsung berjalan tanpa Modal penegasan (PRD §9.10).
   await expect(page).toHaveURL(`${ALAMAT}?bulan=${bulanIni}`);
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(barisBerketerangan(page, keterangan)).toContainText("Rp 12.000");
   expect(await totalTampil(page)).toBe(totalAwal + 2000);
 
@@ -177,11 +179,15 @@ test("mengubah nominal memperbarui total, dan menghapus biaya meminta penegasan 
     .click();
   const nama = `Biaya operasional "${keterangan}"`;
   await page.getByRole("button", { name: "Hapus Biaya operasional" }).click();
-  // Belum terhapus: penegasan tampil di tempat, tanpa dialog.
-  await expect(isi(page)).toContainText(
+  // Belum terhapus: Modal penegasan menyebut akibatnya lebih dulu (PRD §9.10).
+  const modal = page.getByRole("alertdialog", {
+    name: "Hapus Biaya operasional?",
+  });
+  await expect(modal).toContainText(
     `Hapus ${nama}? Biaya ini terhapus dan tidak bisa dikembalikan.`,
   );
-  await page.getByRole("button", { name: "Batal" }).click();
+  await modal.getByRole("button", { name: "Batal" }).click();
+  await expect(modal).toHaveCount(0);
   await page.goto(ALAMAT);
   await expect(barisBerketerangan(page, keterangan)).toHaveCount(1);
 
@@ -189,7 +195,7 @@ test("mengubah nominal memperbarui total, dan menghapus biaya meminta penegasan 
     .getByRole("link", { name: `Ubah ${keterangan}` })
     .click();
   await page.getByRole("button", { name: "Hapus Biaya operasional" }).click();
-  await page.getByRole("button", { name: `Ya, hapus ${nama}` }).click();
+  await modal.getByRole("button", { name: `Ya, hapus ${nama}` }).click();
 
   await expect(page).toHaveURL(`${ALAMAT}?bulan=${bulanIni}`);
   await expect(barisBerketerangan(page, keterangan)).toHaveCount(0);

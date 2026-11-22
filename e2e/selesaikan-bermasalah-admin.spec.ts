@@ -82,6 +82,10 @@ const TOMBOL_PENEGASAN = {
   "Tandai Dana Dikembalikan": "Ya, tandai Dana Dikembalikan",
 };
 
+/** Modal penegasan aksi penyelesaian itu, yang berjudul nama aksinya dengan tanda tanya (PRD §9.10). */
+const modalPenegasan = (page: Page, aksi: keyof typeof TOMBOL_PENEGASAN) =>
+  page.getByRole("alertdialog", { name: `${aksi}?` });
+
 /** Kalimat penegasan "Kirim Item stok" untuk Pesanan ber-email itu. */
 const penegasanKirim = (email: string) =>
   `Kirim satu Item stok Tersedia dari Varian yang sama ke Pesanan ini? Pesanan menjadi Selesai, dan email "Pesanan selesai" dikirim ke ${email}. Aksi ini tidak bisa dibatalkan.`;
@@ -89,14 +93,14 @@ const penegasanKirim = (email: string) =>
 const PENEGASAN_DANA =
   "Tandai Pesanan ini Dana Dikembalikan? Pesanan ini tidak akan mendapat Item stok, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan.";
 
-/** Menekan salah satu aksi penyelesaian, lalu menerima penegasannya. */
+/** Menekan salah satu aksi penyelesaian, lalu menyetujui Modal penegasan-nya. */
 async function selesaikanDenganPenegasan(
   page: Page,
   aksi: keyof typeof TOMBOL_PENEGASAN,
 ) {
   const panel = panelPenyelesaian(page);
   await panel.getByRole("button", { name: aksi, exact: true }).click();
-  await panel
+  await modalPenegasan(page, aksi)
     .getByRole("button", { name: TOMBOL_PENEGASAN[aksi], exact: true })
     .click();
 }
@@ -215,11 +219,11 @@ test("setelah Pesanan Bermasalah diselesaikan, jumlah Pesanan Bermasalah di menu
   }).toPass({ timeout: 60_000 });
 });
 
-// Issue T26-b, PRD §5.9 dan DESIGN.md Navigation (▶ Keputusan 2026-11-12), UAT-E6: "Kirim Item stok" tidak
-// bisa dibatalkan, jadi ditegaskan di tempat lebih dulu, tanpa dialog. Klik ganda pada tombolnya hanya membuka
-// penegasan, Batal tidak mengubah apa pun, dan Pesanan baru Selesai setelah penegasan diterima. Klik ganda
+// Issue T26-b, PRD §5.9 dan §9.10, DESIGN.md Navigation (▶ Keputusan 2026-11-22), UAT-E6: "Kirim Item stok"
+// tidak bisa dibatalkan, jadi ditegaskan lewat Modal penegasan lebih dulu. Klik ganda pada tombolnya hanya
+// membuka modal, Batal tidak mengubah apa pun, dan Pesanan baru Selesai setelah penegasan diterima. Klik ganda
 // pada tombol penegasan tetap hanya memberi satu Item stok.
-test('"Kirim Item stok" meminta penegasan di tempat: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Selesai setelah penegasan diterima', async ({
+test('"Kirim Item stok" membuka Modal penegasan: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Selesai setelah penegasan diterima', async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -238,27 +242,24 @@ test('"Kirim Item stok" meminta penegasan di tempat: Pesanan tetap Bermasalah bi
     .getByRole("button", { name: "Kirim Item stok", exact: true })
     .dblclick();
 
+  const modal = modalPenegasan(page, "Kirim Item stok");
   await expect(
-    panel.getByText(penegasanKirim(email), { exact: true }),
+    modal.getByText(penegasanKirim(email), { exact: true }),
   ).toBeVisible();
   await expect(
-    panel.getByRole("button", { name: "Ya, kirim Item stok", exact: true }),
+    modal.getByRole("button", { name: "Ya, kirim Item stok", exact: true }),
   ).toBeEnabled();
-  await expect(panel.getByRole("button", { name: "Batal" })).toBeEnabled();
-  await expect(
-    panel.getByRole("button", {
-      name: "Tandai Dana Dikembalikan",
-      exact: true,
-    }),
-  ).toHaveCount(0);
+  // Fokus awal ada di Batal, supaya Enter yang tidak disengaja tidak menjalankan aksi.
+  await expect(modal.getByRole("button", { name: "Batal" })).toBeFocused();
   await expect(kepala(page)).toHaveText("Bermasalah");
 
-  await panel.getByRole("button", { name: "Batal" }).click();
+  await modal.getByRole("button", { name: "Batal" }).click();
 
-  await expect(panel.getByText(penegasanKirim(email))).toHaveCount(0);
+  await expect(modal).toHaveCount(0);
+  // Setelah modal tertutup, fokus kembali ke tombol yang membukanya.
   await expect(
     panel.getByRole("button", { name: "Kirim Item stok", exact: true }),
-  ).toBeEnabled();
+  ).toBeFocused();
   await page.reload();
   await expect(kepala(page)).toHaveText("Bermasalah");
   expect((await bacaStokVarian(varianId)).jumlahPerStatus).toEqual({
@@ -271,7 +272,7 @@ test('"Kirim Item stok" meminta penegasan di tempat: Pesanan tetap Bermasalah bi
   await panel
     .getByRole("button", { name: "Kirim Item stok", exact: true })
     .click();
-  await panel
+  await modal
     .getByRole("button", { name: "Ya, kirim Item stok", exact: true })
     .dblclick();
 
@@ -284,9 +285,9 @@ test('"Kirim Item stok" meminta penegasan di tempat: Pesanan tetap Bermasalah bi
   });
 });
 
-// Issue T26-b, PRD §5.9 dan DESIGN.md Navigation (▶ Keputusan 2026-11-12), UAT-E6: "Tandai Dana Dikembalikan"
-// juga ditegaskan di tempat lebih dulu.
-test('"Tandai Dana Dikembalikan" meminta penegasan di tempat: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Dana Dikembalikan setelah penegasan diterima', async ({
+// Issue T26-b, PRD §5.9 dan §9.10, UAT-E6: "Tandai Dana Dikembalikan" juga ditegaskan lewat Modal penegasan
+// lebih dulu.
+test('"Tandai Dana Dikembalikan" membuka Modal penegasan: Pesanan tetap Bermasalah bila Admin memilih Batal, dan baru Dana Dikembalikan setelah penegasan diterima', async ({
   page,
 }) => {
   const varianId = await varianBerstok(1);
@@ -299,27 +300,25 @@ test('"Tandai Dana Dikembalikan" meminta penegasan di tempat: Pesanan tetap Berm
     .getByRole("button", { name: "Tandai Dana Dikembalikan", exact: true })
     .dblclick();
 
-  await expect(panel.getByText(PENEGASAN_DANA, { exact: true })).toBeVisible();
+  const modal = modalPenegasan(page, "Tandai Dana Dikembalikan");
+  await expect(modal.getByText(PENEGASAN_DANA, { exact: true })).toBeVisible();
   await expect(
-    panel.getByRole("button", {
+    modal.getByRole("button", {
       name: "Ya, tandai Dana Dikembalikan",
       exact: true,
     }),
   ).toBeEnabled();
-  await expect(
-    panel.getByRole("button", { name: "Kirim Item stok", exact: true }),
-  ).toHaveCount(0);
   await expect(kepala(page)).toHaveText("Bermasalah");
 
-  await panel.getByRole("button", { name: "Batal" }).click();
+  await modal.getByRole("button", { name: "Batal" }).click();
 
-  await expect(panel.getByText(PENEGASAN_DANA)).toHaveCount(0);
+  await expect(modal).toHaveCount(0);
   await expect(
     panel.getByRole("button", {
       name: "Tandai Dana Dikembalikan",
       exact: true,
     }),
-  ).toBeEnabled();
+  ).toBeFocused();
   await page.reload();
   await expect(kepala(page)).toHaveText("Bermasalah");
 

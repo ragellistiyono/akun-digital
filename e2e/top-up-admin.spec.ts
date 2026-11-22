@@ -307,22 +307,21 @@ test('"Tambahkan ke saldo" ditegaskan lebih dulu, lalu menjadikan Top up Bermasa
     isi(page).getByRole("region", { name: "Rincian pembayaran" }),
   ).toContainText("Rp 50.000");
 
-  // Batal pada penegasan tidak mengubah apa pun.
+  // Batal pada Modal penegasan tidak mengubah apa pun (PRD §9.10).
   await panel.getByRole("button", { name: "Tambahkan ke saldo" }).click();
-  await expect(panel).toContainText(
+  const modal = page.getByRole("alertdialog", { name: "Tambahkan ke saldo?" });
+  await expect(modal).toContainText(
     `Tambahkan Rp 50.000 ke saldo ${email}? Top up ini menjadi Berhasil, dan Riwayat saldo mencatat baris Top up. Aksi ini tidak bisa dibatalkan.`,
   );
-  await panel.getByRole("button", { name: "Batal" }).click();
-  await expect(
-    panel.getByRole("button", { name: "Ya, tambahkan ke saldo" }),
-  ).toHaveCount(0);
+  await modal.getByRole("button", { name: "Batal" }).click();
+  await expect(modal).toHaveCount(0);
   expect(await statusDanSaldo(nomorTopUp)).toEqual({
     status: "Bermasalah",
     saldo: 0,
   });
 
   await panel.getByRole("button", { name: "Tambahkan ke saldo" }).click();
-  await panel.getByRole("button", { name: "Ya, tambahkan ke saldo" }).click();
+  await modal.getByRole("button", { name: "Ya, tambahkan ke saldo" }).click();
   await expect(panel).toHaveCount(0, MUAT);
   await expect(isi(page).locator("h1 + div")).toHaveText("Berhasil");
   const barisRiwayat = isi(page)
@@ -352,10 +351,17 @@ test('"Tandai Dana Dikembalikan" ditegaskan lebih dulu, lalu menjadikan Top up B
     name: "Selesaikan Top up Bermasalah",
   });
   await panel.getByRole("button", { name: "Tandai Dana Dikembalikan" }).click();
-  await expect(panel).toContainText(
+  const modal = page.getByRole("alertdialog", {
+    name: "Tandai Dana Dikembalikan?",
+  });
+  await expect(modal).toContainText(
     `Tandai Top up ini Dana Dikembalikan? Saldo ${email} tidak bertambah, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan.`,
   );
-  await panel
+  expect(await statusDanSaldo(nomorTopUp)).toEqual({
+    status: "Bermasalah",
+    saldo: 0,
+  });
+  await modal
     .getByRole("button", { name: "Ya, tandai Dana Dikembalikan" })
     .click();
   await expect(panel).toHaveCount(0, MUAT);

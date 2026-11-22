@@ -36,8 +36,8 @@ export type KeadaanUbahSaldo = {
 };
 
 /**
- * Masukan form. Tahap "periksa" hanya menilai isian dan meminta penegasan di tempat; tahap "jalankan" dikirim
- * setelah Admin menyetujui penegasan itu (PRD §15.6).
+ * Masukan form. Tahap "periksa" hanya menilai isian dan meminta persetujuan lewat Modal penegasan; tahap "jalankan"
+ * dikirim setelah Admin menyetujui penegasan itu (PRD §15.6, §9.10).
  */
 const MasukanUbahSaldo = z.object({
   idMember: z.string().min(1),

@@ -103,13 +103,18 @@ async function pemakaianDiDaftar(page: Page, kode: string) {
 const panelHapus = (page: Page) =>
   page.getByRole("region", { name: "Hapus Voucher" });
 
-/** Membuka form ubah Voucher itu, memilih Hapus Voucher, lalu menegaskannya. */
+/** Modal penegasan yang sedang terbuka (PRD §9.10). */
+const modalPenegasan = (page: Page) => page.getByRole("alertdialog");
+
+/** Membuka form ubah Voucher itu, memilih Hapus Voucher, lalu menyetujui Modal penegasan-nya. */
 async function hapusLewatPanel(page: Page, id: string, kode: string) {
   await page.goto(`/admin/voucher/${id}`);
-  const panel = panelHapus(page);
-  await panel.getByRole("button", { name: "Hapus Voucher" }).click();
-  await expect(panel).toContainText(`Hapus Voucher ${kode}?`);
-  await panel
+  await panelHapus(page).getByRole("button", { name: "Hapus Voucher" }).click();
+  const modal = page.getByRole("alertdialog", { name: "Hapus Voucher?" });
+  await expect(modal).toContainText(
+    `Hapus Voucher ${kode}? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan.`,
+  );
+  await modal
     .getByRole("button", { name: `Ya, hapus Voucher ${kode}` })
     .click();
 }
@@ -157,6 +162,7 @@ test("UAT-H5 langkah 4: menghapus COBA yang tercatat di Pesanan Dibatalkan ditol
   await masukSebagaiAdmin(page);
   await hapusLewatPanel(page, coba.id, coba.kode);
 
+  await expect(modalPenegasan(page)).toHaveCount(0);
   await expect(panelHapus(page).getByRole("alert")).toHaveText(
     "Voucher ini tidak bisa dihapus, karena sudah tercatat di 1 Pesanan. Pesanan berstatus apa pun dihitung, termasuk Kedaluwarsa dan Dibatalkan. Nonaktifkan Voucher ini saja: pilih Nonaktifkan di daftar Voucher, atau hapus centang Aktif di form ini lalu simpan. Voucher nonaktif tidak bisa dipakai di checkout, sedangkan Pesanan lamanya tetap utuh.",
   );
@@ -171,13 +177,10 @@ test("UAT-H5 langkah 5: HAPUS yang belum pernah dipakai terhapus setelah ditegas
   await masukSebagaiAdmin(page);
   await page.goto(`/admin/voucher/${hapus.id}`);
 
-  // Batal menutup penegasan tanpa menghapus.
-  const panel = panelHapus(page);
-  await panel.getByRole("button", { name: "Hapus Voucher" }).click();
-  await panel.getByRole("button", { name: "Batal" }).click();
-  await expect(panel.getByRole("button", { name: /^Ya, hapus/ })).toHaveCount(
-    0,
-  );
+  // Batal menutup Modal penegasan tanpa menghapus.
+  await panelHapus(page).getByRole("button", { name: "Hapus Voucher" }).click();
+  await modalPenegasan(page).getByRole("button", { name: "Batal" }).click();
+  await expect(modalPenegasan(page)).toHaveCount(0);
   expect(await voucherAda(hapus.id)).toBe(true);
 
   await hapusLewatPanel(page, hapus.id, hapus.kode);
