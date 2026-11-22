@@ -155,7 +155,7 @@ export function ModalPenegasan({
         </p>
         <form
           action={aksi}
-          className="flex flex-col gap-3 sm:flex-row sm:flex-wrap"
+          className="flex flex-col gap-3 lebar:flex-row lebar:flex-wrap"
         >
           {Object.entries(isian).map(([nama, nilai]) => (
             <input key={nama} type="hidden" name={nama} value={nilai} />

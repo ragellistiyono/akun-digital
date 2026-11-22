@@ -293,17 +293,23 @@ test("di layar ponsel, Admin mengubah lalu menghapus Item stok Tersedia, dan isi
   const kotakModal = await modal.boundingBox();
   expect(kotakModal?.x).toBe(16);
   expect(kotakModal?.width).toBe(360 - 2 * 16);
-  // Letak tombol dibaca dari offset*, yang tidak ikut bergeser saat tombol di bawah tetikus mendapat gaya hover.
-  const [ya, batal] = await modal.getByRole("button").evaluateAll((tombol) =>
-    tombol.map((elemen) => {
-      const { offsetLeft, offsetTop, offsetWidth, offsetHeight } =
-        elemen as HTMLElement;
-      return { offsetLeft, offsetTop, offsetWidth, offsetHeight };
-    }),
-  );
-  expect(ya.offsetLeft).toBe(batal.offsetLeft);
-  expect(ya.offsetWidth).toBe(batal.offsetWidth);
-  expect(ya.offsetTop + ya.offsetHeight).toBeLessThanOrEqual(batal.offsetTop);
+  // Letak tombol "Ya, …" dan Batal dibaca dari offset*, yang tidak ikut bergeser saat tombol di bawah tetikus
+  // mendapat gaya hover.
+  const letakTombol = () =>
+    modal.getByRole("button").evaluateAll((tombol) =>
+      tombol.map((elemen) => {
+        const { offsetLeft, offsetTop, offsetWidth, offsetHeight } =
+          elemen as HTMLElement;
+        return { offsetLeft, offsetTop, offsetWidth, offsetHeight };
+      }),
+    );
+  const tombolBersusun = async () => {
+    const [ya, batal] = await letakTombol();
+    expect(ya.offsetLeft).toBe(batal.offsetLeft);
+    expect(ya.offsetWidth).toBe(batal.offsetWidth);
+    expect(ya.offsetTop + ya.offsetHeight).toBeLessThanOrEqual(batal.offsetTop);
+  };
+  await tombolBersusun();
   expect(
     await page.evaluate(
       () =>
@@ -311,6 +317,17 @@ test("di layar ponsel, Admin mengubah lalu menghapus Item stok Tersedia, dan isi
         document.documentElement.clientWidth,
     ),
   ).toBe(true);
+  // Tampilan ponsel berlaku sampai di bawah 900 px (DESIGN.md Layout), jadi tombol tetap bersusun di 768 px dan
+  // baru sebaris, "Ya, …" di kiri Batal, mulai 900 px.
+  await page.setViewportSize({ width: 768, height: 800 });
+  await tombolBersusun();
+  await page.setViewportSize({ width: 900, height: 800 });
+  const [yaLebar, batalLebar] = await letakTombol();
+  expect(yaLebar.offsetTop).toBe(batalLebar.offsetTop);
+  expect(yaLebar.offsetLeft + yaLebar.offsetWidth).toBeLessThanOrEqual(
+    batalLebar.offsetLeft,
+  );
+  await page.setViewportSize({ width: 360, height: 800 });
   await modal.getByRole("button", { name: "Batal" }).click();
   await expect(modal).toHaveCount(0);
   await expect(itemStokBerisi(page, baru[0])).toHaveCount(1);
