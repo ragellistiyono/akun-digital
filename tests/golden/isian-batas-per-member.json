@@ -1,0 +1,175 @@
+{
+  "aturan": "Isian Batas per Member",
+  "prd": "§16.1, §16.2",
+  "keterangan": "batas adalah teks isian apa adanya. Spasi di awal dan akhir dibuang. Bila produkGratis false, isian tidak dipakai: sah true dan batasTersimpan null, apa pun isinya. Bila produkGratis true, Batas per Member wajib berupa bilangan bulat 1 sampai 999. alasan: null bila sah; 'kosong' untuk isian kosong; 'bukan-bilangan-bulat' untuk isian yang bukan bilangan bulat; 'di-luar-rentang' untuk bilangan bulat di bawah 1 atau di atas 999.",
+  "kasus": [
+    {
+      "nama": "Tepat minimum",
+      "input": {
+        "produkGratis": true,
+        "batas": "1"
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": 1
+      }
+    },
+    {
+      "nama": "Contoh pemilik: 5",
+      "input": {
+        "produkGratis": true,
+        "batas": "5"
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": 5
+      }
+    },
+    {
+      "nama": "Contoh pemilik: 10",
+      "input": {
+        "produkGratis": true,
+        "batas": "10"
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": 10
+      }
+    },
+    {
+      "nama": "Tepat maksimum",
+      "input": {
+        "produkGratis": true,
+        "batas": "999"
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": 999
+      }
+    },
+    {
+      "nama": "Di atas maksimum",
+      "input": {
+        "produkGratis": true,
+        "batas": "1000"
+      },
+      "output": {
+        "sah": false,
+        "alasan": "di-luar-rentang",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Nol",
+      "input": {
+        "produkGratis": true,
+        "batas": "0"
+      },
+      "output": {
+        "sah": false,
+        "alasan": "di-luar-rentang",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Negatif",
+      "input": {
+        "produkGratis": true,
+        "batas": "-1"
+      },
+      "output": {
+        "sah": false,
+        "alasan": "di-luar-rentang",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Pecahan",
+      "input": {
+        "produkGratis": true,
+        "batas": "2.5"
+      },
+      "output": {
+        "sah": false,
+        "alasan": "bukan-bilangan-bulat",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Huruf",
+      "input": {
+        "produkGratis": true,
+        "batas": "lima"
+      },
+      "output": {
+        "sah": false,
+        "alasan": "bukan-bilangan-bulat",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Kosong",
+      "input": {
+        "produkGratis": true,
+        "batas": ""
+      },
+      "output": {
+        "sah": false,
+        "alasan": "kosong",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Hanya spasi",
+      "input": {
+        "produkGratis": true,
+        "batas": "   "
+      },
+      "output": {
+        "sah": false,
+        "alasan": "kosong",
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Spasi di awal dan akhir dibuang",
+      "input": {
+        "produkGratis": true,
+        "batas": " 7 "
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": 7
+      }
+    },
+    {
+      "nama": "Produk tidak gratis: isian diabaikan",
+      "input": {
+        "produkGratis": false,
+        "batas": ""
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": null
+      }
+    },
+    {
+      "nama": "Produk tidak gratis: isian salah tetap diabaikan",
+      "input": {
+        "produkGratis": false,
+        "batas": "abc"
+      },
+      "output": {
+        "sah": true,
+        "alasan": null,
+        "batasTersimpan": null
+      }
+    }
+  ]
+}

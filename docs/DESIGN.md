@@ -585,6 +585,12 @@ Hiasan menguatkan kesan buku sketsa. Setiap hiasan diberi `aria-hidden="true"` d
 #### Keputusan teknis: harga di kartu Produk "Mulai Rp X"
 Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber harga "Mulai", yaitu Varian aktif ber-stok dengan Harga jual termurah (PRD §3.8). Contoh: YouTube Premium dengan "1 Bulan" habis dan "3 Bulan" Rp 55.000 (Harga normal Rp 65.000) tampil "Mulai Rp 55.000 · ~~Rp 65.000~~ · Hemat 15%". Bila semua Varian aktif habis, harga diambil dari Varian termurah di antara semua Varian aktif. Harga normalnya tetap dicoret, tetapi label Hemat diganti label Habis. Kartu tidak menampilkan angka stok gabungan, hanya label "Habis" bila semua Varian aktif habis (PRD §3.4, §3.5, §3.8). Angka Stok Varian baru tampil di Halaman Produk.
 
+▶ Keputusan 2026-11-22 (#246): Harga Produk gratis (PRD §16.4)
+- Di kartu Produk, Kartu Produk Unggulan, Halaman Produk, dan Checkout, kata "Gratis" menggantikan Harga jual. Ukuran, huruf, dan warnanya sama dengan Harga jual yang digantikannya.
+- Harga normal yang diisi tetap dicoret di tempat biasanya, tanpa label "Hemat N%". Contoh baris Varian di Kartu Produk Unggulan: "Akun Baru · ~~Rp 15.000~~ · Gratis".
+- Keterangan "Gratis khusus Member, maksimal M per Member" di Halaman Produk memakai teks bantuan biasa, tepat di bawah harga.
+- Varian habis tetap memakai label Habis seperti Produk lain.
+
 ### Inputs / Fields
 - **Isian** (`isian`): tinggi 52 px, radius `coret-alt`, latar `permukaan`, garis 2 px `pensil`, Patrick Hand 18 px, placeholder `pensil-redup`. Textarea ditambah `py-3`. Label berada di atas isian (Label 17 px, jarak 8 px), dan teks bantuan di bawahnya (Bantuan 16 px, `pensil-redup`).
 - **Fokus:** garis menjadi `pulpen`, ditambah halo 3 px `pulpen` 20%, tanpa outline bawaan.
@@ -600,6 +606,10 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 ▶ Keputusan 2026-11-17 (#174): Isian yang tidak bisa diubah, seperti email Member di Checkout (PRD §5.2), tetap berbentuk isian dengan latar `permukaan-2` dan teks `tinta`. Teks bantuannya tetap tampil.
 
 ▶ Keputusan 2026-11-20 (#224): Isian rupiah di dasbor admin, seperti Harga modal (PRD §14.1) dan minimal Total bayar yang dikenai biaya (PRD §14.3), berisi angka dengan titik ribuan, misalnya "100.000", tanpa awalan "Rp".
+
+▶ Keputusan 2026-11-22 (#246): Pilihan Saldo untuk Tamu (PRD §15.7)
+- Pilihan Saldo di Checkout Tamu memakai tampilan pilihan Saldo yang saldonya kurang: garis putus-putus, opasitas 60%, dan tidak bisa dipilih. Labelnya "Saldo", tanpa nominal.
+- Kalimat "Bayar pakai saldo khusus Member. Masuk, atau Daftar lalu top up." berada di bawah kartu pilihan itu, di luar bagian yang diredupkan, supaya tautan "Masuk" dan "Daftar" tetap terbaca penuh dan bisa diketuk. Kedua tautan memakai gaya tautan biasa.
 
 ### Navigation
 - **Garis coretan** (`GarisCoretan` di `kerangka-bilah-atas.tsx`): garis `pensil` bergelombang tipis, seperti garis yang ditarik tangan. Dipakai di tepi bawah bilah atas dan tepi atas navigasi bawah.
@@ -624,6 +634,14 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - Penegasan "Tandai Dana Dikembalikan" berbunyi "Tandai Pesanan ini Dana Dikembalikan? Pesanan ini tidak akan mendapat Item stok, jadi pastikan uangnya sudah dikembalikan di luar sistem. Aksi ini tidak bisa dibatalkan."
 
 ▶ Keputusan 2026-11-17 (#174): Hapus Voucher memakai panel "Hapus Voucher" di bawah halaman ubah Voucher, sama seperti hapus Produk dan Kategori. Penegasannya berbunyi "Hapus Voucher KODE? Voucher ini beserta syaratnya terhapus dan tidak bisa dikembalikan." (PRD §8.8).
+
+▶ Keputusan 2026-11-22 (#246): Modal penegasan (PRD §9.10). Keputusan ini menggantikan butir "ditegaskan langsung di tempatnya, tanpa dialog" di ▶ Keputusan 2026-11-12 (#87). Panel hapus, seperti "Hapus Voucher", tetap ada di halamannya. Bedanya, tombol di panel itu kini membuka Modal penegasan, bukan penegasan di tempat.
+- **Bentuk:** panel `kartu` berlatar `permukaan` dengan tepi merah `aksi` 2 px, seperti penegasan di tempat sebelumnya, dan bayangan `shadow-coret`. Lebarnya paling besar 480 px, di tengah layar. Di ponsel, lebarnya layar dikurangi gutter 16 px di kiri dan kanan. Tanpa hiasan dan rotasi, seperti dasbor admin lainnya.
+- **Latar:** lapisan `pensil` beropasitas 40% menutup seluruh halaman, termasuk menu samping.
+- **Isi, dari atas:** judul berupa pertanyaan pendek, misalnya "Hapus Item stok?", lalu rincian akibat aksinya (PRD §9.10), lalu baris tombol. Tombol aksi memakai `tombol` utama dengan label "Ya, …", dan di sebelahnya ada "Batal" dengan `tombol tombol-kedua`. Di ponsel, kedua tombol bersusun dengan tombol aksi di atas.
+- **Keyboard dan pembaca layar:** modal memakai `role="alertdialog"` dengan `aria-modal="true"`, dan judul serta rinciannya menjadi label dan deskripsinya. Saat modal terbuka, fokus pindah ke "Batal", supaya Enter yang tidak disengaja tidak menjalankan aksi. Tab berputar di dalam modal. Esc dan ketukan di lapisan latar sama dengan "Batal". Setelah modal tertutup, fokus kembali ke tombol yang membukanya.
+- **Selama aksi diproses:** kedua tombol nonaktif, tombol aksi menampilkan teks proses seperti "Menghapus…", dan Esc serta ketukan di latar tidak menutup modal.
+- **Gerak:** modal muncul dengan pudar 150 ms memakai easing standar. Di bawah `prefers-reduced-motion: reduce`, modal langsung tampil.
 
 ### Penanda tab aktif: matahari coretan (komponen khas)
 Setengah matahari coretan berupa SVG: busur berisi `matahari` dengan garis 2 px `pensil` dan lima sinar pendek dari guratan `pensil`, tanpa pendar. Wadahnya 28×14 px; sinarnya keluar dari wadah itu, jadi ukuran tempat penanda tidak berubah, dan garisnya tetap 2 px di ukuran berapa pun. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seperti matahari yang terbit dari cakrawala pensil. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas ukurannya 20×10 px, dan ia duduk di garis bawah bilah atas, di bawah tautan aktif. Saat bilah ciut, matahari navbar ikut mengecil ke 85% bersama monogram. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.

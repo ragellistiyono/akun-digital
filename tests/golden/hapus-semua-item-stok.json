@@ -1,0 +1,103 @@
+{
+  "aturan": "Hapus semua Item stok Tersedia",
+  "prd": "§4.4 (▶ Keputusan 2026-11-22), §9.10",
+  "keterangan": "tombolTampil: tombol \"Hapus semua Item stok Tersedia\" hanya tampil bila tersediaSaatModalDibuka lebih dari 0. teksPenegasan memakai jumlah saat modal dibuka. Kalimat \"… tidak ikut terhapus.\" hanya menyebut status yang jumlahnya lebih dari 0 (Ditahan dulu, lalu Terkirim, disambung \" dan \"), dan tidak tampil bila keduanya 0. pesanSesudah memakai tersediaSaatDisetujui, yaitu jumlah yang benar-benar terhapus; Item stok yang menjadi Ditahan setelah modal terbuka dilewati.",
+  "kasus": [
+    {
+      "nama": "Contoh PRD: ada Ditahan dan Terkirim",
+      "input": {
+        "produk": "Netflix Premium",
+        "varian": "1 Bulan",
+        "tersediaSaatModalDibuka": 25,
+        "ditahan": 2,
+        "terkirim": 10,
+        "tersediaSaatDisetujui": 25
+      },
+      "output": {
+        "tombolTampil": true,
+        "teksPenegasan": "Hapus 25 Item stok Tersedia dari Netflix Premium – 1 Bulan? 2 Ditahan dan 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan.",
+        "pesanSesudah": "25 Item stok terhapus."
+      }
+    },
+    {
+      "nama": "Contoh PRD: tanpa Item stok Ditahan",
+      "input": {
+        "produk": "YouTube Premium",
+        "varian": "3 Bulan",
+        "tersediaSaatModalDibuka": 3,
+        "ditahan": 0,
+        "terkirim": 10,
+        "tersediaSaatDisetujui": 3
+      },
+      "output": {
+        "tombolTampil": true,
+        "teksPenegasan": "Hapus 3 Item stok Tersedia dari YouTube Premium – 3 Bulan? 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan.",
+        "pesanSesudah": "3 Item stok terhapus."
+      }
+    },
+    {
+      "nama": "Hanya ada Ditahan selain Tersedia",
+      "input": {
+        "produk": "Netflix Premium",
+        "varian": "3 Bulan",
+        "tersediaSaatModalDibuka": 4,
+        "ditahan": 1,
+        "terkirim": 0,
+        "tersediaSaatDisetujui": 4
+      },
+      "output": {
+        "tombolTampil": true,
+        "teksPenegasan": "Hapus 4 Item stok Tersedia dari Netflix Premium – 3 Bulan? 1 Ditahan tidak ikut terhapus. Isinya tidak bisa dikembalikan.",
+        "pesanSesudah": "4 Item stok terhapus."
+      }
+    },
+    {
+      "nama": "Hanya Item stok Tersedia",
+      "input": {
+        "produk": "Spotify Premium",
+        "varian": "1 Bulan",
+        "tersediaSaatModalDibuka": 5,
+        "ditahan": 0,
+        "terkirim": 0,
+        "tersediaSaatDisetujui": 5
+      },
+      "output": {
+        "tombolTampil": true,
+        "teksPenegasan": "Hapus 5 Item stok Tersedia dari Spotify Premium – 1 Bulan? Isinya tidak bisa dikembalikan.",
+        "pesanSesudah": "5 Item stok terhapus."
+      }
+    },
+    {
+      "nama": "Satu Item stok menjadi Ditahan sebelum penegasan disetujui",
+      "input": {
+        "produk": "Netflix Premium",
+        "varian": "1 Bulan",
+        "tersediaSaatModalDibuka": 25,
+        "ditahan": 2,
+        "terkirim": 10,
+        "tersediaSaatDisetujui": 24
+      },
+      "output": {
+        "tombolTampil": true,
+        "teksPenegasan": "Hapus 25 Item stok Tersedia dari Netflix Premium – 1 Bulan? 2 Ditahan dan 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan.",
+        "pesanSesudah": "24 Item stok terhapus."
+      }
+    },
+    {
+      "nama": "Tidak ada Item stok Tersedia",
+      "input": {
+        "produk": "YouTube Premium",
+        "varian": "1 Bulan",
+        "tersediaSaatModalDibuka": 0,
+        "ditahan": 0,
+        "terkirim": 3,
+        "tersediaSaatDisetujui": 0
+      },
+      "output": {
+        "tombolTampil": false,
+        "teksPenegasan": null,
+        "pesanSesudah": null
+      }
+    }
+  ]
+}

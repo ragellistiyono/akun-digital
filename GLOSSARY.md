@@ -70,6 +70,10 @@ _Avoid_: reserved, dipesan, terkunci
 Status Item stok yang sudah dikirim ke sebuah Pesanan dan tidak bisa dipakai lagi.
 _Avoid_: terjual, sold, terpakai
 
+**Item stok kembar**:
+Item stok yang semua kolomnya sama persis dengan Item stok lain di toko, dari Varian dan Produk mana pun.
+_Avoid_: duplikat, akun dobel, akun ganda
+
 **Ambang stok menipis**:
 Angka Stok Varian yang dianggap menipis, diatur Admin di pengaturan toko.
 _Avoid_: minimum stok, safety stock, batas stok
@@ -219,7 +223,7 @@ Daftar setiap perubahan Saldo seorang Member: Top up, Pembelian, Ditambah Admin,
 _Avoid_: mutasi, histori saldo, log saldo, ledger
 
 **Metode**:
-Cara sebuah Pesanan dibayar, yaitu QRIS atau Saldo.
+Cara sebuah Pesanan dibayar, yaitu QRIS atau Saldo, atau Gratis untuk Pesanan gratis.
 _Avoid_: metode pembayaran (di kode), payment method, cara bayar
 
 **Kode unik Top up**:
@@ -229,6 +233,24 @@ _Avoid_: pendapatan top up, untung top up
 **Biaya transaksi Top up**:
 Jumlah Biaya transaksi dari Top up Berhasil dalam suatu rentang waktu, yang mengurangi Laba bersih.
 _Avoid_: MDR top up, fee top up
+
+### Produk gratis
+
+**Produk gratis**:
+Produk yang ditandai Admin sehingga semua Variannya bisa diambil Member yang sedang login tanpa pembayaran, dibatasi Batas per Member.
+_Avoid_: produk free, giveaway, promo gratis, produk Rp 0
+
+**Pesanan gratis**:
+Pesanan dari Produk gratis dengan Metode Gratis dan Total bayar Rp 0, yang langsung Selesai.
+_Avoid_: order gratis, klaim, checkout gratis
+
+**Batas per Member**:
+Jumlah Pesanan gratis terbanyak yang boleh dimiliki satu Member untuk satu Produk gratis, dari semua Variannya, sepanjang waktu.
+_Avoid_: kuota gratis, limit, maksimal checkout, Batas per email
+
+**Sisa jatah**:
+Batas per Member dikurangi jumlah Pesanan gratis seorang Member untuk Produk itu, paling kecil 0.
+_Avoid_: kuota tersisa, sisa kuota, sisa limit
 
 ### Toko
 
@@ -251,6 +273,10 @@ _Avoid_: settings, konfigurasi
 **Zona waktu toko**:
 Zona waktu yang dipakai semua tanggal dan jam di toko, yaitu WIB.
 _Avoid_: timezone, waktu server
+
+**Modal penegasan**:
+Jendela di atas halaman dasbor admin yang meminta Admin menyetujui aksi yang tidak bisa dibatalkan, beserta rincian akibatnya.
+_Avoid_: popup, dialog konfirmasi, alert, action box
 
 ### Orang
 
