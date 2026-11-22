@@ -18,8 +18,9 @@ const teks = (isi: string, status: number) =>
 
 // Pemicu pembayaran Qrispy tiruan untuk pengembangan dan test (ADR-0004): membayar QRIS itu dengan nominal
 // yang diatur, termasuk nominal kurang dari Total bayar, untuk Pesanan maupun Top up. Hanya aktif bila
-// QRISPY_MODE=tiruan. Pesanan atau Top up berubah saat kabar pembayarannya diproses, misalnya lewat cek status
-// saat halaman Pesanan atau Halaman bayar Top up dimuat.
+// QRISPY_MODE=tiruan. Pesanan atau Top up berubah saat kabar pembayarannya diproses lewat cek status, yaitu saat
+// halaman Pesanan atau Halaman bayar Top up dimuat, atau saat webhook payment.received memicunya (T82). Nominal ini
+// menjadi amount cek status, yang dipakai sebagai nominal diterima.
 export async function POST(request: Request) {
   let mentah: unknown;
   try {
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     );
   }
   return teks(
-    `Pembayaran tiruan untuk QRIS ${isi.data.qrisId} sebesar ${rupiah(isi.data.amount)} tercatat. Muat ulang halaman Pesanan atau Halaman bayar Top up untuk memproses kabar pembayarannya.`,
+    `Pembayaran tiruan untuk QRIS ${isi.data.qrisId} sebesar ${rupiah(isi.data.amount)} tercatat. Muat ulang halaman Pesanan atau Halaman bayar Top up, atau kirim webhook payment.received untuk QRIS itu, untuk memproses kabar pembayarannya.`,
     200,
   );
 }

@@ -184,9 +184,10 @@ async function batalkanSetelahDibayar(
 }
 
 /**
- * Pembayaran Pesanan itu tercatat sebelum "Batalkan" ditekan: QRIS-nya dibayar lewat Qrispy tiruan, lalu
- * Qrispy mengirim webhook payment.received bentuk dashboard bersignature benar dengan nominal itu sebagai
- * received_amount (ADR-0004).
+ * Pembayaran Pesanan itu tercatat sebelum "Batalkan" ditekan: QRIS-nya dibayar lewat Qrispy tiruan dengan nominal
+ * itu, lalu Qrispy mengirim webhook payment.received bentuk dashboard bersignature benar, yang memicu cek status
+ * dengan nominal itu sebagai amount (ADR-0004 ▶ Keputusan 2026-11-22). received_amount di webhook sengaja selalu
+ * Total bayar, supaya hasilnya hanya ditentukan amount cek status.
  */
 async function catatPembayaran(
   request: APIRequestContext,
@@ -198,7 +199,7 @@ async function catatPembayaran(
     event: "payment.received",
     data: {
       qris_id: dipesan.qrisId,
-      received_amount: amount,
+      received_amount: dipesan.totalBayar,
       paid_at: new Date().toISOString(),
     },
   });
@@ -379,7 +380,7 @@ test("Tautan Pesanan yang sudah Selesai sebelum Batalkan diproses tidak menampil
 
 // Issue T20-c dan PRD §5.8 (▶ Keputusan 2026-11-12 #99): pembayaran dengan nominal kurang (§5.9) tercatat
 // sebelum "Batalkan" diproses, jadi Pesanan sudah Bermasalah. Halaman Pesanan Bermasalah tampil tanpa
-// pesan penjelas pembatalan.
+// pesan penjelas pembatalan. Nominal kurangnya amount cek status yang dipicu webhook (T82).
 test("Pesanan yang sudah Bermasalah saat Batalkan diproses menampilkan Halaman Pesanan Bermasalah tanpa pesan penjelas", async ({
   page,
   request,

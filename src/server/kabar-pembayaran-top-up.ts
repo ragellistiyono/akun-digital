@@ -1,8 +1,8 @@
 // Kabar pembayaran dari Qrispy untuk Top up (PRD §15.4, §15.5, ADR-0004). Semua jalur kabar pembayaran Top up, yaitu
-// webhook, cek status dari Halaman bayar Top up, cek status saat kedaluwarsa, dan pembatalan yang ditolak karena
-// sudah dibayar, memanggil satu pemroses yang sama. Status baru, tambahan saldo, dan Biaya transaksi-nya ditentukan
-// hasilKabarPembayaranTopUp di src/domain/kabar-pembayaran-top-up.ts; perpindahan status yang boleh ada di
-// src/domain/status-top-up.ts.
+// cek status yang dipicu webhook, cek status dari Halaman bayar Top up, cek status saat kedaluwarsa, dan pembatalan
+// yang ditolak karena sudah dibayar, memanggil satu pemroses yang sama. Status baru, tambahan saldo, dan Biaya
+// transaksi-nya ditentukan hasilKabarPembayaranTopUp di src/domain/kabar-pembayaran-top-up.ts; perpindahan status
+// yang boleh ada di src/domain/status-top-up.ts.
 import { and, eq } from "drizzle-orm";
 
 import { hasilKabarPembayaranTopUp } from "@/domain/kabar-pembayaran-top-up";

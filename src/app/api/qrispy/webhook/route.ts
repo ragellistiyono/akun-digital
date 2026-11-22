@@ -16,21 +16,22 @@ const Webhook = z.object({ event: z.string() });
 const EVENT_PEMBAYARAN = "payment.received";
 const EVENT_UJI = "payment.test";
 
-/** Nominal diterima: rupiah bulat lebih dari 0, berupa angka atau teks desimal seperti "50123.00". */
-const NominalDiterima = NominalQrispy.pipe(z.number().positive());
+/** received_amount: rupiah bulat lebih dari 0, berupa angka atau teks desimal seperti "50123.00". */
+const ReceivedAmount = NominalQrispy.pipe(z.number().positive());
 
 /**
- * Bentuk dashboard: event payment.received dengan field di dalam data. Nominal diterima-nya
- * received_amount, bukan amount. payment_reference boleh tidak ada; bila berupa teks, dipakai untuk mengenali
- * kabar Top up (issue T78). Field lain di data, seperti amount dan unique_id, tidak dipakai, jadi tidak
- * diperiksa.
+ * Bentuk dashboard: event payment.received dengan field di dalam data. received_amount dan paid_at tetap wajib,
+ * supaya bentuk dashboard tetap dikenali, tetapi keduanya bukan nominal diterima dan waktu bayar: webhook hanya
+ * memicu cek status, dan keduanya diambil dari jawaban cek status (ADR-0004 ▶ Keputusan 2026-11-22). received_amount
+ * hanya dicatat di log. payment_reference boleh tidak ada; bila berupa teks, dipakai untuk mengenali kabar Top up
+ * (issue T78). Field lain di data, seperti amount dan unique_id, tidak dipakai, jadi tidak diperiksa.
  */
 const KabarDashboard = z
   .object({
     event: z.literal(EVENT_PEMBAYARAN),
     data: z.object({
       qris_id: z.string().min(1),
-      received_amount: NominalDiterima,
+      received_amount: ReceivedAmount,
       paid_at: z.iso.datetime({ offset: true }),
       payment_reference: z.string().optional().catch(undefined),
     }),
@@ -38,8 +39,7 @@ const KabarDashboard = z
   .transform(({ data }) => ({
     qrisId: data.qris_id,
     paymentReference: data.payment_reference,
-    nominalDiterima: data.received_amount,
-    waktuBayar: new Date(data.paid_at),
+    receivedAmount: data.received_amount,
   }));
 
 /** Nama bentuk webhook di baris log, menurut event-nya. */
@@ -88,9 +88,10 @@ function catatBentuk(
 }
 
 // Webhook Qrispy (ADR-0004). Alamat ini didaftarkan pemilik di Dashboard Qrispy → Webhook Settings.
-// Signature diperiksa dari body mentah sebelum body di-parse. Kabar bentuk dashboard diteruskan ke pemroses
-// kabar pembayaran Pesanan atau Top up yang sama dengan jalur cek status, yang memprosesnya dalam satu transaksi
-// dan hanya sekali untuk qris_id yang sama.
+// Signature diperiksa dari body mentah sebelum body di-parse. Kabar bentuk dashboard memicu satu cek status QRIS-nya
+// (▶ Keputusan 2026-11-22); bila jawabannya paid, kabar diteruskan ke pemroses kabar pembayaran Pesanan atau Top up
+// yang sama dengan jalur cek status, yang memprosesnya dalam satu transaksi dan hanya sekali untuk qris_id yang sama.
+// Cek status yang gagal atau belum paid hanya dicatat di log, dan webhook tetap dijawab 200.
 export async function POST(request: Request) {
   const body = await request.text();
   const formatSignature = formatSignatureWebhook(

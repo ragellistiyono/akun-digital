@@ -30,8 +30,9 @@ const JEDA_CEK_STATUS_MS = 15_000;
 export type KabarPembayaran = {
   qrisId: string;
   /**
-   * Nominal yang diterima Qrispy, yang dibandingkan dengan Total bayar (PRD §5.9): `received_amount` dari
-   * webhook `payment.received`, atau `amount` dari cek status yang menjawab `paid` (ADR-0004).
+   * Nominal yang diterima Qrispy, yang dibandingkan dengan Total bayar (PRD §5.9): selalu `amount` dari cek status
+   * yang menjawab `paid`, juga untuk kabar yang dipicu webhook `payment.received`. `received_amount` dari webhook
+   * tidak pernah dipakai di sini (ADR-0004 ▶ Keputusan 2026-11-22).
    */
   nominalDiterima: number;
   waktuBayar: Date;
@@ -187,13 +188,20 @@ const cekTerakhir = (wadah.__cekStatusQrispyTerakhir ??= new Map());
  * Apakah Pesanan atau Top up itu sudah boleh ditanyakan lagi ke Qrispy pada waktu itu. Bila boleh, waktu itu langsung
  * dicatat sebagai cek terakhir, sebelum Qrispy ditanya, sehingga permintaan yang datang bersamaan
  * menunggu giliran berikutnya. Catatan yang sudah lewat 15 detik dibuang.
+ *
+ * Dengan `tanpaMenunggu`, cek selalu boleh walaupun giliran 15 detiknya belum tiba, tetapi waktunya tetap dicatat
+ * sebagai cek terakhir. Ini dipakai cek status yang dipicu webhook (ADR-0004 ▶ Keputusan 2026-11-22).
  */
-export function ambilGiliranCek(id: string, sekarang: Date) {
+export function ambilGiliranCek(
+  id: string,
+  sekarang: Date,
+  { tanpaMenunggu = false }: { tanpaMenunggu?: boolean } = {},
+) {
   const kini = sekarang.getTime();
   for (const [id, waktu] of cekTerakhir) {
     if (kini - waktu >= JEDA_CEK_STATUS_MS) cekTerakhir.delete(id);
   }
-  if (cekTerakhir.has(id)) return false;
+  if (cekTerakhir.has(id) && !tanpaMenunggu) return false;
   cekTerakhir.set(id, kini);
   return true;
 }
