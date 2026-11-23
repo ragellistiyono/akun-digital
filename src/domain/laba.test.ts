@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import golden from "../../tests/golden/laba.json";
-import goldenGratis from "../../tests/golden/laba-pesanan-gratis.json";
-import goldenTopUp from "../../tests/golden/laba-top-up.json";
+import golden from "../../tests/golden/laba-tanpa-kode-unik.json";
+import goldenTopUp from "../../tests/golden/laba-top-up-tanpa-kode-unik.json";
 import type { Metode } from "./bayar-saldo";
 import { laba, pesananMenurutMetode } from "./laba";
 import type { StatusPesanan } from "./status-pesanan";
@@ -21,9 +20,10 @@ const instanAtauNull = (waktu: string | null) =>
   waktu === null ? null : new Date(waktu);
 
 /**
- * Input golden laba.json dengan waktu sebagai instan. Fixture ini dibuat sebelum ada Pesanan saldo dan Top up, jadi
- * semua Pesanan-nya bermetode QRIS, saringan Metode-nya Semua, dan tidak ada Top up. `denganBiayaOperasional` false
- * berarti saringan Produk atau Kategori aktif.
+ * Input golden laba-tanpa-kode-unik.json dengan waktu sebagai instan. Fixture ini tidak memuat Metode, saringan
+ * Metode, dan Top up, jadi saringan Metode-nya Semua dan tidak ada Top up. Pesanan dengan Harga jual Rp 0 di fixture
+ * ini adalah Pesanan gratis (kasus berawalan "Pesanan gratis:", PRD §16.5), jadi bermetode Gratis, dan yang lain
+ * bermetode QRIS. `denganBiayaOperasional` false berarti saringan Produk atau Kategori aktif.
  */
 const inputInstan = ({
   rentang,
@@ -36,7 +36,7 @@ const inputInstan = ({
   saringanProdukAtauKategori: !denganBiayaOperasional,
   pesanan: pesanan.map((p) => ({
     ...p,
-    metode: "QRIS" as const,
+    metode: p.hargaJual === 0 ? ("Gratis" as const) : ("QRIS" as const),
     status: p.status as StatusPesanan,
     dibayarPada: instanAtauNull(p.dibayarPada),
   })),
@@ -44,7 +44,7 @@ const inputInstan = ({
   topUp: [],
 });
 
-/** Input golden laba-top-up.json dengan waktu sebagai instan. */
+/** Input golden laba-top-up-tanpa-kode-unik.json dengan waktu sebagai instan. */
 const inputInstanTopUp = ({
   rentang,
   metode,
@@ -70,7 +70,9 @@ const inputInstanTopUp = ({
   })),
 });
 
-// PRD §9.2, §14.2, §14.5: Total Harga modal, Laba kotor, dan Laba bersih dalam suatu rentang.
+// PRD §9.2, §14.2, §14.5 ▶ Keputusan 2026-11-23, §16.5: Total Harga modal, Laba kotor, dan Laba bersih dalam suatu
+// rentang. Kode unik tidak menambah Pendapatan dan Laba bersih, karena tidak masuk saldo toko. Pesanan gratis dihitung
+// di jumlah Pesanan Selesai tanpa menambah Pendapatan, dengan Laba kotor Rp 0 − Harga modal.
 describe("laba", () => {
   it.each(golden.kasus)("$nama", ({ input, output }) => {
     const hasil = laba(inputInstan(input));
@@ -81,7 +83,6 @@ describe("laba", () => {
       totalHargaModal: hasil.totalHargaModal,
       labaKotor: hasil.labaKotor,
       potonganVoucher: hasil.potonganVoucher,
-      kodeUnik: hasil.kodeUnik,
       biayaTransaksi: hasil.biayaTransaksi,
       biayaOperasional: hasil.biayaOperasional,
       labaBersih: hasil.labaBersih,
@@ -107,48 +108,14 @@ describe("laba", () => {
       { tanggal: "2026-11-11", nominal: 10000 },
     ]);
   });
-});
-
-// PRD §16.5: Pesanan gratis dihitung di jumlah Pesanan Selesai tanpa menambah Pendapatan, dengan Laba kotor Rp 0 −
-// Harga modal. Fixture ini berbentuk sama dengan laba.json, tanpa Metode; Pesanan dengan Harga jual Rp 0 di fixture
-// ini adalah Pesanan gratis, jadi bermetode Gratis, dan yang lain bermetode QRIS.
-const denganMetodeGratis = <P extends { hargaJual: number }>(
-  pesanan: readonly P[],
-) =>
-  pesanan.map((p) => ({
-    ...p,
-    metode: p.hargaJual === 0 ? ("Gratis" as const) : ("QRIS" as const),
-  }));
-
-describe("laba dengan Pesanan gratis", () => {
-  it.each(goldenGratis.kasus)("$nama", ({ input, output }) => {
-    const { pesanan, ...lainnya } = inputInstan(input);
-    const hasil = laba({ ...lainnya, pesanan: denganMetodeGratis(pesanan) });
-
-    expect({
-      pendapatan: hasil.pendapatan,
-      pesananSelesai: hasil.pesananSelesai,
-      totalHargaModal: hasil.totalHargaModal,
-      labaKotor: hasil.labaKotor,
-      potonganVoucher: hasil.potonganVoucher,
-      kodeUnik: hasil.kodeUnik,
-      biayaTransaksi: hasil.biayaTransaksi,
-      biayaOperasional: hasil.biayaOperasional,
-      labaBersih: hasil.labaBersih,
-      pesananTanpaHargaModal: hasil.pesananTanpaHargaModal,
-    }).toEqual(output);
-  });
 
   it("saringan Metode Gratis hanya memuat Pesanan gratis, dengan Pendapatan Rp 0", () => {
-    const kasus = goldenGratis.kasus.find((k) => k.nama === "Contoh PRD §16.5");
+    const kasus = golden.kasus.find(
+      (k) => k.nama === "Pesanan gratis: Contoh PRD §16.5",
+    );
     if (!kasus) throw new Error("Kasus golden tidak ditemukan.");
-    const { pesanan, ...lainnya } = inputInstan(kasus.input);
 
-    const hasil = laba({
-      ...lainnya,
-      metode: "Gratis",
-      pesanan: denganMetodeGratis(pesanan),
-    });
+    const hasil = laba({ ...inputInstan(kasus.input), metode: "Gratis" });
 
     // Contoh PRD §16.5 tanpa Pesanan QRIS-nya: dua Pesanan gratis dengan Harga modal Rp 2.000.
     expect({
@@ -165,7 +132,8 @@ describe("laba dengan Pesanan gratis", () => {
   });
 });
 
-// PRD §14.5 dan §15.8 (▶ Keputusan 2026-11-20): Laba bersih dengan Pesanan saldo, saringan Metode, dan Top up.
+// PRD §14.5 dan §15.8 (▶ Keputusan 2026-11-20 dan 2026-11-23): Laba bersih dengan Pesanan saldo, saringan Metode, dan
+// Top up. Kode unik Top up tidak menambah Laba bersih, sedangkan Biaya transaksi Top up tetap mengurangkannya.
 describe("laba dengan Pesanan saldo dan Top up", () => {
   it.each(goldenTopUp.kasus)("$nama", ({ input, output }) => {
     const hasil = laba(inputInstanTopUp(input));
@@ -176,10 +144,8 @@ describe("laba dengan Pesanan saldo dan Top up", () => {
       totalHargaModal: hasil.totalHargaModal,
       labaKotor: hasil.labaKotor,
       potonganVoucher: hasil.potonganVoucher,
-      kodeUnik: hasil.kodeUnik,
       biayaTransaksi: hasil.biayaTransaksi,
       biayaOperasional: hasil.biayaOperasional,
-      kodeUnikTopUp: hasil.kodeUnikTopUp,
       biayaTransaksiTopUp: hasil.biayaTransaksiTopUp,
       labaBersih: hasil.labaBersih,
       topUpBerhasil: hasil.topUpBerhasil,

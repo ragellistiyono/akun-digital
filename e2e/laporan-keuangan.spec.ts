@@ -16,8 +16,9 @@ import { sisipkanPesanan } from "../src/server/uji-pesanan";
 import { sisipkanTopUp } from "../src/server/uji-top-up";
 import { tanggalIsianWib, tanggalWib } from "../src/server/zona-waktu-toko";
 
-// Laporan keuangan (T71, T72, T73, T81, PRD §11.1, §14.5, §14.6, §14.7, §14.8, §15.8, UAT-N6, UAT-N7, UAT-N8,
-// UAT-O9).
+// Laporan keuangan (T71, T72, T73, T81, T88, PRD §9.3, §11.1, §14.5, §14.6, §14.7, §14.8, §15.8, UAT-N6, UAT-N7,
+// UAT-N8, UAT-O9). Sejak T88, Pendapatan adalah jumlah (Harga jual − potongan voucher), dan Kode unik tidak menambah
+// Pendapatan maupun Laba bersih (PRD §9.3 dan §14.5 ▶ Keputusan 2026-11-23).
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 const PASSWORD = "sandi-uji-admin-123";
 const ALAMAT = "/admin/laporan";
@@ -270,9 +271,17 @@ test("mencari sebagian email dalam huruf besar menyaring tabel tanpa mengubah ri
       "1 Pesanan Selesai belum dihitung labanya, karena Harga modal Varian-nya belum diisi.",
     ),
   ).toBeVisible();
+  // Kolom Kode unik dan Total bayar tetap ada sebagai informasi (PRD §14.6 ▶ Keputusan 2026-11-23, UAT-N8), dengan
+  // rincian contoh PRD §5.5 dari sisipkanPesanan.
+  const selDicari = barisTabel(page)
+    .filter({ hasText: dicari.nomorPesanan })
+    .getByRole("cell");
+  await expect(selDicari.nth(7)).toHaveText("Rp 123");
+  await expect(selDicari.nth(9)).toHaveText("Rp 45.123");
+  // Pendapatan dua Pesanan itu: 2 × (Rp 50.000 − Rp 5.000), tanpa Kode unik.
   const pendapatan = await nilaiRincian(page, "Pendapatan").textContent();
   const labaBersih = await nilaiRincian(page, "Laba bersih").textContent();
-  expect(pendapatan).toBe("Rp 90.246");
+  expect(pendapatan).toBe("Rp 90.000");
 
   await page
     .getByLabel("Cari", { exact: true })
@@ -329,8 +338,8 @@ test("mengetuk batang atau titik grafik menampilkan label kelompok dan nilainya,
   const katalog = await katalogUji({ awalan: "Grafik" });
   const waktuBayar = new Date(Date.now() - 60 * 1000);
   // Rincian contoh PRD §5.5 dari sisipkanPesanan: Total bayar Rp 45.123, potongan voucher Rp 5.000, dan Kode
-  // unik Rp 123. Dengan Harga modal Rp 35.000, Laba kotor Rp 15.000 dan Laba bersih Rp 10.123 (saringan Kategori
-  // aktif, jadi Biaya operasional tidak dikurangkan).
+  // unik Rp 123, jadi Pendapatan Rp 45.000. Dengan Harga modal Rp 35.000, Laba kotor Rp 15.000 dan Laba bersih
+  // Rp 10.000, tanpa Kode unik (saringan Kategori aktif, jadi Biaya operasional tidak dikurangkan).
   await sisipkanPesanan({
     varianId: katalog.varianId,
     status: "Selesai",
@@ -348,21 +357,21 @@ test("mengetuk batang atau titik grafik menampilkan label kelompok dan nilainya,
 
   const pendapatan = grafik(page, "Pendapatan");
   await pendapatan
-    .getByRole("button", { name: `${hariBayar} · Rp 45.123`, exact: true })
+    .getByRole("button", { name: `${hariBayar} · Rp 45.000`, exact: true })
     .click();
   await expect(pendapatan.getByRole("status")).toHaveText(
-    `${hariBayar} · Rp 45.123`,
+    `${hariBayar} · Rp 45.000`,
   );
 
   const laba = grafik(page, "Laba kotor dan Laba bersih");
   await laba
     .getByRole("button", {
-      name: `${hariBayar} · Laba bersih Rp 10.123`,
+      name: `${hariBayar} · Laba bersih Rp 10.000`,
       exact: true,
     })
     .click();
   await expect(laba.getByRole("status")).toHaveText(
-    `${hariBayar} · Laba bersih Rp 10.123`,
+    `${hariBayar} · Laba bersih Rp 10.000`,
   );
 
   const jumlah = grafik(page, "Jumlah Pesanan Selesai");
@@ -442,7 +451,8 @@ test("di lebar 360 px, Produk terlaris dan Pendapatan per Kategori tampil dengan
     .from(varian)
     .where(eq(varian.produkId, produkPanjang));
   const sekarang = Date.now();
-  // Produk pertama: 2 Pesanan Selesai Rp 45.123 (rincian contoh PRD §5.5). Produk bernama panjang: 1 Pesanan.
+  // Produk pertama: 2 Pesanan Selesai dengan Total bayar Rp 45.123 (rincian contoh PRD §5.5), masing-masing
+  // Pendapatan Rp 45.000 tanpa Kode unik. Produk bernama panjang: 1 Pesanan.
   for (const [varianId, menit] of [
     [katalog.varianId, 3],
     [katalog.varianId, 2],
@@ -466,14 +476,14 @@ test("di lebar 360 px, Produk terlaris dan Pendapatan per Kategori tampil dengan
     .getByRole("button");
   await expect(baris).toHaveCount(2);
   await expect(baris.nth(0)).toHaveAccessibleName(
-    `${katalog.namaProduk} · 2 Pesanan · Rp 90.246`,
+    `${katalog.namaProduk} · 2 Pesanan · Rp 90.000`,
   );
   await expect(baris.nth(1)).toHaveAccessibleName(
-    `${namaPanjang} · 1 Pesanan · Rp 45.123`,
+    `${namaPanjang} · 1 Pesanan · Rp 45.000`,
   );
   await baris.nth(1).click();
   await expect(terlaris.getByRole("status")).toHaveText(
-    `${namaPanjang} · 1 Pesanan · Rp 45.123`,
+    `${namaPanjang} · 1 Pesanan · Rp 45.000`,
   );
 
   const perKategori = grafik(page, "Pendapatan per Kategori")
@@ -481,7 +491,7 @@ test("di lebar 360 px, Produk terlaris dan Pendapatan per Kategori tampil dengan
     .getByRole("button");
   await expect(perKategori).toHaveCount(1);
   await expect(perKategori).toHaveAccessibleName(
-    `${katalog.namaKategori} · 3 Pesanan · Rp 135.369`,
+    `${katalog.namaKategori} · 3 Pesanan · Rp 135.000`,
   );
 
   const lebarHalaman = await page.evaluate(
@@ -505,10 +515,10 @@ const metodeTabel = (page: Page) =>
 const BARIS_INFORMASI_TOP_UP =
   /^Top up Berhasil: \d+, Rp \d[\d.]* \(uang Member, bukan Pendapatan\)$/;
 
-// UAT-O9 dan PRD §14.6 ▶ Keputusan 2026-11-20 (#226): rincian angka memuat baris Top up dan baris informasi Top up
-// Berhasil. Saringan Metode Saldo dan QRIS membatasi tabel ke Pesanan bermetode itu, dan menghilangkan baris
-// Biaya operasional serta Top up dengan keterangan baru; saringan Produk dengan Metode Semua memberi keterangan yang
-// sama.
+// UAT-O9 dan PRD §14.6 ▶ Keputusan 2026-11-20 dan 2026-11-23: rincian angka memuat baris Biaya transaksi Top up dan
+// baris informasi Top up Berhasil, tanpa baris Kode unik dan Kode unik Top up. Saringan Metode Saldo dan QRIS
+// membatasi tabel ke Pesanan bermetode itu, dan menghilangkan baris Biaya operasional serta Top up dengan keterangan
+// baru; saringan Produk dengan Metode Semua memberi keterangan yang sama.
 test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan baris Biaya operasional dan Top up (UAT-O9)", async ({
   page,
 }) => {
@@ -560,10 +570,8 @@ test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan
     "Total Harga modal",
     "Laba kotor",
     "− Potongan voucher",
-    "+ Kode unik",
     "− Biaya transaksi",
     "− Biaya operasional",
-    "+ Kode unik Top up",
     "− Biaya transaksi Top up",
     "Laba bersih",
   ]);
@@ -600,7 +608,6 @@ test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan
       "Total Harga modal",
       "Laba kotor",
       "− Potongan voucher",
-      "+ Kode unik",
       "− Biaya transaksi",
       "Laba bersih",
     ]);
@@ -627,7 +634,10 @@ test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan
   await expect(isi(page).getByRole("note")).toHaveText(
     KETERANGAN_BIAYA_OPERASIONAL,
   );
-  await expect(barisRincian(page, "+ Kode unik Top up")).toHaveCount(0);
+  // Pesanan QRIS (Rp 50.000 − Rp 5.000, Kode unik Rp 123) dan Pesanan saldo Rp 50.000, keduanya dengan Harga modal
+  // Rp 35.000: Laba bersih Rp 30.000 − Rp 5.000, tanpa Kode unik.
+  await expect(nilaiRincian(page, "Pendapatan")).toHaveText("Rp 95.000");
+  await expect(nilaiRincian(page, "Laba bersih")).toHaveText("Rp 25.000");
   await expect(barisTabel(page).getByRole("rowheader")).toHaveText([
     saldo.nomorPesanan,
     qris.nomorPesanan,
@@ -643,4 +653,104 @@ test("saringan Metode membatasi tabel ke Pesanan bermetode itu dan menghilangkan
   await expect(terlarisSaldo).toHaveAccessibleName(
     `${katalog.namaProduk} · 1 Pesanan · Rp 50.000`,
   );
+});
+
+/** Id Member baru dengan email unik, pemilik Top up uji. */
+async function memberUji() {
+  const email = `laporan-${randomUUID()}@mail.com`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  return id;
+}
+
+// UAT-N6 dan UAT-O9 ▶ Keputusan 2026-11-23 (PRD §14.5, §14.6, §15.8): rincian angka tanpa baris Kode unik dan Kode
+// unik Top up, dengan Laba bersih = Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya
+// transaksi Top up. Test ini memakai tanggal 14 Maret 2035, yang tidak dipakai test lain, jadi rincian tanpa saringan
+// hanya memuat Pesanan dan Top up test ini. Berkas ini tidak mencatat Biaya operasional, jadi Biaya operasional Rp 0.
+test("rincian angka tanpa saringan tidak memuat baris Kode unik dan Kode unik Top up, dan Laba bersih-nya mengikuti rumus PRD §14.5 yang baru (UAT-N6, UAT-O9)", async ({
+  page,
+}) => {
+  const katalog = await katalogUji({ awalan: "Tanpa Kode unik" });
+  // Tiga Pesanan Selesai contoh PRD §14.5, dengan Kode unik Rp 123, Rp 10, dan Rp 499.
+  for (const [jam, rincian, hargaModal, biayaTransaksi] of [
+    [
+      "09:00",
+      {
+        hargaJual: 50000,
+        potonganVoucher: 5000,
+        kodeUnik: 123,
+        totalBayar: 45123,
+      },
+      35000,
+      0,
+    ],
+    [
+      "13:30",
+      { hargaJual: 50000, potonganVoucher: 0, kodeUnik: 10, totalBayar: 50010 },
+      35000,
+      0,
+    ],
+    [
+      "20:45",
+      {
+        hargaJual: 135000,
+        potonganVoucher: 0,
+        kodeUnik: 499,
+        totalBayar: 135499,
+      },
+      100000,
+      949,
+    ],
+  ] as const) {
+    await sisipkanPesanan({
+      varianId: katalog.varianId,
+      status: "Selesai",
+      rincian,
+      hargaModal,
+      biayaTransaksi,
+      waktuBayar: new Date(`2035-03-14T${jam}:00+07:00`),
+    });
+  }
+  // Satu Top up Berhasil contoh PRD §15.8: Kode unik Rp 200 dan Biaya transaksi Rp 1.052.
+  await sisipkanTopUp({
+    userId: await memberUji(),
+    status: "Berhasil",
+    nominalTopUp: 150000,
+    kodeUnik: 200,
+    biayaTransaksi: 1052,
+    waktuBayar: new Date("2035-03-14T10:00:00+07:00"),
+  });
+  await masukSebagaiAdmin(page);
+
+  await page.goto(`${ALAMAT}?dari=2035-03-14&sampai=2035-03-14`);
+
+  // Tabel rincian PRD §14.5 ▶ Keputusan 2026-11-23, dengan Biaya operasional Rp 0 dan Biaya transaksi Top up
+  // Rp 1.052: 65.000 − 5.000 − 949 − 0 − 1.052 = 57.999.
+  const rincian = isi(page).getByRole("table", { name: "Rincian angka" });
+  await expect(rincian.getByRole("rowheader")).toHaveText([
+    "Pendapatan",
+    "Pesanan Selesai",
+    "Total Harga modal",
+    "Laba kotor",
+    "− Potongan voucher",
+    "− Biaya transaksi",
+    "− Biaya operasional",
+    "− Biaya transaksi Top up",
+    "Laba bersih",
+  ]);
+  await expect(rincian.getByRole("cell")).toHaveText([
+    "Rp 230.000",
+    "3",
+    "Rp 170.000",
+    "Rp 65.000",
+    "Rp 5.000",
+    "Rp 949",
+    "Rp 0",
+    "Rp 1.052",
+    "Rp 57.999",
+    "Top up Berhasil: 1, Rp 150.000 (uang Member, bukan Pendapatan)",
+  ]);
 });

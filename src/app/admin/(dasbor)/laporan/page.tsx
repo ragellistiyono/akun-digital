@@ -146,10 +146,10 @@ function NominalBertanda({ nominal }: { nominal: number }) {
 /**
  * Rincian angka (PRD §14.5, §14.6, §15.8) dengan tata letak Rincian Total bayar (DESIGN.md "Rincian angka Laporan
  * keuangan dan kartu Ringkasan"): label di kiri, nominal rata kanan, dan baris Laba kotor serta Laba bersih
- * ditebalkan dengan garis pemisah 2 px di atasnya. Sesudah Biaya operasional ada baris Kode unik Top up dan Biaya
- * transaksi Top up, dan di bawah Laba bersih baris informasi Top up Berhasil. Keempat baris itu tidak tampil saat
- * saringan Kategori, Produk, atau Metode aktif (nilainya null dari domain); keterangannya tampil sebagai catatan di
- * atas rincian.
+ * ditebalkan dengan garis pemisah 2 px di atasnya. Tidak ada baris Kode unik dan Kode unik Top up, karena keduanya
+ * tidak masuk saldo toko (§14.6 ▶ Keputusan 2026-11-23). Sesudah Biaya operasional ada baris Biaya transaksi Top up,
+ * dan di bawah Laba bersih baris informasi Top up Berhasil. Ketiga baris itu tidak tampil saat saringan Kategori,
+ * Produk, atau Metode aktif (nilainya null dari domain); keterangannya tampil sebagai catatan di atas rincian.
  */
 function RincianAngka({
   rincian,
@@ -168,7 +168,6 @@ function RincianAngka({
       tebal: true,
     },
     { label: "− Potongan voucher", nilai: rupiah(rincian.potonganVoucher) },
-    { label: "+ Kode unik", nilai: rupiah(rincian.kodeUnik) },
     { label: "− Biaya transaksi", nilai: rupiah(rincian.biayaTransaksi) },
     ...(rincian.biayaOperasional === null
       ? []
@@ -178,13 +177,9 @@ function RincianAngka({
             nilai: rupiah(rincian.biayaOperasional),
           },
         ]),
-    ...(rincian.kodeUnikTopUp === null || rincian.biayaTransaksiTopUp === null
+    ...(rincian.biayaTransaksiTopUp === null
       ? []
       : [
-          {
-            label: "+ Kode unik Top up",
-            nilai: rupiah(rincian.kodeUnikTopUp),
-          },
           {
             label: "− Biaya transaksi Top up",
             nilai: rupiah(rincian.biayaTransaksiTopUp),

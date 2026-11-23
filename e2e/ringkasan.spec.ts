@@ -208,6 +208,16 @@ test("Ringkasan menampilkan 13 kartu dengan urutan PRD, kartu uang dan Pesanan S
   await expect(kartu(page, "Total saldo Member")).toContainText(
     "Saldo milik Member yang belum dibelanjakan. Ini uang Member, bukan Pendapatan.",
   );
+  // Keterangan kartu Laba bersih PRD §9.2 ▶ Keputusan 2026-11-23, dan kartu Pendapatan tanpa Kode unik (§9.3).
+  await expect(kartu(page, "Laba bersih")).toContainText(
+    "Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up, dalam rentang itu. Kode unik dan nominal top up tidak dihitung, karena tidak masuk saldo toko.",
+  );
+  await expect(kartu(page, "Pendapatan")).toContainText(
+    "Kode unik tidak dihitung, karena tidak masuk saldo toko.",
+  );
+  await expect(kartu(page, "Pendapatan")).not.toContainText(
+    "termasuk Kode unik",
+  );
 
   // Tidak ada grafik: tidak ada kanvas, gambar, atau SVG yang tidak disembunyikan dari pembaca layar.
   const isi = page.getByRole("main");
@@ -280,7 +290,8 @@ test("kartu Pendapatan, Total Harga modal, Laba kotor, dan Laba bersih membuka L
 });
 
 // UAT-N3 dan PRD §14.2: Pesanan Selesai tanpa Harga modal menambah Pendapatan tetapi tidak Laba kotor, dan
-// peringatan menyebut jumlah Pesanan Selesai tanpa Harga modal sepanjang waktu. Test lain yang berjalan bersamaan
+// peringatan menyebut jumlah Pesanan Selesai tanpa Harga modal sepanjang waktu. Pendapatan bertambah sebesar Harga jual
+// − potongan voucher, tanpa Kode unik (PRD §9.3 ▶ Keputusan 2026-11-23, UAT-I1). Test lain yang berjalan bersamaan
 // bisa menambah Pesanan yang dibayar di sela bacaan, jadi bagian itu diulang bila angkanya terganggu.
 test("Pesanan Selesai tanpa Harga modal menambah Pendapatan tetapi tidak Laba kotor, dan peringatannya tampil dengan N yang benar", async ({
   page,
@@ -309,7 +320,7 @@ test("Pesanan Selesai tanpa Harga modal menambah Pendapatan tetapi tidak Laba ko
     await page.reload();
 
     expect((await hariIniDi(page, "Pendapatan")) - pendapatanSebelum).toBe(
-      20321,
+      20000,
     );
     expect(await hariIniDi(page, "Laba kotor")).toBe(labaKotorSebelum);
     expect(await nPeringatan(page)).toBe(nSebelum + 1);

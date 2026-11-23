@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import golden from "../../tests/golden/pendapatan.json";
+import golden from "../../tests/golden/pendapatan-tanpa-kode-unik.json";
 import type { StatusPesanan } from "./status-pesanan";
 import { pendapatan } from "./pendapatan";
 
@@ -13,13 +13,14 @@ const inputInstan = ({ rentang, pesanan }: KasusGolden["input"]) => ({
     sebelum: new Date(rentang.sebelum),
   },
   pesanan: pesanan.map((p) => ({
+    ...p,
     status: p.status as StatusPesanan,
-    totalBayar: p.totalBayar,
     dibayarPada: new Date(p.dibayarPada),
   })),
 });
 
-// PRD §9.3: Pendapatan adalah jumlah Total bayar Pesanan Selesai menurut waktu pembayarannya.
+// PRD §9.3 ▶ Keputusan 2026-11-23: Pendapatan adalah jumlah (Harga jual − potongan voucher) Pesanan Selesai menurut
+// waktu pembayarannya, tanpa Kode unik, karena Kode unik tidak masuk saldo toko.
 describe("pendapatan", () => {
   it.each(golden.kasus)("$nama", ({ input, output }) => {
     expect(pendapatan(inputInstan(input)).pendapatan).toBe(output.pendapatan);
@@ -44,7 +45,12 @@ describe("pendapatan", () => {
         sebelum: new Date("2026-11-12T00:00:00+07:00"),
       },
       pesanan: [
-        { status: "Kedaluwarsa", totalBayar: 45123, dibayarPada: null },
+        {
+          status: "Kedaluwarsa",
+          hargaJual: 50000,
+          potonganVoucher: 5000,
+          dibayarPada: null,
+        },
       ],
     });
 

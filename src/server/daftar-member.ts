@@ -50,7 +50,8 @@ export async function daftarMember({ cari }: { cari?: string }) {
       nomorPesanan: pesanan.nomorPesanan,
       email: pesanan.email,
       status: pesanan.status,
-      totalBayar: pesanan.totalBayar,
+      hargaJual: pesanan.hargaJual,
+      potonganVoucher: pesanan.potonganVoucher,
       dibayarPada: pesanan.waktuBayar,
     })
     .from(pesanan)

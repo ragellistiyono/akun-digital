@@ -28,11 +28,11 @@ import {
 
 /**
  * Pendapatan, Pesanan Selesai, Total Harga modal, Laba kotor, dan Laba bersih hari ini, bulan ini, dan sepanjang
- * waktu menurut Zona waktu toko, untuk instan `sekarang` (PRD §9.1, §9.2 ▶ Keputusan 2026-11-20). Laba bersih
- * mengurangkan Biaya operasional bertanggal hari ini, bulan ini, atau semua biaya, lalu menambahkan Kode unik Top
- * up dan mengurangkan Biaya transaksi Top up dari Top up Berhasil yang dibayar dalam rentang itu (§9.2 ▶ Keputusan
- * 2026-11-20, §15.8). Setiap rentang membawa Pesanan, Biaya operasional, dan Top up yang dihitung sebagai
- * bahan hitungnya.
+ * waktu menurut Zona waktu toko, untuk instan `sekarang` (PRD §9.1, §9.2 ▶ Keputusan 2026-11-20). Pendapatan dan Laba
+ * bersih tidak menghitung Kode unik, karena tidak masuk saldo toko (§9.3 dan §14.5 ▶ Keputusan 2026-11-23). Laba
+ * bersih mengurangkan Biaya operasional bertanggal hari ini, bulan ini, atau semua biaya, lalu Biaya transaksi Top up
+ * dari Top up Berhasil yang dibayar dalam rentang itu (§15.8). Setiap rentang membawa Pesanan, Biaya operasional, dan
+ * Top up yang dihitung sebagai bahan hitungnya.
  *
  * Sepanjang waktu memuat semua Pesanan dan Top up yang sudah dibayar dan semua Biaya operasional, jadi ketiganya
  * dibaca sekali lalu dihitung untuk ketiga rentang. Waktu "sekarang" bisa diganti untuk test.

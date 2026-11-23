@@ -70,7 +70,8 @@ async function cari(page: Page, kata: string) {
 }
 
 // UAT-B3, PRD §2.3 ▶ Keputusan 2026-11-17: kolom daftar Member, termasuk status Aktif atau Nonaktif. Total belanja dihitung seperti Pendapatan
-// (§9.3): Rp 45.123 + Rp 50.010 = Rp 95.133, tanpa Pesanan Bermasalah Rp 50.200.
+// (§9.3 ▶ Keputusan 2026-11-23): Total bayar Rp 45.123 dan Rp 50.010 tanpa Kode unik menjadi Rp 45.000 + Rp 50.000 =
+// Rp 95.000, tanpa Pesanan Bermasalah Rp 50.200.
 test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, dan melihat email, tanggal daftar, jumlah Pesanan Selesai, total belanja, dan status", async ({
   page,
 }) => {
@@ -140,7 +141,7 @@ test("Admin membuka menu Member, mencari dengan sebagian email berhuruf besar, d
     email,
     "11 Nov 2026",
     "2",
-    "Rp 95.133",
+    "Rp 95.000",
     "Rp 0",
     "Aktif",
     `Nonaktifkan ${email}`,

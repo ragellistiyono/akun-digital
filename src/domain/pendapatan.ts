@@ -35,11 +35,28 @@ export function pesananSelesaiDibayar<P extends PesananDibayar>({
 }
 
 /**
- * Pendapatan dalam rentang itu: jumlah Total bayar Pesanan Selesai yang dibayar dalam rentang itu (PRD §9.3).
- * Kode unik ikut dihitung karena sudah termasuk Total bayar, dan biaya Qrispy tidak dipotong. Rentang null
- * berarti sepanjang waktu. Hasilnya membawa rentang dan Pesanan yang dihitung sebagai bahan hitungnya.
+ * Pendapatan satu Pesanan: Harga jual − potongan voucher, yaitu uang Pesanan itu yang masuk saldo toko (PRD §5.5 dan
+ * §9.3 ▶ Keputusan 2026-11-23). Kode unik tidak dihitung, karena dibayar Pembeli tetapi tidak masuk saldo toko.
  */
-export function pendapatan<P extends PesananDibayar & { totalBayar: number }>({
+export function pendapatanPesanan({
+  hargaJual,
+  potonganVoucher,
+}: {
+  hargaJual: number;
+  potonganVoucher: number;
+}) {
+  return hargaJual - potonganVoucher;
+}
+
+/**
+ * Pendapatan dalam rentang itu: jumlah Pendapatan Pesanan Selesai yang dibayar dalam rentang itu, yaitu jumlah
+ * (Harga jual − potongan voucher) (PRD §9.3 ▶ Keputusan 2026-11-23, tests/golden/pendapatan-tanpa-kode-unik.json).
+ * Kode unik tidak dihitung dan biaya Qrispy tidak dipotong. Rentang null berarti sepanjang waktu. Hasilnya membawa
+ * rentang dan Pesanan yang dihitung sebagai bahan hitungnya.
+ */
+export function pendapatan<
+  P extends PesananDibayar & { hargaJual: number; potonganVoucher: number },
+>({
   rentang,
   pesanan,
 }: {
@@ -48,7 +65,10 @@ export function pendapatan<P extends PesananDibayar & { totalBayar: number }>({
 }) {
   const dihitung = pesananSelesaiDibayar({ rentang, pesanan });
   return {
-    pendapatan: dihitung.reduce((jumlah, p) => jumlah + p.totalBayar, 0),
+    pendapatan: dihitung.reduce(
+      (jumlah, p) => jumlah + pendapatanPesanan(p),
+      0,
+    ),
     rentang,
     dihitung,
   };
