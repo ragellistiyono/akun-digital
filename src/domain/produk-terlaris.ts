@@ -1,4 +1,5 @@
 // Grafik Produk terlaris di Laporan keuangan (PRD §14.7 grafik 4).
+import { pendapatanPesanan } from "./pendapatan";
 
 /** Jumlah paling banyak Produk di grafik Produk terlaris (PRD §14.7). */
 const JUMLAH_PRODUK_TERLARIS = 10;
@@ -9,15 +10,17 @@ const pembandingNama = new Intl.Collator("id", { sensitivity: "base" });
 type PesananSelesaiProduk = {
   produkId: string;
   namaProduk: string;
-  totalBayar: number;
+  hargaJual: number;
+  potonganVoucher: number;
 };
 
 /**
  * Produk terlaris dari Pesanan Selesai yang sudah lolos saringan Laporan keuangan (PRD §14.7 grafik 4,
- * tests/golden/produk-terlaris.json). Pesanan dijumlahkan per Produk dari semua Variannya, dan Pendapatan setiap
- * Produk adalah jumlah Total bayar Pesanan-nya. Paling banyak 10 Produk, urut jumlah Pesanan Selesai terbanyak,
- * lalu Pendapatan terbesar, lalu nama Produk A sampai Z. Produk dikenali dari id-nya, jadi dua Produk bernama
- * sama tidak digabung. Setiap Produk membawa Pesanan yang dihitungnya sebagai bahan hitung.
+ * tests/golden/produk-terlaris-tanpa-kode-unik.json). Pesanan dijumlahkan per Produk dari semua Variannya, dan
+ * Pendapatan setiap Produk adalah jumlah (Harga jual − potongan voucher) Pesanan-nya, tanpa Kode unik (§9.3
+ * ▶ Keputusan 2026-11-23). Paling banyak 10 Produk, urut jumlah Pesanan Selesai terbanyak, lalu Pendapatan
+ * terbesar, lalu nama Produk A sampai Z. Produk dikenali dari id-nya, jadi dua Produk bernama sama tidak digabung.
+ * Setiap Produk membawa Pesanan yang dihitungnya sebagai bahan hitung.
  */
 export function produkTerlaris<P extends PesananSelesaiProduk>({
   pesananSelesai,
@@ -43,7 +46,7 @@ export function produkTerlaris<P extends PesananSelesaiProduk>({
       ...produk,
       pesananSelesai: produk.dihitung.length,
       pendapatan: produk.dihitung.reduce(
-        (jumlah, p) => jumlah + p.totalBayar,
+        (jumlah, p) => jumlah + pendapatanPesanan(p),
         0,
       ),
     }))

@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { StatusPesanan } from "@/domain/status-pesanan";
 
 import kesamaanEmail from "../../tests/golden/kesamaan-email.json";
-import pendapatanGolden from "../../tests/golden/pendapatan.json";
+import pendapatanGolden from "../../tests/golden/pendapatan-tanpa-kode-unik.json";
 
 import { buatAdmin } from "./auth/buat-admin";
 import { daftarMember } from "./daftar-member";
@@ -42,16 +42,24 @@ afterAll(async () => {
 const denganAkhiran = (email: string, akhiran: string) =>
   email.replace("@", `+${akhiran}@`);
 
-/** Pesanan dengan Total bayar dan waktu bayar itu. Kode unik sudah termasuk Total bayar (PRD §5.5). */
+/** Rincian nominal Pesanan uji (PRD §5.5): Total bayar = Harga jual − potongan voucher + Kode unik. */
+type Rincian = {
+  hargaJual: number;
+  potonganVoucher: number;
+  kodeUnik: number;
+  totalBayar: number;
+};
+
+/** Pesanan dengan rincian nominal dan waktu bayar itu. */
 const sisipkanPesananDibayar = ({
   email,
   status,
-  totalBayar,
+  rincian,
   waktuBayar,
 }: {
   email: string;
   status: StatusPesanan;
-  totalBayar: number;
+  rincian: Rincian;
   waktuBayar: Date | null;
 }) =>
   sisipkanPesanan({
@@ -60,12 +68,20 @@ const sisipkanPesananDibayar = ({
     email,
     waktuBayar,
     rincian: {
-      hargaJual: totalBayar,
-      potonganVoucher: 0,
-      kodeUnik: 0,
-      totalBayar,
+      hargaJual: rincian.hargaJual,
+      potonganVoucher: rincian.potonganVoucher,
+      kodeUnik: rincian.kodeUnik,
+      totalBayar: rincian.totalBayar,
     },
   });
+
+/** Rincian tanpa potongan voucher: Harga jual itu ditambah Kode unik itu. */
+const rincianTanpaVoucher = (hargaJual: number, kodeUnik: number) => ({
+  hargaJual,
+  potonganVoucher: 0,
+  kodeUnik,
+  totalBayar: hargaJual + kodeUnik,
+});
 
 /** Baris daftar Member dengan email itu. */
 async function barisMember(email: string) {
@@ -76,8 +92,8 @@ async function barisMember(email: string) {
 }
 
 /**
- * Kasus pendapatan.json yang semua Pesanannya dibayar di dalam rentangnya, sehingga Pendapatan di fixture juga
- * total belanja Member yang memegang semua Pesanan itu (tests/golden/NOTES.md).
+ * Kasus pendapatan-tanpa-kode-unik.json yang semua Pesanannya dibayar di dalam rentangnya, sehingga Pendapatan di
+ * fixture juga total belanja Member yang memegang semua Pesanan itu (tests/golden/NOTES.md).
  */
 const kasusTanpaPengaruhRentang = pendapatanGolden.kasus.filter(
   ({ input: { rentang, pesanan } }) =>
@@ -88,7 +104,7 @@ const kasusTanpaPengaruhRentang = pendapatanGolden.kasus.filter(
     ),
 );
 
-describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan.json)", () => {
+describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan-tanpa-kode-unik.json)", () => {
   it.each(kasusTanpaPengaruhRentang)(
     "$nama: total belanja Member sama dengan Pendapatan di fixture",
     async ({ input, output }) => {
@@ -98,7 +114,7 @@ describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan.json)"
         await sisipkanPesananDibayar({
           email,
           status: p.status as StatusPesanan,
-          totalBayar: p.totalBayar,
+          rincian: p,
           waktuBayar: new Date(p.dibayarPada),
         });
       }
@@ -109,19 +125,19 @@ describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan.json)"
     },
   );
 
-  it("Contoh PRD §9.3 tanpa batas waktu: Kode unik ikut, Pesanan Bermasalah, Dana Dikembalikan, dan Pesanan email lain tidak", async () => {
+  it("Contoh PRD §9.3 tanpa batas waktu: Kode unik tidak ikut, begitu pula Pesanan Bermasalah, Dana Dikembalikan, dan Pesanan email lain", async () => {
     const email = `budi-${randomUUID()}@mail.com`;
     await sisipkanMember({ email, password: PASSWORD });
     const pesananPada = (
       status: StatusPesanan,
-      totalBayar: number,
+      rincian: Rincian,
       waktuBayar: string | null,
       emailPesanan = email,
     ) =>
       sisipkanPesananDibayar({
         email: emailPesanan,
         status,
-        totalBayar,
+        rincian,
         waktuBayar: waktuBayar === null ? null : new Date(waktuBayar),
       });
     // Total bayar Rp 45.123 = Harga jual Rp 50.000 - potongan voucher Rp 5.000 + Kode unik Rp 123 (PRD §5.5).
@@ -131,21 +147,42 @@ describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan.json)"
       email,
       waktuBayar: new Date("2024-01-05T10:00:00+07:00"),
     });
-    await pesananPada("Selesai", 50010, "2026-11-11T13:30:00+07:00");
-    await pesananPada("Selesai", 135499, "2026-11-17T20:45:00+07:00");
-    await pesananPada("Bermasalah", 50200, "2026-11-11T21:00:00+07:00");
-    await pesananPada("Dana Dikembalikan", 40000, "2026-11-11T08:00:00+07:00");
-    await pesananPada("Menunggu Pembayaran", 45123, null);
     await pesananPada(
       "Selesai",
-      99999,
+      rincianTanpaVoucher(50000, 10),
+      "2026-11-11T13:30:00+07:00",
+    );
+    await pesananPada(
+      "Selesai",
+      rincianTanpaVoucher(135000, 499),
+      "2026-11-17T20:45:00+07:00",
+    );
+    await pesananPada(
+      "Bermasalah",
+      rincianTanpaVoucher(50000, 200),
+      "2026-11-11T21:00:00+07:00",
+    );
+    await pesananPada(
+      "Dana Dikembalikan",
+      rincianTanpaVoucher(40000, 0),
+      "2026-11-11T08:00:00+07:00",
+    );
+    await pesananPada(
+      "Menunggu Pembayaran",
+      rincianTanpaVoucher(45000, 123),
+      null,
+    );
+    await pesananPada(
+      "Selesai",
+      rincianTanpaVoucher(99000, 999),
       "2026-11-11T09:00:00+07:00",
       `x${email}`,
     );
 
     const baris = await barisMember(email);
 
-    expect(baris.belanja.totalBelanja).toBe(230632);
+    // PRD §9.3 ▶ Keputusan 2026-11-23: Rp 45.000 + Rp 50.000 + Rp 135.000.
+    expect(baris.belanja.totalBelanja).toBe(230000);
     expect(baris.belanja.jumlahPesananSelesai).toBe(3);
   });
 
@@ -158,14 +195,14 @@ describe("daftarMember: total belanja (PRD §2.3, tests/golden/pendapatan.json)"
       await sisipkanPesananDibayar({
         email: denganAkhiran(input.a, akhiran),
         status: "Selesai",
-        totalBayar: 45123,
+        rincian: rincianTanpaVoucher(45000, 123),
         waktuBayar: new Date("2026-11-11T09:00:00+07:00"),
       });
 
       const baris = await barisMember(emailMember);
 
       expect(baris.belanja.jumlahPesananSelesai).toBe(output.sama ? 1 : 0);
-      expect(baris.belanja.totalBelanja).toBe(output.sama ? 45123 : 0);
+      expect(baris.belanja.totalBelanja).toBe(output.sama ? 45000 : 0);
     },
   );
 });

@@ -311,7 +311,7 @@ export default async function HalamanRingkasan() {
           judul="Pendapatan"
           {...uang((laba) => laba.pendapatan)}
           href={ALAMAT_LAPORAN}
-          keterangan="Jumlah Total bayar Pesanan Selesai menurut waktu pembayaran (WIB), termasuk Kode unik. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung."
+          keterangan="Jumlah (Harga jual − potongan voucher) Pesanan Selesai menurut waktu pembayaran (WIB). Kode unik tidak dihitung, karena tidak masuk saldo toko. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung."
         />
 
         <KartuTigaAngka
@@ -335,7 +335,7 @@ export default async function HalamanRingkasan() {
           judul="Laba bersih"
           {...uang((laba) => laba.labaBersih)}
           href={ALAMAT_LAPORAN}
-          keterangan="Laba kotor − potongan voucher + Kode unik − Biaya transaksi − Biaya operasional + Kode unik Top up − Biaya transaksi Top up, dalam rentang itu. Nominal top up tidak dihitung."
+          keterangan="Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up, dalam rentang itu. Kode unik dan nominal top up tidak dihitung, karena tidak masuk saldo toko."
         />
 
         <KartuTigaAngka

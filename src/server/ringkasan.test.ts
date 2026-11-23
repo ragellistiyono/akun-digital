@@ -53,8 +53,9 @@ const rincian = (hargaJual: number, kodeUnik: number) => ({
 });
 
 describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
-  it("Pendapatan hari ini adalah jumlah Total bayar Pesanan Selesai yang dibayar hari ini menurut WIB, termasuk Kode unik, tanpa Pesanan Bermasalah dan Dana Dikembalikan", async () => {
+  it("Pendapatan hari ini adalah jumlah (Harga jual − potongan voucher) Pesanan Selesai yang dibayar hari ini menurut WIB, tanpa Kode unik, Pesanan Bermasalah, dan Dana Dikembalikan", async () => {
     // Contoh PRD §9.3: Total bayar Rp 45.123, Rp 50.010, dan Rp 135.499, ditambah Pesanan Bermasalah Rp 50.200.
+    // Tanpa Kode unik, Pendapatan-nya Rp 45.000 + Rp 50.000 + Rp 135.000 (▶ Keputusan 2026-11-23).
     for (const [status, harga, kodeUnik, dibayar] of [
       ["Selesai", 45000, 123, "2031-07-15T09:00:00+07:00"],
       ["Selesai", 50000, 10, "2031-07-15T13:30:00+07:00"],
@@ -78,10 +79,28 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       sekarang: new Date("2031-07-15T22:00:00+07:00"),
     });
 
-    expect(angka.hariIni.pendapatan).toBe(230632);
+    expect(angka.hariIni.pendapatan).toBe(230000);
     expect(angka.hariIni.pesananSelesai).toBe(3);
-    expect(angka.bulanIni.pendapatan).toBe(240632);
+    expect(angka.bulanIni.pendapatan).toBe(240000);
     expect(angka.bulanIni.pesananSelesai).toBe(4);
+  });
+
+  it("UAT-I1: satu Pesanan QRIS Rp 1.000 dengan Kode unik Rp 212 menambah Pendapatan hari ini Rp 1.000, sama dengan kenaikan saldo Qrispy", async () => {
+    // Contoh pembayaran sungguhan 2026-11-22 (PRD §5.5 ▶ Keputusan 2026-11-23): Total bayar Rp 1.212, tetapi saldo
+    // Qrispy toko hanya bertambah Rp 1.000.
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      rincian: rincian(1000, 212),
+      waktuBayar: new Date("2034-02-22T22:27:00+07:00"),
+    });
+
+    const angka = await angkaRingkasan({
+      sekarang: new Date("2034-02-22T23:00:00+07:00"),
+    });
+
+    expect(angka.hariIni.pendapatan).toBe(1000);
+    expect(angka.hariIni.pesananSelesai).toBe(1);
   });
 
   it("Pesanan yang dibuat kemarin pukul 23.58 WIB dan dibayar hari ini pukul 00.01 WIB terhitung hari ini", async () => {
@@ -97,7 +116,7 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       sekarang: new Date("2031-08-20T08:00:00+07:00"),
     });
 
-    expect(angka.hariIni.pendapatan).toBe(45123);
+    expect(angka.hariIni.pendapatan).toBe(45000);
     expect(angka.hariIni.pesananSelesai).toBe(1);
   });
 
@@ -122,7 +141,7 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       sekarang: new Date("2031-09-10T12:00:00+07:00"),
     });
 
-    expect(tanggalBayar.hariIni.pendapatan).toBe(45123);
+    expect(tanggalBayar.hariIni.pendapatan).toBe(45000);
     expect(tanggalBayar.hariIni.pesananSelesai).toBe(1);
     expect(tanggalDiselesaikan.hariIni.pendapatan).toBe(0);
     expect(tanggalDiselesaikan.hariIni.pesananSelesai).toBe(0);
@@ -161,10 +180,11 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       sekarang: new Date("2031-10-15T22:00:00+07:00"),
     });
 
-    expect(hariIni.pendapatan).toBe(230632);
+    // PRD §14.5 ▶ Keputusan 2026-11-23: Laba bersih tanpa Kode unik.
+    expect(hariIni.pendapatan).toBe(230000);
     expect(hariIni.totalHargaModal).toBe(170000);
     expect(hariIni.labaKotor).toBe(65000);
-    expect(hariIni.labaBersih).toBe(49683);
+    expect(hariIni.labaBersih).toBe(49051);
   });
 
   it("Biaya operasional bertanggal bulan lalu mengurangi Laba bersih sepanjang waktu, tetapi tidak Laba bersih bulan ini", async () => {
@@ -192,9 +212,9 @@ describe("angkaRingkasan (PRD §9.2, §9.3, §14.5)", () => {
       sekarang: new Date("2031-12-10T08:00:00+07:00"),
     });
 
-    // Rp 15.000 + Rp 100 − Rp 1.000: biaya bulan lalu tidak dikurangkan.
+    // Rp 15.000 − Rp 1.000, tanpa Kode unik Rp 100: biaya bulan lalu tidak dikurangkan.
     expect(angka.bulanIni.biayaOperasional).toBe(1000);
-    expect(angka.bulanIni.labaBersih).toBe(14100);
+    expect(angka.bulanIni.labaBersih).toBe(14000);
     const dikurangkanSepanjangWaktu =
       angka.sepanjangWaktu.biayaOperasionalDihitung.map((b) => b.id);
     expect(dikurangkanSepanjangWaktu).toContain(bulanLalu.id);
@@ -213,10 +233,10 @@ async function memberBaru(awalan: string) {
   return { email, id };
 }
 
-// PRD §9.2 ▶ Keputusan 2026-11-20 dan §15.8: kartu Laba bersih ikut menghitung Kode unik Top up dan Biaya
-// transaksi Top up, sedangkan Nominal top up tidak masuk Pendapatan. Test ini memakai bulan tersendiri di tahun 2033.
+// PRD §9.2 dan §15.8 (▶ Keputusan 2026-11-20 dan 2026-11-23): kartu Laba bersih mengurangkan Biaya transaksi Top up,
+// sedangkan Kode unik Top up dan Nominal top up tidak dihitung. Test ini memakai bulan tersendiri di tahun 2033.
 describe("angkaRingkasan dengan Top up (PRD §9.2, §15.8)", () => {
-  it("contoh PRD §15.8: satu Pesanan saldo dan satu Top up Berhasil hari ini memberi Laba bersih Rp 14.148, Pendapatan tetap Rp 50.000, dan Top up Bermasalah tidak dihitung", async () => {
+  it("contoh PRD §15.8: satu Pesanan saldo dan satu Top up Berhasil hari ini memberi Laba bersih Rp 13.948, Pendapatan tetap Rp 50.000, dan Top up Bermasalah tidak dihitung", async () => {
     const { id: userId } = await memberBaru("laba-top-up");
     await sisipkanPesanan({
       varianId,
@@ -249,10 +269,10 @@ describe("angkaRingkasan dengan Top up (PRD §9.2, §15.8)", () => {
     });
 
     for (const rentang of [angka.hariIni, angka.bulanIni]) {
+      // tests/golden/laba-top-up-tanpa-kode-unik.json, "Contoh PRD §15.8": Rp 15.000 − Rp 1.052.
       expect(rentang.pendapatan).toBe(50000);
-      expect(rentang.kodeUnikTopUp).toBe(200);
       expect(rentang.biayaTransaksiTopUp).toBe(1052);
-      expect(rentang.labaBersih).toBe(14148);
+      expect(rentang.labaBersih).toBe(13948);
       expect(rentang.topUpBerhasil).toEqual({ jumlah: 1, nominal: 150000 });
     }
     const topUpSepanjangWaktu = angka.sepanjangWaktu.topUpDihitung.map(

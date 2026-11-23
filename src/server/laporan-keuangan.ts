@@ -152,9 +152,10 @@ async function bahanLaporan(saringan: SaringanLaporan) {
 
 /**
  * Rincian angka Laporan keuangan (PRD §14.5, §14.6, §15.8): Pendapatan, Pesanan Selesai, Total Harga modal, Laba
- * kotor, potongan voucher, Kode unik, Biaya transaksi, Biaya operasional, Kode unik Top up, Biaya transaksi Top up,
- * Laba bersih, dan Top up Berhasil dalam saringan itu, dihitung fungsi domain laba. Saat saringan Kategori, Produk,
- * atau Metode aktif, Biaya operasional dan kedua angka Top up tidak dihitung (nilainya null).
+ * kotor, potongan voucher, Biaya transaksi, Biaya operasional, Biaya transaksi Top up, Laba bersih, dan Top up
+ * Berhasil dalam saringan itu, dihitung fungsi domain laba. Kode unik dan Kode unik Top up tidak dihitung, karena
+ * tidak masuk saldo toko (§14.6 ▶ Keputusan 2026-11-23). Saat saringan Kategori, Produk, atau Metode aktif, Biaya
+ * operasional, Biaya transaksi Top up, dan Top up Berhasil tidak dihitung (nilainya null).
  */
 export async function rincianLaporan(saringan: SaringanLaporan) {
   return laba(await bahanLaporan(saringan));
@@ -165,11 +166,11 @@ export async function rincianLaporan(saringan: SaringanLaporan) {
  * fungsi domain kelompokPeriodeLaporan, dan angka setiap kelompok dari fungsi domain laba dengan rentang kelompok
  * itu:
  * - Pendapatan dan jumlah Pesanan Selesai (grafik 1 dan 3) menghitung semua Pesanan Selesai, termasuk yang belum
- *   punya Harga modal;
+ *   punya Harga modal, dengan Pendapatan tanpa Kode unik (§9.3 ▶ Keputusan 2026-11-23);
  * - Laba kotor dan Laba bersih (grafik 2) mengikuti §14.2 dan §14.5, dengan Biaya operasional dikurangkan pada
- *   kelompok yang memuat tanggalnya, serta Kode unik Top up ditambahkan dan Biaya transaksi Top up dikurangkan pada
- *   kelompok yang memuat waktu bayar Top up-nya, kecuali saat saringan Kategori, Produk, atau Metode aktif
- *   (§14.6 ▶ Keputusan 2026-11-20).
+ *   kelompok yang memuat tanggalnya, serta Biaya transaksi Top up dikurangkan pada kelompok yang memuat waktu bayar
+ *   Top up-nya, kecuali saat saringan Kategori, Produk, atau Metode aktif (§14.6 ▶ Keputusan 2026-11-20). Kode unik
+ *   Top up tidak ditambahkan (§14.6 ▶ Keputusan 2026-11-23).
  * Kelompok tanpa Pesanan Selesai bernilai 0.
  *
  * Grafik Produk terlaris dan Pendapatan per Kategori (grafik 4 dan 5) dihitung dari semua Pesanan Selesai dalam

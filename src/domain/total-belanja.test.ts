@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import kesamaanEmail from "../../tests/golden/kesamaan-email.json";
-import pendapatanGolden from "../../tests/golden/pendapatan.json";
+import pendapatanGolden from "../../tests/golden/pendapatan-tanpa-kode-unik.json";
 import type { StatusPesanan } from "./status-pesanan";
 import { totalBelanja } from "./total-belanja";
 
@@ -10,7 +10,7 @@ type KasusPendapatan = (typeof pendapatanGolden.kasus)[number];
 const EMAIL_MEMBER = "budi@mail.com";
 
 /**
- * Kasus pendapatan.json yang semua Pesanannya dibayar di dalam rentangnya. Untuk kasus itu batas rentang
+ * Kasus pendapatan-tanpa-kode-unik.json yang semua Pesanannya dibayar di dalam rentangnya. Untuk kasus itu batas rentang
  * tidak mengubah apa pun, jadi Pendapatan yang tertulis di fixture juga total belanja Member yang memegang
  * semua Pesanan itu (tests/golden/NOTES.md, §2.3 total belanja Member).
  */
@@ -29,17 +29,20 @@ const pesananBeremail = (
   email: string,
 ) =>
   pesanan.map((p) => ({
+    ...p,
     status: p.status as StatusPesanan,
-    totalBayar: p.totalBayar,
     dibayarPada: new Date(p.dibayarPada),
     email,
   }));
 
-// PRD §2.3: total belanja dihitung seperti Pendapatan (§9.3), dari Pesanan Member itu saja, tanpa batas waktu.
+// PRD §2.3: total belanja dihitung seperti Pendapatan (§9.3 ▶ Keputusan 2026-11-23), dari Pesanan Member itu saja,
+// tanpa batas waktu: jumlah (Harga jual − potongan voucher), tanpa Kode unik.
 describe("totalBelanja", () => {
-  it("fixture pendapatan.json memuat kasus yang tidak terpengaruh rentang", () => {
+  it("fixture pendapatan-tanpa-kode-unik.json memuat kasus yang tidak terpengaruh rentang", () => {
     expect(kasusTanpaPengaruhRentang.map((k) => k.nama)).toEqual([
       "Contoh PRD",
+      "Contoh pembayaran sungguhan 2026-11-22: Kode unik tidak masuk saldo toko",
+      "Pesanan saldo tanpa Kode unik",
       "Tidak ada Pesanan Selesai",
     ]);
   });
@@ -77,12 +80,16 @@ describe("totalBelanja", () => {
       pesanan: [
         {
           status: "Dana Dikembalikan",
+          hargaJual: 40000,
+          potonganVoucher: 0,
           totalBayar: 40000,
           dibayarPada: new Date("2026-11-11T08:00:00+07:00"),
           email: EMAIL_MEMBER,
         },
         {
           status: "Menunggu Pembayaran",
+          hargaJual: 50000,
+          potonganVoucher: 5000,
           totalBayar: 45123,
           dibayarPada: null,
           email: EMAIL_MEMBER,
@@ -99,12 +106,16 @@ describe("totalBelanja", () => {
       pesanan: [
         {
           status: "Selesai",
+          hargaJual: 50000,
+          potonganVoucher: 5000,
           totalBayar: 45123,
           dibayarPada: new Date("2024-01-05T10:00:00+07:00"),
           email: EMAIL_MEMBER,
         },
         {
           status: "Selesai",
+          hargaJual: 135000,
+          potonganVoucher: 0,
           totalBayar: 135499,
           dibayarPada: new Date("2026-11-17T20:45:00+07:00"),
           email: EMAIL_MEMBER,
@@ -112,8 +123,9 @@ describe("totalBelanja", () => {
       ],
     });
 
+    // Rp 45.000 + Rp 135.000, tanpa Kode unik Rp 123 dan Rp 499.
     expect(hasil).toMatchObject({
-      totalBelanja: 180622,
+      totalBelanja: 180000,
       jumlahPesananSelesai: 2,
     });
   });
@@ -127,6 +139,8 @@ describe("totalBelanja", () => {
         pesanan: [
           {
             status: "Selesai",
+            hargaJual: 50000,
+            potonganVoucher: 5000,
             totalBayar: 45123,
             dibayarPada: new Date("2026-11-11T09:00:00+07:00"),
             email: input.a,
