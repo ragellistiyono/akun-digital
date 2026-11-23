@@ -214,18 +214,3 @@ test("UAT-O7: dengan saldo Rp 45.000, Checkout Netflix Premium 1 Bulan menampilk
     page.getByRole("button", { name: "Bayar Rp 45.000 dengan saldo" }),
   ).toBeVisible();
 });
-
-test("Tamu hanya melihat QRIS di Checkout", async ({ page }) => {
-  const varianId = await varianBaru("Uji Bayar", 1000);
-
-  await page.goto(`/checkout?varianId=${varianId}`);
-
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Checkout" }),
-  ).toBeVisible();
-  await expect(pilihanMetode(page)).toHaveCount(0);
-  await expect(page.getByRole("radio", { name: /^Saldo/ })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Bayar dengan QRIS" }),
-  ).toBeVisible();
-});

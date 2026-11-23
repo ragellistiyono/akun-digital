@@ -23,7 +23,12 @@ import { sisipkanProduk } from "@/server/uji-katalog";
 import { sisipkanMember } from "@/server/uji-member";
 import { sisipkanPesanan } from "@/server/uji-pesanan";
 
-import { aksiDaftarLewatPesanan } from "./aksi";
+import {
+  aksiDaftar,
+  aksiDaftarLewatPesanan,
+  aksiKirimUlangKode,
+  aksiMasukkanKode,
+} from "./aksi";
 
 // Test integrasi Server Action ajakan "Buat akun untuk menyimpan riwayat" di Halaman Pesanan Selesai (T52,
 // PRD §7.1, §7.2 ▶ Keputusan 2026-11-17) dengan database app_test dan email tiruan dari .env.ci. Cookie yang
@@ -70,6 +75,9 @@ beforeEach(() => {
     set: (nama: string, value: string) => {
       cookieBrowser.set(nama, value);
     },
+    delete: (nama: string) => {
+      cookieBrowser.delete(nama);
+    },
   };
   vi.mocked(cookies).mockResolvedValue(toko as unknown as TokoCookie);
   vi.mocked(headers).mockResolvedValue(new Headers());
@@ -100,9 +108,9 @@ function formulir(isian: Record<string, string>) {
 }
 
 /** Hasil aksi: keadaan form yang dikembalikan, atau alamat tujuan bila aksi mengalihkan halaman. */
-async function daftarLewatPesanan(isian: Record<string, string>) {
+async function hasilAksi<Keadaan>(aksi: Promise<Keadaan>) {
   try {
-    return { keadaan: await aksiDaftarLewatPesanan({}, formulir(isian)) };
+    return { keadaan: await aksi };
   } catch (galat) {
     if (
       typeof galat === "object" &&
@@ -116,6 +124,9 @@ async function daftarLewatPesanan(isian: Record<string, string>) {
     throw galat;
   }
 }
+
+const daftarLewatPesanan = (isian: Record<string, string>) =>
+  hasilAksi(aksiDaftarLewatPesanan({}, formulir(isian)));
 
 async function barisPendaftar(email: string) {
   return db
@@ -236,5 +247,115 @@ describe("aksiDaftarLewatPesanan", () => {
     await expect(
       daftarLewatPesanan({ tautan: "A".repeat(43), password: PASSWORD }),
     ).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
+  });
+});
+
+// Tujuan setelah Kode verifikasi (T85, PRD §7.3 dan §15.7 ▶ Keputusan 2026-11-22, UAT-O10). Tautan "Daftar" di pilihan
+// Saldo pada Checkout Tamu membuka halaman Daftar dengan tujuan halaman Top up. Tujuan itu dibawa form Daftar ke
+// halaman verifikasi, lalu oleh isian Kode verifikasi dan "Kirim ulang kode" di halaman itu.
+describe("tujuan setelah Kode verifikasi", () => {
+  const TOP_UP = "/akun/top-up";
+
+  const daftar = (isian: Record<string, string>) =>
+    hasilAksi(aksiDaftar({ email: "" }, formulir(isian)));
+  const masukkanKode = (isian: Record<string, string>) =>
+    hasilAksi(aksiMasukkanKode({}, formulir(isian)));
+  const kirimUlang = (isian: Record<string, string>) =>
+    hasilAksi(aksiKirimUlangKode(formulir(isian)));
+
+  /** Kode dari email "Kode verifikasi: <kode>" terakhir ke alamat itu. */
+  function kodeTerakhir(email: string) {
+    const cocok = /^Kode verifikasi: (\d{6})$/.exec(
+      emailTiruanKe(email).at(-1)?.subjek ?? "",
+    );
+    if (!cocok) throw new Error(`Belum ada email Kode verifikasi ke ${email}.`);
+    return cocok[1];
+  }
+
+  const kodeLainDari = (kode: string) =>
+    kode === "000000" ? "111111" : "000000";
+
+  it("form Daftar dengan tujuan halaman Top up membawa Pendaftar ke halaman verifikasi yang membawa tujuan itu", async () => {
+    expect(
+      await daftar({
+        email: emailBaru("sinta"),
+        password: PASSWORD,
+        tujuan: TOP_UP,
+      }),
+    ).toEqual({ alamat: "/daftar/verifikasi?tujuan=%2Fakun%2Ftop-up" });
+  });
+
+  it("Kode verifikasi yang benar membawa Member baru ke halaman Top up, juga setelah kode salah dan Kirim ulang kode", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const email = emailBaru("sinta");
+    await daftar({ email, password: PASSWORD, tujuan: TOP_UP });
+
+    expect(
+      await masukkanKode({
+        kode: kodeLainDari(kodeTerakhir(email)),
+        tujuan: TOP_UP,
+      }),
+    ).toEqual({
+      keadaan: {
+        galat: {
+          umum: "Kode verifikasi salah. Periksa lagi kode di email terakhir dari kami.",
+        },
+      },
+    });
+
+    vi.setSystemTime(Date.now() + 61_000);
+    expect(await kirimUlang({ tujuan: TOP_UP })).toEqual({
+      keadaan: {
+        pesan: {
+          jenis: "terkirim",
+          teks: `Kode verifikasi baru sudah kami kirim ke ${email}.`,
+        },
+      },
+    });
+
+    expect(
+      await masukkanKode({ kode: kodeTerakhir(email), tujuan: TOP_UP }),
+    ).toEqual({ alamat: TOP_UP });
+  });
+
+  it("tanpa tujuan, Pendaftar dibawa ke halaman verifikasi biasa, lalu Member baru dibawa ke Riwayat Pesanan", async () => {
+    const email = emailBaru("budi");
+
+    expect(await daftar({ email, password: PASSWORD })).toEqual({
+      alamat: "/daftar/verifikasi",
+    });
+    expect(await masukkanKode({ kode: kodeTerakhir(email) })).toEqual({
+      alamat: "/riwayat",
+    });
+  });
+
+  for (const tujuan of [
+    "https://jahat.example/akun/top-up",
+    "//jahat.example/akun/top-up",
+    "/\\jahat.example/akun/top-up",
+    "javascript:alert(1)",
+    "akun/top-up",
+  ]) {
+    it(`tujuan ke luar toko (${tujuan}) diabaikan, dan Member baru dibawa ke Riwayat Pesanan`, async () => {
+      const email = emailBaru("budi");
+
+      expect(await daftar({ email, password: PASSWORD, tujuan })).toEqual({
+        alamat: "/daftar/verifikasi",
+      });
+      expect(await masukkanKode({ kode: kodeTerakhir(email), tujuan })).toEqual(
+        { alamat: "/riwayat" },
+      );
+    });
+  }
+
+  it("browser tanpa Pendaftar dibawa kembali ke halaman Daftar dengan tujuan yang sama", async () => {
+    const daftarDenganTujuan = "/daftar?tujuan=%2Fakun%2Ftop-up";
+
+    expect(await kirimUlang({ tujuan: TOP_UP })).toEqual({
+      alamat: daftarDenganTujuan,
+    });
+    expect(await masukkanKode({ kode: "123456", tujuan: TOP_UP })).toEqual({
+      alamat: daftarDenganTujuan,
+    });
   });
 });

@@ -14,6 +14,7 @@ import { BilahLekat } from "../../../_components/bilah-lekat";
 import { PesanGalat } from "../../../_components/pesan-galat";
 import { RincianNominal } from "../../../_components/rincian-nominal";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
+import { denganTujuan } from "../../daftar/tujuan";
 import {
   aksiCheckout,
   aksiPakaiVoucher,
@@ -35,26 +36,40 @@ const KELAS_LABEL = "text-[17px] leading-tight";
  */
 const KELAS_TAUTAN = "text-pulpen underline decoration-2 underline-offset-4";
 
+/** Halaman Top up (PRD §15.3). */
+const ALAMAT_TOP_UP = "/akun/top-up";
+
+/** Halaman Daftar yang membawa Member baru ke halaman Top up setelah Kode verifikasi benar (PRD §7.3). */
+const ALAMAT_DAFTAR_LALU_TOP_UP = denganTujuan("/daftar", ALAMAT_TOP_UP);
+
 /**
- * Pilihan Metode untuk Member (PRD §15.7), dengan tampilan kartu radio seperti Pilihan Varian (DESIGN.md "Pilihan
- * Varian"): "Saldo (Rp X)" dan "QRIS". Pilihan Saldo yang saldonya kurang bergaris putus-putus, beropasitas 60%,
+ * Pilihan Metode (PRD §15.7), dengan tampilan kartu radio seperti Pilihan Varian (DESIGN.md "Pilihan Varian"):
+ * "Saldo (Rp X)" dan "QRIS" untuk Member. Pilihan Saldo yang saldonya kurang bergaris putus-putus, beropasitas 60%,
  * tidak bisa dipilih, dan di bawahnya tertulis "Saldo kurang Rp X. Top up dulu." dengan kata "Top up" menaut ke
  * halaman Top up. Kecukupan saldo dan selisihnya datang dari server (bayarSaldo).
+ *
+ * Tamu (`saldo` null) melihat pilihan "Saldo" tanpa nominal dengan tampilan yang sama seperti saldo kurang, dan di
+ * bawahnya "Bayar pakai saldo khusus Member. Masuk, atau Daftar lalu top up." (PRD §15.7 ▶ Keputusan 2026-11-22).
+ * "Masuk" membuka halaman Masuk dengan alamat kembali ke Checkout ini (`alamatMasuk`), dan "Daftar" membuka halaman
+ * Daftar dengan tujuan halaman Top up. Kalimat di bawah pilihan Saldo berada di luar kartu yang diredupkan, supaya
+ * tautannya terbaca penuh (DESIGN.md Inputs / Fields ▶ Keputusan 2026-11-22).
  */
 function PilihanMetode({
   saldo,
   metode,
   pilih,
+  alamatMasuk,
 }: {
-  saldo: BayarSaldo;
+  saldo: BayarSaldo | null;
   metode: Metode;
   pilih: (metode: Metode) => void;
+  alamatMasuk: string;
 }) {
   const pilihan: { nilai: Metode; label: string; bisaDipilih: boolean }[] = [
     {
       nilai: "Saldo",
-      label: `Saldo (${rupiah(saldo.saldo)})`,
-      bisaDipilih: saldo.saldoCukup,
+      label: saldo ? `Saldo (${rupiah(saldo.saldo)})` : "Saldo",
+      bisaDipilih: saldo?.saldoCukup ?? false,
     },
     { nilai: "QRIS", label: "QRIS", bisaDipilih: true },
   ];
@@ -94,11 +109,30 @@ function PilihanMetode({
             </label>
             {nilai === "Saldo" && !bisaDipilih && (
               <p className="text-[16px] text-pensil-redup">
-                Saldo kurang {rupiah(saldo.kurang)}.{" "}
-                <Link href="/akun/top-up" className={KELAS_TAUTAN}>
-                  Top up
-                </Link>{" "}
-                dulu.
+                {saldo ? (
+                  <>
+                    Saldo kurang {rupiah(saldo.kurang)}.{" "}
+                    <Link href={ALAMAT_TOP_UP} className={KELAS_TAUTAN}>
+                      Top up
+                    </Link>{" "}
+                    dulu.
+                  </>
+                ) : (
+                  <>
+                    Bayar pakai saldo khusus Member.{" "}
+                    <Link href={alamatMasuk} className={KELAS_TAUTAN}>
+                      Masuk
+                    </Link>
+                    , atau{" "}
+                    <Link
+                      href={ALAMAT_DAFTAR_LALU_TOP_UP}
+                      className={KELAS_TAUTAN}
+                    >
+                      Daftar
+                    </Link>{" "}
+                    lalu top up.
+                  </>
+                )}
               </p>
             )}
           </div>
@@ -141,11 +175,12 @@ type PakaiVoucher = {
  * Bila Member sedang login (`emailMember`), isian email sudah berisi email Member dan tidak bisa diubah
  * (PRD §5.2). Server tetap memakai email dari sesi Member, bukan dari isian ini.
  *
- * Member juga memilih Metode, Saldo atau QRIS (PRD §15.7); Tamu (`checkout.saldo` null) hanya membayar dengan QRIS.
- * Kecukupan saldo diambil dari hasil "Pakai" yang diterima, atau dari Checkout tanpa Voucher bila belum ada, jadi
- * kecukupannya ikut berubah setiap kali hasil "Pakai" mengubah potongan. Pilihan awalnya Saldo bila saldo cukup dan
- * QRIS bila tidak; pilihan yang ditekan Pembeli dipertahankan selama saldonya cukup. Dengan Saldo, rincian berisi
- * Harga jual, potongan voucher, dan Total bayar tanpa Kode unik, dan tombolnya "Bayar Rp X dengan saldo".
+ * Member juga memilih Metode, Saldo atau QRIS (PRD §15.7). Tamu (`checkout.saldo` null) melihat pilihan Saldo yang
+ * tidak bisa dipilih beserta ajakan Masuk atau Daftar, sehingga Tamu membayar dengan QRIS (PRD §15.7 ▶ Keputusan
+ * 2026-11-22). Kecukupan saldo diambil dari hasil "Pakai" yang diterima, atau dari Checkout tanpa Voucher bila belum
+ * ada, jadi kecukupannya ikut berubah setiap kali hasil "Pakai" mengubah potongan. Pilihan awalnya Saldo bila saldo
+ * cukup dan QRIS bila tidak; pilihan yang ditekan Pembeli dipertahankan selama saldonya cukup. Dengan Saldo, rincian
+ * berisi Harga jual, potongan voucher, dan Total bayar tanpa Kode unik, dan tombolnya "Bayar Rp X dengan saldo".
  */
 export function FormCheckout({
   checkout,
@@ -333,13 +368,12 @@ export function FormCheckout({
           </div>
         </div>
 
-        {saldo && (
-          <PilihanMetode
-            saldo={saldo}
-            metode={metode}
-            pilih={setMetodeDitekan}
-          />
-        )}
+        <PilihanMetode
+          saldo={saldo}
+          metode={metode}
+          pilih={setMetodeDitekan}
+          alamatMasuk={alamatMasuk}
+        />
       </div>
 
       <div className="min-w-0 lebar:sticky lebar:top-24">

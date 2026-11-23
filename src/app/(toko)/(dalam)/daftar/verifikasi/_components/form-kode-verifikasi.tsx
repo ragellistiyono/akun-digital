@@ -5,14 +5,15 @@ import { useActionState } from "react";
 import { Isian, PesanGalat } from "../../../../../_masuk/form-masuk";
 import { aksiMasukkanKode } from "../../aksi";
 import type { KeadaanFormKode } from "../../pesan-daftar";
+import { PARAMETER_TUJUAN } from "../../tujuan";
 
 const KEADAAN_AWAL: KeadaanFormKode = {};
 
 /**
  * Isian Kode verifikasi 6 digit dengan tombol "Verifikasi" (PRD §7.3). Penolakan kode tampil di bawah
- * isian.
+ * isian. Form ini membawa `tujuan` setelah verifikasi, bila ada (PRD §7.3 ▶ Keputusan 2026-11-22).
  */
-export function FormKodeVerifikasi() {
+export function FormKodeVerifikasi({ tujuan }: { tujuan: string | null }) {
   const [keadaan, aksi, sedangMengirim] = useActionState(
     aksiMasukkanKode,
     KEADAAN_AWAL,
@@ -20,6 +21,7 @@ export function FormKodeVerifikasi() {
 
   return (
     <form action={aksi} noValidate className="flex flex-col gap-4">
+      {tujuan && <input type="hidden" name={PARAMETER_TUJUAN} value={tujuan} />}
       <Isian
         nama="kode"
         label="Kode verifikasi"
