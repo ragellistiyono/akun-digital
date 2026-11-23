@@ -34,6 +34,12 @@ import {
   PESAN_KODE_SALAH,
   pesanTungguKode,
 } from "./pesan-daftar";
+import {
+  denganTujuan,
+  PARAMETER_TUJUAN,
+  TUJUAN_SETELAH_VERIFIKASI,
+  tujuanAman,
+} from "./tujuan";
 
 // Password disimpan persis seperti diketik, jadi tidak dipangkas (PRD §7.5).
 const PasswordBaru = z
@@ -62,8 +68,9 @@ const MasukanDaftar = z.object({
 
 /**
  * Form Daftar (PRD §7.2): email dan password menjadi Pendaftar, lalu Kode verifikasi dikirim ke email
- * itu dan Pendaftar dibawa ke halaman verifikasi. Email yang sudah terdaftar dan pendaftaran ulang
- * sebelum jeda 60 detik habis ditolak tanpa mengubah apa pun.
+ * itu dan Pendaftar dibawa ke halaman verifikasi, dengan tujuan setelah verifikasi yang dibawa form ini (PRD §7.3
+ * ▶ Keputusan 2026-11-22). Email yang sudah terdaftar dan pendaftaran ulang sebelum jeda 60 detik habis ditolak
+ * tanpa mengubah apa pun.
  */
 export async function aksiDaftar(
   _sebelumnya: KeadaanFormDaftar,
@@ -91,7 +98,12 @@ export async function aksiDaftar(
   }
 
   await simpanEmailPendaftar(masukan.data.email);
-  redirect("/daftar/verifikasi");
+  redirect(
+    denganTujuan(
+      "/daftar/verifikasi",
+      tujuanAman(formData.get(PARAMETER_TUJUAN)),
+    ),
+  );
 }
 
 /**
@@ -140,12 +152,19 @@ export async function aksiDaftarLewatPesanan(
 /**
  * Tombol "Kirim ulang kode" di halaman verifikasi (PRD §7.7): mengirim Kode verifikasi baru ke email
  * Pendaftar di browser ini, paling cepat 60 detik setelah kode terakhir. Browser tanpa Pendaftar dibawa
- * kembali ke halaman Daftar.
+ * kembali ke halaman Daftar, dengan tujuan setelah verifikasi yang dibawa form ini (PRD §7.3 ▶ Keputusan
+ * 2026-11-22).
  */
-export async function aksiKirimUlangKode(): Promise<KeadaanKirimUlang> {
+export async function aksiKirimUlangKode(
+  formData: FormData,
+): Promise<KeadaanKirimUlang> {
   const email = await bacaEmailPendaftar();
   const kirim = email && (await kirimUlangKodeVerifikasi({ email }));
-  if (!kirim || kirim.hasil === "bukan-pendaftar") redirect("/daftar");
+  if (!kirim || kirim.hasil === "bukan-pendaftar") {
+    redirect(
+      denganTujuan("/daftar", tujuanAman(formData.get(PARAMETER_TUJUAN))),
+    );
+  }
 
   if (kirim.hasil === "tunggu") {
     return {
@@ -183,16 +202,18 @@ const PESAN_PENOLAKAN_KODE = {
 
 /**
  * Isian Kode verifikasi di halaman verifikasi (PRD §7.3, §7.7): kode untuk Pendaftar di browser ini.
- * Kode yang benar mengaktifkan akun Member, lalu Pendaftar langsung masuk dan dibawa ke Riwayat Pesanan
- * (PRD §7.3 ▶ Keputusan 2026-11-17). Kode yang salah, kedaluwarsa, atau hangus ditolak dengan sebabnya.
- * Browser tanpa Pendaftar dibawa kembali ke halaman Daftar.
+ * Kode yang benar mengaktifkan akun Member, lalu Pendaftar langsung masuk dan dibawa ke tujuan yang dibawa form ini,
+ * misalnya halaman Top up (PRD §7.3 ▶ Keputusan 2026-11-22). Tanpa tujuan, atau bila tujuannya menunjuk ke luar
+ * toko, Member baru dibawa ke Riwayat Pesanan (PRD §7.3 ▶ Keputusan 2026-11-17). Kode yang salah, kedaluwarsa, atau
+ * hangus ditolak dengan sebabnya. Browser tanpa Pendaftar dibawa kembali ke halaman Daftar dengan tujuan yang sama.
  */
 export async function aksiMasukkanKode(
   _sebelumnya: KeadaanFormKode,
   formData: FormData,
 ): Promise<KeadaanFormKode> {
+  const tujuan = tujuanAman(formData.get(PARAMETER_TUJUAN));
   const email = await bacaEmailPendaftar();
-  if (!email) redirect("/daftar");
+  if (!email) redirect(denganTujuan("/daftar", tujuan));
 
   const masukan = MasukanKode.safeParse({
     kode: String(formData.get("kode") ?? ""),
@@ -208,11 +229,13 @@ export async function aksiMasukkanKode(
     kode: masukan.data.kode,
     kepala: await headers(),
   });
-  if (masukkan.hasil === "bukan-pendaftar") redirect("/daftar");
+  if (masukkan.hasil === "bukan-pendaftar") {
+    redirect(denganTujuan("/daftar", tujuan));
+  }
   if (masukkan.hasil !== "aktif") {
     return { galat: { umum: PESAN_PENOLAKAN_KODE[masukkan.hasil] } };
   }
 
   await hapusEmailPendaftar();
-  redirect("/riwayat");
+  redirect(tujuan ?? TUJUAN_SETELAH_VERIFIKASI);
 }

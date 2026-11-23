@@ -11,7 +11,8 @@ import { FormCheckout } from "./_components/form-checkout";
 // Form checkout (PRD §5.2) untuk Varian yang dipilih di Halaman Produk (`/checkout?varianId=…`). Varian
 // yang tidak bisa dibeli (PRD §3.7) menampilkan halaman tidak ditemukan. Bila Member sedang login,
 // isian emailnya sudah terisi email Member dan tidak bisa diubah, dan ia bisa memilih membayar dengan saldonya
-// (PRD §15.7). Tamu hanya melihat QRIS.
+// (PRD §15.7). Tamu melihat pilihan Saldo yang tidak bisa dipilih beserta ajakan Masuk atau Daftar, dan membayar
+// dengan QRIS (PRD §15.7 ▶ Keputusan 2026-11-22).
 //
 // Alamat kembali dari tautan Masuk di pesan Voucher khusus Member membawa kode voucher yang tadi diketik
 // (`&kodeVoucher=…`), supaya isian kode sudah berisi kode itu setelah login (PRD §8.7 ▶ Keputusan 2026-11-17).
