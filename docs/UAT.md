@@ -695,6 +695,8 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
   - Coba juga di ponsel: modal selebar layar dengan tombol bersusun.
 - PRD: §9.10
 
+▶ Keputusan 2026-11-23 (#264): Ulangi langkah 1 dalam tampilan gelap. Latar di belakang modal harus meredupkan halaman, bukan meneranginya.
+
 ## J. Email (§10)
 
 **UAT-J1 — Tiga jenis email**
@@ -752,6 +754,25 @@ Pada skenario voucher, cukup lihat rincian di halaman bayar, lalu batalkan Pesan
 - Langkah tambahan: pilih "Perangkat", lalu ubah ponsel ke mode gelap. Hasil: toko kembali mengikuti ponsel dan tampil gelap.
 - Langkah tambahan: pilih "Gelap" di tab Akun, lalu buka dasbor admin di browser yang sama. Hasil: dasbor admin juga tampil gelap.
 
+▶ Keputusan 2026-11-23 (#264): Pilihan mode di tab Akun diganti tombol tema di bilah atas, dan tema awalnya Terang. Skenario ini diganti UAT-K6.
+
+**UAT-K6 — Tombol tema di bilah atas**
+- Langkah:
+  1. Ubah ponsel ke mode gelap. Di jendela penyamaran, buka Beranda.
+  2. Ketuk ikon bulan di bilah atas, lalu buka Halaman Produk dan tab Akun.
+  3. Tutup browser, lalu buka toko lagi.
+  4. Ketuk ikon matahari.
+  5. Buka dasbor admin di browser yang sama, lalu ketuk ikon tema di dekat tombol "Keluar".
+  6. Ulangi langkah 1–2 di layar 360 px.
+- Hasil:
+  - Langkah 1: toko tampil terang walaupun ponsel dalam mode gelap. Ada ikon bulan di kiri tombol "Masuk".
+  - Langkah 2: toko langsung berganti gelap tanpa memuat ulang, dan ikonnya menjadi matahari. Tab Akun tidak lagi punya bagian "Tampilan".
+  - Langkah 3: toko tetap gelap.
+  - Langkah 4: toko kembali terang.
+  - Langkah 5: dasbor admin tampil dengan tema yang sama dengan toko, lalu berganti setelah ikonnya diketuk. Toko di tab lain ikut berganti setelah dimuat ulang.
+  - Langkah 6: monogram, ikon tema, dan tombol "Masuk" muat dalam satu baris tanpa gulir ke samping.
+- PRD: §11.3, §11.4
+
 **UAT-K4 — Pasang seperti aplikasi (M3)**
 - Langkah: di ponsel, pilih "Tambahkan ke layar utama", lalu buka dari ikonnya.
 - Hasil:
@@ -800,7 +821,7 @@ Jalankan skenario sesuai milestone yang sedang diuji:
 | M3 | K2, K3, K4 |
 | M4 | N1–N10, lalu ulangi I1 untuk memastikan Pendapatan dan Pesanan Selesai tidak berubah |
 | M5 | O1–O9, lalu ulangi I1 dan N4 untuk memastikan kartu lain tidak berubah selain dua kartu saldo |
-| M6 | E8, I6, D5–D7, O10, P1–P5, lalu ulangi O6 untuk memastikan bayar dengan saldo tetap berjalan, serta ulangi I1, N6, dan O9 untuk memeriksa Pendapatan dan Laba bersih tanpa Kode unik |
+| M6 | E8, I6, D5–D7, K6, O10, P1–P5, lalu ulangi O6 untuk memastikan bayar dengan saldo tetap berjalan, serta ulangi I1, N6, dan O9 untuk memeriksa Pendapatan dan Laba bersih tanpa Kode unik |
 
 PRD: §13
 
@@ -1108,6 +1129,8 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
   - Langkah 4: kartu Produk menampilkan "Gratis" tanpa kata "Mulai", dengan Harga normal Rp 15.000 dicoret dan tanpa label Hemat. Halaman Produk menampilkan "Gratis khusus Member, maksimal 2 per Member".
 - PRD: §16.1, §16.2, §16.4
 
+▶ Keputusan 2026-11-23 (#264): Pada langkah 4, tombol di Halaman Produk berbunyi "Ambil gratis".
+
 **UAT-P2 — Tamu membuka Checkout Produk gratis**
 - Langkah:
   1. Di jendela penyamaran, buka Checkout Akun Uji Gratis sebagai Tamu.
@@ -1129,6 +1152,10 @@ Skenario bagian ini dijalankan berurutan, karena O2 sampai O8 memakai saldo dari
   - Langkah 3: tombol "Ambil gratis" tidak tampil. Sebagai gantinya tampil "Anda sudah mengambil 2 dari batas 2 untuk Produk ini."
   - Langkah 4: Metode Gratis, Total bayar Rp 0, Biaya transaksi Rp 0, Harga modal Rp 0, dan riwayat status "Selesai" dengan pelaku "Pembeli (gratis)". Kedua Pesanan tampil di Riwayat Pesanan Member uji.
 - PRD: §16.2, §16.3, §16.4
+
+▶ Keputusan 2026-11-23 (#264):
+- Pada langkah 1, Checkout menampilkan kalimat "Dengan mengambil, Anda menyetujui Syarat & Ketentuan" dengan tautan, di atas tombol "Ambil gratis".
+- Email "Pesanan selesai" dibuka dengan "Pesanan gratis <Nomor Pesanan> sudah kami proses. Berikut Item stok Anda."
 
 **UAT-P4 — Batas diubah dan stok habis**
 - Langkah:
