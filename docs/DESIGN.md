@@ -591,6 +591,10 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - Keterangan "Gratis khusus Member, maksimal M per Member" di Halaman Produk memakai teks bantuan biasa, tepat di bawah harga.
 - Varian habis tetap memakai label Habis seperti Produk lain.
 
+▶ Keputusan 2026-11-23 (#264): Produk gratis (PRD §16.4)
+- Tombol beli di Halaman Produk gratis berbunyi "Ambil gratis", dengan gaya tombol beli yang sama.
+- Letak keterangan "Gratis khusus Member, maksimal M per Member" dipertahankan: di bawah Pilihan Varian bila Varian-nya lebih dari satu, atau tepat di bawah harga bila hanya satu Varian.
+
 ### Inputs / Fields
 - **Isian** (`isian`): tinggi 52 px, radius `coret-alt`, latar `permukaan`, garis 2 px `pensil`, Patrick Hand 18 px, placeholder `pensil-redup`. Textarea ditambah `py-3`. Label berada di atas isian (Label 17 px, jarak 8 px), dan teks bantuan di bawahnya (Bantuan 16 px, `pensil-redup`).
 - **Fokus:** garis menjadi `pulpen`, ditambah halo 3 px `pulpen` 20%, tanpa outline bawaan.
@@ -610,6 +614,8 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 ▶ Keputusan 2026-11-22 (#246): Pilihan Saldo untuk Tamu (PRD §15.7)
 - Pilihan Saldo di Checkout Tamu memakai tampilan pilihan Saldo yang saldonya kurang: garis putus-putus, opasitas 60%, dan tidak bisa dipilih. Labelnya "Saldo", tanpa nominal.
 - Kalimat "Bayar pakai saldo khusus Member. Masuk, atau Daftar lalu top up." berada di bawah kartu pilihan itu, di luar bagian yang diredupkan, supaya tautan "Masuk" dan "Daftar" tetap terbaca penuh dan bisa diketuk. Kedua tautan memakai gaya tautan biasa.
+
+▶ Keputusan 2026-11-23 (#264): Kontrol segmen mode (Perangkat, Terang, Gelap) di tab Akun dihapus, dan digantikan tombol tema di bilah atas (Navigation, PRD §11.3).
 
 ### Navigation
 - **Garis coretan** (`GarisCoretan` di `kerangka-bilah-atas.tsx`): garis `pensil` bergelombang tipis, seperti garis yang ditarik tangan. Dipakai di tepi bawah bilah atas dan tepi atas navigasi bawah.
@@ -642,6 +648,19 @@ Harga normal yang dicoret dan "Hemat N%" diambil dari Varian yang menjadi sumber
 - **Keyboard dan pembaca layar:** modal memakai `role="alertdialog"` dengan `aria-modal="true"`, dan judul serta rinciannya menjadi label dan deskripsinya. Saat modal terbuka, fokus pindah ke "Batal", supaya Enter yang tidak disengaja tidak menjalankan aksi. Tab berputar di dalam modal. Esc dan ketukan di lapisan latar sama dengan "Batal". Setelah modal tertutup, fokus kembali ke tombol yang membukanya.
 - **Selama aksi diproses:** kedua tombol nonaktif, tombol aksi menampilkan teks proses seperti "Menghapus…", dan Esc serta ketukan di latar tidak menutup modal.
 - **Gerak:** modal muncul dengan pudar 150 ms memakai easing standar. Di bawah `prefers-reduced-motion: reduce`, modal langsung tampil.
+
+▶ Keputusan 2026-11-23 (#264): Modal penegasan dan tombol tema
+- **Judul Modal penegasan** tetap label tombol pemicu ditambah "?", misalnya "Hapus Voucher?", "Kirim Item stok?", atau "Tambah saldo?".
+- **Latar Modal penegasan** memakai token baru `latar-modal`: `pensil` 40% di mode terang, dan hitam #000000 50% di mode gelap. Di mode gelap `pensil` berwarna kapur, jadi latarnya justru akan menerang, padahal latar modal harus meredupkan halaman di kedua mode. Nilai hex ini hanya ditulis di definisi token.
+- **Tema awal** adalah terang. Token mode gelap hanya dipakai saat `data-mode="gelap"`, tidak lagi lewat `prefers-color-scheme` (PRD §11.3).
+- **Tombol tema di bilah atas toko:**
+  - tombol ikon persegi 40×40 px berkelas `tombol tombol-kedua tombol-kecil`, tepat di kiri tombol "Masuk" atau nama Member, di ponsel maupun layar lebar;
+  - ikonnya `Moon` 20 px saat terang dan `Sun` 20 px saat gelap, tanpa teks;
+  - `aria-label`-nya "Ganti ke tampilan gelap" atau "Ganti ke tampilan terang", sesuai aksi ketukan berikutnya;
+  - saat bilah atas ciut ke 52 px, tombol tetap 40 px;
+  - di lebar 360 px, monogram, tombol tema, dan tombol Masuk atau nama Member muat dalam satu baris tanpa gulir ke samping.
+- **Tombol tema di dasbor admin:** tombol ikon yang sama, sebaris dengan tombol "Keluar" di bawah menu samping, di kanan tombol itu. Di ponsel, tombol yang sama ada di menu lipat.
+- **Bilah status Android** mengikuti tema yang sedang tampil, bukan mode perangkat: `kertas` saat terang, dan `kertas-gelap` saat gelap.
 
 ### Penanda tab aktif: matahari coretan (komponen khas)
 Setengah matahari coretan berupa SVG: busur berisi `matahari` dengan garis 2 px `pensil` dan lima sinar pendek dari guratan `pensil`, tanpa pendar. Wadahnya 28×14 px; sinarnya keluar dari wadah itu, jadi ukuran tempat penanda tidak berubah, dan garisnya tetap 2 px di ukuran berapa pun. Ia duduk di garis atas navigasi bawah, di tengah tab aktif, seperti matahari yang terbit dari cakrawala pensil. Saat tab berpindah, ia bergeser sejauh satu lebar tab dalam 0,45 dtk dengan easing standar (PRD §11.2). Di navbar atas ukurannya 20×10 px, dan ia duduk di garis bawah bilah atas, di bawah tautan aktif. Saat bilah ciut, matahari navbar ikut mengecil ke 85% bersama monogram. Penanda ini `aria-hidden`, karena keadaan aktif sudah disampaikan oleh `aria-current`. Saat gerak dikurangi, ia langsung melompat ke posisi baru.

@@ -55,6 +55,8 @@ Diperbarui 2026-11-22 (#246). Sebuah Pesanan yang sudah dibayar penuh menjadi Be
   - `received_amount` tetap wajib ada di payload, supaya bentuk dashboard tetap dikenali, tetapi tidak lagi dibandingkan dengan Total bayar.
   - Saat webhook memicu cek status, log server mencatat satu baris berisi `received_amount` dari webhook dan `amount` dari cek status. Nominal bukan rahasia (▶ Keputusan 2026-11-15, #113). Baris ini memastikan arti `received_amount` pada pembayaran sungguhan berikutnya.
   - Pesanan atau Top up yang sudah telanjur Bermasalah karena webhook tidak diproses ulang otomatis. Admin menyelesaikannya lewat "Kirim Item stok" atau "Tambahkan ke saldo".
+
+  ▶ Keputusan 2026-11-23 (#264): Pembayaran telat untuk Pesanan atau Top up yang sudah Kedaluwarsa atau Dibatalkan hanya tertangkap lewat cek status yang dipicu webhook. Bila cek itu gagal, tidak ada pemeriksaan ulang otomatis. Log galatnya meminta pemilik memeriksa pembayaran itu di Dashboard Qrispy, lalu pemilik menyelesaikannya dari dasbor admin. Kejadian ini butuh dua hal sekaligus, yaitu pembayaran telat dan cek status yang gagal, jadi sangat jarang, sedangkan pemeriksaan ulang otomatis akan menambah pekerjaan latar baru.
 - **Dua jalur kabar pembayaran.** Webhook bukan satu-satunya jalur:
   - Halaman bayar menanyakan status ke server toko, bukan ke Qrispy.
   - Server toko menanyakan status ke Qrispy paling sering sekali per 15 detik untuk setiap Pesanan, dan sekali lagi tepat sebelum Pesanan dijadikan Kedaluwarsa.

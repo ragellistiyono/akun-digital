@@ -244,6 +244,8 @@ Saat menempel banyak baris:
 - Item stok kembar yang sudah tersimpan sebelum aturan ini tayang tidak dihapus atau diubah otomatis.
 - Contoh lengkapnya ada di `tests/golden/item-stok-kembar.json`.
 
+▶ Keputusan 2026-11-23 (#264): Pesan tolakan Item stok kembar di form satu Item stok dan ubah Item stok dipertahankan: "Sudah ada di <Produk> – <Varian> (<status>). Item stok yang sama persis tidak boleh ada dua kali di toko, jadi tidak disimpan. Periksa lagi isinya, lalu simpan Item stok yang belum ada." Baris tempelan yang ditolak tetap memakai kalimat pertamanya saja.
+
 ### 4.3 Satu Item stok untuk satu Pesanan
 
 - Setiap Item stok dikirim ke tepat satu Pesanan, lalu tidak bisa dipakai lagi.
@@ -263,6 +265,8 @@ Saat menempel banyak baris:
   - Contoh tanpa Item stok Ditahan: "Hapus 3 Item stok Tersedia dari YouTube Premium – 3 Bulan? 10 Terkirim tidak ikut terhapus. Isinya tidak bisa dikembalikan."
 - Item stok yang menjadi Ditahan setelah modal terbuka, tetapi sebelum penegasannya disetujui, dilewati. Sesudahnya tampil "N Item stok terhapus.", dengan N jumlah yang benar-benar terhapus.
 - Contoh lengkapnya ada di `tests/golden/hapus-semua-item-stok.json`.
+
+▶ Keputusan 2026-11-23 (#264): Jumlah di teks Modal penegasan hapus semua tetap diambil saat halaman Varian terakhir dimuat. Jumlah yang benar-benar terhapus selalu dihitung ulang saat penegasan disetujui, jadi pesan "N Item stok terhapus." tetap benar walaupun angka di modal sudah tertinggal.
 
 ## 5. Checkout dan pembayaran
 
@@ -819,6 +823,8 @@ Ringkasan hanya berupa angka, tanpa grafik.
 - Kartu Laba bersih berketerangan "Laba kotor − potongan voucher − Biaya transaksi − Biaya operasional − Biaya transaksi Top up, dalam rentang itu. Kode unik dan nominal top up tidak dihitung, karena tidak masuk saldo toko."
 - Kalimat "Kartu Laba bersih ikut menghitung Kode unik Top up" di atas tidak berlaku lagi.
 
+▶ Keputusan 2026-11-23 (#264): Keterangan kartu Pendapatan berbunyi "Jumlah (Harga jual − potongan voucher) Pesanan Selesai menurut waktu pembayaran (WIB). Kode unik tidak dihitung, karena tidak masuk saldo toko. Pesanan Bermasalah dan Dana Dikembalikan tidak dihitung."
+
 ### 9.3 Pendapatan
 
 - Pendapatan adalah jumlah Total bayar dari Pesanan Selesai, dikelompokkan menurut waktu pembayarannya.
@@ -1014,6 +1020,17 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - Bagian itu terletak setelah tombol "Masuk" dan "Daftar" untuk Tamu, atau setelah tombol "Keluar" untuk Member, dan sebelum tombol WhatsApp. Tamu dan Member sama-sama melihatnya.
 - Pilihan itu juga berlaku di dasbor admin bila dibuka di browser yang sama. Dasbor admin tidak punya tombol mode sendiri.
 
+▶ Keputusan 2026-11-23 (#264): Tombol tema di bilah atas. Keputusan ini menggantikan kedua butir di atas dan ▶ Keputusan 2026-11-18 (#188), termasuk bagian "Tampilan" di isi tab Akun (§11.1 ▶ Keputusan 2026-11-20).
+- **Tema awal Terang.** Pengunjung yang belum pernah memilih melihat tampilan Terang, apa pun mode perangkatnya. Tampilan tidak lagi mengikuti mode terang atau gelap di perangkat.
+- **Dua pilihan.** Tema hanya Terang atau Gelap. Pilihan "Perangkat" dihapus. Pengunjung yang dulu memilih "Perangkat" kini melihat Terang, sedangkan yang memilih Terang atau Gelap tetap pada pilihannya.
+- **Satu ikon di bilah atas.**
+  - Bilah atas toko punya satu tombol ikon, tepat di kiri tombol "Masuk" atau nama Member, di ponsel maupun layar lebar.
+  - Saat tampilan Terang, ikonnya bulan, dan ketukan mengganti ke Gelap. Saat tampilan Gelap, ikonnya matahari, dan ketukan mengganti ke Terang.
+  - Tema langsung berganti tanpa memuat ulang halaman.
+- **Diingat di perangkat.** Pilihan tetap diingat di browser itu saja, seperti sebelumnya.
+- **Tab Akun** tidak lagi punya bagian "Tampilan". Isi tab Akun untuk Tamu menjadi tombol "Masuk" dan "Daftar", lalu tombol WhatsApp. Untuk Member, isinya email Member, kotak saldo, form ganti password, tombol "Keluar", lalu tombol WhatsApp.
+- **Dasbor admin** punya tombol ikon yang sama di menu samping, dekat tombol "Keluar", juga di menu lipat ponsel. Pilihan di toko dan di dasbor admin adalah pilihan yang sama di browser itu.
+
 ### 11.4 Pasang seperti aplikasi
 
 - Pembeli bisa memasang toko lewat "Tambahkan ke layar utama". Setelah dipasang, toko terbuka dengan ikon dan layar pembuka sendiri, tanpa bilah alamat browser.
@@ -1031,6 +1048,8 @@ Login, Daftar, dan dasbor Member ditambahkan di M2 sesuai tabel di atas.
 - **Layar pembuka.** Latarnya `kertas` (#FDFBF7), dengan logo di tengah dan nama "MIWE Digital Store" bertulisan Kalam tebal berwarna `pensil` (#2D2D2D). Tampilannya sama di mode terang dan gelap, di Android dan iPhone.
 - **Bilah status ponsel.** Di Android, bilah status mengikuti mode perangkat: `kertas` (#FDFBF7) di mode terang dan `kertas-gelap` (#1E1C19) di mode gelap. Di iPhone, bilah status memakai gaya bawaan, yaitu latar terang dengan teks gelap, dan tidak lagi tembus di atas bilah atas toko.
 - Logo MDS sendiri belum diganti. Logo bergaya coretan tangan, bila dibuat, menjadi keputusan pemilik tersendiri.
+
+▶ Keputusan 2026-11-23 (#264): Karena tema tidak lagi mengikuti mode perangkat (§11.3), bilah status ponsel Android mengikuti tema toko yang sedang tampil: `kertas` (#FDFBF7) saat Terang dan `kertas-gelap` (#1E1C19) saat Gelap. Ketentuan iPhone dan layar pembuka tidak berubah.
 
 ### 11.5 Sistem desain
 
@@ -1487,6 +1506,8 @@ Riwayat status Top up mencatat pelaku setiap perubahan, seperti Pesanan (§5.7):
   - Setelah top up berhasil, Member dibawa ke Riwayat saldo seperti biasa (§15.3), bukan kembali ke Checkout.
 - Pilihan awal Tamu tetap QRIS, dan tombolnya tetap "Bayar dengan QRIS".
 
+▶ Keputusan 2026-11-23 (#264): Tautan "Masuk" di ajakan Saldo tetap memakai alamat yang sama dengan tautan Masuk pesan Voucher khusus Member. Kode voucher hanya ikut terisi setelah login bila kode itu sedang ditolak.
+
 ### 15.8 Saldo di keuangan toko
 
 - Nominal top up bukan Pendapatan. Uang top up baru menjadi Pendapatan saat dibelanjakan.
@@ -1581,6 +1602,8 @@ Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Produk gratis hanya bisa
 - Pesanan QRIS yang sudah dibuat sebelum Produk dijadikan gratis tetap berjalan dengan Harga jual yang dicatat saat checkout (§5.1).
 - Daftar Produk di dasbor admin menandai Produk gratis dengan teks "Gratis".
 
+▶ Keputusan 2026-11-23 (#264): Checkout QRIS atau saldo untuk Varian Produk gratis ditolak di server, misalnya bila form lama dikirim setelah Admin mencentang "Produk gratis". Pesanan tidak dibuat dan saldo tidak berubah. Pesannya: "Produk ini sekarang gratis khusus Member, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk mengambilnya." Pesanan yang sudah dibuat sebelum Produk dijadikan gratis tetap berjalan seperti di atas.
+
 ### 16.2 Batas per Member
 
 - Batas per Member adalah jumlah Pesanan gratis terbanyak yang boleh dimiliki satu Member untuk satu Produk gratis, dari semua Variannya.
@@ -1624,6 +1647,10 @@ Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Produk gratis hanya bisa
 - Pembuatan Pesanan gratis dan pengiriman Item stoknya terjadi bersama. Bila salah satunya tidak bisa terjadi, tidak ada yang berubah. Dua pengambilan yang terjadi bersamaan oleh Member yang sama tidak boleh melewati Batas per Member.
 - Pesanan gratis tidak pernah Bermasalah dan tidak bisa dibatalkan. Riwayat statusnya mencatat satu perubahan "Selesai" dengan pelaku "Pembeli (gratis)" (§5.7). Waktu bayarnya adalah waktu Pesanan dibuat.
 
+▶ Keputusan 2026-11-23 (#264):
+- Checkout Member untuk Produk gratis menampilkan kalimat kecil "Dengan mengambil, Anda menyetujui Syarat & Ketentuan", dengan tautan ke halaman itu dan tanpa kotak centang. Kalimat ini tampil di atas tombol "Ambil gratis", sama seperti kalimat Syarat & Ketentuan di form checkout biasa (§5.2).
+- Pada pesan langkah 3 ("Produk gratis hanya untuk Member yang sedang login. Masuk dulu."), kata "Masuk" menjadi tautan ke halaman Masuk. Setelah login, Member kembali ke Checkout Varian yang sama (§7.5).
+
 ### 16.4 Tampilan
 
 - Di toko, Produk gratis menampilkan "Gratis" di tempat Harga jual: kartu Produk, bagian Produk Unggulan, Halaman Produk, dan Checkout. Kartu Produk tidak memakai kata "Mulai" (§3.8).
@@ -1631,6 +1658,11 @@ Bagian ini ditambahkan pada 2026-11-22 (#246) untuk M6. Produk gratis hanya bisa
 - Halaman Produk gratis menampilkan "Gratis khusus Member, maksimal M per Member", misalnya "Gratis khusus Member, maksimal 5 per Member".
 - Stok Varian dan label "Habis" tetap berlaku (§3.4).
 - Rincian nominal Pesanan gratis berisi baris "Total bayar Rp 0" lalu tulisan "Gratis", tanpa baris Harga jual, Potongan voucher, dan Kode unik. Ini berlaku di Checkout, Halaman Pesanan, email "Pesanan selesai", Riwayat Pesanan, dan detail Pesanan dasbor admin.
+
+▶ Keputusan 2026-11-23 (#264):
+- Tombol beli di Halaman Produk gratis berbunyi "Ambil gratis", sama dengan tombol di Checkout, bukan "Beli · Gratis".
+- Email "Pesanan selesai" untuk Pesanan gratis dibuka dengan "Pesanan gratis <Nomor Pesanan> sudah kami proses. Berikut Item stok Anda.", menggantikan kalimat pembuka §6.3 tentang pembayaran. Subjek dan isi email lainnya tidak berubah.
+- Letak keterangan "Gratis khusus Member, maksimal M per Member" dipertahankan: di bawah Pilihan Varian untuk Produk dengan beberapa Varian, atau tepat di bawah harga untuk Produk dengan satu Varian.
 
 ### 16.5 Pesanan gratis di keuangan
 
