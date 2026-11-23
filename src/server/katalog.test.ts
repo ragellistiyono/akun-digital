@@ -58,6 +58,7 @@ describe("daftarProdukBeranda", () => {
         fotoSampul: null,
         mulai: true,
         harga: 50000,
+        gratis: false,
         habis: false,
         hargaNormal: 75000,
         persenHemat: 33,
@@ -329,6 +330,40 @@ async function sisipkanKatalogUat() {
 const namaBerakhiran = (daftar: { nama: string }[], akhiran: string) =>
   daftar.map((d) => d.nama).filter((n) => n.endsWith(akhiran));
 
+// PRD §3.8 ▶ Keputusan 2026-11-22, §16.4, UAT-P1: kartu Produk gratis menampilkan "Gratis" tanpa kata "Mulai", dengan
+// Harga normal yang dicoret tanpa Hemat. Produknya meniru Akun Uji Gratis dari persiapan M6 [CONTOH], dengan Varian
+// kedua supaya kata "Mulai" teruji.
+describe("daftarProdukBeranda untuk Produk gratis", () => {
+  it("kartu Akun Uji Gratis dengan dua Varian: gratis tanpa Mulai, Harga normal Rp 15.000 dari Varian sumber harga tanpa Hemat, dan daftar Varian Unggulan tanpa Hemat", async () => {
+    const nama = namaUnik("Akun Uji Gratis");
+    await sisipkanProduk({
+      nama,
+      unggulan: true,
+      batasPerMember: 2,
+      varian: [
+        { nama: "Akun Baru", hargaJual: 1000, hargaNormal: 15000, Tersedia: 5 },
+        { nama: "Akun Lama", hargaJual: 2000, hargaNormal: 20000 },
+      ],
+    });
+
+    const { unggulan } = await kartuBernama(nama);
+
+    expect(unggulan).toMatchObject([
+      {
+        mulai: false,
+        gratis: true,
+        habis: false,
+        hargaNormal: 15000,
+        persenHemat: null,
+        varian: [
+          { nama: "Akun Baru", habis: false, persenHemat: null },
+          { nama: "Akun Lama", habis: true, persenHemat: null },
+        ],
+      },
+    ]);
+  });
+});
+
 describe("daftarKategoriToko", () => {
   it("hanya Kategori yang berisi Produk di katalog yang tampil, urut menurut nama (PRD §3.1)", async () => {
     const { akhiran, nama, id } = await sisipkanKatalogUat();
@@ -456,6 +491,8 @@ describe("bacaHalamanProduk", () => {
       deskripsi: "Akun Netflix Premium satu profil.",
       ketentuanGaransi: "Garansi 30 hari.",
       pilihanVarian: true,
+      gratis: false,
+      keteranganGratis: null,
       varian: [
         {
           id: expect.any(String),
@@ -472,6 +509,32 @@ describe("bacaHalamanProduk", () => {
           hargaJual: 135000,
           hargaNormal: null,
           stokVarian: 4,
+          habis: false,
+          persenHemat: null,
+        },
+      ],
+    });
+  });
+
+  // PRD §16.4, UAT-P1: Akun Uji Gratis dari persiapan M6 [CONTOH].
+  it("Akun Uji Gratis: gratis dengan keterangan Gratis khusus Member, maksimal 2 per Member, dan Varian tanpa Persen hemat", async () => {
+    const id = await sisipkanProduk({
+      nama: namaUnik("Akun Uji Gratis"),
+      batasPerMember: 2,
+      varian: [
+        { nama: "Akun Baru", hargaJual: 1000, hargaNormal: 15000, Tersedia: 5 },
+      ],
+    });
+
+    expect(await bacaHalamanProduk(id)).toMatchObject({
+      pilihanVarian: false,
+      gratis: true,
+      keteranganGratis: "Gratis khusus Member, maksimal 2 per Member",
+      varian: [
+        {
+          nama: "Akun Baru",
+          hargaNormal: 15000,
+          stokVarian: 5,
           habis: false,
           persenHemat: null,
         },

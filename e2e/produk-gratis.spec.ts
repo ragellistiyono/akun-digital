@@ -14,8 +14,8 @@ import { sisipkanMember } from "../src/server/uji-member";
 // Checkout Produk gratis dan Pesanan gratis (T86, PRD §9.5, §14.6, §16.3, §16.4, §16.5, UAT-P3, UAT-P5). Produk
 // gratisnya meniru Akun Uji Gratis dari persiapan M6 di docs/UAT.md [CONTOH]: Format Item stok Email dan Password,
 // Batas per Member 2, dan satu Varian "Akun Baru" dengan Harga jual Rp 1.000, Harga normal Rp 15.000, Harga modal
-// Rp 0, dan 5 Item stok Tersedia, dengan akhiran unik. Admin belum bisa menjadikan Produk gratis dari dasbor admin
-// (T87), jadi Produk gratis ini disiapkan langsung di database.
+// Rp 0, dan 5 Item stok Tersedia, dengan akhiran unik. Produk gratis ini disiapkan langsung di database; form Produk
+// di dasbor admin diuji di produk-gratis-form-tampilan.spec.ts.
 // Koneksi database tidak ditutup di afterAll; lihat catatan di checkout.spec.ts.
 
 const PASSWORD_ADMIN = "sandi-uji-admin-123";

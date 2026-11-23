@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { z } from "zod";
 
-import { rupiah } from "@/lib/rupiah";
 import type { HalamanProduk as IsiHalamanProduk } from "@/server/katalog";
 import { bacaHalamanProduk } from "@/server/katalog";
 import { bacaPengaturanToko } from "@/server/pengaturan-toko";
@@ -18,6 +17,7 @@ import {
   LabelHemat,
 } from "../../../_components/kartu-produk";
 import { PilihanVarian } from "../../../_components/pilihan-varian";
+import { teksHarga } from "../../../_components/teks-harga";
 import { TombolWhatsApp } from "../../../_components/tombol-whatsapp";
 
 // Panel (DESIGN.md "Cards / Containers") dengan teks panjang (Typography): ukuran isi 18 px, tinggi baris
@@ -92,17 +92,25 @@ function FotoProduk({ nama, foto }: { nama: string; foto: string[] }) {
  * Harga Produk dengan satu Varian aktif, yang tidak menampilkan pilihan Varian (PRD §3.2, DESIGN.md
  * "Pilihan Varian"): Harga jual spidol tebal 28 px beserta Harga normal yang dicoret dan label Hemat, lalu
  * "Stok N" atau label Habis (PRD §3.4, §3.5).
+ *
+ * Produk gratis menampilkan "Gratis" di tempat Harga jual, dengan Harga normal yang dicoret tanpa Hemat, lalu
+ * keterangan "Gratis khusus Member, maksimal M per Member" sebagai teks bantuan tepat di bawah harga (PRD §16.4,
+ * DESIGN.md ▶ Keputusan 2026-11-22).
  */
 function HargaSatuVarian({
   varian,
+  gratis,
+  keteranganGratis,
 }: {
   varian: IsiHalamanProduk["varian"][number];
+  gratis: boolean;
+  keteranganGratis: string | null;
 }) {
   return (
     <div className="mt-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="font-spidol text-[28px] leading-[1.15] font-bold whitespace-nowrap">
-          {rupiah(varian.hargaJual)}
+          {teksHarga({ hargaJual: varian.hargaJual, gratis })}
         </p>
         {varian.hargaNormal !== null && (
           <HargaNormal nilai={varian.hargaNormal} />
@@ -111,6 +119,7 @@ function HargaSatuVarian({
           <LabelHemat persen={varian.persenHemat} />
         )}
       </div>
+      {keteranganGratis && <KeteranganGratis teks={keteranganGratis} />}
       <p className="mt-2 text-[15px] text-pensil-redup">
         {varian.habis ? <LabelHabis /> : `Stok ${varian.stokVarian}`}
       </p>
@@ -118,11 +127,17 @@ function HargaSatuVarian({
   );
 }
 
+/** Keterangan Produk gratis, "Gratis khusus Member, maksimal M per Member", sebagai teks bantuan (PRD §16.4). */
+function KeteranganGratis({ teks }: { teks: string }) {
+  return <p className="mt-2 text-[15px] text-pensil-redup">{teks}</p>;
+}
+
 // Halaman Produk (PRD §3.3): nama dan Kategori, foto, Varian, deskripsi, lalu ketentuan garansi beserta
 // tombol WhatsApp, dan tombol utama yang membuka form checkout untuk Varian terpilih. Di layar lebar foto
 // dan isinya menjadi dua kolom sama lebar (DESIGN.md "Tata letak halaman", pola Dua kolom), dengan judul
 // di kolom isi sejajar tepi atas foto. Produk yang tidak tampil di toko menampilkan halaman tidak
-// ditemukan.
+// ditemukan. Produk gratis menampilkan "Gratis" di tempat Harga jual beserta keterangan Batas per Member-nya
+// (PRD §16.4).
 export default async function HalamanProduk({
   params,
 }: PageProps<"/produk/[id]">) {
@@ -161,6 +176,7 @@ export default async function HalamanProduk({
             hargaJual,
             habis,
           }))}
+          gratis={produk.gratis}
           terpilihAwal={terpilihAwal}
         >
           {produk.pilihanVarian ? (
@@ -173,13 +189,22 @@ export default async function HalamanProduk({
               </h2>
               <PilihanVarian
                 varian={produk.varian}
+                gratis={produk.gratis}
                 terpilihId={terpilihAwal}
                 labelledBy="judul-pilih-varian"
               />
+              {/* Harga setiap Varian ada di Pilihan Varian, jadi keterangan Produk gratis tampil di bawahnya. */}
+              {produk.keteranganGratis && (
+                <KeteranganGratis teks={produk.keteranganGratis} />
+              )}
             </>
           ) : (
             <>
-              <HargaSatuVarian varian={produk.varian[0]} />
+              <HargaSatuVarian
+                varian={produk.varian[0]}
+                gratis={produk.gratis}
+                keteranganGratis={produk.keteranganGratis}
+              />
               <input
                 type="hidden"
                 name="varianId"

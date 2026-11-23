@@ -77,6 +77,13 @@ const PESAN_SALDO_TANPA_MEMBER =
  */
 const MetodeDipilih = z.enum(["QRIS", "Saldo"]).catch("QRIS");
 
+/**
+ * Pesan bila checkout QRIS atau saldo dikirim untuk Varian Produk gratis, misalnya dari form checkout yang dibuka
+ * sebelum Produk itu dijadikan gratis. Produk gratis hanya diambil lewat "Ambil gratis", tanpa QRIS (PRD §16).
+ */
+const PESAN_PRODUK_GRATIS =
+  "Produk ini sekarang gratis khusus Member, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk mengambilnya.";
+
 /** Pesan PRD §16.3 langkah 2, bila Produk itu tidak lagi gratis saat "Ambil gratis" ditekan. */
 const PESAN_TIDAK_GRATIS =
   "Produk ini tidak gratis lagi, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk melihat harganya.";
@@ -212,6 +219,9 @@ export async function aksiCheckout(
   }
   if (hasil.hasil === "tidak-dijual") {
     return { ...isian, galat: { checkout: PESAN_TIDAK_DIJUAL } };
+  }
+  if (hasil.hasil === "produk-gratis") {
+    return { ...isian, galat: { checkout: PESAN_PRODUK_GRATIS } };
   }
   if (hasil.hasil === "member-nonaktif") {
     const { nomorWhatsapp } = await bacaPengaturanToko();

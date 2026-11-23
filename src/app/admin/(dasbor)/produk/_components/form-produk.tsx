@@ -4,6 +4,11 @@ import { Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
+import {
+  BATAS_PER_MEMBER_MAKSIMUM,
+  BATAS_PER_MEMBER_MINIMUM,
+} from "@/domain/produk-gratis";
+
 import { IsianTeks, KotakCentang } from "../../_components/isian-form";
 import { Keterangan } from "../../_components/keterangan-isian";
 import {
@@ -20,6 +25,8 @@ type ProdukAda = {
   ketentuanGaransi: string;
   unggulan: boolean;
   aktif: boolean;
+  gratis: boolean;
+  batasPerMember: number | null;
 };
 
 /**
@@ -165,6 +172,9 @@ export function FormProduk({
           ketentuanGaransi: produk.ketentuanGaransi,
           unggulan: produk.unggulan,
           aktif: produk.aktif,
+          gratis: produk.gratis,
+          batasPerMember:
+            produk.batasPerMember === null ? "" : String(produk.batasPerMember),
         }
       : {
           nama: "",
@@ -173,6 +183,8 @@ export function FormProduk({
           ketentuanGaransi: "",
           unggulan: false,
           aktif: true,
+          gratis: false,
+          batasPerMember: "",
           formatItemStok: [""],
         },
   );
@@ -270,6 +282,25 @@ export function FormProduk({
         bantuan="Produk nonaktif hilang dari katalog dan tidak bisa dibeli."
         dicentang={keadaan.aktif}
       />
+
+      {/* Isian Batas per Member tepat di bawah centang "Produk gratis", dan hanya dipakai selama centang itu aktif
+          (PRD §16.1). */}
+      <div className="flex flex-col gap-4">
+        <KotakCentang
+          nama="gratis"
+          label="Produk gratis"
+          bantuan="Semua Varian Produk ini bisa diambil gratis oleh Member yang sedang login, tanpa QRIS. Harga jual dipakai lagi bila centang ini dilepas."
+          dicentang={keadaan.gratis}
+        />
+        <IsianTeks
+          nama="batasPerMember"
+          label="Batas per Member"
+          nilaiAwal={keadaan.batasPerMember}
+          galat={galat?.batasPerMember}
+          bantuan={`Jumlah Pesanan gratis terbanyak untuk satu Member, dari semua Varian Produk ini. Angka ${BATAS_PER_MEMBER_MINIMUM} sampai ${BATAS_PER_MEMBER_MAKSIMUM}, misalnya 5. Hanya dipakai bila Produk gratis dicentang.`}
+          inputMode="numeric"
+        />
+      </div>
 
       {!produk && (
         <EditorFormatItemStok

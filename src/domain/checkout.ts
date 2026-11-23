@@ -1,5 +1,5 @@
 // Urutan pemeriksaan checkout satu Varian (PRD §5.2 ▶ Keputusan 2026-11-17 langkah 1–5 dan ▶ Keputusan 2026-11-20
-// langkah 6, §3.7, §5.4 ▶ Keputusan 2026-11-12). Batas Pesanan menunggu ada di batas-pesanan-menunggu.ts, email
+// langkah 6, §3.7, §5.4 ▶ Keputusan 2026-11-12, §16). Batas Pesanan menunggu ada di batas-pesanan-menunggu.ts, email
 // Member nonaktif ada di member-nonaktif.ts, Varian habis ada di stok-varian.ts, penilaian Voucher ada di
 // penerapan-voucher.ts, dan kecukupan saldo ada di bayar-saldo.ts.
 import type { HasilBatasPesananMenunggu } from "./batas-pesanan-menunggu";
@@ -16,6 +16,7 @@ type VoucherDinilai =
 
 type HasilCheckout<V, P> =
   | { hasil: "tidak-dijual" }
+  | { hasil: "produk-gratis" }
   | { hasil: "member-nonaktif" }
   | { hasil: "pesanan-menunggu"; pesananMenunggu: P }
   | { hasil: "stok-habis" }
@@ -34,6 +35,8 @@ type SaldoDinilai = {
  * Hasil checkout satu Varian. Pemeriksaannya berurutan, dan yang pertama menolak menentukan hasilnya
  * (PRD §5.2 ▶ Keputusan 2026-11-17):
  * 1. Varian atau Produk yang tidak dijual (`varianDijual` undefined) ditolak (PRD §3.7);
+ *    Varian Produk gratis (`varianDijual.gratis`) juga ditolak di langkah ini, karena Produk gratis hanya bisa diambil
+ *    lewat "Ambil gratis", tanpa pembayaran QRIS (PRD §16, hasilAmbilGratis);
  * 2. email milik Member nonaktif (`memberNonaktif`) ditolak (PRD §2.3), walaupun email itu masih punya
  *    Pesanan Menunggu Pembayaran;
  * 3. email yang masih punya Pesanan Menunggu Pembayaran menurut `batasPesananMenunggu` mengikuti batas
@@ -50,7 +53,7 @@ type SaldoDinilai = {
  * Bila tidak ada yang menolak, Pesanan untuk Varian itu boleh dibuat, dengan Voucher itu bila diisi, dan hasilnya
  * membawa Varian itu.
  */
-export function hasilCheckout<V, P>({
+export function hasilCheckout<V extends { gratis: boolean }, P>({
   varianDijual,
   memberNonaktif,
   batasPesananMenunggu,
@@ -66,6 +69,7 @@ export function hasilCheckout<V, P>({
   saldo?: SaldoDinilai | null;
 }): HasilCheckout<V, P> {
   if (varianDijual === undefined) return { hasil: "tidak-dijual" };
+  if (varianDijual.gratis) return { hasil: "produk-gratis" };
   if (memberNonaktif) return { hasil: "member-nonaktif" };
   if (!batasPesananMenunggu.boleh) {
     return {

@@ -111,4 +111,32 @@ describe("varianHalamanProduk", () => {
       expect(hasil?.varian[0].persenHemat).toBe(output.persenHemat);
     }
   });
+
+  // PRD §16.4: Halaman Produk gratis tetap menampilkan Harga normal yang dicoret, tanpa label "Hemat N%". UAT
+  // persiapan M6 [CONTOH]: Akun Uji Gratis "Akun Baru", Harga jual Rp 1.000 dan Harga normal Rp 15.000.
+  it("Varian Produk gratis tidak punya Persen hemat, dan Stok Varian serta tanda habis tetap berlaku", () => {
+    const akunBaru = {
+      id: "akun-baru",
+      nama: "Akun Baru",
+      hargaJual: 1000,
+      hargaNormal: 15000,
+      stokVarian: 5,
+      aktif: true,
+    };
+    expect(
+      varianHalamanProduk({
+        gratis: true,
+        varian: [akunBaru, { ...akunBaru, id: "habis", stokVarian: 0 }],
+      })?.varian,
+    ).toEqual([
+      { ...akunBaru, habis: false, persenHemat: null },
+      {
+        ...akunBaru,
+        id: "habis",
+        stokVarian: 0,
+        habis: true,
+        persenHemat: null,
+      },
+    ]);
+  });
 });

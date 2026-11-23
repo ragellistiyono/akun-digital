@@ -1,6 +1,6 @@
 // Katalog toko: kartu Produk, pencarian, dan Kategori di Beranda serta tab Kategori, juga Halaman Produk
-// (PRD §3.1–§3.8). Aturan harganya ada di src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts,
-// dan src/domain/stok-varian.ts; aturan Kategori yang tampil dan pencarian ada di
+// (PRD §3.1–§3.8, §16.4). Aturan harganya ada di src/domain/harga-kartu-produk.ts, src/domain/persen-hemat.ts,
+// dan src/domain/stok-varian.ts, dan keterangan Produk gratis di src/domain/produk-gratis.ts; aturan Kategori yang tampil dan pencarian ada di
 // src/domain/saringan-katalog.ts; aturan Varian di Halaman Produk ada di src/domain/varian-halaman-produk.ts.
 import { and, asc, count, eq } from "drizzle-orm";
 
@@ -8,6 +8,7 @@ import { fotoSampul } from "@/domain/foto-produk";
 import { hargaKartuProduk } from "@/domain/harga-kartu-produk";
 import type { StatusItemStok } from "@/domain/item-stok";
 import { persenHemat, persenHematVarian } from "@/domain/persen-hemat";
+import { keteranganProdukGratis } from "@/domain/produk-gratis";
 import { kategoriTampil, saringProdukBeranda } from "@/domain/saringan-katalog";
 import { stokVarian } from "@/domain/stok-varian";
 import { varianHalamanProduk } from "@/domain/varian-halaman-produk";
@@ -24,11 +25,11 @@ type VarianKartu = {
   hargaJual: number;
   hargaNormal: number | null;
   habis: boolean;
-  /** Persen hemat Varian ini, atau null bila Varian ini habis atau tanpa Harga normal. */
+  /** Persen hemat Varian ini, atau null bila Varian ini habis, tanpa Harga normal, atau milik Produk gratis. */
   persenHemat: number | null;
 };
 
-/** Isi satu kartu Produk di katalog (PRD §3.8, docs/DESIGN.md "Cards / Containers"). */
+/** Isi satu kartu Produk di katalog (PRD §3.8, §16.4, docs/DESIGN.md "Cards / Containers"). */
 export type KartuProduk = {
   id: string;
   nama: string;
@@ -36,10 +37,12 @@ export type KartuProduk = {
   fotoSampul: string | null;
   mulai: boolean;
   harga: number;
+  /** Produk gratis, jadi kartu menampilkan "Gratis" di tempat harga (PRD §16.4). */
+  gratis: boolean;
   habis: boolean;
   /** Harga normal Varian sumber harga, yang tampil dicoret. */
   hargaNormal: number | null;
-  /** Persen hemat Varian sumber harga, atau null bila Varian itu tanpa Harga normal. */
+  /** Persen hemat Varian sumber harga, atau null bila Varian itu tanpa Harga normal atau milik Produk gratis. */
   persenHemat: number | null;
   /** Varian aktif, urut dari Harga jual termurah. */
   varian: VarianKartu[];
@@ -118,6 +121,7 @@ async function produkKatalog(): Promise<ProdukKatalog[]> {
         kategoriId: produk.kategoriId,
         foto: produk.foto,
         unggulan: produk.unggulan,
+        gratis: produk.gratis,
       })
       .from(produk)
       .where(eq(produk.aktif, true))
@@ -128,8 +132,10 @@ async function produkKatalog(): Promise<ProdukKatalog[]> {
   const varianPerProduk = Map.groupBy(semuaVarian, (v) => v.produkId);
   const hasil: ProdukKatalog[] = [];
   for (const p of semuaProduk) {
+    const { gratis } = p;
     const harga = hargaKartuProduk({
       varian: varianPerProduk.get(p.id) ?? [],
+      gratis,
     });
     if (harga === null) continue;
 
@@ -145,11 +151,13 @@ async function produkKatalog(): Promise<ProdukKatalog[]> {
         fotoSampul: sampul === null ? null : alamatBerkasUnggahan(sampul),
         mulai: harga.mulai,
         harga: harga.harga,
+        gratis: harga.gratis,
         habis: harga.habis,
         hargaNormal,
-        persenHemat: persenHemat({ hargaNormal, hargaJual }).persenHemat,
+        persenHemat: persenHemat({ hargaNormal, hargaJual, gratis })
+          .persenHemat,
         varian: harga.varianAktif.map((v) => {
-          const hemat = persenHematVarian(v);
+          const hemat = persenHematVarian({ ...v, gratis });
           return {
             id: v.id,
             nama: v.nama,
@@ -222,11 +230,11 @@ type VarianHalamanProduk = {
   stokVarian: number;
   /** Stok Varian 0, jadi Varian ini tampil "Habis" dan tidak bisa dipilih. */
   habis: boolean;
-  /** Persen hemat, atau null bila Varian ini tanpa Harga normal. */
+  /** Persen hemat, atau null bila Varian ini tanpa Harga normal atau milik Produk gratis. */
   persenHemat: number | null;
 };
 
-/** Isi Halaman Produk (PRD §3.3). */
+/** Isi Halaman Produk (PRD §3.3, §16.4). */
 export type HalamanProduk = {
   id: string;
   nama: string;
@@ -237,6 +245,13 @@ export type HalamanProduk = {
   ketentuanGaransi: string;
   /** Pilihan Varian tampil karena Varian aktifnya lebih dari satu (PRD §3.2). */
   pilihanVarian: boolean;
+  /** Produk gratis, jadi "Gratis" tampil di tempat Harga jual (PRD §16.4). */
+  gratis: boolean;
+  /**
+   * Keterangan "Gratis khusus Member, maksimal M per Member" di bawah harga, atau null bila Produk itu bukan Produk
+   * gratis (PRD §16.4).
+   */
+  keteranganGratis: string | null;
   /** Varian aktif, urut dari Harga jual termurah, lalu nama. */
   varian: VarianHalamanProduk[];
 };
@@ -255,6 +270,8 @@ export async function bacaHalamanProduk(
         foto: produk.foto,
         deskripsi: produk.deskripsi,
         ketentuanGaransi: produk.ketentuanGaransi,
+        gratis: produk.gratis,
+        batasPerMember: produk.batasPerMember,
         kategori: { id: kategori.id, nama: kategori.nama },
       })
       .from(produk)
@@ -264,8 +281,13 @@ export async function bacaHalamanProduk(
   ]);
   if (p === undefined) return null;
 
-  const isi = varianHalamanProduk({ varian: semuaVarian });
+  const isi = varianHalamanProduk({ varian: semuaVarian, gratis: p.gratis });
   if (isi === null) return null;
+  // Produk gratis selalu punya Batas per Member (check constraint produk_gratis_punya_batas_per_member).
+  const keteranganGratis =
+    p.gratis && p.batasPerMember !== null
+      ? keteranganProdukGratis({ batasPerMember: p.batasPerMember })
+      : null;
 
   return {
     id,
@@ -275,6 +297,8 @@ export async function bacaHalamanProduk(
     deskripsi: p.deskripsi,
     ketentuanGaransi: p.ketentuanGaransi,
     pilihanVarian: isi.pilihanVarian,
+    gratis: p.gratis,
+    keteranganGratis,
     varian: isi.varian.map((v) => ({
       id: v.id,
       nama: v.nama,

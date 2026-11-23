@@ -31,6 +31,7 @@ describe("hargaKartuProduk", () => {
     expect(hargaKartuProduk({ varian: [satuBulan, tigaBulan] })).toEqual({
       mulai: true,
       harga: 55000,
+      gratis: false,
       habis: false,
       sumber: tigaBulan,
       varianAktif: [satuBulan, tigaBulan],
@@ -70,5 +71,31 @@ describe("hargaKartuProduk", () => {
     expect(hargaKartuProduk({ varian: [pertama, kedua] })?.sumber).toBe(
       pertama,
     );
+  });
+
+  // PRD §3.8 ▶ Keputusan 2026-11-22, §16.4: kartu Produk gratis menampilkan "Gratis" tanpa kata "Mulai", berapa pun
+  // Varian aktifnya, dan label Habis tetap berlaku.
+  it("Produk gratis dengan dua Varian aktif tidak memakai kata Mulai", () => {
+    expect(
+      hargaKartuProduk({
+        gratis: true,
+        varian: [
+          { hargaJual: 50000, stokVarian: 10, aktif: true },
+          { hargaJual: 135000, stokVarian: 4, aktif: true },
+        ],
+      }),
+    ).toMatchObject({ mulai: false, habis: false, gratis: true });
+  });
+
+  it("Produk gratis yang semua Varian aktifnya habis tetap menampilkan label Habis", () => {
+    expect(
+      hargaKartuProduk({
+        gratis: true,
+        varian: [
+          { hargaJual: 1000, stokVarian: 0, aktif: true },
+          { hargaJual: 2000, stokVarian: 0, aktif: true },
+        ],
+      }),
+    ).toMatchObject({ mulai: false, habis: true, gratis: true });
   });
 });

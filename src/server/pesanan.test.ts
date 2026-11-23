@@ -1101,6 +1101,8 @@ describe("bacaCheckout", () => {
       namaVarian: "3 Bulan",
       hargaJual: 135000,
       perkiraanBayar: 135000,
+      // Bukan Produk gratis (PRD §16.1).
+      gratis: false,
       // Tamu tidak bisa membayar dengan saldo (PRD §15.7).
       saldo: null,
       // Bukan Produk gratis (PRD §16.3).
@@ -1139,7 +1141,11 @@ describe("bacaCheckout", () => {
       teksJatah: "Jatah Anda: sisa 1 dari 2",
       pesanJatahHabis: null,
     });
-    expect((await bacaCheckout(varianId))?.jatah).toBeNull();
+    // Tamu tetap tahu bahwa Varian ini milik Produk gratis, supaya Checkout menampilkan ajakan Masuk atau Daftar.
+    expect(await bacaCheckout(varianId)).toMatchObject({
+      gratis: true,
+      jatah: null,
+    });
   });
 
   // PRD §3.7.

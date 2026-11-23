@@ -61,6 +61,8 @@ async function produkBaru() {
     ketentuanGaransi: "Garansi 30 hari sejak Item stok diterima.",
     unggulan: false,
     aktif: true,
+    gratis: false,
+    batasPerMember: null,
     formatItemStok: ["Email", "Password", "Profil"],
   });
   const [produk] = (await daftarProduk()).filter((p) => p.nama === nama);

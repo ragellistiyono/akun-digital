@@ -1,4 +1,4 @@
-// Daftar Varian di Halaman Produk (PRD §3.2–§3.5, §3.7).
+// Daftar Varian di Halaman Produk (PRD §3.2–§3.5, §3.7, §16.4).
 import { persenHemat } from "./persen-hemat";
 import { varianHabis } from "./stok-varian";
 
@@ -15,15 +15,18 @@ type VarianProduk = {
  * tampil bila Varian aktifnya lebih dari satu (PRD §3.2). Setiap Varian membawa tanda habis, yaitu
  * Stok Varian 0, sehingga tampil "Habis" dan tidak bisa dipilih (PRD §3.4), serta Persen hemat-nya
  * menurut persenHemat (PRD §3.5). Di Halaman Produk, "Habis" menggantikan "Stok N", bukan label
- * Hemat, jadi Varian habis tetap membawa Persen hemat.
+ * Hemat, jadi Varian habis tetap membawa Persen hemat. Varian Produk gratis (`gratis`) tidak punya Persen hemat,
+ * karena Harga normal-nya tampil dicoret tanpa label Hemat (PRD §16.4).
  *
  * Hasilnya null bila Produk tidak punya Varian aktif, karena Produk itu tidak tampil di toko (PRD §3.2
  * ▶ Keputusan 2026-11-11 #53). Urutan Varian mengikuti masukan.
  */
 export function varianHalamanProduk<V extends VarianProduk>({
   varian,
+  gratis = false,
 }: {
   varian: readonly V[];
+  gratis?: boolean;
 }) {
   const varianAktif = varian.filter((v) => v.aktif);
   if (varianAktif.length === 0) return null;
@@ -33,7 +36,7 @@ export function varianHalamanProduk<V extends VarianProduk>({
     varian: varianAktif.map((v) => ({
       ...v,
       habis: varianHabis(v.stokVarian),
-      persenHemat: persenHemat(v).persenHemat,
+      persenHemat: persenHemat({ ...v, gratis }).persenHemat,
     })),
   };
 }

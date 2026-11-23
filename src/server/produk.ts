@@ -11,7 +11,11 @@ import { db } from "./db";
 import { itemStok, kategori, produk, varian } from "./db/schema";
 import { periksaHapusVarian } from "./varian";
 
-/** Isian Produk yang diisi Admin di form, baik saat membuat maupun mengubah (PRD §3.2, §3.3). */
+/**
+ * Isian Produk yang diisi Admin di form, baik saat membuat maupun mengubah (PRD §3.2, §3.3), termasuk centang
+ * "Produk gratis" dan Batas per Member yang sudah diperiksa periksaBatasPerMember (PRD §16.1): null bila Produk itu
+ * bukan Produk gratis.
+ */
 type IsianProduk = {
   nama: string;
   kategoriId: string;
@@ -19,9 +23,11 @@ type IsianProduk = {
   ketentuanGaransi: string;
   unggulan: boolean;
   aktif: boolean;
+  gratis: boolean;
+  batasPerMember: number | null;
 };
 
-/** Semua Produk untuk daftar di dasbor admin, urut menurut nama. */
+/** Semua Produk untuk daftar di dasbor admin, urut menurut nama, beserta tanda Produk gratis (PRD §16.1). */
 export async function daftarProduk() {
   return db
     .select({
@@ -30,6 +36,7 @@ export async function daftarProduk() {
       namaKategori: kategori.nama,
       unggulan: produk.unggulan,
       aktif: produk.aktif,
+      gratis: produk.gratis,
     })
     .from(produk)
     .innerJoin(kategori, eq(produk.kategoriId, kategori.id))
@@ -65,7 +72,7 @@ export async function buatProduk(
 }
 
 /**
- * Mengubah isian Produk, termasuk Kategori, tanda Produk Unggulan, dan aktif atau nonaktif. Format
+ * Mengubah isian Produk, termasuk Kategori, tanda Produk Unggulan, Produk gratis, dan aktif atau nonaktif. Format
  * Item stok tidak ikut diubah; Format Item stok diubah lewat ubahFormatItemStok.
  */
 export async function ubahProduk({

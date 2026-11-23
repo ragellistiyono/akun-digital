@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import golden from "../../tests/golden/batas-per-member.json";
+import goldenIsian from "../../tests/golden/isian-batas-per-member.json";
 import type { Metode } from "./bayar-saldo";
-import { hasilAmbilGratis, sisaJatah } from "./produk-gratis";
+import {
+  hasilAmbilGratis,
+  keteranganProdukGratis,
+  periksaBatasPerMember,
+  sisaJatah,
+} from "./produk-gratis";
 
 type KasusGolden = (typeof golden.kasus)[number];
 
@@ -132,5 +138,28 @@ describe("hasilAmbilGratis", () => {
       hasil: "jatah-habis",
       pesan: "Anda sudah mengambil 2 dari batas 2 untuk Produk ini.",
     });
+  });
+});
+
+// PRD §16.1, §16.2: Batas per Member wajib bilangan bulat 1 sampai 999 selama centang "Produk gratis" aktif, dan
+// isiannya tidak dipakai bila centang itu dilepas.
+describe("periksaBatasPerMember", () => {
+  it.each(goldenIsian.kasus)("$nama", ({ input, output }) => {
+    expect(periksaBatasPerMember(input)).toEqual(output);
+  });
+});
+
+// PRD §16.4: Halaman Produk gratis menampilkan "Gratis khusus Member, maksimal M per Member".
+describe("keteranganProdukGratis", () => {
+  it("contoh PRD: Batas per Member 5", () => {
+    expect(keteranganProdukGratis({ batasPerMember: 5 })).toBe(
+      "Gratis khusus Member, maksimal 5 per Member",
+    );
+  });
+
+  it("UAT-P1: Batas per Member 2", () => {
+    expect(keteranganProdukGratis({ batasPerMember: 2 })).toBe(
+      "Gratis khusus Member, maksimal 2 per Member",
+    );
   });
 });
