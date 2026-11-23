@@ -1,8 +1,8 @@
-import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import type { HalamanProduk } from "@/server/katalog";
 
 import { HargaNormal, LabelHemat } from "./kartu-produk";
+import { teksHarga } from "./teks-harga";
 
 /**
  * Pilihan Varian di Halaman Produk (PRD §3.2–§3.5, DESIGN.md "Pilihan Varian"): radiogroup berisi satu
@@ -14,13 +14,18 @@ import { HargaNormal, LabelHemat } from "./kartu-produk";
  *
  * Radionya radio bawaan browser (`name="varianId"`), jadi pilihan bekerja tanpa JavaScript dan dikirim
  * lewat form beli Halaman Produk.
+ *
+ * Varian Produk gratis (`gratis`) menampilkan "Gratis" di tempat Harga jual, dengan Harga normal yang tetap dicoret
+ * tanpa label Hemat (PRD §16.4).
  */
 export function PilihanVarian({
   varian,
+  gratis,
   terpilihId,
   labelledBy,
 }: {
   varian: HalamanProduk["varian"];
+  gratis: boolean;
   /** id Varian yang sudah terpilih saat halaman dibuka, atau null bila tidak ada. */
   terpilihId: string | null;
   /** id judul yang menamai radiogroup ini. */
@@ -58,7 +63,7 @@ export function PilihanVarian({
           </span>
           <span className="flex min-w-0 flex-col items-end gap-1 text-right">
             <span className="font-spidol text-[20px] leading-[1.2] font-bold whitespace-nowrap">
-              {rupiah(v.hargaJual)}
+              {teksHarga({ hargaJual: v.hargaJual, gratis })}
             </span>
             {v.hargaNormal !== null && (
               <HargaNormal

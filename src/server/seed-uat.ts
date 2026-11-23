@@ -49,7 +49,6 @@ import { db } from "./db";
 import {
   itemStok,
   pesanan,
-  produk,
   riwayatSaldo,
   riwayatStatusPesanan,
   riwayatStatusTopUp,
@@ -657,6 +656,10 @@ async function isiProduk(
       ketentuanGaransi: p.ketentuanGaransi,
       unggulan: p.unggulan,
       aktif: p.aktif,
+      // Produk gratis seed ditandai hanya saat dibuat, supaya centang yang dilepas Admin saat UAT-P4 tidak dipasang
+      // lagi oleh seed berikutnya.
+      gratis: p.batasPerMember !== null,
+      batasPerMember: p.batasPerMember,
       formatItemStok: format.kolom,
     });
     if (hasil.hasil !== "dibuat") {
@@ -672,14 +675,6 @@ async function isiProduk(
         `Produk "${p.nama}" tidak ditemukan setelah dibuat.`,
         JALANKAN_ULANG,
       );
-    }
-    // Form Produk belum punya centang "Produk gratis" (T87), jadi Produk gratis seed ditandai langsung, hanya saat
-    // dibuat, supaya centang yang dilepas Admin saat UAT-P4 tidak dipasang lagi oleh seed berikutnya.
-    if (p.batasPerMember !== null) {
-      await db
-        .update(produk)
-        .set({ gratis: true, batasPerMember: p.batasPerMember })
-        .where(eq(produk.id, id));
     }
   }
 

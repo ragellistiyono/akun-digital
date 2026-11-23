@@ -1,4 +1,4 @@
-import { Plus, Star } from "lucide-react";
+import { Gift, Plus, Star } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 
@@ -7,7 +7,7 @@ import { daftarProduk } from "@/server/produk";
 
 import { Pil, PilAktif } from "../_components/pil";
 
-// Daftar Produk di dasbor admin (PRD §3.2, §3.6, §3.7), urut menurut nama.
+// Daftar Produk di dasbor admin (PRD §3.2, §3.6, §3.7), urut menurut nama. Produk gratis ditandai "Gratis" (PRD §16.1).
 export default async function HalamanDaftarProduk() {
   await wajibSesiAdmin(await headers());
   const semuaProduk = await daftarProduk();
@@ -65,6 +65,13 @@ export default async function HalamanDaftarProduk() {
                           ikon={Star}
                           label="Unggulan"
                           className="bg-postit text-teks-postit"
+                        />
+                      )}
+                      {produk.gratis && (
+                        <Pil
+                          ikon={Gift}
+                          label="Gratis"
+                          className="bg-permukaan text-pulpen"
                         />
                       )}
                     </div>

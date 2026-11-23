@@ -7,7 +7,11 @@ import { hasilCheckout } from "./checkout";
 // PRD §3.7, §5.2 ▶ Keputusan 2026-11-17 langkah 1–5, dan §5.4 ▶ Keputusan 2026-11-12 (#87). Belum ada fixture golden untuk urutan ini, jadi
 // ekspektasinya diambil dari contoh PRD §5.4: Item stok terakhir Netflix Premium 1 Bulan sedang ditahan
 // Pesanan Andi, sehingga Stok Varian-nya 0. Data Produk dan Pesanan ini sintetis.
-const netflixSatuBulan = { produk: "Netflix Premium", varian: "1 Bulan" };
+const netflixSatuBulan = {
+  produk: "Netflix Premium",
+  varian: "1 Bulan",
+  gratis: false,
+};
 const pesananAndi = {
   email: "andi@example.test",
   status: "Menunggu Pembayaran",
@@ -295,5 +299,58 @@ describe("hasilCheckout", () => {
         }),
       }),
     ).toEqual({ hasil: "boleh", varianDijual: netflixSatuBulan });
+  });
+});
+
+// PRD §16: Produk gratis hanya bisa diambil Member yang sedang login lewat "Ambil gratis", tanpa pembayaran QRIS. Jadi
+// checkout QRIS atau saldo untuk Varian Produk gratis ditolak, misalnya dari form checkout yang dibuka sebelum Produk itu
+// dijadikan gratis.
+describe("hasilCheckout untuk Produk gratis", () => {
+  const akunUjiGratis = { produk: "Akun Uji Gratis", varian: "Akun Baru" };
+
+  it("Varian Produk gratis ditolak sebelum Member nonaktif, Pesanan menunggu, dan stok habis", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: { ...akunUjiGratis, gratis: true },
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "andi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 0,
+        memberNonaktif: true,
+        voucher: null,
+      }),
+    ).toEqual({ hasil: "produk-gratis" });
+  });
+
+  it("Varian yang tidak dijual tetap didahulukan", () => {
+    expect(
+      hasilCheckout({
+        varianDijual: undefined,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 5,
+        memberNonaktif: false,
+        voucher: null,
+      }),
+    ).toEqual({ hasil: "tidak-dijual" });
+  });
+
+  it("Varian Produk yang tidak gratis boleh dibeli seperti biasa", () => {
+    const varianDijual = { ...akunUjiGratis, gratis: false };
+    expect(
+      hasilCheckout({
+        varianDijual,
+        batasPesananMenunggu: batasPesananMenunggu({
+          email: "budi@example.test",
+          pesananLain,
+        }),
+        stokVarian: 5,
+        memberNonaktif: false,
+        voucher: null,
+      }),
+    ).toEqual({ hasil: "boleh", varianDijual });
   });
 });

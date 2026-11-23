@@ -82,6 +82,8 @@ async function varianBaru(formatItemStok = ["Email", "Password", "Profil"]) {
     ketentuanGaransi: "Garansi 30 hari sejak Item stok diterima.",
     unggulan: false,
     aktif: true,
+    gratis: false,
+    batasPerMember: null,
     formatItemStok,
   });
   const [produk] = (await daftarProduk()).filter((p) => p.nama === nama);

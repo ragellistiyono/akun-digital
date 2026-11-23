@@ -204,9 +204,9 @@ async function bacaSisaJatah(
  * Isi form checkout sebuah Varian (PRD §5.2): nama Produk dan Varian, Harga jual, dan Perkiraan bayar,
  * yaitu nominal yang akan dikirim ke Qrispy sebelum Qrispy menambahkan Kode unik (docs/DESIGN.md "Rincian
  * Total bayar"). Bila `idMember` diisi, yaitu Member sedang login, hasilnya juga membawa bayar dengan saldo tanpa
- * Voucher menurut bayarSaldo (PRD §15.7); untuk Tamu `saldo` null. Bila Produk-nya Produk gratis dan Member sedang
- * login, `jatah` adalah Sisa jatah Member itu menurut sisaJatah (PRD §16.2, §16.3); selain itu `jatah` null. Hasilnya
- * null bila Varian itu tidak bisa dibeli (PRD §3.7).
+ * Voucher menurut bayarSaldo (PRD §15.7); untuk Tamu `saldo` null. `gratis` menandai Varian Produk gratis (PRD §16.1).
+ * Bila Produk-nya Produk gratis dan Member sedang login, `jatah` adalah Sisa jatah Member itu menurut sisaJatah
+ * (PRD §16.2, §16.3); selain itu `jatah` null. Hasilnya null bila Varian itu tidak bisa dibeli (PRD §3.7).
  */
 export async function bacaCheckout(
   varianId: string,
@@ -226,6 +226,7 @@ export async function bacaCheckout(
     namaVarian,
     hargaJual,
     perkiraanBayar: nominal,
+    gratis: dijual.gratis,
     saldo:
       member &&
       bayarSaldo({
@@ -370,6 +371,7 @@ type HasilPesananMenunggu =
 
 type HasilCheckoutDitolak =
   | { hasil: "tidak-dijual" }
+  | { hasil: "produk-gratis" }
   | { hasil: "member-nonaktif" }
   | { hasil: "stok-habis" }
   | { hasil: "voucher-ditolak"; alasan: AlasanVoucherDitolak; pesan: string }
@@ -430,6 +432,8 @@ const kodeVoucherDiisi = (kode: string | null) =>
  * 2026-11-12).
  *
  * - Produk dan Varian-nya harus aktif (PRD §3.7). Bila tidak, tidak ada QRIS maupun Pesanan yang dibuat.
+ * - Varian Produk gratis ditolak tanpa QRIS maupun Pesanan, karena Produk gratis hanya diambil lewat
+ *   buatPesananGratis (PRD §16). Pesanan QRIS yang sudah dibuat sebelum Produk itu gratis tetap berjalan (PRD §16.1).
  * - Email milik Member nonaktif ditolak (PRD §2.3), tanpa QRIS maupun Pesanan, walaupun email itu masih punya
  *   Pesanan Menunggu Pembayaran. Pesanan yang sudah ada tetap berjalan seperti biasa.
  * - Bila email itu masih punya Pesanan Menunggu Pembayaran (PRD §5.4), tidak ada QRIS maupun Pesanan baru,

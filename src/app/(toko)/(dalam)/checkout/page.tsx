@@ -6,6 +6,7 @@ import { z } from "zod";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { bacaCheckout } from "@/server/pesanan";
 
+import { AjakanProdukGratis } from "./_components/ajakan-produk-gratis";
 import { FormAmbilGratis } from "./_components/form-ambil-gratis";
 import { FormCheckout } from "./_components/form-checkout";
 
@@ -20,9 +21,8 @@ import { FormCheckout } from "./_components/form-checkout";
 // Kodenya hanya mengisi isian. Voucher baru diperiksa saat "Pakai" ditekan atau saat Pesanan dibuat.
 //
 // Member yang membuka Checkout Produk gratis melihat Checkout Produk gratis dengan Sisa jatah-nya, tanpa isian kode
-// voucher dan pilihan Metode (PRD §16.3). Checkout Produk gratis untuk Tamu belum dibuat di sini (T87), jadi Tamu
-// masih melihat form checkout biasa; Admin belum bisa menjadikan Produk gratis sampai saat itu (PRD §13 ▶ Keputusan
-// 2026-11-22).
+// voucher dan pilihan Metode (PRD §16.3). Tamu yang membukanya hanya melihat ajakan Masuk atau Daftar, tanpa form,
+// dan kembali ke Checkout ini setelah login atau setelah Kode verifikasi yang benar dimasukkan (PRD §7.3, §16.3).
 export default async function HalamanCheckout({
   searchParams,
 }: PageProps<"/checkout">) {
@@ -42,12 +42,20 @@ export default async function HalamanCheckout({
   return (
     <>
       <h1 className="mt-4">Checkout</h1>
-      {checkout.jatah && sesiMember ? (
-        <FormAmbilGratis
-          checkout={checkout}
-          jatah={checkout.jatah}
-          emailMember={sesiMember.user.email}
-        />
+      {checkout.gratis ? (
+        checkout.jatah && sesiMember ? (
+          <FormAmbilGratis
+            checkout={checkout}
+            jatah={checkout.jatah}
+            emailMember={sesiMember.user.email}
+          />
+        ) : (
+          <AjakanProdukGratis
+            varianId={checkout.varianId}
+            namaProduk={checkout.namaProduk}
+            namaVarian={checkout.namaVarian}
+          />
+        )
       ) : (
         <FormCheckout
           checkout={checkout}

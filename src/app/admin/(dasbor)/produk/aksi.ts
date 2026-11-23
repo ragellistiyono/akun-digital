@@ -11,6 +11,12 @@ import {
   type MasalahFormatItemStok,
   type PerubahanFormatItemStok,
 } from "@/domain/format-item-stok";
+import {
+  BATAS_PER_MEMBER_MAKSIMUM,
+  BATAS_PER_MEMBER_MINIMUM,
+  periksaBatasPerMember,
+  type AlasanBatasPerMemberDitolak,
+} from "@/domain/produk-gratis";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
 import {
   buatProduk,
@@ -25,6 +31,7 @@ type GalatProduk = {
   deskripsi?: string;
   ketentuanGaransi?: string;
   formatItemStok?: string;
+  batasPerMember?: string;
   /** Nomor kolom Format Item stok (dari 1) yang ditolak. */
   kolomDitolak?: number[];
 };
@@ -41,6 +48,10 @@ export type KeadaanFormProduk = {
   ketentuanGaransi: string;
   unggulan: boolean;
   aktif: boolean;
+  /** Centang "Produk gratis" (PRD §16.1). */
+  gratis: boolean;
+  /** Isian Batas per Member apa adanya, yang hanya dipakai selama centang "Produk gratis" aktif (PRD §16.1). */
+  batasPerMember: string;
   formatItemStok?: string[];
   galat?: GalatProduk;
 };
@@ -88,7 +99,34 @@ function bacaIsian(formData: FormData) {
     // Kotak centang hanya terkirim bila dicentang.
     unggulan: formData.get("unggulan") === "on",
     aktif: formData.get("aktif") === "on",
+    gratis: formData.get("gratis") === "on",
+    batasPerMember: teks("batasPerMember"),
   };
+}
+
+/** Pesan penolakan Batas per Member dari periksaBatasPerMember, mengikuti pola Ambang stok menipis (PRD §9.4, §16.2). */
+const PESAN_BATAS_PER_MEMBER: Record<AlasanBatasPerMemberDitolak, string> = {
+  kosong: `Batas per Member belum diisi, padahal Produk gratis wajib punya Batas per Member. Tulis angka ${BATAS_PER_MEMBER_MINIMUM} sampai ${BATAS_PER_MEMBER_MAKSIMUM}, misalnya 5, lalu simpan lagi.`,
+  "bukan-bilangan-bulat": `Batas per Member harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka ${BATAS_PER_MEMBER_MINIMUM} sampai ${BATAS_PER_MEMBER_MAKSIMUM}, misalnya 5, lalu simpan lagi.`,
+  "di-luar-rentang": `Batas per Member hanya boleh ${BATAS_PER_MEMBER_MINIMUM} sampai ${BATAS_PER_MEMBER_MAKSIMUM}. Tulis angka di rentang itu, lalu simpan lagi.`,
+};
+
+/**
+ * Centang "Produk gratis" dan Batas per Member dari isian form, menurut periksaBatasPerMember (PRD §16.1, §16.2).
+ * Batas per Member hanya diperiksa dan dipakai selama centang itu aktif; bila centang dilepas, yang disimpan null.
+ */
+function bacaProdukGratis(isian: { gratis: boolean; batasPerMember: string }) {
+  const hasil = periksaBatasPerMember({
+    produkGratis: isian.gratis,
+    batas: isian.batasPerMember,
+  });
+  return hasil.sah
+    ? ({
+        sah: true,
+        gratis: isian.gratis,
+        batasPerMember: hasil.batasTersimpan,
+      } as const)
+    : ({ sah: false, galat: PESAN_BATAS_PER_MEMBER[hasil.alasan] } as const);
 }
 
 function galatIsian(galat: z.ZodError<z.infer<typeof MasukanProduk>>) {
@@ -134,13 +172,15 @@ export async function aksiBuatProduk(
     .array(z.string().catch(""))
     .parse(formData.getAll("kolom"));
   const masukan = MasukanProduk.safeParse(isian);
+  const gratis = bacaProdukGratis(isian);
   const format = periksaFormatItemStok(formatItemStok);
-  if (!masukan.success || !format.sah) {
+  if (!masukan.success || !gratis.sah || !format.sah) {
     return {
       ...isian,
       formatItemStok,
       galat: {
         ...(masukan.success ? {} : galatIsian(masukan.error)),
+        ...(gratis.sah ? {} : { batasPerMember: gratis.galat }),
         ...(format.sah
           ? {}
           : {
@@ -156,6 +196,8 @@ export async function aksiBuatProduk(
   // Semua Admin punya hak yang sama (PRD §2.1), jadi sesi Admin yang berlaku cukup untuk membuat.
   const hasil = await buatProduk({
     ...masukan.data,
+    gratis: gratis.gratis,
+    batasPerMember: gratis.batasPerMember,
     formatItemStok: format.kolom,
   });
   if (hasil.hasil === "kategori-tidak-ada") {
@@ -181,9 +223,23 @@ export async function aksiUbahProduk(
   // Format Item stok diubah lewat aksiUbahFormatItemStok, jadi isian kolom tidak dibaca di sini.
   const isian = bacaIsian(formData);
   const masukan = MasukanProduk.safeParse(isian);
-  if (!masukan.success) return { ...isian, galat: galatIsian(masukan.error) };
+  const gratis = bacaProdukGratis(isian);
+  if (!masukan.success || !gratis.sah) {
+    return {
+      ...isian,
+      galat: {
+        ...(masukan.success ? {} : galatIsian(masukan.error)),
+        ...(gratis.sah ? {} : { batasPerMember: gratis.galat }),
+      },
+    };
+  }
 
-  const hasil = await ubahProduk({ id: id.data, ...masukan.data });
+  const hasil = await ubahProduk({
+    id: id.data,
+    ...masukan.data,
+    gratis: gratis.gratis,
+    batasPerMember: gratis.batasPerMember,
+  });
   if (hasil.hasil === "tidak-ada") notFound();
   if (hasil.hasil === "kategori-tidak-ada") {
     return { ...isian, galat: { kategoriId: PESAN_KATEGORI_TIDAK_ADA } };

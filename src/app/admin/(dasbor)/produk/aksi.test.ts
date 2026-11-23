@@ -112,6 +112,8 @@ const keadaanAwal = () => ({
   ketentuanGaransi: "",
   unggulan: false,
   aktif: true,
+  gratis: false,
+  batasPerMember: "",
   formatItemStok: [""],
 });
 
@@ -159,7 +161,7 @@ describe("membuat Produk (PRD §3.2, §4.1)", () => {
         formatItemStok: ["Email", "Password", "Profil"],
         // Produk baru belum punya foto; foto diunggah di halaman Ubah Produk (T08).
         foto: [],
-        // Form Produk belum punya centang "Produk gratis" (T87), jadi Produk baru bukan Produk gratis.
+        // Centang "Produk gratis" tidak dicentang, jadi Produk baru bukan Produk gratis (PRD §16.1).
         gratis: false,
         batasPerMember: null,
       },
@@ -184,6 +186,8 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
       ketentuanGaransi: "Garansi 30 hari sejak Item stok diterima.",
       unggulan: true,
       aktif: true,
+      gratis: false,
+      batasPerMember: "",
       formatItemStok: ["Email", "Password", "Profil"],
       galat: {
         kategoriId:
@@ -336,6 +340,8 @@ describe("Produk yang ditolak dengan pesan dan tidak dibuat", () => {
       ketentuanGaransi: "\n",
       unggulan: false,
       aktif: false,
+      gratis: false,
+      batasPerMember: "",
       formatItemStok: [""],
       galat: {
         nama: "Nama Produk belum diisi. Ketik nama Produk, misalnya Netflix Premium.",
@@ -440,6 +446,8 @@ describe("mengubah Produk (PRD §3.2, §3.7)", () => {
       ketentuanGaransi: ada.ketentuanGaransi,
       unggulan: true,
       aktif: true,
+      gratis: false,
+      batasPerMember: "",
       galat: {
         nama: "Nama Produk belum diisi. Ketik nama Produk, misalnya Netflix Premium.",
         kategoriId:
@@ -571,6 +579,113 @@ const pesanTidakBoleh = (
   ditahan: number,
 ) =>
   `Kolom tidak bisa ${perbuatan}, karena Produk ini masih punya Item stok Tersedia atau Ditahan: ${tersedia} Tersedia dan ${ditahan} Ditahan. Kolom bisa ditambah atau dihapus setelah semua Item stok Produk ini Terkirim, atau setelah Item stok Tersedia-nya dihapus di halaman Varian. Nama kolom tetap bisa diganti kapan saja.`;
+
+// PRD §16.1, §16.2, UAT-P1: centang "Produk gratis" dan isian Batas per Member di form Produk. Pesan penolakannya
+// menyebut sebabnya, mengikuti pola isian Ambang stok menipis (PRD §9.4).
+describe("Produk gratis di form Produk (PRD §16.1, §16.2, UAT-P1)", () => {
+  const PESAN_BATAS = {
+    kosong:
+      "Batas per Member belum diisi, padahal Produk gratis wajib punya Batas per Member. Tulis angka 1 sampai 999, misalnya 5, lalu simpan lagi.",
+    bukanBilanganBulat:
+      "Batas per Member harus bilangan bulat, tanpa koma, titik, atau huruf. Tulis angka 1 sampai 999, misalnya 5, lalu simpan lagi.",
+    diLuarRentang:
+      "Batas per Member hanya boleh 1 sampai 999. Tulis angka di rentang itu, lalu simpan lagi.",
+  };
+
+  it("Batas per Member kosong, 1000, dan 2.5 ditolak dengan pesan yang menyebut sebabnya, dan Produk tidak berubah; dengan 2, Produk tersimpan sebagai Produk gratis dan ditandai gratis di daftar Produk", async () => {
+    const ada = await netflixAda();
+    const isianGratis = (batasPerMember: string) =>
+      formulir({ ...isianUbah(ada), gratis: "on", batasPerMember });
+
+    for (const [batas, pesan] of [
+      ["", PESAN_BATAS.kosong],
+      ["1000", PESAN_BATAS.diLuarRentang],
+      ["2.5", PESAN_BATAS.bukanBilanganBulat],
+    ] as const) {
+      const keadaan = await aksiUbahProduk(keadaanAwal(), isianGratis(batas));
+      expect(keadaan).toEqual({
+        nama: ada.nama,
+        kategoriId: ada.kategoriId,
+        deskripsi: ada.deskripsi,
+        ketentuanGaransi: ada.ketentuanGaransi,
+        unggulan: true,
+        aktif: true,
+        gratis: true,
+        batasPerMember: batas,
+        galat: { batasPerMember: pesan },
+      });
+      expect(await bacaProduk(ada.id)).toEqual(ada);
+    }
+
+    await expect(
+      aksiUbahProduk(keadaanAwal(), isianGratis("2")),
+    ).rejects.toSatisfy(arahKe("/admin/produk"));
+    expect(await bacaProduk(ada.id)).toEqual({
+      ...ada,
+      gratis: true,
+      batasPerMember: 2,
+    });
+    expect((await daftarProduk()).find((p) => p.id === ada.id)).toMatchObject({
+      gratis: true,
+    });
+  });
+
+  it("melepas centang Produk gratis menyimpan Produk itu sebagai Produk biasa, dan isian Batas per Member tidak dipakai walaupun isinya salah", async () => {
+    const ada = await netflixAda();
+    await expect(
+      aksiUbahProduk(
+        keadaanAwal(),
+        formulir({ ...isianUbah(ada), gratis: "on", batasPerMember: "2" }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin/produk"));
+
+    await expect(
+      aksiUbahProduk(
+        keadaanAwal(),
+        formulir({ ...isianUbah(ada), batasPerMember: "abc" }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin/produk"));
+
+    expect(await bacaProduk(ada.id)).toEqual(ada);
+    expect((await daftarProduk()).find((p) => p.id === ada.id)).toMatchObject({
+      gratis: false,
+    });
+  });
+
+  it("Admin membuat Produk gratis dengan Batas per Member 5, dan Produk baru dengan Batas per Member yang ditolak tidak dibuat", async () => {
+    const streaming = await kategoriBaru();
+    const nama = namaUnik("Akun Uji Gratis");
+    sebagaiPengunjung(await cookieAdminBaru());
+
+    const ditolak = await aksiBuatProduk(
+      keadaanAwal(),
+      formulir({
+        ...isianNetflix(streaming.id, nama),
+        gratis: "on",
+        batasPerMember: "lima",
+      }),
+    );
+    expect(ditolak.galat).toEqual({
+      batasPerMember: PESAN_BATAS.bukanBilanganBulat,
+    });
+    expect(ditolak).toMatchObject({ gratis: true, batasPerMember: "lima" });
+    expect(await produkBernama(nama)).toEqual([]);
+
+    await expect(
+      aksiBuatProduk(
+        keadaanAwal(),
+        formulir({
+          ...isianNetflix(streaming.id, nama),
+          gratis: "on",
+          batasPerMember: " 5 ",
+        }),
+      ),
+    ).rejects.toSatisfy(arahKe("/admin/produk"));
+    expect(await produkBernama(nama)).toMatchObject([
+      { gratis: true, batasPerMember: 5 },
+    ]);
+  });
+});
 
 describe("mengubah Format Item stok (PRD §4.1, UAT-D2)", () => {
   it("Admin mengganti nama kolom Profil menjadi Nama Profil walaupun Produk punya Item stok Tersedia dan Ditahan; Item stok Tersedia dan Ditahan tampil dengan nama baru, Item stok Terkirim tetap dengan nama lama", async () => {

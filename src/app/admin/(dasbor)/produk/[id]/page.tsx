@@ -53,7 +53,11 @@ export default async function HalamanUbahProduk({
           />
         </div>
         <div className="min-w-0 space-y-6">
-          <VarianProduk produkId={produk.id} varian={varian} />
+          <VarianProduk
+            produkId={produk.id}
+            gratis={produk.gratis}
+            varian={varian}
+          />
           <FotoProduk
             produkId={produk.id}
             foto={fotoUntukTampilan(produk.foto)}

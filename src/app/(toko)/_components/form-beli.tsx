@@ -3,9 +3,8 @@
 import Form from "next/form";
 import { useState, type ReactNode } from "react";
 
-import { rupiah } from "@/lib/rupiah";
-
 import { BilahLekat } from "./bilah-lekat";
+import { teksHarga } from "./teks-harga";
 
 /** Alamat form checkout. Varian terpilih dikirim sebagai `?varianId=…`. */
 const ALAMAT_CHECKOUT = "/checkout";
@@ -17,14 +16,17 @@ type VarianBeli = { id: string; hargaJual: number; habis: boolean };
  * `varianId`) atau, untuk Produk dengan satu Varian, isian tersembunyi `varianId`, beserta isi halaman
  * lainnya. Tombol utamanya (kelas `tombol`) ada di bilah lekat dan mengikuti Varian terpilih: "Beli · Rp X",
  * atau "Habis" dan tidak bisa ditekan bila Varian itu habis atau tidak ada Varian ber-stok. Tombol nonaktif
- * otomatis bergaris putus di atas `kertas-lama`.
+ * otomatis bergaris putus di atas `kertas-lama`. Untuk Produk gratis (`gratis`), tombolnya "Beli · Gratis" (PRD §16.3,
+ * §16.4).
  */
 export function FormBeli({
   varian,
+  gratis,
   terpilihAwal,
   children,
 }: {
   varian: VarianBeli[];
+  gratis: boolean;
   /** id Varian yang sudah terpilih saat halaman dibuka, atau null bila tidak ada. */
   terpilihAwal: string | null;
   children: ReactNode;
@@ -48,7 +50,9 @@ export function FormBeli({
       {children}
       <BilahLekat>
         <button type="submit" disabled={!terpilih} className="tombol min-w-0">
-          {terpilih ? `Beli · ${rupiah(terpilih.hargaJual)}` : "Habis"}
+          {terpilih
+            ? `Beli · ${teksHarga({ hargaJual: terpilih.hargaJual, gratis })}`
+            : "Habis"}
         </button>
       </BilahLekat>
     </Form>

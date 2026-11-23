@@ -5,6 +5,8 @@ import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import type { KartuProduk as IsiKartuProduk } from "@/server/katalog";
 
+import { teksHarga } from "./teks-harga";
+
 /** Alamat Halaman Produk (T13). */
 const alamatHalamanProduk = (id: string) => `/produk/${id}`;
 
@@ -54,7 +56,10 @@ function FotoSampul({
   );
 }
 
-/** Harga jual di kartu: "Mulai Rp X" atau "Rp X" (PRD §3.8), ditulis spidol tebal. */
+/**
+ * Harga jual di kartu: "Mulai Rp X" atau "Rp X" (PRD §3.8), ditulis spidol tebal. Produk gratis menampilkan "Gratis"
+ * tanpa kata "Mulai" (PRD §16.4).
+ */
 function Harga({
   kartu,
   className,
@@ -73,7 +78,9 @@ function Harga({
       {kartu.mulai && (
         <span className="font-tangan text-[16px] font-normal">Mulai </span>
       )}
-      <span className="whitespace-nowrap">{rupiah(kartu.harga)}</span>
+      <span className="whitespace-nowrap">
+        {teksHarga({ hargaJual: kartu.harga, gratis: kartu.gratis })}
+      </span>
     </p>
   );
 }
@@ -122,7 +129,7 @@ export function LabelHabis() {
 
 /**
  * Baris banding: Harga normal Varian sumber harga yang dicoret, lalu label Hemat, atau label Habis bila
- * semua Varian aktif habis (DESIGN.md, keputusan teknis "Mulai Rp X").
+ * semua Varian aktif habis (DESIGN.md, keputusan teknis "Mulai Rp X"). Produk gratis tidak punya Hemat (PRD §16.4).
  */
 function Banding({ kartu }: { kartu: IsiKartuProduk }) {
   const hemat = kartu.habis ? null : kartu.persenHemat;
@@ -160,7 +167,8 @@ export function KartuProduk({ kartu }: { kartu: IsiKartuProduk }) {
  * Kartu Produk Unggulan: kartu tegas yang "dipaku" di papan, satu anak tangga lebih besar dari kartu Produk,
  * tanpa lencana tambahan. Di layar lebar kartu ini menampilkan daftar Varian aktif beserta Harga normal yang
  * dicoret dan label "Hemat N%", atau label Habis (DESIGN.md "Cards / Containers", ▶ Keputusan 2026-11-11
- * #53 dan 2026-11-12 #87).
+ * #53 dan 2026-11-12 #87). Varian Produk gratis menampilkan Harga normal yang dicoret lalu "Gratis", tanpa Hemat
+ * (DESIGN.md ▶ Keputusan 2026-11-22).
  */
 export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
   return (
@@ -206,7 +214,10 @@ export function KartuProdukUnggulan({ kartu }: { kartu: IsiKartuProduk }) {
                     <LabelHemat persen={v.persenHemat} />
                   )}
                   <span className="font-spidol text-[19px] font-bold whitespace-nowrap">
-                    {rupiah(v.hargaJual)}
+                    {teksHarga({
+                      hargaJual: v.hargaJual,
+                      gratis: kartu.gratis,
+                    })}
                   </span>
                 </>
               )}

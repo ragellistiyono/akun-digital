@@ -35,6 +35,10 @@ type Varian = {
   aktif: boolean;
 };
 
+/** Catatan di form Varian Produk gratis (PRD §16.1). */
+const CATATAN_PRODUK_GRATIS =
+  "Produk ini gratis. Harga jual dipakai lagi bila centang Produk gratis dilepas.";
+
 /** Tombol kecil 40 px untuk aksi kedua di baris Varian (kelas `tombol-kecil` di globals.css). */
 const KELAS_TOMBOL_KECIL = "tombol tombol-kedua tombol-kecil";
 
@@ -64,16 +68,21 @@ function labaKotorKetikan({
  * Form Varian untuk menambah (tanpa `varian`) atau mengubah Varian yang sudah ada. Setelah Varian
  * tersimpan, atau saat Admin memilih Batal, form ditutup lewat `onSelesai`.
  *
+ * Varian Produk gratis tetap wajib punya Harga jual, dengan catatan bahwa Harga jual dipakai lagi bila centang
+ * Produk gratis dilepas (PRD §16.1). Catatan ini tetap tampil walaupun Harga jual ditolak.
+ *
  * "Laba kotor per Pesanan" di bawah isian Harga modal berubah langsung saat Harga jual atau Harga modal
  * diketik (PRD §14.1). Setelah server menjawab, misalnya dengan pesan penolakan, isian kembali ke nilai
  * jawabannya, jadi Laba kotor-nya ikut dihitung ulang dari nilai itu.
  */
 function FormVarian({
   produkId,
+  gratis,
   varian,
   onSelesai,
 }: {
   produkId: string;
+  gratis: boolean;
   varian?: Varian;
   onSelesai: () => void;
 }) {
@@ -161,15 +170,22 @@ function FormVarian({
 
       {/* Harga jual dan Harga modal berdampingan bila panel Varian cukup lebar, lalu Harga normal. */}
       <div className="grid items-start gap-6 @md:grid-cols-2">
-        <IsianTeks
-          nama="hargaJual"
-          id={`${awalan}-harga-jual`}
-          label="Harga jual"
-          nilaiAwal={keadaan.hargaJual}
-          galat={galat?.hargaJual}
-          bantuan={`Rupiah bulat dari ${rupiah(HARGA_JUAL_MINIMUM)} sampai ${rupiah(HARGA_JUAL_MAKSIMUM)}, misalnya 50.000.`}
-          inputMode="numeric"
-        />
+        <div className="flex flex-col gap-2">
+          <IsianTeks
+            nama="hargaJual"
+            id={`${awalan}-harga-jual`}
+            label="Harga jual"
+            nilaiAwal={keadaan.hargaJual}
+            galat={galat?.hargaJual}
+            bantuan={`Rupiah bulat dari ${rupiah(HARGA_JUAL_MINIMUM)} sampai ${rupiah(HARGA_JUAL_MAKSIMUM)}, misalnya 50.000.`}
+            inputMode="numeric"
+          />
+          {gratis && (
+            <p className="text-[15px] text-pensil-redup">
+              {CATATAN_PRODUK_GRATIS}
+            </p>
+          )}
+        </div>
 
         <div className="flex flex-col gap-2">
           <IsianTeks
@@ -228,9 +244,11 @@ function FormVarian({
  */
 function BarisVarian({
   produkId,
+  gratis,
   varian,
 }: {
   produkId: string;
+  gratis: boolean;
   varian: Varian;
 }) {
   const [diubah, setDiubah] = useState(false);
@@ -240,6 +258,7 @@ function BarisVarian({
       <li className="py-4">
         <FormVarian
           produkId={produkId}
+          gratis={gratis}
           varian={varian}
           onSelesai={() => setDiubah(false)}
         />
@@ -303,13 +322,15 @@ function BarisVarian({
  * Varian di halaman Ubah Produk (PRD §3.2, §3.5, §3.7, §14.1): daftar Varian beserta Harga jual, Harga
  * normal, Harga modal, Laba kotor per Pesanan, dan keadaannya ("—" untuk Varian tanpa Harga modal), form
  * tambah dan ubah, serta tautan ke halaman Varian untuk mengisi Item stok. Setiap Varian langsung tersimpan,
- * terpisah dari tombol Simpan di form Produk.
+ * terpisah dari tombol Simpan di form Produk. `gratis` menandai Produk gratis (PRD §16.1).
  */
 export function VarianProduk({
   produkId,
+  gratis,
   varian,
 }: {
   produkId: string;
+  gratis: boolean;
   varian: Varian[];
 }) {
   const [menambah, setMenambah] = useState(false);
@@ -338,13 +359,22 @@ export function VarianProduk({
           className="flex flex-col divide-y-2 divide-dashed divide-pensil"
         >
           {varian.map((satu) => (
-            <BarisVarian key={satu.id} produkId={produkId} varian={satu} />
+            <BarisVarian
+              key={satu.id}
+              produkId={produkId}
+              gratis={gratis}
+              varian={satu}
+            />
           ))}
         </ul>
       )}
 
       {menambah ? (
-        <FormVarian produkId={produkId} onSelesai={() => setMenambah(false)} />
+        <FormVarian
+          produkId={produkId}
+          gratis={gratis}
+          onSelesai={() => setMenambah(false)}
+        />
       ) : (
         <div>
           <button

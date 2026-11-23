@@ -68,3 +68,24 @@ describe("persenHematVarian", () => {
     });
   });
 });
+
+// PRD §16.4, docs/DESIGN.md ▶ Keputusan 2026-11-22: Harga normal Produk gratis tetap dicoret, tanpa label "Hemat N%".
+// UAT persiapan M6 [CONTOH]: Akun Uji Gratis "Akun Baru", Harga jual Rp 1.000 dan Harga normal Rp 15.000.
+describe("Produk gratis tanpa label Hemat", () => {
+  it("persenHemat Varian Produk gratis tidak tampil", () => {
+    expect(
+      persenHemat({ hargaNormal: 15000, hargaJual: 1000, gratis: true }),
+    ).toMatchObject({ tampil: false, persenHemat: null });
+  });
+
+  it("persenHematVarian Varian Produk gratis yang ber-stok tidak punya Hemat", () => {
+    expect(
+      persenHematVarian({
+        hargaNormal: 15000,
+        hargaJual: 1000,
+        stokVarian: 5,
+        gratis: true,
+      }),
+    ).toMatchObject({ habis: false, persenHemat: null });
+  });
+});

@@ -154,6 +154,29 @@ const keadaanAwal = () => ({ email: "", kodeVoucher: "" });
 const PESAN_TIDAK_DIJUAL =
   "Produk atau Varian ini sedang tidak dijual, jadi Pesanan tidak dibuat. Pilih Produk lain di Beranda.";
 
+/** Pesan bila checkout QRIS atau saldo dikirim untuk Varian Produk gratis (PRD §16). */
+const PESAN_PRODUK_GRATIS =
+  "Produk ini sekarang gratis khusus Member, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk mengambilnya.";
+
+/**
+ * Varian "Akun Baru" Produk gratis baru yang meniru Akun Uji Gratis dari persiapan M6 [CONTOH]: Harga jual Rp 1.000,
+ * Batas per Member 2, dan 5 Item stok Tersedia. Hasilnya id Varian itu.
+ */
+async function varianAkunUjiGratis() {
+  const produkId = await sisipkanProduk({
+    nama: `Akun Uji Gratis ${randomUUID().slice(0, 8)}`,
+    batasPerMember: 2,
+    varian: [
+      { nama: "Akun Baru", hargaJual: 1000, hargaNormal: 15000, Tersedia: 5 },
+    ],
+  });
+  const [{ id }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  return id;
+}
+
 describe("checkout (PRD §5.2)", () => {
   it("email yang sah membuat Pesanan Menunggu Pembayaran, lalu Pembeli diarahkan ke Tautan Pesanan", async () => {
     const varianId = await netflixSatuBulan();
@@ -264,6 +287,27 @@ describe("checkout (PRD §5.2)", () => {
         checkout:
           "Stok Varian ini sudah habis, jadi Pesanan tidak dibuat. Pilih Varian lain, atau Produk lain di Beranda.",
       },
+    });
+    expect(buatQris).not.toHaveBeenCalled();
+    expect(await pesananDenganEmail(email)).toEqual([]);
+  });
+
+  // PRD §16: Produk gratis hanya diambil lewat "Ambil gratis", tanpa QRIS, misalnya bila form checkout dibuka
+  // sebelum Produk itu dijadikan gratis.
+  it("checkout QRIS untuk Varian Produk gratis ditolak dengan pesan, tanpa QRIS maupun Pesanan", async () => {
+    const varianId = await varianAkunUjiGratis();
+    const email = emailUnik();
+    const buatQris = vi.spyOn(qrispyTiruan, "buatQris");
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, email }),
+    );
+
+    expect(keadaan).toEqual({
+      email,
+      kodeVoucher: "",
+      galat: { checkout: PESAN_PRODUK_GRATIS },
     });
     expect(buatQris).not.toHaveBeenCalled();
     expect(await pesananDenganEmail(email)).toEqual([]);
@@ -1061,6 +1105,20 @@ describe("bayar dengan saldo (PRD §15.7)", () => {
     });
     return kode;
   }
+
+  it("bayar dengan saldo untuk Varian Produk gratis ditolak dengan pesan, saldo tidak berubah, dan Pesanan tidak dibuat", async () => {
+    const varianId = await varianAkunUjiGratis();
+    const member = await memberLoginDenganSaldo(5000);
+
+    const keadaan = await aksiCheckout(
+      keadaanAwal(),
+      formulir({ varianId, metode: "Saldo" }),
+    );
+
+    expect(keadaan.galat).toEqual({ checkout: PESAN_PRODUK_GRATIS });
+    expect(await saldoMember(member.id)).toBe(5000);
+    expect(await pesananDenganEmail(member.email)).toEqual([]);
+  });
 
   it("Member dengan saldo cukup membeli Uji Bayar dengan saldo: Pesanan langsung Selesai tanpa QRIS, Item stok Terkirim, saldo berkurang Rp 1.000, dan Riwayat saldo mencatat Pembelian dengan Nomor Pesanan", async () => {
     const varianId = await varianBaru("Uji Bayar", 1000);

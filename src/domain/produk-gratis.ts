@@ -1,4 +1,4 @@
-// Produk gratis (PRD §16): Batas per Member dan Sisa jatah (§16.2), urutan pemeriksaan "Ambil gratis" (§16.3), dan
+// Produk gratis (PRD §16): isian Batas per Member (§16.1, §16.2), Sisa jatah (§16.2), urutan pemeriksaan "Ambil gratis" (§16.3), dan
 // nominal yang dicatat Pesanan gratis (§16.5). Batas Pesanan menunggu ada di batas-pesanan-menunggu.ts, dan Varian
 // habis ada di stok-varian.ts.
 import type { Metode } from "./bayar-saldo";
@@ -17,6 +17,57 @@ export const NOMINAL_PESANAN_GRATIS = {
   totalBayar: 0,
   biayaTransaksi: 0,
 } as const;
+
+/** Batas per Member terkecil dan terbesar yang boleh disimpan (PRD §16.2). */
+export const BATAS_PER_MEMBER_MINIMUM = 1;
+export const BATAS_PER_MEMBER_MAKSIMUM = 999;
+
+export type AlasanBatasPerMemberDitolak =
+  "kosong" | "bukan-bilangan-bulat" | "di-luar-rentang";
+
+/** Isian yang berupa bilangan bulat: angka saja, boleh diawali tanda minus. */
+const POLA_BILANGAN_BULAT = /^-?[0-9]+$/;
+
+/**
+ * Memeriksa isian Batas per Member di form Produk (PRD §16.1, §16.2, tests/golden/isian-batas-per-member.json).
+ * `batas` adalah teks isian apa adanya; spasi di awal dan akhirnya dibuang.
+ * - Bila `produkGratis` false, isian tidak dipakai: hasilnya sah dan `batasTersimpan` null, apa pun isinya.
+ * - Bila `produkGratis` true, Batas per Member wajib berupa bilangan bulat 1 sampai 999. Isian kosong ditolak dengan
+ *   alasan "kosong", isian yang bukan bilangan bulat dengan "bukan-bilangan-bulat", dan bilangan bulat di luar rentang
+ *   itu dengan "di-luar-rentang". `batasTersimpan` adalah Batas per Member yang disimpan, atau null bila ditolak.
+ */
+export function periksaBatasPerMember({
+  produkGratis,
+  batas,
+}: {
+  produkGratis: boolean;
+  batas: string;
+}):
+  | { sah: true; alasan: null; batasTersimpan: number | null }
+  | { sah: false; alasan: AlasanBatasPerMemberDitolak; batasTersimpan: null } {
+  if (!produkGratis) return { sah: true, alasan: null, batasTersimpan: null };
+  const isian = batas.trim();
+  if (isian === "") {
+    return { sah: false, alasan: "kosong", batasTersimpan: null };
+  }
+  if (!POLA_BILANGAN_BULAT.test(isian)) {
+    return { sah: false, alasan: "bukan-bilangan-bulat", batasTersimpan: null };
+  }
+  const angka = Number(isian);
+  if (angka < BATAS_PER_MEMBER_MINIMUM || angka > BATAS_PER_MEMBER_MAKSIMUM) {
+    return { sah: false, alasan: "di-luar-rentang", batasTersimpan: null };
+  }
+  return { sah: true, alasan: null, batasTersimpan: angka };
+}
+
+/** Keterangan Halaman Produk gratis di bawah harganya, "Gratis khusus Member, maksimal M per Member" (PRD §16.4). */
+export function keteranganProdukGratis({
+  batasPerMember,
+}: {
+  batasPerMember: number;
+}) {
+  return `Gratis khusus Member, maksimal ${batasPerMember} per Member`;
+}
 
 /** Pesanan yang diperiksa untuk jatah terpakai: Produk-nya, Metode-nya, dan email-nya. */
 type PesananJatah = { produk: string; metode: Metode; email: string };

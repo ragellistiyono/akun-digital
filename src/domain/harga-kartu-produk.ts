@@ -1,14 +1,16 @@
-// Harga di kartu Produk (PRD §3.4, §3.8).
+// Harga di kartu Produk (PRD §3.4, §3.8, §16.4).
 import { varianHabis } from "./stok-varian";
 
 /** Bahan hitung harga kartu dari satu Varian: Harga jual, Stok Varian, dan aktif atau nonaktif. */
 type VarianKartu = { hargaJual: number; stokVarian: number; aktif: boolean };
 
 type HasilHargaKartuProduk<V extends VarianKartu> = {
-  /** Kata "Mulai" dipakai karena Varian aktifnya lebih dari satu. */
+  /** Kata "Mulai" dipakai karena Varian aktifnya lebih dari satu dan Produk itu bukan Produk gratis. */
   mulai: boolean;
-  /** Harga jual yang tampil di kartu. */
+  /** Harga jual yang tampil di kartu, kecuali Produk gratis yang menampilkan "Gratis" sebagai gantinya. */
   harga: number;
+  /** Produk gratis, jadi kartu menampilkan "Gratis" di tempat harga (PRD §16.4). */
+  gratis: boolean;
   /** Semua Varian aktif habis, jadi kartu menampilkan label Habis. */
   habis: boolean;
   /** Varian sumber harga, tempat Harga normal yang dicoret dan Hemat diambil (docs/DESIGN.md). */
@@ -29,11 +31,17 @@ const termurah = <V extends VarianKartu>(varian: V[]) =>
  * Varian yang memberi harga itu menjadi sumber harga. Bila Harga jual termurahnya sama, Varian yang
  * lebih dulu di masukan yang dipilih. Hasilnya null bila Produk tidak punya Varian aktif, karena Produk
  * itu tidak tampil di katalog.
+ *
+ * Kartu Produk gratis (`gratis`) menampilkan "Gratis" di tempat harga, tanpa kata "Mulai", berapa pun Varian
+ * aktifnya. Label Habis dan Varian sumber harga tetap ditentukan dengan aturan di atas (PRD §3.8 ▶ Keputusan
+ * 2026-11-22, §16.4).
  */
 export function hargaKartuProduk<V extends VarianKartu>({
   varian,
+  gratis = false,
 }: {
   varian: readonly V[];
+  gratis?: boolean;
 }): HasilHargaKartuProduk<V> | null {
   const varianAktif = varian.filter((v) => v.aktif);
   if (varianAktif.length === 0) return null;
@@ -42,8 +50,9 @@ export function hargaKartuProduk<V extends VarianKartu>({
   const habis = berstok.length === 0;
   const sumber = termurah(habis ? varianAktif : berstok);
   return {
-    mulai: varianAktif.length > 1,
+    mulai: !gratis && varianAktif.length > 1,
     harga: sumber.hargaJual,
+    gratis,
     habis,
     sumber,
     varianAktif,
