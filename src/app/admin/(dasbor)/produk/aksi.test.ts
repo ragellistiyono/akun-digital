@@ -159,6 +159,9 @@ describe("membuat Produk (PRD §3.2, §4.1)", () => {
         formatItemStok: ["Email", "Password", "Profil"],
         // Produk baru belum punya foto; foto diunggah di halaman Ubah Produk (T08).
         foto: [],
+        // Form Produk belum punya centang "Produk gratis" (T87), jadi Produk baru bukan Produk gratis.
+        gratis: false,
+        batasPerMember: null,
       },
     ]);
   });
@@ -417,6 +420,8 @@ describe("mengubah Produk (PRD §3.2, §3.7)", () => {
       aktif: true,
       formatItemStok: ["Email", "Password", "Profil"],
       foto: [],
+      gratis: false,
+      batasPerMember: null,
     });
   });
 

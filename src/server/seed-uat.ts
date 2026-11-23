@@ -49,6 +49,7 @@ import { db } from "./db";
 import {
   itemStok,
   pesanan,
+  produk,
   riwayatSaldo,
   riwayatStatusPesanan,
   riwayatStatusTopUp,
@@ -120,6 +121,11 @@ type ProdukSeed = {
   deskripsi: string;
   ketentuanGaransi: string;
   formatItemStok: string[];
+  /**
+   * Batas per Member bila Produk ini Produk gratis (PRD §16.1, §16.2), dari persiapan M6 di docs/UAT.md (▶ Keputusan
+   * 2026-11-22), atau null bila bukan Produk gratis.
+   */
+  batasPerMember: number | null;
   /** Warna petak foto contoh Produk. */
   warnaFoto: Rgb;
   varian: VarianSeed[];
@@ -148,6 +154,7 @@ const PRODUK: ProdukSeed[] = [
     ketentuanGaransi:
       "Garansi penggantian selama masa langganan bila profil tidak bisa dipakai. Hubungi kami lewat WhatsApp dengan Nomor Pesanan Anda.",
     formatItemStok: ["Email", "Password", "Profil"],
+    batasPerMember: null,
     warnaFoto: [91, 74, 146], // langit-garis
     varian: [
       {
@@ -192,6 +199,7 @@ const PRODUK: ProdukSeed[] = [
     ketentuanGaransi:
       "Garansi penggantian selama masa langganan bila akun tidak bisa dipakai. Hubungi kami lewat WhatsApp dengan Nomor Pesanan Anda.",
     formatItemStok: ["Email", "Password"],
+    batasPerMember: null,
     warnaFoto: [235, 201, 103], // matahari
     varian: [
       {
@@ -223,6 +231,7 @@ const PRODUK: ProdukSeed[] = [
     ketentuanGaransi:
       "Garansi penggantian selama masa langganan bila akun tidak bisa dipakai. Hubungi kami lewat WhatsApp dengan Nomor Pesanan Anda.",
     formatItemStok: ["Email", "Password"],
+    batasPerMember: null,
     warnaFoto: [237, 144, 101], // persik
     varian: [
       {
@@ -243,6 +252,7 @@ const PRODUK: ProdukSeed[] = [
       "Produk untuk menguji pembayaran QRIS sungguhan sebesar Rp 1.000 ditambah Kode unik. Item stok-nya berupa kode contoh.",
     ketentuanGaransi: "Tanpa garansi.",
     formatItemStok: ["Kode"],
+    batasPerMember: null,
     warnaFoto: [117, 72, 242], // aksi
     varian: [
       {
@@ -259,6 +269,36 @@ const PRODUK: ProdukSeed[] = [
     ],
   },
   {
+    // Persiapan M6 di docs/UAT.md (▶ Keputusan 2026-11-22): Produk gratis untuk UAT-P1 sampai UAT-P5.
+    nama: "Akun Uji Gratis",
+    kategori: "Streaming",
+    unggulan: false,
+    aktif: true,
+    deskripsi:
+      "Produk gratis untuk menguji pengambilan Produk gratis oleh Member. Item stok-nya berupa akun contoh.",
+    ketentuanGaransi: "Tanpa garansi.",
+    formatItemStok: ["Email", "Password"],
+    batasPerMember: 2,
+    warnaFoto: [24, 96, 62], // st-selesai
+    varian: [
+      {
+        nama: "Akun Baru",
+        hargaJual: 1000,
+        hargaNormal: 15000,
+        hargaModal: 0,
+        itemStok: [
+          // Item stok yang ditempel ulang dengan ejaan lain pada UAT-D5.
+          "budi.santoso@mail.com|rahasia1",
+          ...berurut(
+            4,
+            (nomor) =>
+              `gratis-${nomor}@miwe.example|sandi-contoh-gratis-${nomor}`,
+          ),
+        ],
+      },
+    ],
+  },
+  {
     // Persiapan bersama tidak menyebut Varian untuk Game Lama, jadi Produk ini tanpa Varian.
     nama: "Game Lama",
     kategori: "Game",
@@ -267,6 +307,7 @@ const PRODUK: ProdukSeed[] = [
     deskripsi: "Akun game lama yang sudah tidak dijual.",
     ketentuanGaransi: "Tanpa garansi.",
     formatItemStok: ["Email", "Password"],
+    batasPerMember: null,
     warnaFoto: [98, 88, 121], // tinta-redup
     varian: [],
   },
@@ -631,6 +672,14 @@ async function isiProduk(
         `Produk "${p.nama}" tidak ditemukan setelah dibuat.`,
         JALANKAN_ULANG,
       );
+    }
+    // Form Produk belum punya centang "Produk gratis" (T87), jadi Produk gratis seed ditandai langsung, hanya saat
+    // dibuat, supaya centang yang dilepas Admin saat UAT-P4 tidak dipasang lagi oleh seed berikutnya.
+    if (p.batasPerMember !== null) {
+      await db
+        .update(produk)
+        .set({ gratis: true, batasPerMember: p.batasPerMember })
+        .where(eq(produk.id, id));
     }
   }
 

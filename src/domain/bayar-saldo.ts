@@ -1,7 +1,10 @@
 // Bayar Pesanan dengan saldo (PRD §15.7) dan Metode sebuah Pesanan (GLOSSARY).
 
-/** Metode sebuah Pesanan (GLOSSARY): QRIS atau Saldo. Pesanan yang dibuat sebelum bayar dengan saldo ada bermetode QRIS. */
-export const METODE = ["QRIS", "Saldo"] as const;
+/**
+ * Metode sebuah Pesanan (GLOSSARY): QRIS atau Saldo, atau Gratis untuk Pesanan gratis (PRD §16.5). Pesanan yang dibuat
+ * sebelum bayar dengan saldo ada bermetode QRIS.
+ */
+export const METODE = ["QRIS", "Saldo", "Gratis"] as const;
 
 export type Metode = (typeof METODE)[number];
 

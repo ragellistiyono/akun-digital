@@ -218,6 +218,13 @@
       "when": 1795390131800,
       "tag": "0030_item_stok_sidik_jari",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1795393963125,
+      "tag": "0031_produk_gratis",
+      "breakpoints": true
     }
   ]
 }

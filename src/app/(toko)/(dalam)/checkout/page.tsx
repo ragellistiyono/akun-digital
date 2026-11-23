@@ -6,6 +6,7 @@ import { z } from "zod";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
 import { bacaCheckout } from "@/server/pesanan";
 
+import { FormAmbilGratis } from "./_components/form-ambil-gratis";
 import { FormCheckout } from "./_components/form-checkout";
 
 // Form checkout (PRD §5.2) untuk Varian yang dipilih di Halaman Produk (`/checkout?varianId=…`). Varian
@@ -17,6 +18,11 @@ import { FormCheckout } from "./_components/form-checkout";
 // Alamat kembali dari tautan Masuk di pesan Voucher khusus Member membawa kode voucher yang tadi diketik
 // (`&kodeVoucher=…`), supaya isian kode sudah berisi kode itu setelah login (PRD §8.7 ▶ Keputusan 2026-11-17).
 // Kodenya hanya mengisi isian. Voucher baru diperiksa saat "Pakai" ditekan atau saat Pesanan dibuat.
+//
+// Member yang membuka Checkout Produk gratis melihat Checkout Produk gratis dengan Sisa jatah-nya, tanpa isian kode
+// voucher dan pilihan Metode (PRD §16.3). Checkout Produk gratis untuk Tamu belum dibuat di sini (T87), jadi Tamu
+// masih melihat form checkout biasa; Admin belum bisa menjadikan Produk gratis sampai saat itu (PRD §13 ▶ Keputusan
+// 2026-11-22).
 export default async function HalamanCheckout({
   searchParams,
 }: PageProps<"/checkout">) {
@@ -36,11 +42,19 @@ export default async function HalamanCheckout({
   return (
     <>
       <h1 className="mt-4">Checkout</h1>
-      <FormCheckout
-        checkout={checkout}
-        emailMember={sesiMember?.user.email ?? null}
-        kodeVoucher={kodeVoucher}
-      />
+      {checkout.jatah && sesiMember ? (
+        <FormAmbilGratis
+          checkout={checkout}
+          jatah={checkout.jatah}
+          emailMember={sesiMember.user.email}
+        />
+      ) : (
+        <FormCheckout
+          checkout={checkout}
+          emailMember={sesiMember?.user.email ?? null}
+          kodeVoucher={kodeVoucher}
+        />
+      )}
     </>
   );
 }

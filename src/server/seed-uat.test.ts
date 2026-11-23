@@ -358,7 +358,8 @@ describe("pnpm db:seed di database kosong", () => {
       ...kategori.map((k) => k.alamatIkon),
       ...semua.map((k) => k.fotoSampul),
     ];
-    expect(alamat).toHaveLength(6);
+    // 2 Kategori yang tampil (Streaming dan Musik) dan 5 Produk aktif, termasuk Akun Uji Gratis dari persiapan M6.
+    expect(alamat).toHaveLength(7);
     for (const satu of alamat) {
       const nama = (satu ?? "").replace("/unggahan/", "");
       expect((await bacaBerkasUnggahan(nama))?.jenis, nama).toBe("image/png");
@@ -409,6 +410,7 @@ describe("pnpm db:seed di database kosong", () => {
       .innerJoin(produk, eq(varian.produkId, produk.id))
       .orderBy(produk.nama, varian.nama);
     expect(semuaVarian).toEqual([
+      { produk: "Akun Uji Gratis", varian: "Akun Baru", hargaModal: 0 },
       { produk: "Netflix Premium", varian: "1 Bulan", hargaModal: 35000 },
       { produk: "Netflix Premium", varian: "3 Bulan", hargaModal: 100000 },
       { produk: "Spotify Premium", varian: "1 Bulan", hargaModal: 18000 },
@@ -585,20 +587,75 @@ describe("pnpm db:seed di database kosong", () => {
     ).toContain("uji-kembar@mail.com|pass9|Profil 1");
   });
 
+  // Issue T86: persiapan M6 di docs/UAT.md (▶ Keputusan 2026-11-22), untuk UAT-P1 sampai UAT-P5.
+  it("Akun Uji Gratis adalah Produk gratis di Kategori Streaming dengan Batas per Member 2, Format Email dan Password, dan Varian Akun Baru Rp 1.000 (Harga normal Rp 15.000) dengan 5 Item stok Tersedia, termasuk budi.santoso@mail.com|rahasia1 [CONTOH]", async () => {
+    const { db } = await import("./db");
+    const { kategori, produk, varian } = await import("./db/schema");
+    const { eq } = await import("drizzle-orm");
+    const { daftarItemStokVarian, daftarVarianItemStok } =
+      await import("./item-stok");
+
+    expect(
+      await db
+        .select({
+          kategori: kategori.nama,
+          gratis: produk.gratis,
+          batasPerMember: produk.batasPerMember,
+          formatItemStok: produk.formatItemStok,
+          varian: varian.nama,
+          hargaJual: varian.hargaJual,
+          hargaNormal: varian.hargaNormal,
+        })
+        .from(produk)
+        .innerJoin(kategori, eq(produk.kategoriId, kategori.id))
+        .innerJoin(varian, eq(varian.produkId, produk.id))
+        .where(eq(produk.nama, "Akun Uji Gratis")),
+    ).toEqual([
+      {
+        kategori: "Streaming",
+        gratis: true,
+        batasPerMember: 2,
+        formatItemStok: ["Email", "Password"],
+        varian: "Akun Baru",
+        hargaJual: 1000,
+        hargaNormal: 15000,
+      },
+    ]);
+    // Produk seed lain bukan Produk gratis.
+    expect(
+      await db
+        .select({ nama: produk.nama })
+        .from(produk)
+        .where(eq(produk.gratis, true)),
+    ).toEqual([{ nama: "Akun Uji Gratis" }]);
+
+    const [akunBaru] = (await daftarVarianItemStok()).filter(
+      (v) => v.namaProduk === "Akun Uji Gratis",
+    );
+    const daftar = await daftarItemStokVarian({
+      varianId: akunBaru.varianId,
+      status: "Tersedia",
+    });
+    expect(daftar).toHaveLength(5);
+    expect(
+      daftar.map((item) => item.kolom.map((k) => k.nilai).join("|")),
+    ).toContain("budi.santoso@mail.com|rahasia1");
+  });
+
   it("menjalankan seed dua kali tidak menggandakan data", async () => {
     const sebelum = await jumlahData();
-    // Jumlah dari "Persiapan bersama": 6 Varian (Game Lama tanpa Varian), 29 Item stok (Netflix 1 Bulan
+    // Jumlah dari "Persiapan bersama": 7 Varian (Game Lama tanpa Varian), 34 Item stok (Netflix 1 Bulan
     // 10 Tersedia dan 1 Terkirim ke Pesanan Selesai, Netflix 3 Bulan 4 ditambah uji-kembar dari persiapan M6,
-    // YouTube 3 Bulan 3, Uji Bayar 10),
-    // dan 8 berkas gambar (3 ikon Kategori dan 5 foto Produk). User berisi 1 Admin dan 2 Member, masing-masing
+    // YouTube 3 Bulan 3, Uji Bayar 10, dan Akun Uji Gratis 5 dari persiapan M6),
+    // dan 9 berkas gambar (3 ikon Kategori dan 6 foto Produk). User berisi 1 Admin dan 2 Member, masing-masing
     // dengan satu akun password, Voucher berisi 6 Voucher seed, dan Biaya operasional berisi Sewa server.
     expect(sebelum).toEqual({
       user: 3,
       account: 3,
       kategori: 3,
-      produk: 5,
-      varian: 6,
-      item_stok: 29,
+      produk: 6,
+      varian: 7,
+      item_stok: 34,
       pesanan: 3,
       riwayat_status_pesanan: 6,
       pengaturan_toko: 1,
@@ -607,7 +664,7 @@ describe("pnpm db:seed di database kosong", () => {
       riwayat_saldo: 3,
       top_up: 2,
       riwayat_status_top_up: 4,
-      berkas: 8,
+      berkas: 9,
     });
 
     await jalankanSeed();

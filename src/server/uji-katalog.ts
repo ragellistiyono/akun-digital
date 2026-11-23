@@ -56,8 +56,8 @@ export async function sisipkanKategori({
 /**
  * Menyisipkan Produk beserta Varian dan Item stoknya, di Kategori yang diberikan atau di Kategori barunya
  * sendiri. Setiap Item stok berisi teks uji acak untuk setiap kolom Format Item stok, terenkripsi seperti
- * Item stok yang diisi Admin, supaya Item stok yang Terkirim bisa tampil di halaman Pesanan. Hasilnya id
- * Produk itu.
+ * Item stok yang diisi Admin, supaya Item stok yang Terkirim bisa tampil di halaman Pesanan. Bila `batasPerMember`
+ * diberikan, Produk itu menjadi Produk gratis dengan Batas per Member itu (PRD §16.1). Hasilnya id Produk itu.
  */
 export async function sisipkanProduk({
   nama,
@@ -68,6 +68,7 @@ export async function sisipkanProduk({
   deskripsi = "Deskripsi uji.",
   ketentuanGaransi = "Garansi uji.",
   formatItemStok = ["Kode"],
+  batasPerMember = null,
   varian: semuaVarian,
 }: {
   nama: string;
@@ -78,6 +79,7 @@ export async function sisipkanProduk({
   deskripsi?: string;
   ketentuanGaransi?: string;
   formatItemStok?: string[];
+  batasPerMember?: number | null;
   varian: VarianUji[];
 }) {
   kategoriId ??= await sisipkanKategori({
@@ -94,6 +96,8 @@ export async function sisipkanProduk({
       aktif,
       formatItemStok,
       foto,
+      gratis: batasPerMember !== null,
+      batasPerMember,
     })
     .returning({ id: produk.id });
 

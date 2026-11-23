@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { type BayarSaldo, METODE } from "@/domain/bayar-saldo";
+import type { BayarSaldo } from "@/domain/bayar-saldo";
 import { nominalTagihanQris } from "@/domain/total-bayar";
 import { rupiah } from "@/lib/rupiah";
 import { bacaSesiMember } from "@/server/auth/sesi-member";
@@ -13,6 +13,7 @@ import { nilaiVoucher } from "@/server/penilaian-voucher";
 import {
   bacaBayarSaldo,
   buatPesanan,
+  buatPesananGratis,
   buatPesananSaldo,
   TautanPesanan,
 } from "@/server/pesanan";
@@ -69,8 +70,20 @@ const pesanSaldoKurang = (saldo: number, harusDibayar: number) =>
 const PESAN_SALDO_TANPA_MEMBER =
   "Bayar dengan saldo hanya untuk Member yang sedang login. Masuk dulu, atau bayar dengan QRIS.";
 
-/** Metode yang dipilih di form. Isian yang tidak ada atau tidak dikenal berarti QRIS, satu-satunya pilihan Tamu. */
-const MetodeDipilih = z.enum(METODE).catch("QRIS");
+/**
+ * Metode yang dipilih di form checkout: QRIS atau Saldo (PRD §15.7). Isian yang tidak ada atau tidak dikenal berarti
+ * QRIS, satu-satunya pilihan Tamu. Metode Gratis tidak dipilih di form ini; Pesanan gratis dibuat lewat "Ambil gratis"
+ * (aksiAmbilGratis).
+ */
+const MetodeDipilih = z.enum(["QRIS", "Saldo"]).catch("QRIS");
+
+/** Pesan PRD §16.3 langkah 2, bila Produk itu tidak lagi gratis saat "Ambil gratis" ditekan. */
+const PESAN_TIDAK_GRATIS =
+  "Produk ini tidak gratis lagi, jadi Pesanan tidak dibuat. Buka lagi Halaman Produk untuk melihat harganya.";
+
+/** Pesan PRD §16.3 langkah 3, bila "Ambil gratis" dikirim tanpa sesi Member, misalnya karena sesinya habis. */
+const PESAN_GRATIS_TANPA_MEMBER =
+  "Produk gratis hanya untuk Member yang sedang login. Masuk dulu.";
 
 /** Pesan PRD §5.4 ▶ Keputusan 2026-11-11, tanpa tautan ke Pesanan itu dan tanpa tombol batal. */
 const pesanPesananMenunggu = (kedaluwarsaPada: Date) =>
@@ -98,6 +111,29 @@ function tautanDiBrowser(isiCookie: string | undefined) {
   return (isiCookie ?? "")
     .split(PEMISAH_TAUTAN)
     .filter((tautan) => TautanPesanan.safeParse(tautan).success);
+}
+
+type TokoCookie = Awaited<ReturnType<typeof cookies>>;
+
+/** Menyimpan Tautan Pesanan yang baru dibuat di cookie browser ini, di belakang Tautan Pesanan yang sudah ada. */
+function simpanTautanDiBrowser(
+  tokoCookie: TokoCookie,
+  tautanBrowserIni: readonly string[],
+  tautan: string,
+) {
+  tokoCookie.set(
+    COOKIE_TAUTAN_PESANAN,
+    [...tautanBrowserIni, tautan]
+      .slice(-BATAS_TAUTAN_DI_COOKIE)
+      .join(PEMISAH_TAUTAN),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: UMUR_COOKIE_DETIK,
+    },
+  );
 }
 
 /**
@@ -205,19 +241,54 @@ export async function aksiCheckout(
     };
   }
   if (hasil.hasil === "dibuat") {
-    tokoCookie.set(
-      COOKIE_TAUTAN_PESANAN,
-      [...tautanBrowserIni, hasil.tautan]
-        .slice(-BATAS_TAUTAN_DI_COOKIE)
-        .join(PEMISAH_TAUTAN),
-      {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: UMUR_COOKIE_DETIK,
-      },
-    );
+    simpanTautanDiBrowser(tokoCookie, tautanBrowserIni, hasil.tautan);
+  }
+  redirect(`/pesanan/${hasil.tautan}`);
+}
+
+/** Keadaan form Checkout Produk gratis: pesan penolakan "Ambil gratis", bila ada. */
+export type KeadaanFormAmbilGratis = { galat?: string };
+
+/**
+ * "Ambil gratis" di Checkout Produk gratis (PRD §16.3): membuat Pesanan gratis untuk Member yang sedang login, yang
+ * langsung Selesai, lalu membawa Member ke Tautan Pesanan, yang menampilkan Halaman Pesanan Selesai. Tautan Pesanan-nya
+ * disimpan di cookie browser ini seperti checkout lain.
+ *
+ * Pemeriksaannya berurutan menurut buatPesananGratis, dan setiap penolakan tampil dengan pesan PRD-nya. Login Member
+ * diperiksa di server lewat sesinya, bukan hanya dengan menampilkan form ini kepada Member. Email Pesanan diambil
+ * dari sesi Member, bukan dari form. Bila email Member masih punya Pesanan Menunggu Pembayaran (PRD §5.4), Member
+ * diarahkan ke Pesanan itu bila Pesanan itu dibuat di browser ini, dan ditolak dengan pesan berisi jam kedaluwarsanya
+ * bila tidak.
+ */
+export async function aksiAmbilGratis(
+  _sebelumnya: KeadaanFormAmbilGratis,
+  formData: FormData,
+): Promise<KeadaanFormAmbilGratis> {
+  const sesiMember = await bacaSesiMember(await headers());
+  const tokoCookie = await cookies();
+  const tautanBrowserIni = tautanDiBrowser(
+    tokoCookie.get(COOKIE_TAUTAN_PESANAN)?.value,
+  );
+  const varianId = z.uuid().safeParse(formData.get("varianId"));
+  if (!varianId.success) return { galat: PESAN_TIDAK_DIJUAL };
+
+  const hasil = await buatPesananGratis({
+    varianId: varianId.data,
+    idMember: sesiMember?.user.id ?? null,
+    tautanDiBrowser: tautanBrowserIni,
+  });
+  if (hasil.hasil === "tidak-dijual") return { galat: PESAN_TIDAK_DIJUAL };
+  if (hasil.hasil === "tidak-gratis") return { galat: PESAN_TIDAK_GRATIS };
+  if (hasil.hasil === "tidak-login") {
+    return { galat: PESAN_GRATIS_TANPA_MEMBER };
+  }
+  if (hasil.hasil === "pesanan-menunggu-di-browser-lain") {
+    return { galat: pesanPesananMenunggu(hasil.kedaluwarsaPada) };
+  }
+  if (hasil.hasil === "stok-habis") return { galat: PESAN_STOK_HABIS };
+  if (hasil.hasil === "jatah-habis") return { galat: hasil.pesan };
+  if (hasil.hasil === "dibuat") {
+    simpanTautanDiBrowser(tokoCookie, tautanBrowserIni, hasil.tautan);
   }
   redirect(`/pesanan/${hasil.tautan}`);
 }
