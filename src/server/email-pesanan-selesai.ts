@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
+import { rincianNominal } from "@/domain/rincian-nominal";
 import { rupiah } from "@/lib/rupiah";
 
 import { aman, footerWhatsapp } from "./bagian-email";
@@ -34,8 +35,9 @@ type BahanEmailPesananSelesai = Pick<
 
 /**
  * Baris rincian nominal (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris potongannya
- * menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar dengan saldo
- * tidak punya baris Kode unik (PRD §15.7).
+ * menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Baris yang tampil mengikuti Metode
+ * Pesanan itu menurut rincianNominal: Pesanan yang dibayar dengan saldo tidak punya baris Kode unik (PRD §15.7), dan
+ * Pesanan gratis hanya punya baris Total bayar (PRD §16.4).
  */
 function barisRincian({
   hargaJual,
@@ -45,21 +47,24 @@ function barisRincian({
   totalBayar,
   metode,
 }: PesananSelesai["rincian"]) {
+  const { barisHargaDanPotongan, barisKodeUnik } = rincianNominal(metode);
   return [
-    { label: "Harga jual", nilai: rupiah(hargaJual) },
-    {
-      label: labelPotonganVoucher(kodeVoucher),
-      nilai: potonganVoucher === 0 ? rupiah(0) : `− ${rupiah(potonganVoucher)}`,
-    },
-    ...(metode === "Saldo"
-      ? []
-      : [{ label: "Kode unik", nilai: rupiah(kodeUnik) }]),
+    ...(barisHargaDanPotongan
+      ? [
+          { label: "Harga jual", nilai: rupiah(hargaJual) },
+          {
+            label: labelPotonganVoucher(kodeVoucher),
+            nilai:
+              potonganVoucher === 0
+                ? rupiah(0)
+                : `− ${rupiah(potonganVoucher)}`,
+          },
+        ]
+      : []),
+    ...(barisKodeUnik ? [{ label: "Kode unik", nilai: rupiah(kodeUnik) }] : []),
     { label: "Total bayar", nilai: rupiah(totalBayar) },
   ];
 }
-
-/** Tulisan di bawah rincian Pesanan yang dibayar dengan saldo (PRD §15.7). */
-const DIBAYAR_DENGAN_SALDO = "Dibayar dengan saldo";
 
 /**
  * Isi email "Pesanan selesai" dalam bahasa Indonesia, sebagai teks biasa dan HTML. HTML-nya tanpa warna:
@@ -73,8 +78,9 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
   const keteranganTautan =
     "Buka Pesanan ini kapan saja tanpa login lewat Tautan Pesanan berikut:";
   const rincian = barisRincian(bahan.rincian);
-  const keteranganSaldo =
-    bahan.rincian.metode === "Saldo" ? [DIBAYAR_DENGAN_SALDO] : [];
+  // Tulisan di bawah rincian: "Dibayar dengan saldo" (PRD §15.7) atau "Gratis" (PRD §16.4).
+  const { keterangan } = rincianNominal(bahan.rincian.metode);
+  const keteranganMetode = keterangan === null ? [] : [keterangan];
   const footer = footerWhatsapp(bahan.nomorWhatsapp);
 
   const teks = [
@@ -89,7 +95,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
     "",
     "Rincian pembayaran",
     ...rincian.map(({ label, nilai }) => `${label}: ${nilai}`),
-    ...keteranganSaldo,
+    ...keteranganMetode,
     "",
     keteranganTautan,
     bahan.alamatPesanan,
@@ -115,7 +121,7 @@ function isiEmailPesananSelesai(bahan: BahanEmailPesananSelesai): Email {
         `<tr><td style="padding:4px 16px 4px 0">${aman(label)}</td><td style="padding:4px 0;text-align:right">${aman(nilai)}</td></tr>`,
     ),
     `</table>`,
-    ...keteranganSaldo.map(
+    ...keteranganMetode.map(
       (keterangan) => `<p style="margin:0 0 16px">${aman(keterangan)}</p>`,
     ),
     `<p style="margin:0 0 4px">${aman(keteranganTautan)}</p>`,

@@ -33,13 +33,13 @@ type TopUpLaba = {
   biayaTransaksi: number | null;
 };
 
-/** Saringan Metode Laporan keuangan (PRD §14.6 ▶ Keputusan 2026-11-20): Semua, QRIS, atau Saldo. */
+/** Saringan Metode Laporan keuangan (PRD §14.6 ▶ Keputusan 2026-11-20 dan 2026-11-22): Semua, QRIS, Saldo, atau Gratis. */
 export type SaringanMetode = Metode | "Semua";
 
 /**
- * Pesanan yang cocok dengan saringan Metode, dengan urutan input (PRD §14.6 ▶ Keputusan 2026-11-20): "Semua" memuat
- * Pesanan QRIS dan Saldo, sedangkan QRIS atau Saldo hanya memuat Pesanan bermetode itu. Saringan ini membatasi
- * rincian angka dan semua grafik Laporan keuangan.
+ * Pesanan yang cocok dengan saringan Metode, dengan urutan input (PRD §14.6 ▶ Keputusan 2026-11-20 dan 2026-11-22):
+ * "Semua" memuat Pesanan QRIS, Saldo, dan Gratis, sedangkan QRIS, Saldo, atau Gratis hanya memuat Pesanan bermetode
+ * itu. Saringan ini membatasi rincian angka dan semua grafik Laporan keuangan.
  */
 export function pesananMenurutMetode<P extends { metode: Metode }>({
   metode,
@@ -60,7 +60,9 @@ const jumlahkan = <T>(daftar: readonly T[], nilai: (t: T) => number) =>
  * Angka keuangan dalam rentang itu (PRD §14.2, §14.5, §15.8, tests/golden/laba.json, tests/golden/laba-top-up.json).
  * Rentang null berarti sepanjang waktu, tanpa batas tanggal.
  *
- * - Hanya Pesanan yang cocok dengan saringan `metode` yang dihitung; "Semua" menghitung QRIS dan Saldo (§14.6).
+ * - Hanya Pesanan yang cocok dengan saringan `metode` yang dihitung; "Semua" menghitung semua Metode (§14.6).
+ *   Pesanan gratis dihitung seperti Pesanan Selesai lain, dengan nominal Rp 0 dan Harga modal Varian-nya, jadi tidak
+ *   menambah Pendapatan dan Laba kotornya Rp 0 − Harga modal (§16.5, tests/golden/laba-pesanan-gratis.json).
  * - Pendapatan dan jumlah Pesanan Selesai menghitung semua Pesanan Selesai yang dibayar dalam rentang itu (§9.3).
  *   Pesanan saldo dihitung sama, dengan Kode unik dan Biaya transaksi Rp 0 (§15.8).
  * - Total Harga modal, Laba kotor, potongan voucher, Kode unik, dan Biaya transaksi hanya dari Pesanan Selesai

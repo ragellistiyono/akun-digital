@@ -8,6 +8,7 @@ import { z } from "zod";
 import { PilStatusPesanan } from "@/components/pil-status-pesanan";
 import type { AjakanHalamanPesanan } from "@/domain/ajakan-halaman-pesanan";
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
+import { rincianNominal } from "@/domain/rincian-nominal";
 import { STATUS_PESANAN } from "@/domain/status-pesanan";
 import { rupiah } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
@@ -52,8 +53,9 @@ type PesananDibaca = NonNullable<
 /**
  * Rincian nominal yang dicatat di Pesanan (PRD §5.5). Pesanan yang memakai Voucher menulis kode Voucher-nya di
  * baris potongan, misalnya "Potongan voucher (HEMAT5)"; Pesanan tanpa Voucher menulis "Potongan voucher"
- * (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar dengan saldo tidak punya baris Kode unik, dan di bawah
- * rinciannya tertulis "Dibayar dengan saldo" (PRD §15.7).
+ * (PRD §8.8 ▶ Keputusan 2026-11-17). Baris yang tampil mengikuti Metode Pesanan itu menurut rincianNominal: Pesanan
+ * yang dibayar dengan saldo tidak punya baris Kode unik, dan di bawah rinciannya tertulis "Dibayar dengan saldo"
+ * (PRD §15.7); Pesanan gratis hanya punya baris "Total bayar Rp 0", lalu tulisan "Gratis" (PRD §16.4).
  */
 function PanelRincian({
   rincian,
@@ -62,31 +64,36 @@ function PanelRincian({
   rincian: PesananDibaca["rincian"];
   className?: string;
 }) {
+  const { barisHargaDanPotongan, barisKodeUnik, keterangan } = rincianNominal(
+    rincian.metode,
+  );
   return (
     <section aria-label="Rincian pembayaran" className={cn(PANEL, className)}>
       <RincianNominal
         baris={[
-          { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
-          {
-            label: labelPotonganVoucher(rincian.kodeVoucher),
-            nilai:
-              rincian.potonganVoucher === 0
-                ? rupiah(0)
-                : `− ${rupiah(rincian.potonganVoucher)}`,
-          },
-          ...(rincian.metode === "Saldo"
-            ? []
-            : [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]),
+          ...(barisHargaDanPotongan
+            ? [
+                { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
+                {
+                  label: labelPotonganVoucher(rincian.kodeVoucher),
+                  nilai:
+                    rincian.potonganVoucher === 0
+                      ? rupiah(0)
+                      : `− ${rupiah(rincian.potonganVoucher)}`,
+                },
+              ]
+            : []),
+          ...(barisKodeUnik
+            ? [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]
+            : []),
         ]}
         total={{
           label: "Total bayar",
           nilai: rupiah(rincian.totalBayar),
         }}
       />
-      {rincian.metode === "Saldo" && (
-        <p className="mt-3 text-[16px] text-pensil-redup">
-          Dibayar dengan saldo
-        </p>
+      {keterangan && (
+        <p className="mt-3 text-[16px] text-pensil-redup">{keterangan}</p>
       )}
     </section>
   );
@@ -337,7 +344,8 @@ export default async function HalamanTautanPesanan({
           emailMemberLogin:
             (await bacaSesiMember(await headers()))?.user.email ?? null,
         });
-  // Pesanan Menunggu Pembayaran selalu Pesanan QRIS; Pesanan yang dibayar dengan saldo langsung Selesai (PRD §15.7).
+  // Pesanan Menunggu Pembayaran selalu Pesanan QRIS; Pesanan yang dibayar dengan saldo dan Pesanan gratis langsung
+  // Selesai (PRD §15.7, §16.3).
   const { gambarQr, kedaluwarsaPada } = pesanan;
   return (
     <>

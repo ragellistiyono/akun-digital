@@ -202,6 +202,8 @@ export const kategori = pgTable(
 // daftar nama kolom berurutan; aturan isinya (issue T07) diperiksa periksaFormatItemStok di domain.
 // Foto Produk (PRD §3.3) adalah daftar nama berkas gambar di folder unggahan menurut urutannya; foto
 // pertama menjadi sampul. Batas 5 foto diperiksa tambahFoto di domain.
+// Produk gratis (PRD §16.1) wajib punya Batas per Member, bilangan bulat 1 sampai 999 (PRD §16.2); Produk yang bukan
+// Produk gratis boleh tanpa Batas per Member. Produk yang dibuat sebelum Produk gratis ada bukan Produk gratis.
 export const produk = pgTable(
   "produk",
   {
@@ -216,8 +218,20 @@ export const produk = pgTable(
     aktif: boolean("aktif").default(true).notNull(),
     formatItemStok: text("format_item_stok").array().notNull(),
     foto: text("foto").array().default([]).notNull(),
+    gratis: boolean("gratis").default(false).notNull(),
+    batasPerMember: integer("batas_per_member"),
   },
-  (tabel) => [index("produk_kategori_id_idx").on(tabel.kategoriId)],
+  (tabel) => [
+    index("produk_kategori_id_idx").on(tabel.kategoriId),
+    check(
+      "produk_gratis_punya_batas_per_member",
+      sql`not ${tabel.gratis} or ${tabel.batasPerMember} is not null`,
+    ),
+    check(
+      "produk_batas_per_member_rentang",
+      sql`${tabel.batasPerMember} between 1 and 999`,
+    ),
+  ],
 );
 
 // Varian (PRD §3.2, §3.5, §3.7): pilihan di dalam sebuah Produk, dengan Harga jual dan Harga normal
@@ -328,7 +342,7 @@ export const pengaturanToko = pgTable(
 // Status Pesanan (GLOSSARY, PRD §5.7).
 export const statusPesanan = pgEnum("status_pesanan", STATUS_PESANAN);
 
-// Metode sebuah Pesanan (GLOSSARY, PRD §9.5 ▶ Keputusan 2026-11-20): QRIS atau Saldo.
+// Metode sebuah Pesanan (GLOSSARY, PRD §9.5 ▶ Keputusan 2026-11-20 dan 2026-11-22): QRIS, Saldo, atau Gratis.
 export const metode = pgEnum("metode", METODE);
 
 // Pesanan (PRD §5.1): satu pembelian satu Varian. Harga jual dan potongan voucher dicatat saat checkout,
@@ -347,7 +361,8 @@ export const metode = pgEnum("metode", METODE);
 // itu, dan null selama Pesanan belum dibayar. Pengaturan yang diubah sesudahnya tidak mengubahnya.
 // Metode mencatat cara Pesanan dibayar; Pesanan yang dibuat sebelum bayar dengan saldo ada bermetode QRIS. Pesanan
 // yang dibayar dengan saldo (PRD §15.7) tidak punya QRIS, jadi qris_id, waktu kedaluwarsa, dan gambar QR-nya null,
-// sedangkan Kode unik dan Biaya transaksi-nya Rp 0. Pesanan QRIS selalu punya ketiganya.
+// sedangkan Kode unik dan Biaya transaksi-nya Rp 0. Pesanan QRIS selalu punya ketiganya. Pesanan gratis (PRD §16.5)
+// juga tanpa QRIS, dengan Harga jual, potongan voucher, Kode unik, Total bayar, dan Biaya transaksi Rp 0.
 export const pesanan = pgTable(
   "pesanan",
   {

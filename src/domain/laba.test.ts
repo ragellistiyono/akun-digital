@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import golden from "../../tests/golden/laba.json";
+import goldenGratis from "../../tests/golden/laba-pesanan-gratis.json";
 import goldenTopUp from "../../tests/golden/laba-top-up.json";
 import type { Metode } from "./bayar-saldo";
 import { laba, pesananMenurutMetode } from "./laba";
@@ -105,6 +106,62 @@ describe("laba", () => {
     expect(hasil.biayaOperasionalDihitung).toEqual([
       { tanggal: "2026-11-11", nominal: 10000 },
     ]);
+  });
+});
+
+// PRD §16.5: Pesanan gratis dihitung di jumlah Pesanan Selesai tanpa menambah Pendapatan, dengan Laba kotor Rp 0 −
+// Harga modal. Fixture ini berbentuk sama dengan laba.json, tanpa Metode; Pesanan dengan Harga jual Rp 0 di fixture
+// ini adalah Pesanan gratis, jadi bermetode Gratis, dan yang lain bermetode QRIS.
+const denganMetodeGratis = <P extends { hargaJual: number }>(
+  pesanan: readonly P[],
+) =>
+  pesanan.map((p) => ({
+    ...p,
+    metode: p.hargaJual === 0 ? ("Gratis" as const) : ("QRIS" as const),
+  }));
+
+describe("laba dengan Pesanan gratis", () => {
+  it.each(goldenGratis.kasus)("$nama", ({ input, output }) => {
+    const { pesanan, ...lainnya } = inputInstan(input);
+    const hasil = laba({ ...lainnya, pesanan: denganMetodeGratis(pesanan) });
+
+    expect({
+      pendapatan: hasil.pendapatan,
+      pesananSelesai: hasil.pesananSelesai,
+      totalHargaModal: hasil.totalHargaModal,
+      labaKotor: hasil.labaKotor,
+      potonganVoucher: hasil.potonganVoucher,
+      kodeUnik: hasil.kodeUnik,
+      biayaTransaksi: hasil.biayaTransaksi,
+      biayaOperasional: hasil.biayaOperasional,
+      labaBersih: hasil.labaBersih,
+      pesananTanpaHargaModal: hasil.pesananTanpaHargaModal,
+    }).toEqual(output);
+  });
+
+  it("saringan Metode Gratis hanya memuat Pesanan gratis, dengan Pendapatan Rp 0", () => {
+    const kasus = goldenGratis.kasus.find((k) => k.nama === "Contoh PRD §16.5");
+    if (!kasus) throw new Error("Kasus golden tidak ditemukan.");
+    const { pesanan, ...lainnya } = inputInstan(kasus.input);
+
+    const hasil = laba({
+      ...lainnya,
+      metode: "Gratis",
+      pesanan: denganMetodeGratis(pesanan),
+    });
+
+    // Contoh PRD §16.5 tanpa Pesanan QRIS-nya: dua Pesanan gratis dengan Harga modal Rp 2.000.
+    expect({
+      pendapatan: hasil.pendapatan,
+      pesananSelesai: hasil.pesananSelesai,
+      totalHargaModal: hasil.totalHargaModal,
+      labaKotor: hasil.labaKotor,
+    }).toEqual({
+      pendapatan: 0,
+      pesananSelesai: 2,
+      totalHargaModal: 4000,
+      labaKotor: -4000,
+    });
   });
 });
 

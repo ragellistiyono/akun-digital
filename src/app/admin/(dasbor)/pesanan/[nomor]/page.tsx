@@ -13,6 +13,7 @@ import {
 import { labelPotonganVoucher } from "@/domain/label-potongan-voucher";
 import { nomorPesananSah } from "@/domain/nomor-pesanan";
 import { penyelesaianBermasalahTersedia } from "@/domain/penyelesaian-bermasalah";
+import { rincianNominal } from "@/domain/rincian-nominal";
 import { rupiah, rupiahBertanda } from "@/lib/rupiah";
 import { cn } from "@/lib/utils";
 import { wajibSesiAdmin } from "@/server/auth/sesi-admin";
@@ -41,7 +42,10 @@ const NomorDariAlamat = z.string().refine(nomorPesananSah);
 
 type DetailPesanan = NonNullable<Awaited<ReturnType<typeof bacaDetailPesanan>>>;
 
-/** Email, Produk beserta Varian, dan Metode Pesanan itu (PRD §9.5 ▶ Keputusan 2026-11-20). */
+/**
+ * Email, Produk beserta Varian, dan Metode Pesanan itu: QRIS, Saldo, atau Gratis (PRD §9.5 ▶ Keputusan 2026-11-20 dan
+ * 2026-11-22).
+ */
 function PanelPesanan({ pesanan }: { pesanan: DetailPesanan }) {
   return (
     <section aria-label="Pesanan" className={PANEL}>
@@ -110,9 +114,11 @@ function RincianLaba({ laba }: { laba: DetailPesanan["laba"] }) {
 
 /**
  * Rincian nominal yang dicatat di Pesanan (PRD §5.5), dengan tulisan yang sama seperti di Halaman Pesanan. Baris
- * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Pesanan yang dibayar
- * dengan saldo tidak punya baris Kode unik, dan di bawah rinciannya tertulis "Dibayar dengan saldo" (PRD §9.5 ▶
- * Keputusan 2026-11-20). Di bawahnya ada Harga modal dan Laba kotor Pesanan itu.
+ * potongannya menyebut kode Voucher Pesanan itu, bila ada (PRD §8.8 ▶ Keputusan 2026-11-17). Baris yang tampil
+ * mengikuti Metode Pesanan itu menurut rincianNominal: Pesanan yang dibayar dengan saldo tidak punya baris Kode unik,
+ * dan di bawah rinciannya tertulis "Dibayar dengan saldo" (PRD §9.5 ▶ Keputusan 2026-11-20); Pesanan gratis hanya
+ * punya baris "Total bayar Rp 0", lalu tulisan "Gratis" (PRD §9.5 ▶ Keputusan 2026-11-22, §16.4). Di bawahnya ada
+ * Harga modal dan Laba kotor Pesanan itu.
  */
 function PanelRincian({
   rincian,
@@ -121,28 +127,33 @@ function PanelRincian({
   rincian: DetailPesanan["rincian"];
   laba: DetailPesanan["laba"];
 }) {
+  const { barisHargaDanPotongan, barisKodeUnik, keterangan } = rincianNominal(
+    rincian.metode,
+  );
   return (
     <section aria-label="Rincian pembayaran" className={PANEL}>
       <RincianNominal
         baris={[
-          { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
-          {
-            label: labelPotonganVoucher(rincian.kodeVoucher),
-            nilai:
-              rincian.potonganVoucher === 0
-                ? rupiah(0)
-                : `− ${rupiah(rincian.potonganVoucher)}`,
-          },
-          ...(rincian.metode === "Saldo"
-            ? []
-            : [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]),
+          ...(barisHargaDanPotongan
+            ? [
+                { label: "Harga jual", nilai: rupiah(rincian.hargaJual) },
+                {
+                  label: labelPotonganVoucher(rincian.kodeVoucher),
+                  nilai:
+                    rincian.potonganVoucher === 0
+                      ? rupiah(0)
+                      : `− ${rupiah(rincian.potonganVoucher)}`,
+                },
+              ]
+            : []),
+          ...(barisKodeUnik
+            ? [{ label: "Kode unik", nilai: rupiah(rincian.kodeUnik) }]
+            : []),
         ]}
         total={{ label: "Total bayar", nilai: rupiah(rincian.totalBayar) }}
       />
-      {rincian.metode === "Saldo" && (
-        <p className="mt-3 text-[16px] text-pensil-redup">
-          Dibayar dengan saldo
-        </p>
+      {keterangan && (
+        <p className="mt-3 text-[16px] text-pensil-redup">{keterangan}</p>
       )}
       <RincianLaba laba={laba} />
     </section>

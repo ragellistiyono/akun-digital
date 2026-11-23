@@ -1103,7 +1103,43 @@ describe("bacaCheckout", () => {
       perkiraanBayar: 135000,
       // Tamu tidak bisa membayar dengan saldo (PRD §15.7).
       saldo: null,
+      // Bukan Produk gratis (PRD §16.3).
+      jatah: null,
     });
+  });
+
+  // PRD §16.2, §16.3, UAT-P3 langkah 2: Akun Uji Gratis [CONTOH] dengan Batas per Member 2.
+  it("Checkout Akun Uji Gratis membawa Sisa jatah Member yang sudah punya satu Pesanan gratis, dan tanpa jatah untuk Tamu", async () => {
+    const produkId = await sisipkanProduk({
+      nama: `Akun Uji Gratis ${akhiran()}`,
+      batasPerMember: 2,
+      varian: [{ nama: "Akun Baru", hargaJual: 1000, Tersedia: 5 }],
+    });
+    const [{ id: varianId }] = await db
+      .select({ id: varian.id })
+      .from(varian)
+      .where(eq(varian.produkId, produkId));
+    const email = emailUnik();
+    await sisipkanMember({ email, password: "sandi-uji-member-123" });
+    const [{ id: idMember }] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    await sisipkanPesanan({
+      varianId,
+      status: "Selesai",
+      email,
+      metode: "Gratis",
+      rincian: { hargaJual: 0, potonganVoucher: 0, kodeUnik: 0, totalBayar: 0 },
+    });
+
+    expect((await bacaCheckout(varianId, { idMember }))?.jatah).toMatchObject({
+      jatahTerpakai: 1,
+      sisaJatah: 1,
+      teksJatah: "Jatah Anda: sisa 1 dari 2",
+      pesanJatahHabis: null,
+    });
+    expect((await bacaCheckout(varianId))?.jatah).toBeNull();
   });
 
   // PRD §3.7.

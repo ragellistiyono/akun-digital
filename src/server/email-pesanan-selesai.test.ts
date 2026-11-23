@@ -21,7 +21,11 @@ import {
   pekerjaanEmailPesananSelesai,
 } from "./pekerjaan-latar";
 import { bacaPengaturanToko } from "./pengaturan-toko";
-import { bacaPesananLewatTautan, buatPesananSaldo } from "./pesanan";
+import {
+  bacaPesananLewatTautan,
+  buatPesananGratis,
+  buatPesananSaldo,
+} from "./pesanan";
 import { bayarQrisTiruan } from "./qrispy-tiruan";
 import { ubahSaldoOlehAdmin } from "./saldo";
 import { isiItemStokUji, sisipkanProduk } from "./uji-katalog";
@@ -228,7 +232,65 @@ async function pesananDibayarDenganSaldo() {
   return { id, email, kode: hemat5.kode };
 }
 
+/**
+ * Pesanan gratis Akun Uji Gratis [CONTOH] (persiapan M6 di docs/UAT.md, Batas per Member 2) milik Member baru, dengan
+ * satu Item stok Tersedia berisi isi itu.
+ */
+async function pesananGratis() {
+  const produkId = await sisipkanProduk({
+    nama: `Akun Uji Gratis ${randomUUID().slice(0, 8)}`,
+    formatItemStok: FORMAT,
+    batasPerMember: 2,
+    varian: [{ nama: "Akun Baru", hargaJual: 1000, hargaModal: 0 }],
+  });
+  const [{ id: varianId }] = await db
+    .select({ id: varian.id })
+    .from(varian)
+    .where(eq(varian.produkId, produkId));
+  await db
+    .insert(itemStok)
+    .values({ varianId, ...isiItemStokUji(ISI_ITEM_STOK) });
+  const email = `member-${randomUUID()}@example.test`;
+  await sisipkanMember({ email, password: "sandi-uji-member-123" });
+  const [{ id: idMember }] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, email));
+  const hasil = await buatPesananGratis({ varianId, idMember });
+  if (hasil.hasil !== "dibuat") throw new Error(hasil.hasil);
+  const [{ id }] = await db
+    .select({ id: pesanan.id })
+    .from(pesanan)
+    .where(eq(pesanan.tautan, hasil.tautan));
+  return { id, email };
+}
+
 describe('email "Pesanan selesai" (PRD §6.3, §10.1, §10.2)', () => {
+  // PRD §16.4: rincian Pesanan gratis hanya berisi "Total bayar Rp 0", lalu tulisan "Gratis".
+  it('email Pesanan gratis memuat Item stok dan rincian "Total bayar Rp 0" lalu "Gratis", tanpa Harga jual, Potongan voucher, dan Kode unik', async () => {
+    const gratis = await pesananGratis();
+
+    await jalankanPekerjaanEmail(gratis.id);
+
+    const [email] = emailTiruanKe(gratis.email);
+    const baris = email.teks.split("\n");
+    const awalRincian = baris.indexOf("Rincian pembayaran");
+    expect(baris.slice(awalRincian, awalRincian + 3)).toEqual([
+      "Rincian pembayaran",
+      "Total bayar: Rp 0",
+      "Gratis",
+    ]);
+    expect(baris).toContain("Email: miwe.akun07@contoh.id");
+    for (const isi of [email.teks, email.html]) {
+      expect(isi).not.toContain("Harga jual");
+      expect(isi).not.toContain("Potongan voucher");
+      expect(isi).not.toContain("Kode unik");
+    }
+    expect(email.html).toContain("Total bayar");
+    expect(email.html).toContain("Rp 0");
+    expect(email.html).toContain(">Gratis<");
+  });
+
   // PRD §15.7: rincian Pesanan yang dibayar dengan saldo tanpa baris Kode unik, lalu "Dibayar dengan saldo".
   it('email Pesanan yang dibayar dengan saldo memuat rincian tanpa Kode unik dan tulisan "Dibayar dengan saldo"', async () => {
     const dibayar = await pesananDibayarDenganSaldo();
